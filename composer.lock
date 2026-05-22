@@ -4,68 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9dee57d3c974f2c3065ab0b2d6322744",
+    "content-hash": "14e1db1a2f860a5750b0ecda1aa81239",
     "packages": [
-        {
-            "name": "andydefer/laravel-logger",
-            "version": "1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/andydefer/laravel-logger.git",
-                "reference": "8c746ec0223e3b327aa2f5d46bf35c46e9720867"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/laravel-logger/zipball/8c746ec0223e3b327aa2f5d46bf35c46e9720867",
-                "reference": "8c746ec0223e3b327aa2f5d46bf35c46e9720867",
-                "shasum": ""
-            },
-            "require": {
-                "andydefer/php-records": "^1.0",
-                "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
-                "php": ">=8.1"
-            },
-            "require-dev": {
-                "barryvdh/laravel-ide-helper": "^3.6",
-                "composer/composer": "^2.0",
-                "larastan/larastan": "^3.8",
-                "laravel/pint": "^1.26",
-                "orchestra/testbench": "^10.8",
-                "phpunit/phpunit": "^12.5",
-                "rector/rector": "*",
-                "symfony/var-dumper": "^7.0",
-                "vimeo/psalm": "^6.14"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "AndyDefer\\Directive\\DirectiveServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "AndyDefer\\Logger\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Andy Kani",
-                    "email": "andykanidimbu@gmail.com"
-                }
-            ],
-            "description": "A structured logging package for Laravel that writes logs in JSONL format (JSON Lines). Each log entry is a valid JSON object on its own line, making it easy to parse, stream, and analyze.",
-            "support": {
-                "issues": "https://github.com/andydefer/laravel-logger/issues",
-                "source": "https://github.com/andydefer/laravel-logger/tree/1.0.0"
-            },
-            "time": "2026-05-22T10:24:48+00:00"
-        },
         {
             "name": "andydefer/php-records",
             "version": "1.0.0",
