@@ -6,12 +6,14 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
-use AndyDefer\Directive\DirectiveKernel;
+use AndyDefer\Directive\Contracts\DirectiveRegistrarInterface;
+use AndyDefer\Directive\Directives\MakeDirective;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
+use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Tasks\AskQuestionTask;
 use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
@@ -19,6 +21,7 @@ use AndyDefer\Directive\Tasks\DisplayErrorTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
 use AndyDefer\Directive\Tasks\DisplayTableTask;
 use AndyDefer\Logger\Contracts\LoggerInterface;
+use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Support\ServiceProvider;
 
 class DirectiveServiceProvider extends ServiceProvider
@@ -45,34 +48,41 @@ class DirectiveServiceProvider extends ServiceProvider
             return new ContainerDirectiveFactory($app);
         });
 
-        // ===== Services (ordre d'enregistrement important) =====
-
-        // 1. Parser - Pas de dépendances
-        $this->app->singleton(DirectiveParserService::class, function ($app) {
-            return new DirectiveParserService;
+        // Registrar (must be registered first so packages can use it)
+        $this->app->singleton(DirectiveRegistrarInterface::class, function ($app) {
+            return new DirectiveRegistrar();
+        });
+        $this->app->singleton(DirectiveRegistrar::class, function ($app) {
+            return $app->make(DirectiveRegistrarInterface::class);
         });
 
-        // 2. Hydrator - Dépend de la factory
+        // Parser
+        $this->app->singleton(DirectiveParserService::class, function ($app) {
+            return new DirectiveParserService();
+        });
+
+        // Hydrator
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
             return new DirectiveHydratorService(
                 $app->make(DirectiveFactoryInterface::class)
             );
         });
 
-        // 3. Discovery - Dépend de Config et Hydrator
+        // Discovery
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
             return new DirectiveDiscoveryService(
                 $app->make(DirectiveConfig::class),
-                $app->make(DirectiveHydratorService::class)
+                $app->make(DirectiveHydratorService::class),
+                $app->make(DirectiveRegistrarInterface::class),
             );
         });
 
-        // 4. Renderer - Pas de dépendances
+        // Renderer
         $this->app->singleton(DirectiveRendererService::class, function ($app) {
-            return new DirectiveRendererService;
+            return new DirectiveRendererService();
         });
 
-        // 5. Execution - Dépend de tous les autres services
+        // Execution
         $this->app->singleton(DirectiveExecutionService::class, function ($app) {
             return new DirectiveExecutionService(
                 $app->make(DirectiveDiscoveryService::class),
@@ -85,30 +95,39 @@ class DirectiveServiceProvider extends ServiceProvider
             );
         });
 
-        // ===== Tasks (singletons simples) =====
-
+        // Tasks
         $this->app->singleton(DisplayMessageTask::class, function ($app) {
-            return new DisplayMessageTask;
+            return new DisplayMessageTask();
         });
 
         $this->app->singleton(AskQuestionTask::class, function ($app) {
-            return new AskQuestionTask;
+            return new AskQuestionTask();
         });
 
         $this->app->singleton(ConfirmQuestionTask::class, function ($app) {
-            return new ConfirmQuestionTask;
+            return new ConfirmQuestionTask();
         });
 
         $this->app->singleton(DisplayTableTask::class, function ($app) {
-            return new DisplayTableTask;
+            return new DisplayTableTask();
         });
 
         $this->app->singleton(DisplayErrorTask::class, function ($app) {
-            return new DisplayErrorTask;
+            return new DisplayErrorTask();
         });
 
-        // ===== Kernel (point d'entrée) =====
+        // Make directive
+        $this->app->singleton(MakeDirective::class);
 
+        // Register built-in directives
+        $this->app->afterResolving(DirectiveRegistrarInterface::class, function ($registrar) {
+            $classes = new StringTypedCollection();
+            $classes->add(MakeDirective::class);
+
+            $registrar->register($classes);
+        });
+
+        // Kernel
         $this->app->singleton(DirectiveKernel::class, function ($app) {
             return new DirectiveKernel(
                 $app->make(DirectiveExecutionService::class)
@@ -119,7 +138,7 @@ class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/../../config/directive.php' => config_path('directive.php'),
+            __DIR__ . '/../config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 }
