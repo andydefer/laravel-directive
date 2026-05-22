@@ -136,7 +136,7 @@ class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/directive.php' => config_path('directive.php'),
+            __DIR__ . '/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 }
