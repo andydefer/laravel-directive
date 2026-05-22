@@ -1,11 +1,3 @@
-Tu as raison. Voici un README.md complet, exhaustif, qui couvre tous les aspects :
-
-1. Les faiblesses d'Artisan
-2. L'enregistrement par des packages tiers
-3. L'architecture complète
-4. Tous les concepts
-
-```markdown
 # Laravel Directive
 
 **A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between business logic and presentation.**
@@ -13,26 +5,6 @@ Tu as raison. Voici un README.md complet, exhaustif, qui couvre tous les aspects
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://php.net)
 [![Laravel Version](https://img.shields.io/badge/Laravel-12.x%20%7C%2013.x%20%7C%2014.x%20%7C%2015.x-blue)](https://laravel.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-
----
-
-## Table des matières
-
-1. [Pourquoi ce package ?](#pourquoi-ce-package-)
-2. [Installation](#installation)
-3. [Configuration](#configuration)
-4. [Premiers pas](#premiers-pas)
-5. [Les méthodes de base](#les-méthodes-de-base)
-6. [Arguments et options](#arguments-et-options)
-7. [Interaction utilisateur](#interaction-utilisateur)
-8. [Enregistrement de directives depuis un package tiers](#enregistrement-de-directives-depuis-un-package-tiers)
-9. [Commandes intégrées](#commandes-intégrées)
-10. [Testabilité](#testabilité)
-11. [Codes de sortie](#codes-de-sortie)
-12. [Exemples complets](#exemples-complets)
-13. [Architecture](#architecture)
-14. [Bonnes pratiques](#bonnes-pratiques)
-15. [API Reference](#api-reference)
 
 ---
 
