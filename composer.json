@@ -40,12 +40,6 @@
         "directive"
     ],
     "scripts": {
-        "post-install-cmd": [
-            "@php -r \"file_exists('directive') && chmod('directive', 0755);\""
-        ],
-        "post-update-cmd": [
-            "@php -r \"file_exists('directive') && chmod('directive', 0755);\""
-        ],
         "test": "phpunit",
         "test-coverage": "phpunit --coverage-html coverage",
         "lint": "pint",
