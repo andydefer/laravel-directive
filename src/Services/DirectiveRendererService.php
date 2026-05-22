@@ -17,7 +17,7 @@ class DirectiveRendererService
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
 
 \033[1;32mUSAGE:\033[0m
-  directive <signature> [arguments] [options]
+  ./vendor/bin/directive <signature> [arguments] [options]
 
 \033[1;32mCOMMANDS:\033[0m
   \033[33m--list, -l\033[0m      List all available directives
@@ -25,16 +25,16 @@ class DirectiveRendererService
 
 \033[1;32mEXAMPLES:\033[0m
   \033[36m# Run a simple directive\033[0m
-  directive hello
+  ./vendor/bin/directive hello
 
   \033[36m# Run with arguments\033[0m
-  directive user:create John Doe --role=admin
+  ./vendor/bin/directive user:create John Doe --role=admin
 
   \033[36m# Run with flags\033[0m
-  directive cache:clear --force
+  ./vendor/bin/directive cache:clear --force
 
   \033[36m# List all directives\033[0m
-  directive --list
+  ./vendor/bin/directive --list
 
 \033[1;32mCREATE YOUR OWN DIRECTIVE:\033[0m
   1. Create a file in \033[33mapp/Directives/\033[0m
@@ -42,7 +42,7 @@ class DirectiveRendererService
   3. Implement \033[33mgetSignature()\033[0m, \033[33mgetDescription()\033[0m and \033[33mexecute()\033[0m
 
 \033[1;32mFOR MORE INFORMATION:\033[0m
-  Documentation: https://github.com/andy-defer/best-practices
+  Documentation: https://github.com/andydefer/laravel-directive
 
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
 
@@ -57,15 +57,15 @@ HELP;
 
         $lines = [
             "\n\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m",
-            "\033[1;32m✅ Available Directives (".$directives->count().")\033[0m",
+            "\033[1;32m✅ Available Directives (" . $directives->count() . ")\033[0m",
             "\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m",
             sprintf("\033[1;37m%-25s \033[1;36m%s\033[0m", 'Signature', 'Description'),
-            "\033[90m".str_repeat('─', 70)."\033[0m",
+            "\033[90m" . str_repeat('─', 70) . "\033[0m",
         ];
 
         foreach ($directives as $directive) {
             $aliases = $directive->aliases->count() > 0
-                ? ' ('.implode(', ', $directive->aliases->toArray()).')'
+                ? ' (' . implode(', ', $directive->aliases->toArray()) . ')'
                 : '';
 
             $lines[] = sprintf(
@@ -77,8 +77,8 @@ HELP;
         }
 
         $lines[] = "\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m";
-        $lines[] = "\n\033[90m💡 Usage: directive <signature> [arguments] [--options]\033[0m";
-        $lines[] = "\033[90m📚 Run 'directive --help' for more information\033[0m\n";
+        $lines[] = "\n\033[90m💡 Usage: ./vendor/bin/directive <signature> [arguments] [--options]\033[0m";
+        $lines[] = "\033[90m📚 Run './vendor/bin/directive --help' for more information\033[0m\n";
 
         return implode("\n", $lines);
     }
@@ -99,9 +99,9 @@ HELP;
 \033[1;32m📝 Create a file \033[33mapp/Directives/HelloDirective.php\033[0m
 
 \033[1;32m🚀 Run your directive:\033[0m
-  php directive hello "John Doe"
+  ./vendor/bin/directive hello "John Doe"
 
-\033[90m💡 Tip: Run 'directive --list' after creating your directive to see it here!\033[0m
+\033[90m💡 Tip: Run './vendor/bin/directive --list' after creating your directive to see it here!\033[0m
 
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
 
@@ -115,7 +115,7 @@ EMPTY;
 \033[31m✗ Directive '\033[1;33m{$signature}\033[0m\033[31m' not found\033[0m
 
 \033[90m💡 Suggestions:\033[0m
-  • Run \033[33mdirective --list\033[0m to see available directives
+  • Run \033[33m./vendor/bin/directive --list\033[0m to see available directives
   • Check the spelling of the directive name
   • Make sure the directive file exists in \033[33mapp/Directives/\033[0m
   • Run \033[33mcomposer dump-autoload\033[0m if you just added a new directive

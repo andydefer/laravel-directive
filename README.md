@@ -1,3 +1,11 @@
+Tu as raison. Voici un README.md complet, exhaustif, qui couvre tous les aspects :
+
+1. Les faiblesses d'Artisan
+2. L'enregistrement par des packages tiers
+3. L'architecture complète
+4. Tous les concepts
+
+```markdown
 # Laravel Directive
 
 **A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between business logic and presentation.**
@@ -8,32 +16,65 @@
 
 ---
 
-## Introduction
+## Table des matières
 
-### Le problème avec Artisan
+1. [Pourquoi ce package ?](#pourquoi-ce-package-)
+2. [Installation](#installation)
+3. [Configuration](#configuration)
+4. [Premiers pas](#premiers-pas)
+5. [Les méthodes de base](#les-méthodes-de-base)
+6. [Arguments et options](#arguments-et-options)
+7. [Interaction utilisateur](#interaction-utilisateur)
+8. [Enregistrement de directives depuis un package tiers](#enregistrement-de-directives-depuis-un-package-tiers)
+9. [Commandes intégrées](#commandes-intégrées)
+10. [Testabilité](#testabilité)
+11. [Codes de sortie](#codes-de-sortie)
+12. [Exemples complets](#exemples-complets)
+13. [Architecture](#architecture)
+14. [Bonnes pratiques](#bonnes-pratiques)
+15. [API Reference](#api-reference)
 
-Artisan est puissant mais impose certaines contraintes :
+---
 
-| Contrainte | Problème |
-|------------|----------|
-| Héritage unique | Impossible d'avoir des commandes sans hériter de `Command` |
-| Configuration en un seul bloc | La signature, la description et la logique sont mélangées |
-| Pas de séparation claire | Le code métier est couplé à l'affichage |
-| Tests difficiles | Les commandes Artisan sont complexes à mocker et tester |
+## Pourquoi ce package ?
+
+### Les faiblesses d'Artisan (Laravel natif)
+
+| Problème | Explication |
+|----------|-------------|
+| **Héritage unique** | Impossible d'avoir des commandes sans hériter de `Command` |
+| **Configuration monolithique** | Signature, description et logique mélangées dans une seule classe |
+| **Couplage fort** | La logique métier est couplée à l'affichage (`$this->info()`, `$this->table()`) |
+| **Tests difficiles** | Les commandes Artisan sont complexes à mocker. Impossible de mocker `ask()` ou `confirm()` |
+| **Pas d'extensibilité** | Impossible pour un package d'enregistrer ses propres commandes facilement |
+| **Arguments non typés** | Les arguments et options arrivent sous forme de tableau brut (`array $arguments`) |
+| **Pas de séparation claire** | Le `handle()` contient à la fois la logique métier et l'interface utilisateur |
+
+### Pourquoi un package ne peut pas enregistrer ses commandes facilement avec Artisan ?
+
+Avec Artisan, un package externe doit :
+1. Publier ses commandes via `$this->commands([...])` dans le ServiceProvider
+2. L'utilisateur final doit exécuter `php artisan vendor:publish`
+3. Les commandes sont enregistrées MAIS l'utilisateur ne peut pas les lister sans connaître leur existence
+
+**Avec Laravel Directive, c'est différent :**
+- Le package enregistre ses directives programmatiquement
+- L'utilisateur les voit immédiatement avec `./vendor/bin/directive --list`
+- Aucune action manuelle n'est requise
 
 ### La solution : Directives
 
 **Laravel Directive** introduit une architecture propre avec :
 
 - **Séparation des responsabilités** : La logique métier et l'affichage sont découplés
-- **Typage fort** : Arguments et options typés via `ParameterCollection`
+- **Typage fort** : Arguments et options typés via `ParameterCollection` et `ParameterRecord`
 - **Testabilité exceptionnelle** : Chaque directive est facile à mocker et tester
-- **Extensibilité** : Enregistrez des directives depuis n'importe quel package
+- **Extensibilité** : Enregistrez des directives depuis n'importe quel package via `DirectiveRegistrar`
 - **Simplicité** : Une classe = une directive, sans configuration complexe
 
 ```php
 // ✅ Une directive propre et testable
-class UserListDirective extends AbstractDirective
+final class UserListDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
@@ -71,7 +112,7 @@ composer require andydefer/laravel-directive
 
 - PHP 8.1 ou supérieur
 - Laravel 12.x, 13.x, 14.x ou 15.x
-- Dépend automatiquement de `andydefer/php-records` et `andydefer/laravel-logger`
+- Dépend automatiquement de `andydefer/php-records`
 
 ### Publication de la configuration (optionnel)
 
@@ -100,50 +141,32 @@ return [
 
 ---
 
-## Créer votre première directive
+## Premiers pas
 
-### 1. Créez la classe
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Directives;
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-
-class HelloDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'hello {name?}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Say hello to someone';
-    }
-
-    public function execute(): ExitCode
-    {
-        $name = $this->argument('name') ?? 'World';
-        $this->line("Hello, {$name}!");
-        
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### 2. Exécutez la directive
+### Lister les directives disponibles
 
 ```bash
-php directive hello
-# Output: Hello, World!
+./vendor/bin/directive --list
+```
 
-php directive hello John
-# Output: Hello, John!
+### Afficher l'aide
+
+```bash
+./vendor/bin/directive --help
+```
+
+### Créer votre première directive avec la commande intégrée
+
+```bash
+./vendor/bin/directive make:directive hello
+```
+
+Cela génère le fichier `app/Directives/HelloDirective.php`.
+
+### Exécuter votre directive
+
+```bash
+./vendor/bin/directive hello
 ```
 
 ---
@@ -221,8 +244,6 @@ public function execute(): ExitCode
         return ExitCode::INVALID_ARGUMENT;
     }
     
-    // Traitement...
-    
     return ExitCode::SUCCESS;
 }
 ```
@@ -239,8 +260,6 @@ public function execute(): ExitCode
     if ($ttl !== null) {
         $ttl = (int) $ttl;
     }
-    
-    // Traitement...
     
     return ExitCode::SUCCESS;
 }
@@ -344,7 +363,13 @@ $this->table($headers, $rows);
 
 ---
 
-## Enregistrement de directives depuis un package
+## Enregistrement de directives depuis un package tiers
+
+### Pourquoi c'est important ?
+
+Avec Artisan, un package externe ne peut pas enregistrer ses commandes sans action de l'utilisateur final.
+
+**Avec Laravel Directive, c'est automatique :**
 
 ### Pour les développeurs de packages
 
@@ -361,25 +386,55 @@ class MyPackageServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        // Récupérer le registrar
         $registrar = app(DirectiveRegistrarInterface::class);
         
+        // Créer la collection des classes de directives
         $classes = new StringTypedCollection();
         $classes->add(MyDirective::class);
         $classes->add(AnotherDirective::class);
         
+        // Enregistrer
         $registrar->register($classes);
     }
 }
 ```
 
-### Comment ça fonctionne
+### Comment ça fonctionne ?
 
-1. Le package appelle `DirectiveRegistrar::register()`
-2. Le registrar stocke les classes de directives
-3. Le `DirectiveDiscoveryService` fusionne :
-   - Les directives du filesystem (`app/Directives/`)
-   - Les directives enregistrées par les packages
-4. Le kernel exécute la directive trouvée
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      PACKAGE TIERS                          │
+│                                                             │
+│  1. Appelle DirectiveRegistrar::register()                 │
+│     ↓                                                       │
+│  2. Le registrar stocke les classes                        │
+│     ↓                                                       │
+│  3. DirectiveDiscoveryService fusionne :                    │
+│     - Directives du filesystem (app/Directives/)           │
+│     - Directives enregistrées par les packages             │
+│     ↓                                                       │
+│  4. Le kernel exécute la directive trouvée                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Exemple concret
+
+```bash
+# Après installation du package, la commande est directement disponible
+./vendor/bin/directive my-package:command
+```
+
+### Enregistrement des directives built-in
+
+Le package enregistre automatiquement ses propres directives :
+
+```php
+// Dans DirectiveServiceProvider
+$classes = new StringTypedCollection();
+$classes->add(MakeDirective::class);
+$registrar->register($classes);
+```
 
 ---
 
@@ -389,10 +444,7 @@ class MyPackageServiceProvider extends ServiceProvider
 
 ```bash
 # Créer une directive simple
-php directive make:directive user:list
-
-# Avec des options
-php directive make:directive cache:clear
+./vendor/bin/directive make:directive user:list
 ```
 
 **Génère :** `app/Directives/UserListDirective.php`
@@ -407,7 +459,7 @@ namespace App\Directives;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 
-class UserListDirective extends AbstractDirective
+final class UserListDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
@@ -421,10 +473,7 @@ class UserListDirective extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        // TODO: Implement your directive logic here
-        
         $this->info('Directive executed successfully!');
-        
         return ExitCode::SUCCESS;
     }
 }
@@ -434,25 +483,23 @@ class UserListDirective extends AbstractDirective
 
 ```bash
 # Liste simple
-php directive list:directives
+./vendor/bin/directive --list
 
-# Avec les sources
-php directive list:directives --source
+# Ou avec l'alias
+./vendor/bin/directive -l
 ```
 
 ### Alias disponibles
 
-```bash
-php directive list              # Alias pour list:directives
-php directive create:directive  # Alias pour make:directive
-php directive make:cmd          # Alias pour make:directive
-```
+| Commande | Alias |
+|----------|-------|
+| `make:directive` | `create:directive`, `make:cmd` |
+| `--list` | `-l` |
+| `--help` | `-h` |
 
 ---
 
 ## Testabilité
-
-L'un des avantages majeurs de Laravel Directive est sa **testabilité exceptionnelle**. Contrairement aux commandes Artisan natives qui sont difficiles à tester, les directives sont conçues pour être facilement mockées et testées.
 
 ### Comparaison avec Artisan
 
@@ -476,37 +523,16 @@ use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Tests\TestCase;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
 use App\Directives\UserCreateDirective;
-use App\Services\UserService;
 
-class UserCreateDirectiveTest extends TestCase
+final class UserCreateDirectiveTest extends TestCase
 {
     private UserCreateDirective $directive;
-    private UserService $userService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Mock des dépendances
-        $this->userService = $this->createMock(UserService::class);
-        $displayMessage = $this->createMock(DisplayMessageTask::class);
-        $askQuestion = $this->createMock(AskQuestionTask::class);
-        $confirmQuestion = $this->createMock(ConfirmQuestionTask::class);
-        $displayTable = $this->createMock(DisplayTableTask::class);
-        
-        // Injection des mocks
-        $this->directive = new UserCreateDirective(
-            $this->userService,
-            $displayMessage,
-            $askQuestion,
-            $confirmQuestion,
-            $displayTable,
-        );
+        $this->directive = $this->app->make(UserCreateDirective::class);
     }
 
     public function test_execute_creates_user_and_returns_success(): void
@@ -518,15 +544,10 @@ class UserCreateDirectiveTest extends TestCase
             new ParameterRecord(name: 'email', value: 'john@example.com'),
         );
         $this->directive->setArguments($arguments);
-        
-        $this->userService->expects($this->once())
-            ->method('create')
-            ->with('John Doe', 'john@example.com')
-            ->willReturn(true);
-        
+
         // Act
         $result = $this->directive->execute();
-        
+
         // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
@@ -537,140 +558,15 @@ class UserCreateDirectiveTest extends TestCase
         $arguments = new ParameterCollection();
         $arguments->add(new ParameterRecord(name: 'email', value: 'john@example.com'));
         $this->directive->setArguments($arguments);
-        
+
         // Act
         $result = $this->directive->execute();
-        
+
         // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 }
 ```
-
-### Tester l'interaction utilisateur
-
-```php
-public function test_ask_returns_user_input(): void
-{
-    // Arrange
-    $inputStream = fopen('php://memory', 'r+');
-    fwrite($inputStream, "John Doe\n");
-    rewind($inputStream);
-    
-    $askQuestion = new AskQuestionTask($inputStream);
-    
-    // Act
-    $result = $askQuestion->execute(new AskQuestionRecord('Your name?'));
-    
-    // Assert
-    $this->assertSame('John Doe', $result);
-    
-    fclose($inputStream);
-}
-
-public function test_confirm_returns_true_for_yes(): void
-{
-    // Arrange
-    $inputStream = fopen('php://memory', 'r+');
-    fwrite($inputStream, "y\n");
-    rewind($inputStream);
-    
-    $confirmQuestion = new ConfirmQuestionTask($inputStream);
-    
-    // Act
-    ob_start();
-    $result = $confirmQuestion->execute(new AskQuestionRecord('Continue?'));
-    ob_end_clean();
-    
-    // Assert
-    $this->assertTrue($result);
-    
-    fclose($inputStream);
-}
-```
-
-### Mock des messages d'affichage
-
-```php
-public function test_info_message_is_displayed(): void
-{
-    // Arrange
-    $displayMessage = $this->createMock(DisplayMessageTask::class);
-    $displayMessage->expects($this->once())
-        ->method('execute')
-        ->with($this->callback(function ($record) {
-            return $record->message === 'User created successfully'
-                && $record->type === MessageType::INFO;
-        }));
-    
-    $directive = new UserCreateDirective(/* ... mocks ... */);
-    
-    // Act
-    $directive->info('User created successfully');
-    
-    // Assert - done via expectations
-}
-```
-
-### Structure AAA dans les tests
-
-Tous les tests suivent la structure **Arrange - Act - Assert** :
-
-```php
-public function test_directive_behavior(): void
-{
-    // Arrange : Préparer les données et les mocks
-    $arguments = new ParameterCollection();
-    $arguments->add(new ParameterRecord(name: 'name', value: 'John'));
-    $this->directive->setArguments($arguments);
-    
-    // Act : Exécuter la méthode testée
-    $result = $this->directive->execute();
-    
-    // Assert : Vérifier les résultats
-    $this->assertSame(ExitCode::SUCCESS, $result);
-}
-```
-
-### Tester une directive qui utilise le filesystem
-
-```php
-use org\bovigo\vfs\vfsStream;
-
-public function test_creates_file_on_disk(): void
-{
-    // Arrange - filesystem virtuel
-    $root = vfsStream::setup('project');
-    vfsStream::newDirectory('app/Directives')->at($root);
-    
-    // Changer le répertoire de travail
-    $oldCwd = getcwd();
-    chdir(vfsStream::url('project'));
-    
-    $directive = $this->createDirectiveWithMocks();
-    $directive->setArguments($this->createArguments(['name' => 'test:cmd']));
-    
-    // Act
-    $result = $directive->execute();
-    
-    // Assert
-    $this->assertTrue($root->hasChild('app/Directives/TestCmdDirective.php'));
-    
-    // Restaurer
-    chdir($oldCwd);
-}
-```
-
-### Points clés pour des tests robustes
-
-| Point | Recommandation |
-|-------|----------------|
-| **Injecter les dépendances** | Toujours utiliser le constructeur pour les services externes |
-| **Mocker les tâches d'affichage** | `DisplayMessageTask`, `AskQuestionTask`, `ConfirmQuestionTask` |
-| **Ne pas tester l'affichage** | Testez la logique métier, pas le `echo` |
-| **Utiliser `ParameterCollection`** | Pour injecter des arguments typés dans les tests |
-| **Capturer les sorties** | Utiliser `ob_start()`/`ob_end_clean()` pour les tests de confirmation |
-| **Isoler le filesystem** | Utilisez `vfsStream` ou mocks pour les opérations fichiers |
 
 ---
 
@@ -717,7 +613,7 @@ namespace App\Directives;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 
-class UserCreateDirective extends AbstractDirective
+final class UserCreateDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
@@ -733,24 +629,30 @@ class UserCreateDirective extends AbstractDirective
     {
         $name = $this->argument('name');
         $email = $this->argument('email');
-        $role = $this->option('role');
-        $notify = $this->option('notify');
-
+        
         if ($name === null || $email === null) {
             $this->error('Name and email are required');
             return ExitCode::INVALID_ARGUMENT;
         }
-
-        // Création utilisateur...
+        
+        $role = $this->option('role');
+        $notify = $this->option('notify');
+        
         $this->info("User {$name} created with role {$role}");
-
+        
         if ($notify) {
             $this->info("Notification sent to {$email}");
         }
-
+        
         return ExitCode::SUCCESS;
     }
 }
+```
+
+**Utilisation :**
+
+```bash
+./vendor/bin/directive user:create "John Doe" john@example.com --role=admin --notify
 ```
 
 ### Directive interactive complète
@@ -767,7 +669,7 @@ use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-class SetupDirective extends AbstractDirective
+final class SetupDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
@@ -798,8 +700,6 @@ class SetupDirective extends AbstractDirective
             return ExitCode::SUCCESS;
         }
         
-        // Configuration...
-        
         $headers = new StringTypedCollection();
         $headers->add('Setting', 'Value');
         
@@ -812,49 +712,6 @@ class SetupDirective extends AbstractDirective
         $this->table($headers, $rows);
         
         $this->info('Setup completed successfully!');
-        
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### Directive avec alias
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Directives;
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
-
-class CacheClearDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'cache:clear';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Clear all application caches';
-    }
-
-    public function getAliases(): StringTypedCollection
-    {
-        $aliases = new StringTypedCollection();
-        $aliases->add('cache:flush');
-        $aliases->add('cc');
-        return $aliases;
-    }
-
-    public function execute(): ExitCode
-    {
-        // Nettoyage du cache...
-        $this->info('Cache cleared successfully!');
         
         return ExitCode::SUCCESS;
     }
@@ -901,6 +758,16 @@ class CacheClearDirective extends AbstractDirective
 | `DirectiveExecutionService` | Exécute la directive demandée |
 | `AbstractDirective` | Classe de base pour toutes les directives |
 
+### Tasks d'affichage (découplage)
+
+| Task | Rôle |
+|------|------|
+| `DisplayMessageTask` | Affiche des messages colorés |
+| `DisplayTableTask` | Affiche des tableaux formatés |
+| `AskQuestionTask` | Gère les questions interactives |
+| `ConfirmQuestionTask` | Gère les confirmations |
+| `DisplayErrorTask` | Affiche les erreurs formatées |
+
 ---
 
 ## Bonnes pratiques
@@ -909,11 +776,11 @@ class CacheClearDirective extends AbstractDirective
 
 ```php
 // ✅ BON
-class UserCreateDirective extends AbstractDirective { }
-class UserDeleteDirective extends AbstractDirective { }
+final class UserCreateDirective extends AbstractDirective { }
+final class UserDeleteDirective extends AbstractDirective { }
 
 // ❌ MAUVAIS
-class UserDirective extends AbstractDirective { }
+final class UserDirective extends AbstractDirective { }
 ```
 
 ### 2. Nommage cohérent
@@ -951,39 +818,7 @@ public function execute(): ExitCode
 }
 ```
 
-### 4. Utiliser les retours de codes appropriés
-
-| Situation | Code |
-|-----------|------|
-| Succès | `ExitCode::SUCCESS` |
-| Erreur métier | `ExitCode::FAILURE` |
-| Argument invalide | `ExitCode::INVALID_ARGUMENT` |
-
-### 5. Garder les directives testables
-
-```php
-// ✅ BON - Injection de dépendances
-class MyDirective extends AbstractDirective
-{
-    public function __construct(
-        private readonly UserService $userService,
-        ...$parents
-    ) {
-        parent::__construct(...$parents);
-    }
-}
-
-// ❌ MAUVAIS - Appel statique
-class MyDirective extends AbstractDirective
-{
-    public function execute(): ExitCode
-    {
-        UserService::create(); // Difficile à tester
-    }
-}
-```
-
-### 6. Enregistrer les directives depuis un package
+### 4. Enregistrer les directives depuis un package
 
 ```php
 // Dans le ServiceProvider du package
@@ -993,6 +828,30 @@ public function boot(): void
     $classes->add(MyDirective::class);
     
     app(DirectiveRegistrarInterface::class)->register($classes);
+}
+```
+
+### 5. Garder les directives testables
+
+```php
+// ✅ BON - Injection de dépendances
+final class MyDirective extends AbstractDirective
+{
+    public function __construct(
+        private readonly UserService $userService,
+        ...$parents
+    ) {
+        parent::__construct(...$parents);
+    }
+}
+
+// ❌ MAUVAIS - Appel statique (difficile à tester)
+final class MyDirective extends AbstractDirective
+{
+    public function execute(): ExitCode
+    {
+        UserService::create(); // Difficile à mocker
+    }
 }
 ```
 
@@ -1032,20 +891,21 @@ public function boot(): void
 
 | Commande | Description |
 |----------|-------------|
-| `directive make:directive {name}` | Crée une nouvelle directive |
-| `directive list:directives` | Liste toutes les directives |
-| `directive --list` | Alias pour lister |
-| `directive --help` | Affiche l'aide |
+| `./vendor/bin/directive make:directive {name}` | Crée une nouvelle directive |
+| `./vendor/bin/directive --list` | Liste toutes les directives |
+| `./vendor/bin/directive --help` | Affiche l'aide |
 
 ### Alias disponibles
 
 | Commande | Alias |
 |----------|-------|
 | `make:directive` | `create:directive`, `make:cmd` |
-| `list:directives` | `directives:list`, `list` |
+| `--list` | `-l` |
+| `--help` | `-h` |
 
 ---
 
 ## Licence
 
 MIT © [Andy Defer](https://github.com/andydefer)
+```

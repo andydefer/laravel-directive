@@ -26,37 +26,55 @@ if (!$autoloadFound) {
     exit(1);
 }
 
-use AndyDefer\Directive\Collections\TypedRecords;
-use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveKernel;
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
-use AndyDefer\Directive\Records\DirectiveExecutionRecord;
-use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\Directive\Services\DirectiveRegistrar;
+use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
+use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Tasks\AskQuestionTask;
 use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
 use AndyDefer\Directive\Tasks\DisplayErrorTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
 use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 
 $container = new Container();
 
-$container->singleton(DisplayMessageTask::class);
-$container->singleton(AskQuestionTask::class);
-$container->singleton(ConfirmQuestionTask::class);
-$container->singleton(DisplayTableTask::class);
-$container->singleton(DisplayErrorTask::class);
+$container->singleton(DisplayMessageTask::class, function () {
+    return new DisplayMessageTask();
+});
+$container->singleton(AskQuestionTask::class, function () {
+    return new AskQuestionTask();
+});
+$container->singleton(ConfirmQuestionTask::class, function () {
+    return new ConfirmQuestionTask();
+});
+$container->singleton(DisplayTableTask::class, function () {
+    return new DisplayTableTask();
+});
+$container->singleton(DisplayErrorTask::class, function () {
+    return new DisplayErrorTask();
+});
 
 $projectRoot = getcwd();
 $directivesPath = $projectRoot . '/app/Directives';
 
+// Lire la configuration si elle existe, sans utiliser app_path()
 if (file_exists($projectRoot . '/config/directive.php')) {
     $config = require $projectRoot . '/config/directive.php';
-    $directivesPath = $config['path'] ?? $directivesPath;
+    if (isset($config['path']) && is_string($config['path'])) {
+        // Si le chemin commence par app_path(), le remplacer
+        $path = $config['path'];
+        if (str_starts_with($path, 'app_path()')) {
+            $path = str_replace('app_path()', $projectRoot . '/app', $path);
+        }
+        $directivesPath = $path;
+    }
 }
 
 $directiveConfig = DirectiveConfig::default()->withDirectivesPath($directivesPath);
@@ -64,7 +82,14 @@ $directiveConfig = DirectiveConfig::default()->withDirectivesPath($directivesPat
 $factory = new ContainerDirectiveFactory($container);
 $parser = new DirectiveParserService();
 $hydrator = new DirectiveHydratorService($factory);
-$discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator);
+$registrar = new DirectiveRegistrar();
+
+// Enregistrer la directive make:directive
+$classes = new StringTypedCollection();
+$classes->add(\AndyDefer\Directive\Directives\MakeDirective::class);
+$registrar->register($classes);
+
+$discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $registrar);
 $renderer = new DirectiveRendererService();
 $displayMessage = $container->make(DisplayMessageTask::class);
 $displayError = $container->make(DisplayErrorTask::class);
@@ -76,7 +101,6 @@ $executionService = new DirectiveExecutionService(
     $renderer,
     $displayMessage,
     $displayError,
-    null,
 );
 
 $kernel = new DirectiveKernel($executionService);
