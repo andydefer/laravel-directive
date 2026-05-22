@@ -10,146 +10,117 @@ use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
 
 final class ConfirmQuestionTaskTest extends TestCase
 {
-    private ConfirmQuestionTask $task;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->task = new ConfirmQuestionTask;
-    }
-
     public function test_execute_returns_true_for_y(): void
     {
         $record = new AskQuestionRecord('Continue?');
 
-        $input = fopen('php://memory', 'r+');
-        fwrite($input, "y\n");
-        rewind($input);
+        $inputStream = fopen('php://memory', 'r+');
+        fwrite($inputStream, "y\n");
+        rewind($inputStream);
 
-        $task = new class extends ConfirmQuestionTask
-        {
-            public $testInput;
+        $task = new ConfirmQuestionTask($inputStream);
 
-            public function execute(AskQuestionRecord $record): bool
-            {
-                echo $record->question . ' (y/n) ';
-                $answer = strtolower(trim(fgets($this->testInput)));
-
-                return in_array($answer, ['y', 'yes'], true);
-            }
-        };
-
-        $task->testInput = $input;
+        ob_start();
         $result = $task->execute($record);
+        ob_end_clean();
 
         $this->assertTrue($result);
+
+        fclose($inputStream);
     }
 
     public function test_execute_returns_true_for_yes(): void
     {
         $record = new AskQuestionRecord('Continue?');
 
-        $input = fopen('php://memory', 'r+');
-        fwrite($input, "yes\n");
-        rewind($input);
+        $inputStream = fopen('php://memory', 'r+');
+        fwrite($inputStream, "yes\n");
+        rewind($inputStream);
 
-        $task = new class extends ConfirmQuestionTask
-        {
-            public $testInput;
+        $task = new ConfirmQuestionTask($inputStream);
 
-            public function execute(AskQuestionRecord $record): bool
-            {
-                echo $record->question . ' (y/n) ';
-                $answer = strtolower(trim(fgets($this->testInput)));
-
-                return in_array($answer, ['y', 'yes'], true);
-            }
-        };
-
-        $task->testInput = $input;
+        ob_start();
         $result = $task->execute($record);
+        ob_end_clean();
 
         $this->assertTrue($result);
+
+        fclose($inputStream);
     }
 
     public function test_execute_returns_false_for_n(): void
     {
         $record = new AskQuestionRecord('Continue?');
 
-        $input = fopen('php://memory', 'r+');
-        fwrite($input, "n\n");
-        rewind($input);
+        $inputStream = fopen('php://memory', 'r+');
+        fwrite($inputStream, "n\n");
+        rewind($inputStream);
 
-        $task = new class extends ConfirmQuestionTask
-        {
-            public $testInput;
+        $task = new ConfirmQuestionTask($inputStream);
 
-            public function execute(AskQuestionRecord $record): bool
-            {
-                echo $record->question . ' (y/n) ';
-                $answer = strtolower(trim(fgets($this->testInput)));
-
-                return in_array($answer, ['y', 'yes'], true);
-            }
-        };
-
-        $task->testInput = $input;
+        ob_start();
         $result = $task->execute($record);
+        ob_end_clean();
 
         $this->assertFalse($result);
+
+        fclose($inputStream);
     }
 
     public function test_execute_returns_false_for_no(): void
     {
         $record = new AskQuestionRecord('Continue?');
 
-        $input = fopen('php://memory', 'r+');
-        fwrite($input, "no\n");
-        rewind($input);
+        $inputStream = fopen('php://memory', 'r+');
+        fwrite($inputStream, "no\n");
+        rewind($inputStream);
 
-        $task = new class extends ConfirmQuestionTask
-        {
-            public $testInput;
+        $task = new ConfirmQuestionTask($inputStream);
 
-            public function execute(AskQuestionRecord $record): bool
-            {
-                echo $record->question . ' (y/n) ';
-                $answer = strtolower(trim(fgets($this->testInput)));
-
-                return in_array($answer, ['y', 'yes'], true);
-            }
-        };
-
-        $task->testInput = $input;
+        ob_start();
         $result = $task->execute($record);
+        ob_end_clean();
 
         $this->assertFalse($result);
+
+        fclose($inputStream);
     }
 
     public function test_execute_returns_false_for_invalid_input(): void
     {
         $record = new AskQuestionRecord('Continue?');
 
-        $input = fopen('php://memory', 'r+');
-        fwrite($input, "maybe\n");
-        rewind($input);
+        $inputStream = fopen('php://memory', 'r+');
+        fwrite($inputStream, "maybe\n");
+        rewind($inputStream);
 
-        $task = new class extends ConfirmQuestionTask
-        {
-            public $testInput;
+        $task = new ConfirmQuestionTask($inputStream);
 
-            public function execute(AskQuestionRecord $record): bool
-            {
-                echo $record->question . ' (y/n) ';
-                $answer = strtolower(trim(fgets($this->testInput)));
-
-                return in_array($answer, ['y', 'yes'], true);
-            }
-        };
-
-        $task->testInput = $input;
+        ob_start();
         $result = $task->execute($record);
+        ob_end_clean();
 
         $this->assertFalse($result);
+
+        fclose($inputStream);
+    }
+
+    public function test_execute_returns_true_for_y_case_insensitive(): void
+    {
+        $record = new AskQuestionRecord('Continue?');
+
+        $inputStream = fopen('php://memory', 'r+');
+        fwrite($inputStream, "Y\n");
+        rewind($inputStream);
+
+        $task = new ConfirmQuestionTask($inputStream);
+
+        ob_start();
+        $result = $task->execute($record);
+        ob_end_clean();
+
+        $this->assertTrue($result);
+
+        fclose($inputStream);
     }
 }

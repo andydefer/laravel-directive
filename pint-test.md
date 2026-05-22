@@ -1,5 +1,5 @@
 # Pint Formatting Test Report
-*Generated: ven. 22 mai 2026 14:04:58 WAT*
+*Generated: ven. 22 mai 2026 14:12:20 WAT*
 
 
   ⨯..⨯⨯..⨯....⨯...⨯⨯..⨯.⨯⨯.⨯⨯.⨯⨯⨯⨯⨯....⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯.⨯⨯.⨯
@@ -29,7 +29,7 @@
   ⨯ tests/Fixtures/Directives/InvalidClass.php                                                                                                              blank_line_after_namespace  
   ⨯ tests/Fixtures/Directives/TestEchoDirective.php                                                                                                               new_with_parentheses  
   ⨯ tests/TestCase.php                                                                                                                                                    concat_space  
-  ⨯ tests/Unit/AbstractDirectiveTest.php                                                                            class_attributes_separation, new_with_parentheses, ordered_imports  
+  ⨯ tests/Unit/AbstractDirectiveTest.php                                                         class_attributes_separation, new_with_parentheses, no_unused_imports, ordered_imports  
   ⨯ tests/Unit/Collections/ParameterCollectionTest.php                                                                                                            new_with_parentheses  
   ⨯ tests/Unit/Enums/DirectiveEventTypeTest.php                                                                                                                        ordered_imports  
   ⨯ tests/Unit/Enums/ExitCodeTest.php                                                                                                                                  ordered_imports  
@@ -38,6 +38,6 @@
   ⨯ tests/Unit/Services/DirectiveHydratorServiceTest.php class_attributes_separation, new_with_parentheses, trailing_comma_in_multiline, no_unused_imports, blank_line_before_stateme…  
   ⨯ tests/Unit/Services/DirectiveParserServiceTest.php                                                                        new_with_parentheses, no_unused_imports, ordered_imports  
   ⨯ tests/Unit/Tasks/AskQuestionTaskTest.php                                                                                                                           ordered_imports  
-  ⨯ tests/Unit/Tasks/ConfirmQuestionTaskTest.php                                                                      class_definition, concat_space, braces_position, ordered_imports  
+  ⨯ tests/Unit/Tasks/ConfirmQuestionTaskTest.php                                                                                                                       ordered_imports  
   ⨯ tests/Unit/Tasks/DisplayTableTaskTest.php                                                                                                    new_with_parentheses, ordered_imports  
 

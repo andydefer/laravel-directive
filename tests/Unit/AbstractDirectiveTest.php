@@ -10,6 +10,7 @@ use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Enums\MessageType;
 use AndyDefer\Directive\Records\AskQuestionRecord;
+use AndyDefer\Directive\Records\ConfirmQuestionRecord;
 use AndyDefer\Directive\Records\DisplayMessageRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Tasks\AskQuestionTask;
