@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Directive\Unit\Enums;
 
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Enums\DirectiveEventType;
+use AndyDefer\Directive\Tests\TestCase;
 
 final class DirectiveEventTypeTest extends TestCase
 {

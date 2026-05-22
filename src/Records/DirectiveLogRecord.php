@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Records;
 
-use AndyDefer\Records\AbstractRecord;
 use AndyDefer\Directive\Enums\DirectiveEventType;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Records\AbstractRecord;
 
 final class DirectiveLogRecord extends AbstractRecord
 {

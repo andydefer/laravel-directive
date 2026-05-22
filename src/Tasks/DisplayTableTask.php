@@ -20,17 +20,17 @@ class DisplayTableTask
             return;
         }
 
-        echo $this->formatHeaderRow($record->headers, $widths) . "\n";
-        echo $this->formatSeparator($widths) . "\n";
+        echo $this->formatHeaderRow($record->headers, $widths)."\n";
+        echo $this->formatSeparator($widths)."\n";
 
         foreach ($record->rows as $row) {
-            echo $this->formatDataRow($row, $widths) . "\n";
+            echo $this->formatDataRow($row, $widths)."\n";
         }
     }
 
     private function calculateColumnWidths(DisplayTableRecord $record): WidthCollection
     {
-        $widths = new WidthCollection();
+        $widths = new WidthCollection;
         $headersArray = $record->headers->toArray();
         $columnCount = count($headersArray);
 
@@ -83,7 +83,7 @@ class DisplayTableTask
             $parts[] = str_pad($header, $width);
         }
 
-        return '| ' . implode(' | ', $parts) . ' |';
+        return '| '.implode(' | ', $parts).' |';
     }
 
     private function formatDataRow(RowCollection $row, WidthCollection $widths): string
@@ -96,7 +96,7 @@ class DisplayTableTask
             $parts[] = str_pad($formattedValue, $width);
         }
 
-        return '| ' . implode(' | ', $parts) . ' |';
+        return '| '.implode(' | ', $parts).' |';
     }
 
     private function formatValue(mixed $value): string
@@ -124,6 +124,6 @@ class DisplayTableTask
             $parts[] = str_repeat('-', $width);
         }
 
-        return '|-' . implode('-|-', $parts) . '-|';
+        return '|-'.implode('-|-', $parts).'-|';
     }
 }

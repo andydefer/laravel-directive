@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Records;
 
-use AndyDefer\Directive\Collections\TypedRecords;
 use AndyDefer\Records\AbstractRecord;
 use AndyDefer\Records\Collections\TypedCollection;
 

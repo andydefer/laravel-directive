@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Services\DirectiveRegistrar;
+use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\TestCase;
-use AndyDefer\Directive\Tests\Fixtures\Directives\TestPackageDirective;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class DirectiveRegistrarTest extends TestCase
@@ -38,13 +38,14 @@ final class DirectiveRegistrarTest extends TestCase
     {
         // Arrange
         $classes = new StringTypedCollection();
-        $classes->add(TestPackageDirective::class, TestPackageDirective::class . '2');
+        $classes->add(TestPackageDirective::class);
+        $classes->add('AndyDefer\Directive\Tests\Fixtures\Directives\AnotherTestDirective');
 
         // Act
         $this->registrar->register($classes);
 
-        // Assert
-        $this->assertSame(1, $this->registrar->count()); // Only valid classes
+        // Assert - Only TestPackageDirective is valid (the other doesn't exist)
+        $this->assertSame(1, $this->registrar->count());
     }
 
     public function test_register_ignores_nonexistent_classes(): void

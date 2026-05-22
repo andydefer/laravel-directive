@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Directive\Unit\Services;
 
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
@@ -18,7 +17,7 @@ use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Tasks\DisplayErrorTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
-use AndyDefer\Logger\Contracts\LoggerInterface;
+use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -33,7 +32,6 @@ final class DirectiveExecutionServiceTest extends TestCase
     private DirectiveRendererService&MockObject $renderer;
     private DisplayMessageTask&MockObject $displayMessage;
     private DisplayErrorTask&MockObject $displayError;
-    private LoggerInterface&MockObject $logger;
     private DirectiveExecutionService $service;
 
     protected function setUp(): void
@@ -46,7 +44,6 @@ final class DirectiveExecutionServiceTest extends TestCase
         $this->renderer = $this->createMock(DirectiveRendererService::class);
         $this->displayMessage = $this->createMock(DisplayMessageTask::class);
         $this->displayError = $this->createMock(DisplayErrorTask::class);
-        $this->logger = $this->createMock(LoggerInterface::class);
 
         $this->renderer->method('renderList')->willReturn('');
         $this->renderer->method('renderHelp')->willReturn('');
@@ -62,7 +59,6 @@ final class DirectiveExecutionServiceTest extends TestCase
             $this->renderer,
             $this->displayMessage,
             $this->displayError,
-            $this->logger,
         );
     }
 
@@ -74,6 +70,7 @@ final class DirectiveExecutionServiceTest extends TestCase
         foreach ($items as $item) {
             $collection->add($item);
         }
+
         return $collection;
     }
 
@@ -107,7 +104,6 @@ final class DirectiveExecutionServiceTest extends TestCase
             $this->renderer,
             $this->displayMessage,
             $this->displayError,
-            $this->logger,
         );
     }
 

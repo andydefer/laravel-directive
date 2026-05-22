@@ -17,7 +17,7 @@ class AskQuestionTask
 
     public function execute(AskQuestionRecord $record): string
     {
-        echo $record->question . ' ';
+        echo $record->question.' ';
 
         return trim(fgets($this->inputStream));
     }

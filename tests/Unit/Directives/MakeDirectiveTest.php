@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Directives;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Directives\MakeDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\ParameterRecord;
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Tasks\AskQuestionTask;
 use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
 use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Tests\TestCase;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
 #[AllowMockObjectsWithoutExpectations]

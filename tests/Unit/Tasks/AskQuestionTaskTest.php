@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Directive\Unit\Tasks;
 
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Records\AskQuestionRecord;
 use AndyDefer\Directive\Tasks\AskQuestionTask;
+use AndyDefer\Directive\Tests\TestCase;
 
 final class AskQuestionTaskTest extends TestCase
 {

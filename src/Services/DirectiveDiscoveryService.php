@@ -9,7 +9,6 @@ use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Contracts\DirectiveRegistrarInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 /**
  * Service responsible for discovering directives from multiple sources.
@@ -53,11 +52,17 @@ class DirectiveDiscoveryService
      */
     private function discoverFromFilesystem(TypedCollection $results): TypedCollection
     {
-        if (!is_dir($this->config->directivesPath)) {
+        $path = $this->config->directivesPath;
+
+        if ($path === '') {
             return $results;
         }
 
-        $files = glob($this->config->directivesPath . '/*.php');
+        if (!is_dir($path)) {
+            return $results;
+        }
+
+        $files = glob($path . '/*.php');
 
         if ($files === false) {
             return $results;

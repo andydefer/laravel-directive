@@ -6,9 +6,8 @@ namespace AndyDefer\Directive\Tests\Directive\Unit\Services;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ParameterType;
-use AndyDefer\Directive\Records\ParameterRecord;
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Services\DirectiveParserService;
+use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class DirectiveParserServiceTest extends TestCase
@@ -18,7 +17,7 @@ final class DirectiveParserServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveParserService();
+        $this->service = new DirectiveParserService;
     }
 
     // ==================== Parse Tests ====================
@@ -26,7 +25,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_arguments_only(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('John Doe', 'john@example.com');
 
         // Act
@@ -42,7 +41,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_long_options(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('John Doe', '--role=admin');
 
         // Act
@@ -57,7 +56,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_flag_option(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--force');
 
         // Act
@@ -71,7 +70,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_short_option(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('-v');
 
         // Act
@@ -85,7 +84,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_mixed_arguments_and_options(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('John', 'john@example.com', '--role=admin', '--active');
 
         // Act
@@ -102,7 +101,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_options_between_arguments(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('John', '--role=admin', 'john@example.com', '--active');
 
         // Act
@@ -119,7 +118,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_optional_argument(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('John');
 
         // Act
@@ -133,7 +132,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_missing_optional_argument(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
 
         // Act
         $result = $this->service->parse('user:create {name?}', $argv);
@@ -147,7 +146,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_option_without_value(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--role=');
 
         // Act
@@ -237,7 +236,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_to_result_converts_parsed_record_correctly(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('John', '--role=admin', '--active');
 
         // Act
@@ -255,7 +254,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_to_result_with_empty_parsed_record(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
 
         // Act
         $parsed = $this->service->parse('test:cmd', $argv);
@@ -271,7 +270,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_to_json_returns_valid_json(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('John', '--role=admin');
 
         // Act
@@ -293,7 +292,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_to_json_with_empty_parsed_record(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
 
         // Act
         $parsed = $this->service->parse('test:cmd', $argv);
@@ -312,7 +311,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_multiple_short_options(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('-v', '-f', '--verbose');
 
         // Act
@@ -328,7 +327,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_option_value_containing_equals(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--message=Hello=World');
 
         // Act
@@ -342,7 +341,7 @@ final class DirectiveParserServiceTest extends TestCase
     public function test_parse_with_false_option_value(): void
     {
         // Arrange
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--active=false');
 
         // Act

@@ -6,18 +6,17 @@ namespace AndyDefer\Directive\Tests\Directive\Unit;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\RowCollection;
-use AndyDefer\Directive\Records\ParameterRecord;
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Enums\MessageType;
 use AndyDefer\Directive\Records\AskQuestionRecord;
-use AndyDefer\Directive\Records\ConfirmQuestionRecord;
 use AndyDefer\Directive\Records\DisplayMessageRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
+use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Tasks\AskQuestionTask;
 use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
 use AndyDefer\Directive\Tasks\DisplayTableTask;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
+use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -26,9 +25,13 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class AbstractDirectiveTest extends TestCase
 {
     private DisplayMessageTask&MockObject $displayMessage;
+
     private AskQuestionTask&MockObject $askQuestion;
+
     private ConfirmQuestionTask&MockObject $confirmQuestion;
+
     private DisplayTableTask&MockObject $displayTable;
+
     private TestConcreteDirective $directive;
 
     protected function setUp(): void
@@ -53,7 +56,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_set_arguments_sets_arguments(): void
     {
         // Arrange
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(
             new ParameterRecord(name: 'name', value: 'John Doe'),
             new ParameterRecord(name: 'email', value: 'john@example.com'),
@@ -71,7 +74,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_argument_returns_null_for_unknown_key(): void
     {
         // Arrange
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $this->directive->setArguments($arguments);
 
         // Act
@@ -84,7 +87,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_argument_returns_null_when_value_is_boolean(): void
     {
         // Arrange
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'active', value: true));
         $this->directive->setArguments($arguments);
 
@@ -98,7 +101,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_set_arguments_returns_self_for_chaining(): void
     {
         // Arrange
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'name', value: 'John'));
 
         // Act
@@ -113,7 +116,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_set_options_sets_options(): void
     {
         // Arrange
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(
             new ParameterRecord(name: 'role', value: 'admin'),
             new ParameterRecord(name: 'active', value: true),
@@ -133,7 +136,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_option_returns_null_for_unknown_key(): void
     {
         // Arrange
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $this->directive->setOptions($options);
 
         // Act
@@ -146,7 +149,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_has_option_returns_true_when_option_exists(): void
     {
         // Arrange
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
         $this->directive->setOptions($options);
 
@@ -160,7 +163,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_has_option_returns_false_when_option_does_not_exist(): void
     {
         // Arrange
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
         $this->directive->setOptions($options);
 
@@ -174,7 +177,7 @@ final class AbstractDirectiveTest extends TestCase
     public function test_set_options_returns_self_for_chaining(): void
     {
         // Arrange
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
 
         // Act
@@ -305,11 +308,11 @@ final class AbstractDirectiveTest extends TestCase
     public function test_table_delegates_to_display_table_task(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John', 'john@example.com');
         $rows->add($row);
 

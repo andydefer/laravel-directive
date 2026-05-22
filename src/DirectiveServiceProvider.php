@@ -20,7 +20,6 @@ use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
 use AndyDefer\Directive\Tasks\DisplayErrorTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
 use AndyDefer\Directive\Tasks\DisplayTableTask;
-use AndyDefer\Logger\Contracts\LoggerInterface;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Support\ServiceProvider;
 
@@ -91,7 +90,6 @@ class DirectiveServiceProvider extends ServiceProvider
                 $app->make(DirectiveRendererService::class),
                 $app->make(DisplayMessageTask::class),
                 $app->make(DisplayErrorTask::class),
-                $app->make(LoggerInterface::class),
             );
         });
 

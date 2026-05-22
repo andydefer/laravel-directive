@@ -9,7 +9,6 @@ use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
-use AndyDefer\Records\Collections\TypedCollection;
 
 class DirectiveHydratorService
 {

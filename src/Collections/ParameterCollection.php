@@ -24,13 +24,12 @@ final class ParameterCollection extends TypedCollection
      *
      * Flat format: [value1, name1, value2, name2, ...]
      *
-     * @param TypedCollection $flat Flat arguments collection
-     *
+     * @param  TypedCollection  $flat  Flat arguments collection
      * @return self New collection with ParameterRecord objects
      */
     public static function fromFlatArguments(TypedCollection $flat): self
     {
-        $result = new self();
+        $result = new self;
         $items = $flat->toArray();
 
         for ($i = 0; $i < $flat->count(); $i += 2) {
@@ -50,13 +49,12 @@ final class ParameterCollection extends TypedCollection
      *
      * Flat format: [name1, value1, name2, value2, ...]
      *
-     * @param TypedCollection $flat Flat options collection
-     *
+     * @param  TypedCollection  $flat  Flat options collection
      * @return self New collection with ParameterRecord objects
      */
     public static function fromFlatOptions(TypedCollection $flat): self
     {
-        $result = new self();
+        $result = new self;
         $items = $flat->toArray();
 
         for ($i = 0; $i < $flat->count(); $i += 2) {
@@ -100,8 +98,7 @@ final class ParameterCollection extends TypedCollection
     /**
      * Get parameter value by name.
      *
-     * @param string $name Parameter name
-     *
+     * @param  string  $name  Parameter name
      * @return bool|string|int|null Value or null if not found
      */
     public function get(string $name): bool|string|int|null
@@ -118,8 +115,7 @@ final class ParameterCollection extends TypedCollection
     /**
      * Check if parameter exists.
      *
-     * @param string $name Parameter name
-     *
+     * @param  string  $name  Parameter name
      * @return bool True if exists
      */
     public function has(string $name): bool

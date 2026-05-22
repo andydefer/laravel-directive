@@ -22,9 +22,10 @@ final class MakeDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection();
+        $aliases = new StringTypedCollection;
         $aliases->add('create:directive');
         $aliases->add('make:cmd');
+
         return $aliases;
     }
 
@@ -35,6 +36,7 @@ final class MakeDirective extends AbstractDirective
             $this->error('Directive name is required');
             $this->line('Usage: directive make:directive <name>');
             $this->line('Example: directive make:directive user:list');
+
             return ExitCode::INVALID_ARGUMENT;
         }
 
@@ -43,16 +45,19 @@ final class MakeDirective extends AbstractDirective
 
         if (file_exists($filePath)) {
             $this->error("Directive already exists: {$filePath}");
+
             return ExitCode::FAILURE;
         }
 
-        if (!$this->createDirectiveDirectory()) {
+        if (! $this->createDirectiveDirectory()) {
             $this->error('Cannot create directives directory');
+
             return ExitCode::FAILURE;
         }
 
-        if (!$this->createDirectiveFile($filePath, $className, $name)) {
+        if (! $this->createDirectiveFile($filePath, $className, $name)) {
             $this->error('Cannot create directive file');
+
             return ExitCode::FAILURE;
         }
 
@@ -69,8 +74,7 @@ final class MakeDirective extends AbstractDirective
      *
      * Example: user:list -> UserListDirective
      *
-     * @param string $name Directive signature
-     *
+     * @param  string  $name  Directive signature
      * @return string Generated class name
      */
     private function generateClassName(string $name): string
@@ -82,31 +86,29 @@ final class MakeDirective extends AbstractDirective
             $className .= str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $part)));
         }
 
-        return $className . 'Directive';
+        return $className.'Directive';
     }
 
     /**
      * Generate signature with placeholder option.
      *
-     * @param string $name Base signature
-     *
+     * @param  string  $name  Base signature
      * @return string Full signature
      */
     private function generateSignature(string $name): string
     {
-        return $name . ' {--option}';
+        return $name.' {--option}';
     }
 
     /**
      * Get the file path for a directive.
      *
-     * @param string $className Directive class name
-     *
+     * @param  string  $className  Directive class name
      * @return string Full file path
      */
     private function getDirectivePath(string $className): string
     {
-        return getcwd() . '/app/Directives/' . $className . '.php';
+        return getcwd().'/app/Directives/'.$className.'.php';
     }
 
     /**
@@ -116,14 +118,15 @@ final class MakeDirective extends AbstractDirective
      */
     private function createDirectiveDirectory(): bool
     {
-        $dir = getcwd() . '/app/Directives';
+        $dir = getcwd().'/app/Directives';
 
         if (is_dir($dir)) {
             return true;
         }
 
         if (mkdir($dir, 0755, true)) {
-            $this->line("📁 Created directory: app/Directives/");
+            $this->line('📁 Created directory: app/Directives/');
+
             return true;
         }
 
@@ -133,10 +136,9 @@ final class MakeDirective extends AbstractDirective
     /**
      * Create the directive file from stub.
      *
-     * @param string $path      File path
-     * @param string $className Directive class name
-     * @param string $signature Directive signature
-     *
+     * @param  string  $path  File path
+     * @param  string  $className  Directive class name
+     * @param  string  $signature  Directive signature
      * @return bool True if file was created
      */
     private function createDirectiveFile(string $path, string $className, string $signature): bool

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Directive\Unit\Services;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -14,6 +12,7 @@ use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
 use AndyDefer\Directive\Tasks\DisplayTableTask;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestDirective;
+use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -23,6 +22,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveHydratorServiceTest extends TestCase
 {
     private DirectiveFactoryInterface&MockObject $factory;
+
     private DirectiveHydratorService $service;
 
     protected function setUp(): void
@@ -57,6 +57,7 @@ final class DirectiveHydratorServiceTest extends TestCase
         foreach ($items as $item) {
             $collection->add($item);
         }
+
         return $collection;
     }
 
@@ -71,7 +72,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['John Doe', 'name', 'john@example.com', 'email']);
-        $options = new StringTypedCollection();
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -96,7 +97,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $options = $this->createMixedCollection(['active', 'true', 'verbose', null, 'role', 'admin']);
 
         $parsed = new ParsedDirectiveRecord(
@@ -123,7 +124,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
-        $options = new StringTypedCollection();
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -148,8 +149,8 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
-        $options = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -174,7 +175,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['value1', 'key1', 'value2']);
-        $options = new StringTypedCollection();
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -197,7 +198,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $options = $this->createMixedCollection(['active', 'true', 'verbose']);
 
         $parsed = new ParsedDirectiveRecord(
@@ -221,7 +222,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $options = $this->createMixedCollection([
             'string_value',
             'hello',
@@ -234,7 +235,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             'empty_value',
             '',
             'numeric_value',
-            '42'
+            '42',
         ]);
 
         $parsed = new ParsedDirectiveRecord(

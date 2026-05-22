@@ -57,8 +57,7 @@ interface DirectiveInterface
     /**
      * Set the arguments for this directive.
      *
-     * @param ParameterCollection $arguments Collection of typed argument parameters
-     *
+     * @param  ParameterCollection  $arguments  Collection of typed argument parameters
      * @return self Returns the directive instance for method chaining
      */
     public function setArguments(ParameterCollection $arguments): self;
@@ -66,8 +65,7 @@ interface DirectiveInterface
     /**
      * Get an argument value by its key.
      *
-     * @param string $key The argument name
-     *
+     * @param  string  $key  The argument name
      * @return string|null The argument value, or null if not found
      */
     public function argument(string $key): ?string;
@@ -75,8 +73,7 @@ interface DirectiveInterface
     /**
      * Set the options for this directive.
      *
-     * @param ParameterCollection $options Collection of typed option parameters
-     *
+     * @param  ParameterCollection  $options  Collection of typed option parameters
      * @return self Returns the directive instance for method chaining
      */
     public function setOptions(ParameterCollection $options): self;
@@ -84,8 +81,7 @@ interface DirectiveInterface
     /**
      * Get an option value by its key.
      *
-     * @param string $key The option name
-     *
+     * @param  string  $key  The option name
      * @return bool|string|null The option value (boolean for flags, string for values), or null if not found
      */
     public function option(string $key): bool|string|null;
@@ -93,8 +89,7 @@ interface DirectiveInterface
     /**
      * Check if an option exists.
      *
-     * @param string $key The option name
-     *
+     * @param  string  $key  The option name
      * @return bool True if the option exists, false otherwise
      */
     public function hasOption(string $key): bool;

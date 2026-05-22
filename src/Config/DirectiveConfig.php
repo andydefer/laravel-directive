@@ -13,7 +13,7 @@ final class DirectiveConfig
     public static function default(): self
     {
         return new self(
-            directivesPath: __DIR__.'/../../../app/Directives',
+            directivesPath: getcwd() . '/app/Directives',
         );
     }
 

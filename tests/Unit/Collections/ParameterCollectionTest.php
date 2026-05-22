@@ -15,7 +15,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_constructor_creates_empty_collection(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
 
         $this->assertInstanceOf(ParameterCollection::class, $collection);
         $this->assertTrue($collection->isEmpty());
@@ -24,7 +24,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_constructor_allows_only_parameter_records(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $record = new ParameterRecord(name: 'test', value: 'value');
 
         $collection->add($record);
@@ -35,7 +35,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_can_add_multiple_records(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $record1 = new ParameterRecord(name: 'name', value: 'John');
         $record2 = new ParameterRecord(name: 'age', value: '30');
 
@@ -250,7 +250,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_to_associative_array_converts_collection(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(
             new ParameterRecord(name: 'name', value: 'John'),
             new ParameterRecord(name: 'age', value: 30),
@@ -268,7 +268,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_to_associative_array_returns_empty_array_for_empty_collection(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
 
         $result = $collection->toAssociativeArray();
 
@@ -277,7 +277,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_to_associative_array_preserves_null_values(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(new ParameterRecord(name: 'optional', value: null));
 
         $result = $collection->toAssociativeArray();
@@ -289,7 +289,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_get_returns_value_by_name(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(
             new ParameterRecord(name: 'name', value: 'John'),
             new ParameterRecord(name: 'age', value: 30)
@@ -301,7 +301,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_get_returns_null_for_non_existent_name(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(new ParameterRecord(name: 'name', value: 'John'));
 
         $this->assertNull($collection->get('unknown'));
@@ -309,14 +309,14 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_get_returns_null_when_collection_empty(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
 
         $this->assertNull($collection->get('anything'));
     }
 
     public function test_get_returns_boolean_value(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(
             new ParameterRecord(name: 'active', value: true),
             new ParameterRecord(name: 'enabled', value: false)
@@ -330,7 +330,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_has_returns_true_when_parameter_exists(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(
             new ParameterRecord(name: 'name', value: 'John'),
             new ParameterRecord(name: 'age', value: 30)
@@ -342,7 +342,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_has_returns_false_when_parameter_does_not_exist(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(new ParameterRecord(name: 'name', value: 'John'));
 
         $this->assertFalse($collection->has('unknown'));
@@ -350,14 +350,14 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_has_returns_false_when_collection_empty(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
 
         $this->assertFalse($collection->has('anything'));
     }
 
     public function test_has_distinguishes_between_similar_names(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         $collection->add(
             new ParameterRecord(name: 'name', value: 'John'),
             new ParameterRecord(name: 'full_name', value: 'John Doe')
@@ -372,7 +372,7 @@ final class ParameterCollectionTest extends TestCase
 
     public function test_handles_large_collections(): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
 
         for ($i = 0; $i < 1000; $i++) {
             $collection->add(new ParameterRecord(name: "key_{$i}", value: "value_{$i}"));

@@ -10,6 +10,7 @@ use AndyDefer\Records\Collections\TypedCollection;
  * Abstract base collection with index-based access.
  *
  * @template TValue
+ *
  * @extends TypedCollection<TValue>
  */
 abstract class IndexedCollection extends TypedCollection
@@ -17,23 +18,21 @@ abstract class IndexedCollection extends TypedCollection
     /**
      * Get value at specific index.
      *
-     * @param int $index Index position
-     *
+     * @param  int  $index  Index position
      * @return TValue|null Value or null if not found
      */
     public function get(int $index): mixed
     {
         $items = $this->toArray();
+
         return $items[$index] ?? null;
     }
 
     /**
      * Set value at specific index.
      *
-     * @param int   $index Index position
-     * @param TValue $value Value to set
-     *
-     * @return self
+     * @param  int  $index  Index position
+     * @param  TValue  $value  Value to set
      */
     public function set(int $index, mixed $value): self
     {
@@ -52,8 +51,7 @@ abstract class IndexedCollection extends TypedCollection
     /**
      * Check if index exists.
      *
-     * @param int $index Index position
-     *
+     * @param  int  $index  Index position
      * @return bool True if index exists
      */
     public function has(int $index): bool

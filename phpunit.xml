@@ -6,9 +6,14 @@
     colors="true"
 >
     <testsuites>
-        <!-- Tests Unitaires généraux (pour compatibilité) -->
+        <!-- Tests Unitaires -->
         <testsuite name="Unit">
             <directory suffix="Test.php">./tests/Unit</directory>
+        </testsuite>
+
+        <!-- Tests d'Intégration -->
+        <testsuite name="Feature">
+            <directory suffix="Test.php">./tests/Feature</directory>
         </testsuite>
     </testsuites>
     

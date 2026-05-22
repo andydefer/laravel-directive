@@ -12,7 +12,6 @@ use AndyDefer\Directive\Records\AskQuestionRecord;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\DisplayMessageRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
-use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Tasks\AskQuestionTask;
 use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
@@ -22,6 +21,7 @@ use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 abstract class AbstractDirective implements DirectiveInterface
 {
     protected ParameterCollection $arguments;
+
     protected ParameterCollection $options;
 
     public function __construct(
@@ -30,8 +30,8 @@ abstract class AbstractDirective implements DirectiveInterface
         protected readonly ConfirmQuestionTask $confirmQuestion,
         protected readonly DisplayTableTask $displayTable,
     ) {
-        $this->arguments = new ParameterCollection();
-        $this->options = new ParameterCollection();
+        $this->arguments = new ParameterCollection;
+        $this->options = new ParameterCollection;
     }
 
     /**
@@ -48,7 +48,7 @@ abstract class AbstractDirective implements DirectiveInterface
 
     public function getAliases(): StringTypedCollection
     {
-        return new StringTypedCollection();
+        return new StringTypedCollection;
     }
 
     // ==================== Argument Management ====================
@@ -56,6 +56,7 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setArguments(ParameterCollection $arguments): self
     {
         $this->arguments = $arguments;
+
         return $this;
     }
 
@@ -75,6 +76,7 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setOptions(ParameterCollection $options): self
     {
         $this->options = $options;
+
         return $this;
     }
 

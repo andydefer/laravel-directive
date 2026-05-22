@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contracts;
 
-use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 /**
@@ -29,8 +28,7 @@ interface DirectiveRegistrarInterface
     /**
      * Register directive classes.
      *
-     * @param StringTypedCollection $directiveClasses Collection of directive class names
-     *
+     * @param  StringTypedCollection  $directiveClasses  Collection of directive class names
      * @return self Returns the instance for method chaining
      */
     public function register(StringTypedCollection $directiveClasses): self;
@@ -45,8 +43,7 @@ interface DirectiveRegistrarInterface
     /**
      * Check if a directive class is registered.
      *
-     * @param string $directiveClass The directive class name
-     *
+     * @param  string  $directiveClass  The directive class name
      * @return bool True if registered, false otherwise
      */
     public function isRegistered(string $directiveClass): bool;

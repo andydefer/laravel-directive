@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tests\Fixtures\Directives;
+namespace AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
@@ -24,6 +24,7 @@ final class TestPackageDirective extends AbstractDirective
     {
         $aliases = new StringTypedCollection();
         $aliases->add('tpkg');
+
         return $aliases;
     }
 

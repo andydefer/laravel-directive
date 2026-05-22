@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
-
 // Cette classe n'implémente pas DirectiveInterface
 // Elle doit être ignorée par le discovery service
 final class InvalidClass

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Directive\Unit\Tasks;
 
 use AndyDefer\Directive\Collections\RowCollection;
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class DisplayTableTaskTest extends TestCase
@@ -17,22 +17,22 @@ final class DisplayTableTaskTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->task = new DisplayTableTask();
+        $this->task = new DisplayTableTask;
     }
 
     public function test_execute_displays_table_with_headers_and_rows(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email', 'Age');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
-        $row1 = new RowCollection();
+        $row1 = new RowCollection;
         $row1->add('John Doe', 'john@example.com', 30);
         $rows->add($row1);
 
-        $row2 = new RowCollection();
+        $row2 = new RowCollection;
         $row2->add('Jane Smith', 'jane@example.com', 25);
         $rows->add($row2);
 
@@ -61,10 +61,10 @@ final class DisplayTableTaskTest extends TestCase
     public function test_execute_handles_empty_rows(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
         $record = new DisplayTableRecord($headers, $rows);
 
@@ -84,12 +84,12 @@ final class DisplayTableTaskTest extends TestCase
     public function test_execute_handles_single_row(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
-        $row = new RowCollection();
+        $row = new RowCollection;
         $row->add('John Doe', 'john@example.com');
         $rows->add($row);
 
@@ -108,16 +108,16 @@ final class DisplayTableTaskTest extends TestCase
     public function test_execute_handles_mixed_data_types(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Age', 'Active');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
-        $row1 = new RowCollection();
+        $row1 = new RowCollection;
         $row1->add('John Doe', 30, true);
         $rows->add($row1);
 
-        $row2 = new RowCollection();
+        $row2 = new RowCollection;
         $row2->add('Jane Smith', 25, false);
         $rows->add($row2);
 
@@ -138,16 +138,16 @@ final class DisplayTableTaskTest extends TestCase
     public function test_execute_handles_special_characters(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Message');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
-        $row1 = new RowCollection();
+        $row1 = new RowCollection;
         $row1->add('Hello World!');
         $rows->add($row1);
 
-        $row2 = new RowCollection();
+        $row2 = new RowCollection;
         $row2->add('Special chars: @#$%');
         $rows->add($row2);
 
@@ -166,12 +166,12 @@ final class DisplayTableTaskTest extends TestCase
     public function test_execute_handles_null_values(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email', 'Phone');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
-        $row = new RowCollection();
+        $row = new RowCollection;
         $row->add('John Doe', 'john@example.com', null);
         $rows->add($row);
 
@@ -190,15 +190,15 @@ final class DisplayTableTaskTest extends TestCase
     public function test_execute_handles_nested_collections(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Tags');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
-        $tags = new StringTypedCollection();
+        $tags = new StringTypedCollection;
         $tags->add('php', 'laravel', 'vip');
 
-        $row = new RowCollection();
+        $row = new RowCollection;
         $row->add('John Doe', $tags);
         $rows->add($row);
 
@@ -217,16 +217,16 @@ final class DisplayTableTaskTest extends TestCase
     public function test_execute_handles_unicode_characters(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Nom', 'Ville');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
-        $row1 = new RowCollection();
+        $row1 = new RowCollection;
         $row1->add('Jean François', 'Paris');
         $rows->add($row1);
 
-        $row2 = new RowCollection();
+        $row2 = new RowCollection;
         $row2->add('Marie Curie', 'Varsovie');
         $rows->add($row2);
 

@@ -17,25 +17,25 @@ final class DirectiveRegistrar implements DirectiveRegistrarInterface
 
     public function __construct()
     {
-        $this->registeredDirectives = new StringTypedCollection();
+        $this->registeredDirectives = new StringTypedCollection;
     }
 
     public function register(StringTypedCollection $directiveClasses): self
     {
         foreach ($directiveClasses as $class) {
-            if (!is_string($class)) {
+            if (! is_string($class)) {
                 continue;
             }
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 continue;
             }
 
-            if (!is_subclass_of($class, DirectiveInterface::class)) {
+            if (! is_subclass_of($class, DirectiveInterface::class)) {
                 continue;
             }
 
-            if (!$this->registeredDirectives->contains($class)) {
+            if (! $this->registeredDirectives->contains($class)) {
                 $this->registeredDirectives->add($class);
             }
         }
@@ -60,7 +60,8 @@ final class DirectiveRegistrar implements DirectiveRegistrarInterface
      */
     public function clear(): self
     {
-        $this->registeredDirectives = new StringTypedCollection();
+        $this->registeredDirectives = new StringTypedCollection;
+
         return $this;
     }
 

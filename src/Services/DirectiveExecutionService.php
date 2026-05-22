@@ -4,26 +4,17 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
-use AndyDefer\Directive\Collections\TypedRecords;
-use AndyDefer\Directive\Enums\DirectiveEventType;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Enums\MessageType;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
-use AndyDefer\Directive\Records\DirectiveLogRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\DisplayMessageRecord;
 use AndyDefer\Directive\Tasks\DisplayErrorTask;
 use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Logger\Contracts\LoggerInterface;
 use AndyDefer\Records\Collections\TypedCollection;
 
 /**
- * Service de gestion des commandes de directives
- *
- * ✅ Plusieurs méthodes du même domaine (exécution, liste, aide)
- * ✅ Retourne des valeurs (ExitCode)
- * ✅ Logique métier (routage, recherche)
- * ✅ Dépendances injectées
+ * Service responsible for executing directives.
  */
 class DirectiveExecutionService
 {
@@ -36,20 +27,17 @@ class DirectiveExecutionService
         private readonly DirectiveRendererService $renderer,
         private readonly DisplayMessageTask $displayMessage,
         private readonly DisplayErrorTask $displayError,
-        private readonly ?LoggerInterface $logger = null,
     ) {
         $this->directives = $this->discovery->discover();
     }
 
     /**
-     * Exécute une directive (méthode principale)
-     * Retourne un ExitCode comme tout bon Service
+     * Execute a directive.
      */
     public function execute(DirectiveExecutionRecord $record): ExitCode
     {
         $signature = $record->signature;
 
-        // Routage des commandes spéciales
         if ($this->isListCommand($signature)) {
             return $this->handleListCommand();
         }
@@ -58,12 +46,11 @@ class DirectiveExecutionService
             return $this->handleHelpCommand();
         }
 
-        // Exécution d'une directive normale
         return $this->executeDirective($record);
     }
 
     /**
-     * Vérifie si une directive existe (logique métier)
+     * Check if a directive exists.
      */
     public function exists(string $signature): bool
     {
@@ -71,7 +58,7 @@ class DirectiveExecutionService
     }
 
     /**
-     * Liste toutes les directives disponibles (logique métier)
+     * List all available directives.
      */
     public function listDirectives(): TypedCollection
     {
@@ -79,7 +66,7 @@ class DirectiveExecutionService
     }
 
     /**
-     * Trouve une directive par sa signature (logique métier)
+     * Find a directive by its signature.
      */
     public function findDirectiveBySignature(string $signature): ?DirectiveMetadataRecord
     {
@@ -87,7 +74,7 @@ class DirectiveExecutionService
     }
 
     /**
-     * Exécute une directive et retourne le code de sortie
+     * Execute a directive and return the exit code.
      */
     private function executeDirective(DirectiveExecutionRecord $record): ExitCode
     {
@@ -104,17 +91,11 @@ class DirectiveExecutionService
         $parsed = $this->parser->parse($directive->signature, $record->arguments);
         $command = $this->hydrator->hydrate($directive->class, $parsed);
 
-        $this->logStart($directive);
-
-        $exitCode = $command->execute();
-
-        $this->logFinish($directive, $exitCode);
-
-        return $exitCode;
+        return $command->execute();
     }
 
     /**
-     * Gère la commande --list
+     * Handle the --list command.
      */
     private function handleListCommand(): ExitCode
     {
@@ -129,7 +110,7 @@ class DirectiveExecutionService
     }
 
     /**
-     * Gère la commande --help
+     * Handle the --help command.
      */
     private function handleHelpCommand(): ExitCode
     {
@@ -144,24 +125,26 @@ class DirectiveExecutionService
     }
 
     /**
-     * Logique métier : recherche d'une directive
+     * Find a directive by signature or alias.
      */
     private function findDirective(string $signature): ?DirectiveMetadataRecord
     {
         foreach ($this->directives as $directive) {
-            if ($directive->signature === $signature) {
+            // Extraire le nom de base (ex: 'test:echo' depuis 'test:echo {message?}')
+            $baseSignature = explode(' {', $directive->signature)[0];
+
+            if ($baseSignature === $signature) {
                 return $directive;
             }
             if ($directive->aliases->contains($signature)) {
                 return $directive;
             }
         }
-
         return null;
     }
 
     /**
-     * Logique métier : détection commande liste
+     * Check if the command is a list command.
      */
     private function isListCommand(string $signature): bool
     {
@@ -169,36 +152,10 @@ class DirectiveExecutionService
     }
 
     /**
-     * Logique métier : détection commande aide
+     * Check if the command is a help command.
      */
     private function isHelpCommand(string $signature): bool
     {
         return $signature === '--help' || $signature === '-h';
-    }
-
-    private function logStart(DirectiveMetadataRecord $directive): void
-    {
-        if ($this->logger === null) {
-            return;
-        }
-
-        $this->logger->info(new DirectiveLogRecord(
-            type: DirectiveEventType::STARTED,
-            signature: $directive->signature,
-            class: $directive->class,
-        ));
-    }
-
-    private function logFinish(DirectiveMetadataRecord $directive, ExitCode $exitCode): void
-    {
-        if ($this->logger === null) {
-            return;
-        }
-
-        $this->logger->info(new DirectiveLogRecord(
-            type: DirectiveEventType::FINISHED,
-            signature: $directive->signature,
-            exitCode: $exitCode,
-        ));
     }
 }

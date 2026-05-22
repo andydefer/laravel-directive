@@ -17,7 +17,7 @@ class ConfirmQuestionTask
 
     public function execute(AskQuestionRecord $record): bool
     {
-        echo $record->question . ' (y/n) ';
+        echo $record->question.' (y/n) ';
         $answer = strtolower(trim(fgets($this->inputStream)));
 
         return in_array($answer, ['y', 'yes'], true);

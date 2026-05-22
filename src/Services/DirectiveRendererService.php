@@ -57,15 +57,15 @@ HELP;
 
         $lines = [
             "\n\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m",
-            "\033[1;32m✅ Available Directives (" . $directives->count() . ")\033[0m",
+            "\033[1;32m✅ Available Directives (".$directives->count().")\033[0m",
             "\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m",
             sprintf("\033[1;37m%-25s \033[1;36m%s\033[0m", 'Signature', 'Description'),
-            "\033[90m" . str_repeat('─', 70) . "\033[0m",
+            "\033[90m".str_repeat('─', 70)."\033[0m",
         ];
 
         foreach ($directives as $directive) {
             $aliases = $directive->aliases->count() > 0
-                ? ' (' . implode(', ', $directive->aliases->toArray()) . ')'
+                ? ' ('.implode(', ', $directive->aliases->toArray()).')'
                 : '';
 
             $lines[] = sprintf(
