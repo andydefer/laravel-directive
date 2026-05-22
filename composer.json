@@ -1,0 +1,56 @@
+{
+    "name": "andydefer/laravel-directive",
+    "description": "A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between what your command does (business logic) and how it's presented (output/UI).",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andy Defer",
+            "email": "andykanidimbu@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
+        "andydefer/laravel-logger": "^1.0",
+        "andydefer/php-records": "^1.0"
+    },
+    "require-dev": {
+        "barryvdh/laravel-ide-helper": "^3.6",
+        "composer/composer": "^2.0",
+        "larastan/larastan": "^3.8",
+        "laravel/pint": "^1.26",
+        "orchestra/testbench": "^10.8",
+        "phpunit/phpunit": "^12.5",
+        "rector/rector": "*",
+        "symfony/var-dumper": "^7.0",
+        "vimeo/psalm": "^6.14"
+    },
+    "autoload": {
+        "psr-4": {
+            "AndyDefer\\Directive\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AndyDefer\\Directive\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "directive"
+    ],
+    "scripts": {
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-html coverage",
+        "lint": "pint",
+        "analyse": "phpstan analyse",
+        "psalm": "psalm"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AndyDefer\\Directive\\DirectiveServiceProvider"
+            ]
+        }
+    }
+}
