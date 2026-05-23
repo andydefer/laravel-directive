@@ -7,36 +7,29 @@ namespace AndyDefer\Directive;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
-use AndyDefer\Directive\Enums\MessageType;
-use AndyDefer\Directive\Records\AskQuestionRecord;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\Directive\Records\DisplayMessageRecord;
-use AndyDefer\Directive\Records\DisplayTableRecord;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
+/**
+ * Abstract base class for all directive implementations.
+ *
+ * Provides common functionality for argument/option handling, user interaction
+ * (asking questions, displaying messages), and table rendering. All concrete
+ * directives must extend this class.
+ */
 abstract class AbstractDirective implements DirectiveInterface
 {
     protected ParameterCollection $arguments;
-
     protected ParameterCollection $options;
 
     public function __construct(
-        protected readonly DisplayMessageTask $displayMessage,
-        protected readonly AskQuestionTask $askQuestion,
-        protected readonly ConfirmQuestionTask $confirmQuestion,
-        protected readonly DisplayTableTask $displayTable,
+        protected readonly DirectiveInteractionService $interaction,
     ) {
-        $this->arguments = new ParameterCollection;
-        $this->options = new ParameterCollection;
+        $this->arguments = new ParameterCollection();
+        $this->options = new ParameterCollection();
     }
 
-    /**
-     * Get the blueprint of the directive (metadata without execution).
-     */
     public function getBlueprint(): DirectiveBlueprintRecord
     {
         return new DirectiveBlueprintRecord(
@@ -48,7 +41,7 @@ abstract class AbstractDirective implements DirectiveInterface
 
     public function getAliases(): StringTypedCollection
     {
-        return new StringTypedCollection;
+        return new StringTypedCollection();
     }
 
     // ==================== Argument Management ====================
@@ -56,7 +49,6 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setArguments(ParameterCollection $arguments): self
     {
         $this->arguments = $arguments;
-
         return $this;
     }
 
@@ -76,7 +68,6 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setOptions(ParameterCollection $options): self
     {
         $this->options = $options;
-
         return $this;
     }
 
@@ -94,40 +85,40 @@ abstract class AbstractDirective implements DirectiveInterface
 
     public function line(string $message): void
     {
-        $this->displayMessage->execute(new DisplayMessageRecord($message, MessageType::LINE));
+        $this->interaction->line($message);
     }
 
     public function info(string $message): void
     {
-        $this->displayMessage->execute(new DisplayMessageRecord($message, MessageType::INFO));
+        $this->interaction->info($message);
     }
 
     public function error(string $message): void
     {
-        $this->displayMessage->execute(new DisplayMessageRecord($message, MessageType::ERROR));
+        $this->interaction->error($message);
     }
 
     public function warn(string $message): void
     {
-        $this->displayMessage->execute(new DisplayMessageRecord($message, MessageType::WARNING));
+        $this->interaction->warn($message);
     }
 
     // ==================== User Interaction ====================
 
     public function ask(string $question): string
     {
-        return $this->askQuestion->execute(new AskQuestionRecord($question));
+        return $this->interaction->ask($question);
     }
 
     public function confirm(string $question): bool
     {
-        return $this->confirmQuestion->execute(new AskQuestionRecord($question));
+        return $this->interaction->confirm($question);
     }
 
     // ==================== Table Display ====================
 
     public function table(StringTypedCollection $headers, RowCollection $rows): void
     {
-        $this->displayTable->execute(new DisplayTableRecord($headers, $rows));
+        $this->interaction->table($headers, $rows);
     }
 }

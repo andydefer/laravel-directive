@@ -5,157 +5,106 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Enums\MessageType;
+use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
-use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use AndyDefer\Directive\Records\DisplayMessageRecord;
-use AndyDefer\Directive\Tasks\DisplayErrorTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-/**
- * Service responsible for executing directives.
- */
 class DirectiveExecutionService
 {
-    private TypedCollection $directives;
-
     public function __construct(
-        private readonly DirectiveDiscoveryService $discovery,
         private readonly DirectiveParserService $parser,
         private readonly DirectiveHydratorService $hydrator,
         private readonly DirectiveRendererService $renderer,
-        private readonly DisplayMessageTask $displayMessage,
-        private readonly DisplayErrorTask $displayError,
-    ) {
-        $this->directives = $this->discovery->discover();
-    }
+        private readonly DirectiveRegistrar $registrar,
+        private readonly DirectiveInteractionService $interaction,
+    ) {}
 
-    /**
-     * Execute a directive.
-     */
     public function execute(DirectiveExecutionRecord $record): ExitCode
     {
         $signature = $record->signature;
 
-        if ($this->isListCommand($signature)) {
-            return $this->handleListCommand();
+        // Handle built-in commands
+        if ($signature === '--help' || $signature === '-h') {
+            $this->renderer->renderHelp();
+            return ExitCode::SUCCESS;
         }
 
-        if ($this->isHelpCommand($signature)) {
-            return $this->handleHelpCommand();
+        if ($signature === '--list' || $signature === '-l') {
+            $directives = $this->registrar->getAllDirectivesMetadata();
+            $this->renderer->renderList($directives);
+            return ExitCode::SUCCESS;
         }
 
-        return $this->executeDirective($record);
-    }
+        $classes = $this->registrar->find($signature);
 
-    /**
-     * Check if a directive exists.
-     */
-    public function exists(string $signature): bool
-    {
-        return $this->findDirective($signature) !== null;
-    }
-
-    /**
-     * List all available directives.
-     */
-    public function listDirectives(): TypedCollection
-    {
-        return $this->directives;
-    }
-
-    /**
-     * Find a directive by its signature.
-     */
-    public function findDirectiveBySignature(string $signature): ?DirectiveMetadataRecord
-    {
-        return $this->findDirective($signature);
-    }
-
-    /**
-     * Execute a directive and return the exit code.
-     */
-    private function executeDirective(DirectiveExecutionRecord $record): ExitCode
-    {
-        $directive = $this->findDirective($record->signature);
-
-        if ($directive === null) {
-            $this->displayError->execute(
-                $this->renderer->renderNotFound($record->signature)
-            );
-
+        if ($classes->isEmpty()) {
+            $this->renderer->renderNotFound($signature);
             return ExitCode::NOT_FOUND;
         }
 
-        $parsed = $this->parser->parse($directive->signature, $record->arguments);
-        $command = $this->hydrator->hydrate($directive->class, $parsed);
-
-        return $command->execute();
-    }
-
-    /**
-     * Handle the --list command.
-     */
-    private function handleListCommand(): ExitCode
-    {
-        $this->displayMessage->execute(
-            new DisplayMessageRecord(
-                $this->renderer->renderList($this->directives),
-                MessageType::LINE
-            )
-        );
-
-        return ExitCode::SUCCESS;
-    }
-
-    /**
-     * Handle the --help command.
-     */
-    private function handleHelpCommand(): ExitCode
-    {
-        $this->displayMessage->execute(
-            new DisplayMessageRecord(
-                $this->renderer->renderHelp(),
-                MessageType::LINE
-            )
-        );
-
-        return ExitCode::SUCCESS;
-    }
-
-    /**
-     * Find a directive by signature or alias.
-     */
-    private function findDirective(string $signature): ?DirectiveMetadataRecord
-    {
-        foreach ($this->directives as $directive) {
-            // Extraire le nom de base (ex: 'test:echo' depuis 'test:echo {message?}')
-            $baseSignature = explode(' {', $directive->signature)[0];
-
-            if ($baseSignature === $signature) {
-                return $directive;
-            }
-            if ($directive->aliases->contains($signature)) {
-                return $directive;
-            }
+        if ($classes->count() > 1) {
+            return $this->handleConflict($record);
         }
-        return null;
+
+        $class = $classes->firstItem();
+        return $this->executeDirective($class, $record);
     }
 
-    /**
-     * Check if the command is a list command.
-     */
-    private function isListCommand(string $signature): bool
+    private function handleConflict(DirectiveExecutionRecord $record): ExitCode
     {
-        return $signature === '--list' || $signature === '-l';
+        $classes = $this->registrar->find($record->signature);
+        $classNames = new StringTypedCollection();
+        $signatures = new StringTypedCollection();
+        $descriptions = new StringTypedCollection();
+
+        foreach ($classes as $class) {
+            $reflection = new \ReflectionClass($class);
+            $instance = $reflection->newInstanceWithoutConstructor();
+
+            $classNames->add($reflection->getShortName());
+            $signatures->add($instance->getSignature());
+            $descriptions->add($instance->getDescription());
+        }
+
+        $conflictRecord = new ConflictDisplayRecord(
+            name: $record->signature,
+            classNames: $classNames,
+            signatures: $signatures,
+            descriptions: $descriptions,
+        );
+
+        $this->renderer->renderConflict($conflictRecord);
+
+        $choice = $this->interaction->askUserChoice($record->signature, $classes->count());
+
+        if ($choice === 0) {
+            $this->renderer->renderError('Invalid choice');
+            return ExitCode::INVALID_ARGUMENT;
+        }
+
+        $selectedClass = $classes->toArray()[$choice - 1];
+
+        return $this->executeDirective($selectedClass, $record);
     }
 
-    /**
-     * Check if the command is a help command.
-     */
-    private function isHelpCommand(string $signature): bool
+    private function executeDirective(string $class, DirectiveExecutionRecord $record): ExitCode
     {
-        return $signature === '--help' || $signature === '-h';
+        $reflection = new \ReflectionClass($class);
+        $instance = $reflection->newInstanceWithoutConstructor();
+        $signature = $instance->getSignature();
+
+        $parsed = $this->parser->parse($signature, $record->arguments);
+
+        $directive = $this->hydrator->hydrate($class, $parsed);
+
+        $result = $directive->execute();
+
+        if ($result->isSuccess()) {
+            $this->renderer->renderSuccess('Directive executed successfully');
+        } else {
+            $this->renderer->renderError('Directive execution failed');
+        }
+
+        return $result;
     }
 }

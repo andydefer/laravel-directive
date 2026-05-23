@@ -1,3 +1,4 @@
+```markdown
 # Laravel Directive
 
 **A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between business logic and presentation.**
@@ -89,27 +90,24 @@ composer require andydefer/laravel-directive
 ### Publication de la configuration (optionnel)
 
 ```bash
-php artisan vendor:publish --tag=directive-config
+php artisan vendor:publish --tag=directive-config --force
 ```
 
 ---
 
 ## Configuration
 
-### Variables d'environnement
-
-```env
-DIRECTIVE_PATH=app/CustomDirectives
-```
-
 ### Fichier de configuration
 
 ```php
 // config/directive.php
 return [
-    'path' => env('DIRECTIVE_PATH', app_path('Directives')),
+    'path' => getcwd() . '/app/Directives',
 ];
 ```
+
+> **⚠️ Attention : Pas de dépendance à Laravel**  
+> Ce package fonctionne de manière **autonome** et ne charge pas Laravel pour l'exécution des commandes. Nous utilisons uniquement des fonctions PHP standard (`getcwd()`, `getenv()`) pour rester **testable**, **découplé** et **performant**. Les helpers Laravel comme `app_path()` ou `env()` ne sont pas disponibles dans le contexte CLI et ne sont jamais utilisés. Cette approche garantit que vos commandes restent rapides et votre code facilement testable sans bootstrap de framework. Le ServiceProvider n'est utilisé que pour l'intégration avec Laravel.
 
 ---
 
@@ -127,7 +125,7 @@ return [
 ./vendor/bin/directive --help
 ```
 
-### Créer votre première directive avec la commande intégrée
+### Créer votre première directive
 
 ```bash
 ./vendor/bin/directive make:directive hello
@@ -140,6 +138,80 @@ Cela génère le fichier `app/Directives/HelloDirective.php`.
 ```bash
 ./vendor/bin/directive hello
 ```
+
+---
+
+## Format des signatures de directives
+
+Les signatures de directives doivent respecter un format strict pour garantir la cohérence et la testabilité du code.
+
+### Règles fondamentales
+
+| Règle | Explication |
+|-------|-------------|
+| **Délimiteurs autorisés** | Seuls `:` (deux-points) et `-` (tiret) sont autorisés |
+| **Caractères autorisés** | Lettres (a-z, A-Z) et chiffres (0-9) |
+| **Premier caractère** | Doit être une lettre (pas un chiffre ni un délimiteur) |
+| **Pas de délimiteurs consécutifs** | `user::list` ou `user--list` sont interdits |
+| **Pas de délimiteur final** | `user:` ou `user-` sont interdits |
+| **Pas de délimiteur initial** | `:list` ou `-list` sont interdits |
+
+### Format de signature
+
+```
+[partie]:[partie]  ou  [partie]-[partie]
+```
+
+Chaque `[partie]` doit :
+- Commencer par une lettre
+- Ne contenir que des lettres et des chiffres
+
+### ✅ Exemples valides
+
+| Signature | Explication |
+|-----------|-------------|
+| `user:list` | Utilisation du délimiteur `:` |
+| `cache-clear` | Utilisation du délimiteur `-` |
+| `api:user-profile` | Mélange des deux délimiteurs |
+| `admin:user:create` | Plusieurs délimiteurs `:` |
+| `user:v2` | Les chiffres sont autorisés dans une partie |
+| `api-v2:user-profile` | Chiffres avec délimiteur `-` puis `:` |
+
+### ❌ Exemples invalides
+
+| Signature | Raison |
+|-----------|--------|
+| `create@user` | Caractère `@` interdit |
+| `create_user` | Underscore `_` interdit |
+| `user:` | Délimiteur final interdit |
+| `:list` | Délimiteur initial interdit |
+| `user::list` | Délimiteurs consécutifs interdits |
+| `user--list` | Délimiteurs consécutifs interdits |
+| `123:user` | Premier caractère est un chiffre |
+| `user:123-list` | Partie commençant par un chiffre |
+| `User:List` | Les majuscules sont autorisées mais déconseillées (préférer minuscules) |
+
+### Pourquoi ce format strict ?
+
+1. **Génération automatique des noms de classes** : Le service `DirectiveNamingService` convertit `user:list` en `UserListDirective` et `api:user-profile` en `ApiUserProfileDirective`. Les caractères interdits empêcheraient cette conversion propre.
+
+2. **Compatibilité cross-platform** : Les caractères comme `@` ou `_` peuvent avoir des significations spéciales selon les shells.
+
+3. **Cohérence du code** : Toutes les directives suivent le même pattern, ce qui facilite la maintenance et la découverte.
+
+4. **Validation automatique** : Le kernel valide la signature avant l'exécution. Une signature invalide retourne immédiatement un code d'erreur `INVALID_ARGUMENT`.
+
+### Transformation signature → nom de classe
+
+Le package convertit automatiquement la signature en nom de classe PascalCase :
+
+| Signature | Nom de classe généré |
+|-----------|---------------------|
+| `user:list` | `UserListDirective` |
+| `cache-clear` | `CacheClearDirective` |
+| `api:user-profile` | `ApiUserProfileDirective` |
+| `admin:user:create` | `AdminUserCreateDirective` |
+| `user:v2-profile` | `UserV2ProfileDirective` |
 
 ---
 
@@ -358,15 +430,12 @@ class MyPackageServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        // Récupérer le registrar
         $registrar = app(DirectiveRegistrarInterface::class);
         
-        // Créer la collection des classes de directives
         $classes = new StringTypedCollection();
         $classes->add(MyDirective::class);
         $classes->add(AnotherDirective::class);
         
-        // Enregistrer
         $registrar->register($classes);
     }
 }
@@ -397,17 +466,6 @@ class MyPackageServiceProvider extends ServiceProvider
 ./vendor/bin/directive my-package:command
 ```
 
-### Enregistrement des directives built-in
-
-Le package enregistre automatiquement ses propres directives :
-
-```php
-// Dans DirectiveServiceProvider
-$classes = new StringTypedCollection();
-$classes->add(MakeDirective::class);
-$registrar->register($classes);
-```
-
 ---
 
 ## Commandes intégrées
@@ -415,11 +473,14 @@ $registrar->register($classes);
 ### `make:directive` - Créer une nouvelle directive
 
 ```bash
-# Créer une directive simple
+# Créer une directive avec délimiteur ':'
 ./vendor/bin/directive make:directive user:list
+
+# Créer une directive avec délimiteur '-'
+./vendor/bin/directive make:directive cache-clear
 ```
 
-**Génère :** `app/Directives/UserListDirective.php`
+**Génère :** `app/Directives/UserListDirective.php` ou `app/Directives/CacheClearDirective.php`
 
 ```php
 <?php
@@ -430,7 +491,12 @@ namespace App\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
+/**
+ * Generated directive for user:list
+ * Created at: 2026-05-23 10:30:00
+ */
 final class UserListDirective extends AbstractDirective
 {
     public function getSignature(): string
@@ -443,22 +509,22 @@ final class UserListDirective extends AbstractDirective
         return 'Generated directive for user:list';
     }
 
+    public function getAliases(): StringTypedCollection
+    {
+        $aliases = new StringTypedCollection();
+        // $aliases->add('your-alias');
+        return $aliases;
+    }
+
     public function execute(): ExitCode
     {
+        // TODO: Implement your directive logic here
+
         $this->info('Directive executed successfully!');
+
         return ExitCode::SUCCESS;
     }
 }
-```
-
-### `list:directives` - Lister toutes les directives
-
-```bash
-# Liste simple
-./vendor/bin/directive --list
-
-# Ou avec l'alias
-./vendor/bin/directive -l
 ```
 
 ### Alias disponibles
@@ -481,7 +547,7 @@ final class UserListDirective extends AbstractDirective
 | **Test des arguments** | Simulation complexe via `$this->artisan()` | Injection directe dans `ParameterCollection` |
 | **Test des options** | Doit passer par la ligne de commande | Accès direct via `option()` mocké |
 | **Test des sorties** | Capture via `$this->expectsOutput()` | Mock des `DisplayMessageTask` |
-| **Test des interactions** | Impossible de mocker `ask()` et `confirm()` | Injection de flux personnalisé |
+| **Test des interactions** | Impossible de mocker `ask()` et `confirm()` | Mock des `AskQuestionTask` et `ConfirmQuestionTask` |
 | **Isolement** | La commande s'exécute réellement | La logique métier est isolée |
 
 ### Exemple : Tester une directive complète
@@ -493,6 +559,7 @@ namespace Tests\Unit\Directives;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Records\DirectiveDependenciesRecord;
 use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Tests\TestCase;
 use App\Directives\UserCreateDirective;
@@ -504,12 +571,20 @@ final class UserCreateDirectiveTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->directive = $this->app->make(UserCreateDirective::class);
+        
+        $deps = new DirectiveDependenciesRecord(
+            displayMessage: $this->createMock(DisplayMessageTask::class),
+            askQuestion: $this->createMock(AskQuestionTask::class),
+            confirmQuestion: $this->createMock(ConfirmQuestionTask::class),
+            displayTable: $this->createMock(DisplayTableTask::class),
+        );
+        
+        $this->directive = new UserCreateDirective($deps);
     }
 
     public function test_execute_creates_user_and_returns_success(): void
     {
-        // Arrange
+        // Arrange : Set up arguments
         $arguments = new ParameterCollection();
         $arguments->add(
             new ParameterRecord(name: 'name', value: 'John Doe'),
@@ -517,24 +592,24 @@ final class UserCreateDirectiveTest extends TestCase
         );
         $this->directive->setArguments($arguments);
 
-        // Act
+        // Act : Execute the directive
         $result = $this->directive->execute();
 
-        // Assert
+        // Assert : Verify the result
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_returns_error_when_name_missing(): void
     {
-        // Arrange
+        // Arrange : Set up arguments without required 'name'
         $arguments = new ParameterCollection();
         $arguments->add(new ParameterRecord(name: 'email', value: 'john@example.com'));
         $this->directive->setArguments($arguments);
 
-        // Act
+        // Act : Execute the directive
         $result = $this->directive->execute();
 
-        // Assert
+        // Assert : Verify error code
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 }
@@ -722,12 +797,14 @@ final class SetupDirective extends AbstractDirective
 
 | Composant | Rôle |
 |-----------|------|
-| `DirectiveKernel` | Point d'entrée, parsing des arguments bruts |
+| `DirectiveKernel` | Point d'entrée, parsing des arguments bruts, validation des signatures |
+| `SignatureValidationService` | Valide le format des signatures de directives |
 | `DirectiveParserService` | Parse les signatures et les arguments |
 | `DirectiveHydratorService` | Hydrate les directives avec les arguments typés |
 | `DirectiveDiscoveryService` | Découvre les directives (filesystem + packages) |
 | `DirectiveRegistrar` | Enregistre les directives des packages |
 | `DirectiveExecutionService` | Exécute la directive demandée |
+| `DirectiveNamingService` | Génère les noms de classes et signatures |
 | `AbstractDirective` | Classe de base pour toutes les directives |
 
 ### Tasks d'affichage (découplage)
@@ -738,7 +815,7 @@ final class SetupDirective extends AbstractDirective
 | `DisplayTableTask` | Affiche des tableaux formatés |
 | `AskQuestionTask` | Gère les questions interactives |
 | `ConfirmQuestionTask` | Gère les confirmations |
-| `DisplayErrorTask` | Affiche les erreurs formatées |
+| `CreateDirectiveFileTask` | Crée les fichiers de directives sur le disque |
 
 ---
 
@@ -810,10 +887,10 @@ public function boot(): void
 final class MyDirective extends AbstractDirective
 {
     public function __construct(
+        DirectiveDependenciesRecord $deps,
         private readonly UserService $userService,
-        ...$parents
     ) {
-        parent::__construct(...$parents);
+        parent::__construct($deps);
     }
 }
 
@@ -824,6 +901,26 @@ final class MyDirective extends AbstractDirective
     {
         UserService::create(); // Difficile à mocker
     }
+}
+```
+
+### 6. Respecter le format de signature
+
+```php
+// ✅ BON - Signatures valides
+public function getSignature(): string
+{
+    return 'user:list';           // Délimiteur ':'
+    return 'cache-clear';         // Délimiteur '-'
+    return 'api:user-profile';    // Délimiteurs mixtes
+}
+
+// ❌ MAUVAIS - Signatures invalides
+public function getSignature(): string
+{
+    return 'user@list';           // Caractère '@' interdit
+    return 'create_user';         // Underscore '_' interdit
+    return 'user:';               // Délimiteur final interdit
 }
 ```
 

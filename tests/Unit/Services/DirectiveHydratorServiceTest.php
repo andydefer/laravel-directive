@@ -2,15 +2,12 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tests\Directive\Unit\Services;
+namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestDirective;
 use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Records\Collections\TypedCollection;
@@ -22,7 +19,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveHydratorServiceTest extends TestCase
 {
     private DirectiveFactoryInterface&MockObject $factory;
-
+    private DirectiveInteractionService&MockObject $interaction;
     private DirectiveHydratorService $service;
 
     protected function setUp(): void
@@ -30,22 +27,13 @@ final class DirectiveHydratorServiceTest extends TestCase
         parent::setUp();
 
         $this->factory = $this->createMock(DirectiveFactoryInterface::class);
+        $this->interaction = $this->createMock(DirectiveInteractionService::class);
         $this->service = new DirectiveHydratorService($this->factory);
     }
 
     private function createTestDirective(): TestDirective
     {
-        $displayMessage = $this->createMock(DisplayMessageTask::class);
-        $askQuestion = $this->createMock(AskQuestionTask::class);
-        $confirmQuestion = $this->createMock(ConfirmQuestionTask::class);
-        $displayTable = $this->createMock(DisplayTableTask::class);
-
-        return new TestDirective(
-            $displayMessage,
-            $askQuestion,
-            $confirmQuestion,
-            $displayTable,
-        );
+        return new TestDirective($this->interaction);
     }
 
     /**
@@ -72,7 +60,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['John Doe', 'name', 'john@example.com', 'email']);
-        $options = new StringTypedCollection;
+        $options = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -97,7 +85,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
+        $arguments = new StringTypedCollection();
         $options = $this->createMixedCollection(['active', 'true', 'verbose', null, 'role', 'admin']);
 
         $parsed = new ParsedDirectiveRecord(
@@ -124,7 +112,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
-        $options = new StringTypedCollection;
+        $options = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -149,8 +137,8 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
-        $options = new StringTypedCollection;
+        $arguments = new StringTypedCollection();
+        $options = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -175,7 +163,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['value1', 'key1', 'value2']);
-        $options = new StringTypedCollection;
+        $options = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -198,7 +186,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
+        $arguments = new StringTypedCollection();
         $options = $this->createMixedCollection(['active', 'true', 'verbose']);
 
         $parsed = new ParsedDirectiveRecord(
@@ -222,7 +210,7 @@ final class DirectiveHydratorServiceTest extends TestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
+        $arguments = new StringTypedCollection();
         $options = $this->createMixedCollection([
             'string_value',
             'hello',
@@ -270,7 +258,7 @@ final class DirectiveHydratorServiceTest extends TestCase
 
         // Assert
         $this->assertSame(TestDirective::class, $blueprint->class);
-        $this->assertSame('test:directive', $blueprint->signature);
+        $this->assertSame('test-directive', $blueprint->signature);
         $this->assertSame('Test directive', $blueprint->description);
     }
 

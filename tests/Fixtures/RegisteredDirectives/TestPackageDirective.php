@@ -6,13 +6,20 @@ namespace AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class TestPackageDirective extends AbstractDirective
 {
+    public function __construct(
+        DirectiveInteractionService $interaction,
+    ) {
+        parent::__construct($interaction);
+    }
+
     public function getSignature(): string
     {
-        return 'test:package';
+        return 'test-package';
     }
 
     public function getDescription(): string

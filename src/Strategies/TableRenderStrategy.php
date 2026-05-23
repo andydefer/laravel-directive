@@ -2,35 +2,59 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tasks;
+namespace AndyDefer\Directive\Strategies;
 
+use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Collections\WidthCollection;
+use AndyDefer\Directive\Contracts\RenderStrategyInterface;
+use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-class DisplayTableTask
+final class TableRenderStrategy implements RenderStrategyInterface
 {
-    public function execute(DisplayTableRecord $record): void
+    public function supports(RenderType $type): bool
+    {
+        return $type === RenderType::TABLE;
+    }
+
+    public function execute(object $record, RenderType $type): ReplacementCollection
+    {
+        $replacements = new ReplacementCollection();
+
+        if (!$record instanceof DisplayTableRecord) {
+            return $replacements;
+        }
+
+        $replacements->addReplacement('{{table}}', $this->renderTable($record));
+
+        return $replacements;
+    }
+
+    private function renderTable(DisplayTableRecord $record): string
     {
         $widths = $this->calculateColumnWidths($record);
 
         if ($widths->isEmpty()) {
-            return;
+            return '';
         }
 
-        echo $this->formatHeaderRow($record->headers, $widths)."\n";
-        echo $this->formatSeparator($widths)."\n";
+        $lines = [];
+        $lines[] = $this->formatHeaderRow($record->headers, $widths);
+        $lines[] = $this->formatSeparator($widths);
 
         foreach ($record->rows as $row) {
-            echo $this->formatDataRow($row, $widths)."\n";
+            $lines[] = $this->formatDataRow($row, $widths);
         }
+
+        return implode("\n", $lines);
     }
 
     private function calculateColumnWidths(DisplayTableRecord $record): WidthCollection
     {
-        $widths = new WidthCollection;
+        $widths = new WidthCollection();
         $headersArray = $record->headers->toArray();
         $columnCount = count($headersArray);
 
@@ -38,13 +62,11 @@ class DisplayTableTask
             return $widths;
         }
 
-        // Initialize widths with header lengths
         for ($i = 0; $i < $columnCount; $i++) {
             $header = $headersArray[$i] ?? '';
             $widths->add(strlen($header));
         }
 
-        // Update widths based on rows data
         foreach ($record->rows as $row) {
             for ($i = 0; $i < $columnCount; $i++) {
                 $value = $row->get($i);
@@ -83,7 +105,7 @@ class DisplayTableTask
             $parts[] = str_pad($header, $width);
         }
 
-        return '| '.implode(' | ', $parts).' |';
+        return '| ' . implode(' | ', $parts) . ' |';
     }
 
     private function formatDataRow(RowCollection $row, WidthCollection $widths): string
@@ -96,7 +118,7 @@ class DisplayTableTask
             $parts[] = str_pad($formattedValue, $width);
         }
 
-        return '| '.implode(' | ', $parts).' |';
+        return '| ' . implode(' | ', $parts) . ' |';
     }
 
     private function formatValue(mixed $value): string
@@ -124,6 +146,6 @@ class DisplayTableTask
             $parts[] = str_repeat('-', $width);
         }
 
-        return '|-'.implode('-|-', $parts).'-|';
+        return '|-' . implode('-|-', $parts) . '-|';
     }
 }

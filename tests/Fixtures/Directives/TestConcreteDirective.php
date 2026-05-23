@@ -6,25 +6,19 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 
 final class TestConcreteDirective extends AbstractDirective
 {
     public function __construct(
-        DisplayMessageTask $displayMessage,
-        AskQuestionTask $askQuestion,
-        ConfirmQuestionTask $confirmQuestion,
-        DisplayTableTask $displayTable,
+        DirectiveInteractionService $interaction,
     ) {
-        parent::__construct($displayMessage, $askQuestion, $confirmQuestion, $displayTable);
+        parent::__construct($interaction);
     }
 
     public function getSignature(): string
     {
-        return 'test:concrete';
+        return 'test-concrete';
     }
 
     public function getDescription(): string

@@ -5,66 +5,72 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Enums\ShortOption;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
+use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
+/**
+ * Core kernel that orchestrates directive execution from CLI.
+ */
 class DirectiveKernel
 {
-    private bool $debug = false;
-
     public function __construct(
         private readonly DirectiveExecutionService $service,
+        private readonly SignatureValidationService $signatureValidator,
+        private readonly DirectiveRendererService $renderer,
     ) {}
-
-    public function enableDebug(bool $debug = true): self
-    {
-        $this->debug = $debug;
-        return $this;
-    }
 
     public function run(array $argv): ExitCode
     {
-        // Si aucun argument n'est passé, afficher l'aide par défaut
         if (count($argv) < 2) {
             return $this->showDefaultHelp();
         }
 
         $signature = $argv[1];
 
-        // Si la signature commence par '--', c'est une option globale
+        // Check for long options --help, --list
         if (str_starts_with($signature, '--')) {
-            return $this->service->execute(new DirectiveExecutionRecord(
-                signature: $signature,
-                arguments: new StringTypedCollection(),
-            ));
+            return $this->executeDirective($signature, []);
         }
 
-        $args = array_slice($argv, 2);
-
-        $arguments = new StringTypedCollection();
-
-        foreach ($args as $arg) {
-            $arguments->add($arg);
+        // Check for allowed short options -h, -l, -v
+        if (ShortOption::isValid($signature)) {
+            return $this->executeDirective($signature, []);
         }
 
-        $result = $this->service->execute(new DirectiveExecutionRecord(
-            signature: $signature,
-            arguments: $arguments,
-        ));
+        $validation = $this->signatureValidator->validate($signature);
 
+        if (!$validation->isValid) {
+            $this->renderer->renderValidationError($validation);
+            return ExitCode::INVALID_ARGUMENT;
+        }
 
-        return $result;
+        $arguments = array_slice($argv, 2);
+
+        return $this->executeDirective($signature, $arguments);
     }
 
-    /**
-     * Affiche l'aide par défaut quand aucune directive n'est spécifiée.
-     */
+    private function executeDirective(string $signature, array $arguments): ExitCode
+    {
+        $argumentCollection = new StringTypedCollection();
+
+        foreach ($arguments as $argument) {
+            $argumentCollection->add($argument);
+        }
+
+        $record = new DirectiveExecutionRecord(
+            signature: $signature,
+            arguments: $argumentCollection,
+        );
+
+        return $this->service->execute($record);
+    }
+
     private function showDefaultHelp(): ExitCode
     {
-        return $this->service->execute(new DirectiveExecutionRecord(
-            signature: '--help',
-            arguments: new StringTypedCollection(),
-        ));
+        return $this->executeDirective('--help', []);
     }
 }

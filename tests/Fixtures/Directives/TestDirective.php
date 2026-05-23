@@ -6,29 +6,21 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 
 final class TestDirective extends AbstractDirective
 {
     private string $signature;
-
     private string $description;
-
     private ?ExitCode $exitCode;
 
     public function __construct(
-        DisplayMessageTask $displayMessage,
-        AskQuestionTask $askQuestion,
-        ConfirmQuestionTask $confirmQuestion,
-        DisplayTableTask $displayTable,
-        string $signature = 'test:directive',
+        DirectiveInteractionService $interaction,
+        string $signature = 'test-directive',
         string $description = 'Test directive',
         ?ExitCode $exitCode = ExitCode::SUCCESS,
     ) {
-        parent::__construct($displayMessage, $askQuestion, $confirmQuestion, $displayTable);
+        parent::__construct($interaction);
         $this->signature = $signature;
         $this->description = $description;
         $this->exitCode = $exitCode;

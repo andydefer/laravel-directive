@@ -30,45 +30,47 @@ use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\DirectiveRegistrar;
+use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Config\DirectiveConfig;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayErrorTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Tasks\InputTask;
+use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 
 $container = new Container();
 
-$container->singleton(DisplayMessageTask::class, function () {
-    return new DisplayMessageTask();
+// Enregistrer les Tasks
+$container->singleton(RenderTask::class, function () {
+    return new RenderTask();
 });
-$container->singleton(AskQuestionTask::class, function () {
-    return new AskQuestionTask();
+$container->singleton(InputTask::class, function () {
+    return new InputTask();
 });
-$container->singleton(ConfirmQuestionTask::class, function () {
-    return new ConfirmQuestionTask();
+
+// Enregistrer les Services
+$container->singleton(DirectiveInteractionService::class, function ($c) {
+    return new DirectiveInteractionService(
+        $c->make(RenderTask::class),
+        $c->make(InputTask::class),
+    );
 });
-$container->singleton(DisplayTableTask::class, function () {
-    return new DisplayTableTask();
-});
-$container->singleton(DisplayErrorTask::class, function () {
-    return new DisplayErrorTask();
+
+$container->singleton(SignatureValidationService::class, function () {
+    return new SignatureValidationService();
 });
 
 $projectRoot = getcwd();
 $directivesPath = $projectRoot . '/app/Directives';
 
-// Lire la configuration si elle existe, sans utiliser app_path()
+// Lire la configuration si elle existe
 if (file_exists($projectRoot . '/config/directive.php')) {
     $config = require $projectRoot . '/config/directive.php';
     if (isset($config['path']) && is_string($config['path'])) {
-        // Si le chemin commence par app_path(), le remplacer
         $path = $config['path'];
         if (str_starts_with($path, 'app_path()')) {
             $path = str_replace('app_path()', $projectRoot . '/app', $path);
@@ -78,32 +80,35 @@ if (file_exists($projectRoot . '/config/directive.php')) {
 }
 
 $directiveConfig = DirectiveConfig::default()->withDirectivesPath($directivesPath);
-
 $factory = new ContainerDirectiveFactory($container);
 $parser = new DirectiveParserService();
 $hydrator = new DirectiveHydratorService($factory);
 $registrar = new DirectiveRegistrar();
 
-// Enregistrer la directive make:directive
+// Enregistrer la directive make-directive
 $classes = new StringTypedCollection();
 $classes->add(\AndyDefer\Directive\Directives\MakeDirective::class);
 $registrar->register($classes);
 
 $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $registrar);
-$renderer = new DirectiveRendererService();
-$displayMessage = $container->make(DisplayMessageTask::class);
-$displayError = $container->make(DisplayErrorTask::class);
+$renderer = new DirectiveRendererService($container->make(RenderTask::class));
+$interaction = $container->make(DirectiveInteractionService::class);
+$signatureValidator = $container->make(SignatureValidationService::class);
 
 $executionService = new DirectiveExecutionService(
-    $discovery,
-    $parser,
-    $hydrator,
-    $renderer,
-    $displayMessage,
-    $displayError,
+    parser: $parser,
+    hydrator: $hydrator,
+    renderer: $renderer,
+    registrar: $registrar,
+    interaction: $interaction,
 );
 
-$kernel = new DirectiveKernel($executionService);
+$kernel = new DirectiveKernel(
+    $executionService,
+    $signatureValidator,
+    $renderer,
+);
+
 $exitCode = $kernel->run($argv);
 
 exit($exitCode->value);

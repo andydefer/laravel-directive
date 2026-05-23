@@ -2,22 +2,20 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tests\Directive\Feature;
+namespace AndyDefer\Directive\Tests\Feature;
 
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveRegistrar;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayErrorTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Tasks\InputTask;
+use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
+use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
@@ -40,11 +38,21 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
 
         $this->container = new Container();
 
-        $this->container->singleton(DisplayMessageTask::class);
-        $this->container->singleton(AskQuestionTask::class);
-        $this->container->singleton(ConfirmQuestionTask::class);
-        $this->container->singleton(DisplayTableTask::class);
-        $this->container->singleton(DisplayErrorTask::class);
+        // Enregistrer les Tasks
+        $this->container->singleton(RenderTask::class, function () {
+            return new RenderTask();
+        });
+        $this->container->singleton(InputTask::class, function () {
+            return new InputTask();
+        });
+
+        // Enregistrer les Services
+        $this->container->singleton(DirectiveInteractionService::class, function ($c) {
+            return new DirectiveInteractionService(
+                $c->make(RenderTask::class),
+                $c->make(InputTask::class),
+            );
+        });
 
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
@@ -69,7 +77,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
 
         $found = false;
         foreach ($result as $directive) {
-            if ($directive->signature === 'test:echo {message?}') {
+            if ($directive->signature === 'test-echo {message?}') {
                 $found = true;
                 $this->assertSame('Test echo directive', $directive->description);
                 $this->assertSame(TestEchoDirective::class, $directive->class);
@@ -78,7 +86,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
             }
         }
 
-        $this->assertTrue($found, 'Directive "test:echo {message?}" not found');
+        $this->assertTrue($found, 'Directive "test-echo {message?}" not found');
     }
 
     public function test_finds_concrete_directives(): void
@@ -90,7 +98,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
             $signatures[] = $directive->signature;
         }
 
-        $this->assertContains('test:echo {message?}', $signatures);
+        $this->assertContains('test-echo {message?}', $signatures);
     }
 
     public function test_returns_complete_metadata_structure(): void
@@ -182,7 +190,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
 
         $found = false;
         foreach ($result as $directive) {
-            if ($directive->signature === 'test:package') {
+            if ($directive->signature === 'test-package') {
                 $found = true;
                 $this->assertSame('Test directive from external package', $directive->description);
                 $this->assertSame(TestPackageDirective::class, $directive->class);
@@ -190,7 +198,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
             }
         }
 
-        $this->assertTrue($found, 'Registered directive "test:package" not found');
+        $this->assertTrue($found, 'Registered directive "test-package" not found');
     }
 
     public function test_discover_combines_filesystem_and_registered_directives(): void
@@ -212,8 +220,8 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
             $signatures[] = $directive->signature;
         }
 
-        $this->assertContains('test:echo {message?}', $signatures, 'Filesystem directive missing');
-        $this->assertContains('test:package', $signatures, 'Registered directive missing');
+        $this->assertContains('test-echo {message?}', $signatures, 'Filesystem directive missing');
+        $this->assertContains('test-package', $signatures, 'Registered directive missing');
     }
 
     public function test_discover_ignores_invalid_registered_classes(): void
@@ -236,9 +244,9 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
             $signatures[] = $directive->signature;
         }
 
-        $this->assertNotContains('invalid:class', $signatures);
-        $this->assertContains('test:echo {message?}', $signatures);
-        $this->assertNotContains('test:package', $signatures);
+        $this->assertNotContains('invalid-package', $signatures);
+        $this->assertContains('test-echo {message?}', $signatures);
+        $this->assertNotContains('test-package', $signatures);
     }
 
     public function test_discover_handles_empty_registrar(): void
@@ -257,8 +265,8 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
             $signatures[] = $directive->signature;
         }
 
-        $this->assertContains('test:echo {message?}', $signatures);
-        $this->assertNotContains('test:package', $signatures);
+        $this->assertContains('test-echo {message?}', $signatures);
+        $this->assertNotContains('test-package', $signatures);
     }
 
     public function test_discover_with_null_registrar_only_uses_filesystem(): void
@@ -277,8 +285,8 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
             $signatures[] = $directive->signature;
         }
 
-        $this->assertContains('test:echo {message?}', $signatures);
-        $this->assertNotContains('test:package', $signatures);
+        $this->assertContains('test-echo {message?}', $signatures);
+        $this->assertNotContains('test-package', $signatures);
     }
 
     public function test_registered_directive_metadata_structure_is_correct(): void
@@ -297,7 +305,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
 
         $found = false;
         foreach ($result as $directive) {
-            if ($directive->signature === 'test:package') {
+            if ($directive->signature === 'test-package') {
                 $found = true;
                 $this->assertIsString($directive->signature);
                 $this->assertNotEmpty($directive->signature);
@@ -332,7 +340,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
 
         $count = 0;
         foreach ($result as $directive) {
-            if ($directive->signature === 'test:package') {
+            if ($directive->signature === 'test-package') {
                 $count++;
             }
         }
@@ -361,7 +369,7 @@ final class DirectiveDiscoveryServiceIntegrationTest extends TestCase
 
         $count = 0;
         foreach ($result as $directive) {
-            if ($directive->signature === 'test:package') {
+            if ($directive->signature === 'test-package') {
                 $count++;
             }
         }

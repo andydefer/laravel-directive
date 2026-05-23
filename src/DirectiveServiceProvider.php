@@ -12,27 +12,57 @@ use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Tasks\AskQuestionTask;
-use AndyDefer\Directive\Tasks\ConfirmQuestionTask;
-use AndyDefer\Directive\Tasks\DisplayErrorTask;
-use AndyDefer\Directive\Tasks\DisplayMessageTask;
-use AndyDefer\Directive\Tasks\DisplayTableTask;
+use AndyDefer\Directive\Services\SignatureValidationService;
+use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
+use AndyDefer\Directive\Tasks\InputTask;
+use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Support\ServiceProvider;
 
-class DirectiveServiceProvider extends ServiceProvider
+/**
+ * Laravel service provider for the Directive package.
+ */
+final class DirectiveServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Config
+        $this->registerConfig();
+        $this->registerFactory();
+        $this->registerRegistrar();
+        $this->registerParser();
+        $this->registerHydrator();
+        $this->registerDiscovery();
+        $this->registerRenderer();
+        $this->registerSignatureValidation();
+        $this->registerNamingService();
+        $this->registerTasks();
+        $this->registerInputTask();
+        $this->registerInteractionService();
+        $this->registerExecution();
+        $this->registerMakeDirective();
+        $this->registerBuiltInDirectives();
+        $this->registerKernel();
+    }
+
+    public function boot(): void
+    {
+        $this->publishes([
+            __DIR__ . '/config/directive.php' => config_path('directive.php'),
+        ], 'directive-config');
+    }
+
+    private function registerConfig(): void
+    {
         $this->app->singleton(DirectiveConfig::class, function ($app) {
             $config = DirectiveConfig::default();
 
-            if ($app->has('config') && $app->config->has('directive')) {
-                $appConfig = $app->config->get('directive', []);
+            if ($this->isLaravelConfigAvailable($app)) {
+                $appConfig = $app['config']->get('directive', []);
 
                 if (isset($appConfig['path'])) {
                     $config = $config->withDirectivesPath($appConfig['path']);
@@ -41,33 +71,44 @@ class DirectiveServiceProvider extends ServiceProvider
 
             return $config;
         });
+    }
 
-        // Factory
+    private function registerFactory(): void
+    {
         $this->app->singleton(DirectiveFactoryInterface::class, function ($app) {
             return new ContainerDirectiveFactory($app);
         });
+    }
 
-        // Registrar (must be registered first so packages can use it)
+    private function registerRegistrar(): void
+    {
         $this->app->singleton(DirectiveRegistrarInterface::class, function ($app) {
             return new DirectiveRegistrar();
         });
+
         $this->app->singleton(DirectiveRegistrar::class, function ($app) {
             return $app->make(DirectiveRegistrarInterface::class);
         });
+    }
 
-        // Parser
+    private function registerParser(): void
+    {
         $this->app->singleton(DirectiveParserService::class, function ($app) {
             return new DirectiveParserService();
         });
+    }
 
-        // Hydrator
+    private function registerHydrator(): void
+    {
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
             return new DirectiveHydratorService(
                 $app->make(DirectiveFactoryInterface::class)
             );
         });
+    }
 
-        // Discovery
+    private function registerDiscovery(): void
+    {
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
             return new DirectiveDiscoveryService(
                 $app->make(DirectiveConfig::class),
@@ -75,68 +116,116 @@ class DirectiveServiceProvider extends ServiceProvider
                 $app->make(DirectiveRegistrarInterface::class),
             );
         });
+    }
 
-        // Renderer
+    private function registerRenderer(): void
+    {
         $this->app->singleton(DirectiveRendererService::class, function ($app) {
-            return new DirectiveRendererService();
-        });
-
-        // Execution
-        $this->app->singleton(DirectiveExecutionService::class, function ($app) {
-            return new DirectiveExecutionService(
-                $app->make(DirectiveDiscoveryService::class),
-                $app->make(DirectiveParserService::class),
-                $app->make(DirectiveHydratorService::class),
-                $app->make(DirectiveRendererService::class),
-                $app->make(DisplayMessageTask::class),
-                $app->make(DisplayErrorTask::class),
+            return new DirectiveRendererService(
+                $app->make(RenderTask::class),
             );
         });
+    }
 
-        // Tasks
-        $this->app->singleton(DisplayMessageTask::class, function ($app) {
-            return new DisplayMessageTask();
+    private function registerSignatureValidation(): void
+    {
+        $this->app->singleton(SignatureValidationService::class, function ($app) {
+            return new SignatureValidationService();
         });
+    }
 
-        $this->app->singleton(AskQuestionTask::class, function ($app) {
-            return new AskQuestionTask();
+    private function registerNamingService(): void
+    {
+        $this->app->singleton(DirectiveNamingService::class, function ($app) {
+            return new DirectiveNamingService();
         });
+    }
 
-        $this->app->singleton(ConfirmQuestionTask::class, function ($app) {
-            return new ConfirmQuestionTask();
+    private function registerTasks(): void
+    {
+        $tasks = [
+            RenderTask::class,
+            InputTask::class,
+            CreateDirectiveFileTask::class,
+        ];
+
+        foreach ($tasks as $task) {
+            $this->app->singleton($task, function ($app) use ($task) {
+                if ($task === CreateDirectiveFileTask::class) {
+                    return new CreateDirectiveFileTask(
+                        $app->make(DirectiveNamingService::class)
+                    );
+                }
+                return new $task();
+            });
+        }
+    }
+
+    private function registerInputTask(): void
+    {
+        $this->app->singleton(InputTask::class, function ($app) {
+            return new InputTask();
         });
+    }
 
-        $this->app->singleton(DisplayTableTask::class, function ($app) {
-            return new DisplayTableTask();
+    private function registerInteractionService(): void
+    {
+        $this->app->singleton(DirectiveInteractionService::class, function ($app) {
+            return new DirectiveInteractionService(
+                $app->make(RenderTask::class),
+                $app->make(InputTask::class),
+            );
         });
+    }
 
-        $this->app->singleton(DisplayErrorTask::class, function ($app) {
-            return new DisplayErrorTask();
+    private function registerExecution(): void
+    {
+        $this->app->singleton(DirectiveExecutionService::class, function ($app) {
+            return new DirectiveExecutionService(
+                parser: $app->make(DirectiveParserService::class),
+                hydrator: $app->make(DirectiveHydratorService::class),
+                renderer: $app->make(DirectiveRendererService::class),
+                registrar: $app->make(DirectiveRegistrar::class),
+                interaction: $app->make(DirectiveInteractionService::class),
+            );
         });
+    }
 
-        // Make directive
-        $this->app->singleton(MakeDirective::class);
+    private function registerMakeDirective(): void
+    {
+        $this->app->singleton(MakeDirective::class, function ($app) {
+            return new MakeDirective(
+                interaction: $app->make(DirectiveInteractionService::class),
+                signatureValidator: $app->make(SignatureValidationService::class),
+                namingService: $app->make(DirectiveNamingService::class),
+                fileTask: $app->make(CreateDirectiveFileTask::class),
+            );
+        });
+    }
 
-        // Register built-in directives
+    private function registerBuiltInDirectives(): void
+    {
         $this->app->afterResolving(DirectiveRegistrarInterface::class, function ($registrar) {
             $classes = new StringTypedCollection();
             $classes->add(MakeDirective::class);
 
             $registrar->register($classes);
         });
+    }
 
-        // Kernel
+    private function registerKernel(): void
+    {
         $this->app->singleton(DirectiveKernel::class, function ($app) {
             return new DirectiveKernel(
-                $app->make(DirectiveExecutionService::class)
+                $app->make(DirectiveExecutionService::class),
+                $app->make(SignatureValidationService::class),
+                $app->make(DirectiveRendererService::class),
             );
         });
     }
 
-    public function boot(): void
+    private function isLaravelConfigAvailable(object $app): bool
     {
-        $this->publishes([
-            __DIR__ . '/config/directive.php' => config_path('directive.php'),
-        ], 'directive-config');
+        return $app->has('config') && $app['config']->has('directive');
     }
 }

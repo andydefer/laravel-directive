@@ -6,13 +6,20 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class TestEchoDirective extends AbstractDirective
 {
+    public function __construct(
+        DirectiveInteractionService $interaction,
+    ) {
+        parent::__construct($interaction);
+    }
+
     public function getSignature(): string
     {
-        return 'test:echo {message?}';
+        return 'test-echo {message?}';
     }
 
     public function getDescription(): string

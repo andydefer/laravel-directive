@@ -6,41 +6,121 @@ namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Contracts\DirectiveRegistrarInterface;
+use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-/**
- * Service responsible for registering directive classes from external packages.
- */
-final class DirectiveRegistrar implements DirectiveRegistrarInterface
+class DirectiveRegistrar implements DirectiveRegistrarInterface
 {
     private StringTypedCollection $registeredDirectives;
+    private array $signatureMap = [];
+    private array $aliasMap = [];
+    private array $directivesMetadata = [];
 
     public function __construct()
     {
-        $this->registeredDirectives = new StringTypedCollection;
+        $this->registeredDirectives = new StringTypedCollection();
     }
 
     public function register(StringTypedCollection $directiveClasses): self
     {
         foreach ($directiveClasses as $class) {
-            if (! is_string($class)) {
+            if (!is_string($class)) {
                 continue;
             }
 
-            if (! class_exists($class)) {
+            if (!class_exists($class)) {
                 continue;
             }
 
-            if (! is_subclass_of($class, DirectiveInterface::class)) {
+            if (!is_subclass_of($class, DirectiveInterface::class)) {
                 continue;
             }
 
-            if (! $this->registeredDirectives->contains($class)) {
+            if (!$this->registeredDirectives->contains($class)) {
                 $this->registeredDirectives->add($class);
+                $this->buildMaps($class);
             }
         }
 
         return $this;
+    }
+
+    private function buildMaps(string $class): void
+    {
+        $reflection = new \ReflectionClass($class);
+        $instance = $reflection->newInstanceWithoutConstructor();
+
+        $signature = $instance->getSignature();
+
+        // Store by full signature
+        if (!isset($this->signatureMap[$signature])) {
+            $this->signatureMap[$signature] = new StringTypedCollection();
+        }
+        $this->signatureMap[$signature]->add($class);
+
+        // Also store by command name (without arguments)
+        $commandName = explode(' ', $signature)[0];
+        if (!isset($this->signatureMap[$commandName])) {
+            $this->signatureMap[$commandName] = new StringTypedCollection();
+        }
+        if (!$this->signatureMap[$commandName]->contains($class)) {
+            $this->signatureMap[$commandName]->add($class);
+        }
+
+        // Store metadata
+        $this->directivesMetadata[$commandName] = (object)[
+            'signature' => $commandName,
+            'fullSignature' => $signature,
+            'class' => $class,
+            'description' => $instance->getDescription(),
+            'aliases' => $instance->getAliases(),
+        ];
+
+        $aliases = $instance->getAliases();
+        foreach ($aliases as $alias) {
+            if (!isset($this->aliasMap[$alias])) {
+                $this->aliasMap[$alias] = new StringTypedCollection();
+            }
+            $this->aliasMap[$alias]->add($class);
+        }
+    }
+
+    public function find(string $name): StringTypedCollection
+    {
+        if (isset($this->aliasMap[$name])) {
+            return $this->aliasMap[$name];
+        }
+
+        if (isset($this->signatureMap[$name])) {
+            return $this->signatureMap[$name];
+        }
+
+        return new StringTypedCollection();
+    }
+
+    public function getAllDirectivesMetadata(): TypedCollection
+    {
+        $collection = new TypedCollection(\stdClass::class);
+        foreach ($this->directivesMetadata as $metadata) {
+            $collection->add($metadata);
+        }
+        return $collection;
+    }
+
+    public function hasConflict(string $name): bool
+    {
+        $matches = $this->find($name);
+        return $matches->count() > 1;
+    }
+
+    public function getSignatureMap(): array
+    {
+        return $this->signatureMap;
+    }
+
+    public function getAliasMap(): array
+    {
+        return $this->aliasMap;
     }
 
     public function getRegistered(): StringTypedCollection
@@ -53,23 +133,15 @@ final class DirectiveRegistrar implements DirectiveRegistrarInterface
         return $this->registeredDirectives->contains($directiveClass);
     }
 
-    /**
-     * Clear all registered directives.
-     *
-     * @return self Returns the instance for method chaining
-     */
     public function clear(): self
     {
-        $this->registeredDirectives = new StringTypedCollection;
-
+        $this->registeredDirectives = new StringTypedCollection();
+        $this->signatureMap = [];
+        $this->aliasMap = [];
+        $this->directivesMetadata = [];
         return $this;
     }
 
-    /**
-     * Get the count of registered directives.
-     *
-     * @return int Number of registered directives
-     */
     public function count(): int
     {
         return $this->registeredDirectives->count();
