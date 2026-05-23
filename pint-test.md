@@ -1,11 +1,11 @@
 # Pint Formatting Test Report
-*Generated: sam. 23 mai 2026 11:28:55 WAT*
+*Generated: sam. 23 mai 2026 11:34:29 WAT*
 
 
-  ⨯⨯.......................⨯.⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.....⨯⨯⨯⨯⨯..⨯...⨯⨯...⨯⨯⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯⨯⨯.......⨯.⨯.⨯⨯.⨯
+  ⨯⨯.......................⨯.⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.....⨯⨯⨯⨯⨯..⨯...⨯⨯...⨯⨯⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯⨯⨯.......⨯.⨯.⨯⨯.⨯
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................ 110 files, 60 style issues  
+    FAIL   ................................................................................................................................................ 111 files, 61 style issues  
   ⨯ src/AbstractDirective.php                                                                           class_attributes_separation, new_with_parentheses, blank_line_before_statement  
   ⨯ src/Collections/ReplacementCollection.php                                                                                        new_with_parentheses, blank_line_before_statement  
   ⨯ src/Config/DirectiveConfig.php                                                                                               concat_space, braces_position, single_line_empty_body  
@@ -44,6 +44,7 @@
   ⨯ tests/Unit/AbstractDirectiveTest.php                                                                                             class_attributes_separation, new_with_parentheses  
   ⨯ tests/Unit/Collections/ReplacementCollectionTest.php                                                                                                          new_with_parentheses  
   ⨯ tests/Unit/DirectiveKernelTest.php                                                                                                                     class_attributes_separation  
+  ⨯ tests/Unit/DirectiveServiceProviderTest.php                                       class_attributes_separation, new_with_parentheses, fully_qualified_strict_types, ordered_imports  
   ⨯ tests/Unit/Directives/MakeDirectiveTest.php                                                                     class_attributes_separation, new_with_parentheses, ordered_imports  
   ⨯ tests/Unit/Services/DirectiveExecutionServiceTest.php                                               class_attributes_separation, new_with_parentheses, blank_line_before_statement  
   ⨯ tests/Unit/Services/DirectiveHydratorServiceTest.php                                                                             class_attributes_separation, new_with_parentheses  
