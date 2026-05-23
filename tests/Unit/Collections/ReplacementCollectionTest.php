@@ -92,4 +92,78 @@ final class ReplacementCollectionTest extends TestCase
 
         $this->assertTrue($values->isEmpty());
     }
+
+    public function test_to_associative_array_returns_empty_array_for_empty_collection(): void
+    {
+        $collection = new ReplacementCollection();
+        $result = $collection->toAssociativeArray();
+
+        $this->assertIsArray($result);
+        $this->assertEmpty($result);
+    }
+
+    public function test_to_associative_array_converts_single_replacement(): void
+    {
+        $collection = new ReplacementCollection();
+        $collection->addReplacement('{{name}}', 'John');
+
+        $result = $collection->toAssociativeArray();
+
+        $this->assertIsArray($result);
+        $this->assertCount(1, $result);
+        $this->assertArrayHasKey('{{name}}', $result);
+        $this->assertSame('John', $result['{{name}}']);
+    }
+
+    public function test_to_associative_array_converts_multiple_replacements(): void
+    {
+        $collection = new ReplacementCollection();
+        $collection
+            ->addReplacement('{{name}}', 'John')
+            ->addReplacement('{{email}}', 'john@example.com')
+            ->addReplacement('{{age}}', '30');
+
+        $result = $collection->toAssociativeArray();
+
+        $this->assertIsArray($result);
+        $this->assertCount(3, $result);
+        $this->assertArrayHasKey('{{name}}', $result);
+        $this->assertArrayHasKey('{{email}}', $result);
+        $this->assertArrayHasKey('{{age}}', $result);
+        $this->assertSame('John', $result['{{name}}']);
+        $this->assertSame('john@example.com', $result['{{email}}']);
+        $this->assertSame('30', $result['{{age}}']);
+    }
+
+    public function test_to_associative_array_preserves_order(): void
+    {
+        $collection = new ReplacementCollection();
+        $collection
+            ->addReplacement('{{first}}', 'First')
+            ->addReplacement('{{second}}', 'Second')
+            ->addReplacement('{{third}}', 'Third');
+
+        $result = $collection->toAssociativeArray();
+        $keys = array_keys($result);
+
+        $this->assertSame(['{{first}}', '{{second}}', '{{third}}'], $keys);
+        $this->assertSame(['First', 'Second', 'Third'], array_values($result));
+    }
+
+    public function test_to_associative_array_works_after_multiple_operations(): void
+    {
+        $collection = new ReplacementCollection();
+        $collection->addReplacement('{{name}}', 'John');
+        $collection->addReplacement('{{email}}', 'john@example.com');
+
+        $firstResult = $collection->toAssociativeArray();
+        $this->assertCount(2, $firstResult);
+
+        $collection->addReplacement('{{age}}', '30');
+        $secondResult = $collection->toAssociativeArray();
+
+        $this->assertCount(3, $secondResult);
+        $this->assertArrayHasKey('{{age}}', $secondResult);
+        $this->assertSame('30', $secondResult['{{age}}']);
+    }
 }

@@ -19,14 +19,10 @@ use AndyDefer\Directive\Strategies\ValidationErrorRenderStrategy;
 
 class RenderTask
 {
-    private string $stubPath;
-
     private array $strategies;
 
-    public function __construct(?string $stubPath = null)
+    public function __construct()
     {
-        $this->stubPath = $stubPath ?? __DIR__ . '/../../stubs/';
-
         $this->strategies = [
             new HelpRenderStrategy(),
             new ListRenderStrategy(),
@@ -45,10 +41,9 @@ class RenderTask
             $type = RenderType::EMPTY;
         }
 
-        $stub = $this->getStub($type);
         $replacements = $this->getReplacements($record, $type);
 
-        return $this->applyReplacements($stub, $replacements);
+        return $type->render($replacements->toAssociativeArray());
     }
 
     private function isEmptyDirectives(object $record): bool
@@ -60,12 +55,6 @@ class RenderTask
         return $record->directives === null || $record->directives->isEmpty();
     }
 
-    private function getStub(RenderType $type): string
-    {
-        $content = file_get_contents($this->stubPath . $type->getStubName());
-        return $content === false ? '' : $content;
-    }
-
     private function getReplacements(object $record, RenderType $type): ReplacementCollection
     {
         foreach ($this->strategies as $strategy) {
@@ -75,14 +64,5 @@ class RenderTask
         }
 
         return new ReplacementCollection();
-    }
-
-    private function applyReplacements(string $content, ReplacementCollection $replacements): string
-    {
-        return str_replace(
-            $replacements->getPlaceholders()->toArray(),
-            $replacements->getValues()->toArray(),
-            $content
-        );
     }
 }

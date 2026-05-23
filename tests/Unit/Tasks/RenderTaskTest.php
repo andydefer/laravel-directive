@@ -14,38 +14,12 @@ use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class RenderTaskTest extends TestCase
 {
-    private string $tempDir;
     private RenderTask $task;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->tempDir = sys_get_temp_dir() . '/stubs_test_' . uniqid();
-        mkdir($this->tempDir);
-
-        $this->createTestStubs();
-
-        $this->task = new RenderTask($this->tempDir . '/');
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-        array_map('unlink', glob($this->tempDir . '/*.stub'));
-        rmdir($this->tempDir);
-    }
-
-    private function createTestStubs(): void
-    {
-        file_put_contents($this->tempDir . '/help.stub', 'HELP CONTENT');
-        file_put_contents($this->tempDir . '/list.stub', "COUNT: {{count}}\nROWS:\n{{rows}}");
-        file_put_contents($this->tempDir . '/not-found.stub', 'NOT FOUND: {{signature}}');
-        file_put_contents($this->tempDir . '/success.stub', 'SUCCESS: {{message}}');
-        file_put_contents($this->tempDir . '/error.stub', 'ERROR: {{message}}');
-        file_put_contents($this->tempDir . '/empty.stub', 'EMPTY DIRECTIVES');
-        file_put_contents($this->tempDir . '/conflict.stub', "CONFLICT: {{name}}\n{{options}}");
-        file_put_contents($this->tempDir . '/table.stub', "{{table}}");
+        $this->task = new RenderTask();
     }
 
     public function test_render_help(): void
@@ -53,7 +27,8 @@ final class RenderTaskTest extends TestCase
         $record = new RenderRecord(type: RenderType::HELP);
         $result = $this->task->execute($record, RenderType::HELP);
 
-        $this->assertSame('HELP CONTENT', $result);
+        $this->assertStringContainsString('Directive System', $result);
+        $this->assertStringContainsString('USAGE:', $result);
     }
 
     public function test_render_list_with_directives(): void
@@ -68,8 +43,9 @@ final class RenderTaskTest extends TestCase
         $record = new RenderRecord(type: RenderType::LIST, directives: $directives);
         $result = $this->task->execute($record, RenderType::LIST);
 
-        $this->assertStringContainsString('COUNT: 1', $result);
+        $this->assertStringContainsString('Available Directives', $result);
         $this->assertStringContainsString('test-cmd', $result);
+        $this->assertStringContainsString('Test command', $result);
     }
 
     public function test_render_list_empty_falls_back_to_empty(): void
@@ -77,7 +53,7 @@ final class RenderTaskTest extends TestCase
         $record = new RenderRecord(type: RenderType::LIST, directives: null);
         $result = $this->task->execute($record, RenderType::LIST);
 
-        $this->assertSame('EMPTY DIRECTIVES', $result);
+        $this->assertStringContainsString('No Directives Found', $result);
     }
 
     public function test_render_not_found(): void
@@ -85,7 +61,8 @@ final class RenderTaskTest extends TestCase
         $record = new RenderRecord(type: RenderType::NOT_FOUND, signature: 'unknown-cmd');
         $result = $this->task->execute($record, RenderType::NOT_FOUND);
 
-        $this->assertSame('NOT FOUND: unknown-cmd', $result);
+        $this->assertStringContainsString('unknown-cmd', $result);
+        $this->assertStringContainsString('not found', $result);
     }
 
     public function test_render_success(): void
@@ -93,7 +70,8 @@ final class RenderTaskTest extends TestCase
         $record = new RenderRecord(type: RenderType::SUCCESS, message: 'Operation OK');
         $result = $this->task->execute($record, RenderType::SUCCESS);
 
-        $this->assertSame('SUCCESS: Operation OK', $result);
+        $this->assertStringContainsString('Operation OK', $result);
+        $this->assertStringContainsString("\033[32m", $result);
     }
 
     public function test_render_error(): void
@@ -101,7 +79,8 @@ final class RenderTaskTest extends TestCase
         $record = new RenderRecord(type: RenderType::ERROR, message: 'Something wrong');
         $result = $this->task->execute($record, RenderType::ERROR);
 
-        $this->assertSame('ERROR: Something wrong', $result);
+        $this->assertStringContainsString('Something wrong', $result);
+        $this->assertStringContainsString("\033[31m", $result);
     }
 
     public function test_render_conflict(): void
@@ -124,7 +103,7 @@ final class RenderTaskTest extends TestCase
 
         $result = $this->task->execute($record, RenderType::CONFLICT);
 
-        $this->assertStringContainsString('CONFLICT: add-user', $result);
+        $this->assertStringContainsString('add-user', $result);
         $this->assertStringContainsString('UserCreateDirective', $result);
     }
 }

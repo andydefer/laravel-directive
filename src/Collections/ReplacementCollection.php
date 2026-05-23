@@ -41,4 +41,18 @@ final class ReplacementCollection extends TypedCollection
         }
         return $values;
     }
+
+    /**
+     * Convert collection to associative array.
+     *
+     * @return array<string, string>
+     */
+    public function toAssociativeArray(): array
+    {
+        $result = [];
+        foreach ($this->items as $replacement) {
+            $result[$replacement->placeholder] = $replacement->value;
+        }
+        return $result;
+    }
 }
