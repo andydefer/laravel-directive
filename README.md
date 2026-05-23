@@ -1,10 +1,9 @@
-
 # Laravel Directive
 
 **A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between business logic and presentation.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://php.net)
-[![Laravel Version](https://img.shields.io/badge/Laravel-12.x%20%7C%2013.x%20%7C%2014.x%20%7C%2015.x-blue)](https://laravel.com)
+[![Laravel Version](https://img.shields.io/badge/Laravel-12.x%20%7C%2013.x-blue)](https://laravel.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
@@ -51,7 +50,7 @@ final class UserListDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'user:list {--active} {role?}';
+        return 'user-list {--active} {role?}';
     }
 
     public function getDescription(): string
@@ -128,7 +127,7 @@ return [
 ### Créer votre première directive
 
 ```bash
-./vendor/bin/directive make:directive hello
+./vendor/bin/directive make-directive hello
 ```
 
 Cela génère le fichier `app/Directives/HelloDirective.php`.
@@ -149,17 +148,17 @@ Les signatures de directives doivent respecter un format strict pour garantir la
 
 | Règle | Explication |
 |-------|-------------|
-| **Délimiteurs autorisés** | Seuls `:` (deux-points) et `-` (tiret) sont autorisés |
+| **Délimiteurs autorisés** | Seuls `-` (tiret) est autorisé comme séparateur |
 | **Caractères autorisés** | Lettres (a-z, A-Z) et chiffres (0-9) |
 | **Premier caractère** | Doit être une lettre (pas un chiffre ni un délimiteur) |
-| **Pas de délimiteurs consécutifs** | `user::list` ou `user--list` sont interdits |
-| **Pas de délimiteur final** | `user:` ou `user-` sont interdits |
-| **Pas de délimiteur initial** | `:list` ou `-list` sont interdits |
+| **Pas de délimiteurs consécutifs** | `user--list` est interdit |
+| **Pas de délimiteur final** | `user-` est interdit |
+| **Pas de délimiteur initial** | `-list` est interdit |
 
 ### Format de signature
 
 ```
-[partie]:[partie]  ou  [partie]-[partie]
+partie-partie
 ```
 
 Chaque `[partie]` doit :
@@ -170,30 +169,28 @@ Chaque `[partie]` doit :
 
 | Signature | Explication |
 |-----------|-------------|
-| `user:list` | Utilisation du délimiteur `:` |
+| `user-list` | Utilisation du délimiteur `-` |
 | `cache-clear` | Utilisation du délimiteur `-` |
-| `api:user-profile` | Mélange des deux délimiteurs |
-| `admin:user:create` | Plusieurs délimiteurs `:` |
-| `user:v2` | Les chiffres sont autorisés dans une partie |
-| `api-v2:user-profile` | Chiffres avec délimiteur `-` puis `:` |
+| `api-user-profile` | Plusieurs délimiteurs `-` |
+| `user-v2` | Les chiffres sont autorisés dans une partie |
 
 ### ❌ Exemples invalides
 
 | Signature | Raison |
 |-----------|--------|
+| `user:list` | Caractère `:` interdit |
 | `create@user` | Caractère `@` interdit |
 | `create_user` | Underscore `_` interdit |
-| `user:` | Délimiteur final interdit |
-| `:list` | Délimiteur initial interdit |
-| `user::list` | Délimiteurs consécutifs interdits |
+| `user-` | Délimiteur final interdit |
+| `-list` | Délimiteur initial interdit |
 | `user--list` | Délimiteurs consécutifs interdits |
-| `123:user` | Premier caractère est un chiffre |
-| `user:123-list` | Partie commençant par un chiffre |
-| `User:List` | Les majuscules sont autorisées mais déconseillées (préférer minuscules) |
+| `123-user` | Premier caractère est un chiffre |
+| `user-123-list` | Partie commençant par un chiffre |
+| `User-List` | Les majuscules sont autorisées mais déconseillées (préférer minuscules) |
 
 ### Pourquoi ce format strict ?
 
-1. **Génération automatique des noms de classes** : Le service `DirectiveNamingService` convertit `user:list` en `UserListDirective` et `api:user-profile` en `ApiUserProfileDirective`. Les caractères interdits empêcheraient cette conversion propre.
+1. **Génération automatique des noms de classes** : Le service `DirectiveNamingService` convertit `user-list` en `UserListDirective`. Les caractères interdits empêcheraient cette conversion propre.
 
 2. **Compatibilité cross-platform** : Les caractères comme `@` ou `_` peuvent avoir des significations spéciales selon les shells.
 
@@ -207,11 +204,11 @@ Le package convertit automatiquement la signature en nom de classe PascalCase :
 
 | Signature | Nom de classe généré |
 |-----------|---------------------|
-| `user:list` | `UserListDirective` |
+| `user-list` | `UserListDirective` |
 | `cache-clear` | `CacheClearDirective` |
-| `api:user-profile` | `ApiUserProfileDirective` |
-| `admin:user:create` | `AdminUserCreateDirective` |
-| `user:v2-profile` | `UserV2ProfileDirective` |
+| `api-user-profile` | `ApiUserProfileDirective` |
+| `admin-user-create` | `AdminUserCreateDirective` |
+| `user-v2-profile` | `UserV2ProfileDirective` |
 
 ---
 
@@ -224,7 +221,7 @@ Définit le nom et les paramètres de la directive.
 ```php
 public function getSignature(): string
 {
-    return 'user:create {name} {email} {--role=admin}';
+    return 'user-create {name} {email} {--role=admin}';
 }
 ```
 
@@ -264,8 +261,8 @@ use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 public function getAliases(): StringTypedCollection
 {
     $aliases = new StringTypedCollection();
-    $aliases->add('user:add');
-    $aliases->add('create:user');
+    $aliases->add('user-add');
+    $aliases->add('create-user');
     return $aliases;
 }
 ```
@@ -277,7 +274,7 @@ public function getAliases(): StringTypedCollection
 ### Accès aux arguments
 
 ```php
-// Signature: user:create {name} {email?}
+// Signature: user-create {name} {email?}
 public function execute(): ExitCode
 {
     $name = $this->argument('name');      // Requis
@@ -295,7 +292,7 @@ public function execute(): ExitCode
 ### Accès aux options
 
 ```php
-// Signature: cache:clear {--force} {--ttl=3600}
+// Signature: cache-clear {--force} {--ttl=3600}
 public function execute(): ExitCode
 {
     $force = $this->option('force');  // bool (true si présent)
@@ -463,24 +460,21 @@ class MyPackageServiceProvider extends ServiceProvider
 
 ```bash
 # Après installation du package, la commande est directement disponible
-./vendor/bin/directive my-package:command
+./vendor/bin/directive my-package-command
 ```
 
 ---
 
 ## Commandes intégrées
 
-### `make:directive` - Créer une nouvelle directive
+### `make-directive` - Créer une nouvelle directive
 
 ```bash
-# Créer une directive avec délimiteur ':'
-./vendor/bin/directive make:directive user:list
-
-# Créer une directive avec délimiteur '-'
-./vendor/bin/directive make:directive cache-clear
+# Créer une directive simple
+./vendor/bin/directive make-directive user-list
 ```
 
-**Génère :** `app/Directives/UserListDirective.php` ou `app/Directives/CacheClearDirective.php`
+**Génère :** `app/Directives/UserListDirective.php`
 
 ```php
 <?php
@@ -494,19 +488,19 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 /**
- * Generated directive for user:list
+ * Generated directive for user-list
  * Created at: 2026-05-23 10:30:00
  */
 final class UserListDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'user:list {--option}';
+        return 'user-list {--option}';
     }
 
     public function getDescription(): string
     {
-        return 'Generated directive for user:list';
+        return 'Generated directive for user-list';
     }
 
     public function getAliases(): StringTypedCollection
@@ -531,7 +525,7 @@ final class UserListDirective extends AbstractDirective
 
 | Commande | Alias |
 |----------|-------|
-| `make:directive` | `create:directive`, `make:cmd` |
+| `make-directive` | `create-directive`, `make-cmd` |
 | `--list` | `-l` |
 | `--help` | `-h` |
 
@@ -546,8 +540,8 @@ final class UserListDirective extends AbstractDirective
 | **Mock des dépendances** | Difficile (appel à `$this->call()`) | Facile (injection de dépendances) |
 | **Test des arguments** | Simulation complexe via `$this->artisan()` | Injection directe dans `ParameterCollection` |
 | **Test des options** | Doit passer par la ligne de commande | Accès direct via `option()` mocké |
-| **Test des sorties** | Capture via `$this->expectsOutput()` | Mock des `DisplayMessageTask` |
-| **Test des interactions** | Impossible de mocker `ask()` et `confirm()` | Mock des `AskQuestionTask` et `ConfirmQuestionTask` |
+| **Test des sorties** | Capture via `$this->expectsOutput()` | Mock des services d'affichage |
+| **Test des interactions** | Impossible de mocker `ask()` et `confirm()` | Mock du service d'interaction |
 | **Isolement** | La commande s'exécute réellement | La logique métier est isolée |
 
 ### Exemple : Tester une directive complète
@@ -559,8 +553,8 @@ namespace Tests\Unit\Directives;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\DirectiveDependenciesRecord;
 use AndyDefer\Directive\Records\ParameterRecord;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\TestCase;
 use App\Directives\UserCreateDirective;
 
@@ -572,14 +566,8 @@ final class UserCreateDirectiveTest extends TestCase
     {
         parent::setUp();
         
-        $deps = new DirectiveDependenciesRecord(
-            displayMessage: $this->createMock(DisplayMessageTask::class),
-            askQuestion: $this->createMock(AskQuestionTask::class),
-            confirmQuestion: $this->createMock(ConfirmQuestionTask::class),
-            displayTable: $this->createMock(DisplayTableTask::class),
-        );
-        
-        $this->directive = new UserCreateDirective($deps);
+        $interaction = $this->createMock(DirectiveInteractionService::class);
+        $this->directive = new UserCreateDirective($interaction);
     }
 
     public function test_execute_creates_user_and_returns_success(): void
@@ -664,7 +652,7 @@ final class UserCreateDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'user:create {name} {email} {--role=user} {--notify}';
+        return 'user-create {name} {email} {--role=user} {--notify}';
     }
 
     public function getDescription(): string
@@ -699,7 +687,7 @@ final class UserCreateDirective extends AbstractDirective
 **Utilisation :**
 
 ```bash
-./vendor/bin/directive user:create "John Doe" john@example.com --role=admin --notify
+./vendor/bin/directive user-create "John Doe" john@example.com --role=admin --notify
 ```
 
 ### Directive interactive complète
@@ -720,7 +708,7 @@ final class SetupDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'app:setup';
+        return 'app-setup';
     }
 
     public function getDescription(): string
@@ -804,18 +792,11 @@ final class SetupDirective extends AbstractDirective
 | `DirectiveDiscoveryService` | Découvre les directives (filesystem + packages) |
 | `DirectiveRegistrar` | Enregistre les directives des packages |
 | `DirectiveExecutionService` | Exécute la directive demandée |
+| `DirectiveInteractionService` | Gère les interactions utilisateur (messages, questions, tables) |
 | `DirectiveNamingService` | Génère les noms de classes et signatures |
 | `AbstractDirective` | Classe de base pour toutes les directives |
-
-### Tasks d'affichage (découplage)
-
-| Task | Rôle |
-|------|------|
-| `DisplayMessageTask` | Affiche des messages colorés |
-| `DisplayTableTask` | Affiche des tableaux formatés |
-| `AskQuestionTask` | Gère les questions interactives |
-| `ConfirmQuestionTask` | Gère les confirmations |
-| `CreateDirectiveFileTask` | Crée les fichiers de directives sur le disque |
+| `RenderTask` | Centralise le rendu des templates (Strategy Pattern) |
+| `InputTask` | Centralise les entrées utilisateur (Strategy Pattern) |
 
 ---
 
@@ -836,7 +817,7 @@ final class UserDirective extends AbstractDirective { }
 
 ```php
 // ✅ BON
-getSignature(): 'user:create'
+getSignature(): 'user-create'
 getDescription(): 'Create a new user'
 
 // ❌ MAUVAIS
@@ -887,10 +868,10 @@ public function boot(): void
 final class MyDirective extends AbstractDirective
 {
     public function __construct(
-        DirectiveDependenciesRecord $deps,
+        DirectiveInteractionService $interaction,
         private readonly UserService $userService,
     ) {
-        parent::__construct($deps);
+        parent::__construct($interaction);
     }
 }
 
@@ -910,18 +891,37 @@ final class MyDirective extends AbstractDirective
 // ✅ BON - Signatures valides
 public function getSignature(): string
 {
-    return 'user:list';           // Délimiteur ':'
+    return 'user-list';           // Délimiteur '-'
     return 'cache-clear';         // Délimiteur '-'
-    return 'api:user-profile';    // Délimiteurs mixtes
+    return 'api-user-profile';    // Délimiteurs multiples
 }
 
 // ❌ MAUVAIS - Signatures invalides
 public function getSignature(): string
 {
+    return 'user:list';           // Caractère ':' interdit
     return 'user@list';           // Caractère '@' interdit
     return 'create_user';         // Underscore '_' interdit
-    return 'user:';               // Délimiteur final interdit
+    return 'user-';               // Délimiteur final interdit
 }
+```
+
+---
+
+## Gestion des conflits d'alias
+
+Lorsque plusieurs directives partagent le même alias, le système demande à l'utilisateur de choisir :
+
+```bash
+$ ./vendor/bin/directive my-alias
+
+⚠️ Multiple directives match 'my-alias':
+1. FirstDirective (signature: first-command)
+   Description of first directive
+2. SecondDirective (signature: second-command)
+   Description of second directive
+
+Which one do you want to use? [1-2]: 
 ```
 
 ---
@@ -960,7 +960,7 @@ public function getSignature(): string
 
 | Commande | Description |
 |----------|-------------|
-| `./vendor/bin/directive make:directive {name}` | Crée une nouvelle directive |
+| `./vendor/bin/directive make-directive {name}` | Crée une nouvelle directive |
 | `./vendor/bin/directive --list` | Liste toutes les directives |
 | `./vendor/bin/directive --help` | Affiche l'aide |
 
@@ -968,7 +968,7 @@ public function getSignature(): string
 
 | Commande | Alias |
 |----------|-------|
-| `make:directive` | `create:directive`, `make:cmd` |
+| `make-directive` | `create-directive`, `make-cmd` |
 | `--list` | `-l` |
 | `--help` | `-h` |
 
