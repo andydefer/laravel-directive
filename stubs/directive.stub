@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+
+/**
+ * Generated directive for {{signature}}
+ * Created at: {{date}}
+ */
+final class {{class}} extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return '{{signature}}';
+    }
+
+    public function getDescription(): string
+    {
+        return '{{description}}';
+    }
+
+    public function getAliases(): StringTypedCollection
+    {
+        $aliases = new StringTypedCollection();
+        // $aliases->add('your-alias');
+        return $aliases;
+    }
+
+    public function execute(): ExitCode
+    {
+        // TODO: Implement your directive logic here
+
+        $this->info('Directive executed successfully!');
+
+        return ExitCode::SUCCESS;
+    }
+}

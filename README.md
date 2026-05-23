@@ -8,72 +8,6 @@
 
 ---
 
-## Pourquoi ce package ?
-
-### Les faiblesses d'Artisan (Laravel natif)
-
-| Problème | Explication |
-|----------|-------------|
-| **Héritage unique** | Impossible d'avoir des commandes sans hériter de `Command` |
-| **Configuration monolithique** | Signature, description et logique mélangées dans une seule classe |
-| **Couplage fort** | La logique métier est couplée à l'affichage (`$this->info()`, `$this->table()`) |
-| **Tests difficiles** | Les commandes Artisan sont complexes à mocker. Impossible de mocker `ask()` ou `confirm()` |
-| **Pas d'extensibilité** | Impossible pour un package d'enregistrer ses propres commandes facilement |
-| **Arguments non typés** | Les arguments et options arrivent sous forme de tableau brut (`array $arguments`) |
-| **Pas de séparation claire** | Le `handle()` contient à la fois la logique métier et l'interface utilisateur |
-
-### Pourquoi un package ne peut pas enregistrer ses commandes facilement avec Artisan ?
-
-Avec Artisan, un package externe doit :
-1. Publier ses commandes via `$this->commands([...])` dans le ServiceProvider
-2. L'utilisateur final doit exécuter `php artisan vendor:publish`
-3. Les commandes sont enregistrées MAIS l'utilisateur ne peut pas les lister sans connaître leur existence
-
-**Avec Laravel Directive, c'est différent :**
-- Le package enregistre ses directives programmatiquement
-- L'utilisateur les voit immédiatement avec `./vendor/bin/directive --list`
-- Aucune action manuelle n'est requise
-
-### La solution : Directives
-
-**Laravel Directive** introduit une architecture propre avec :
-
-- **Séparation des responsabilités** : La logique métier et l'affichage sont découplés
-- **Typage fort** : Arguments et options typés via `ParameterCollection` et `ParameterRecord`
-- **Testabilité exceptionnelle** : Chaque directive est facile à mocker et tester
-- **Extensibilité** : Enregistrez des directives depuis n'importe quel package via `DirectiveRegistrar`
-- **Simplicité** : Une classe = une directive, sans configuration complexe
-
-```php
-// ✅ Une directive propre et testable
-final class UserListDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'user-list {--active} {role?}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'List all users matching criteria';
-    }
-
-    public function execute(): ExitCode
-    {
-        $active = $this->option('active');
-        $role = $this->argument('role');
-        
-        // Votre logique métier ici
-        
-        $this->info('Users listed successfully!');
-        
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
----
-
 ## Installation
 
 ```bash
@@ -444,15 +378,15 @@ class MyPackageServiceProvider extends ServiceProvider
 ┌─────────────────────────────────────────────────────────────┐
 │                      PACKAGE TIERS                          │
 │                                                             │
-│  1. Appelle DirectiveRegistrar::register()                 │
+│  1. Appelle DirectiveRegistrar::register()                  │
 │     ↓                                                       │
-│  2. Le registrar stocke les classes                        │
+│  2. Le registrar stocke les classes                         │
 │     ↓                                                       │
 │  3. DirectiveDiscoveryService fusionne :                    │
-│     - Directives du filesystem (app/Directives/)           │
-│     - Directives enregistrées par les packages             │
+│     - Directives du filesystem (app/Directives/)            │
+│     - Directives enregistrées par les packages              │
 │     ↓                                                       │
-│  4. Le kernel exécute la directive trouvée                 │
+│  4. Le kernel exécute la directive trouvée                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -528,6 +462,73 @@ final class UserListDirective extends AbstractDirective
 | `make-directive` | `create-directive`, `make-cmd` |
 | `--list` | `-l` |
 | `--help` | `-h` |
+
+---
+
+
+## Pourquoi ce package ?
+
+### Les faiblesses d'Artisan (Laravel natif)
+
+| Problème | Explication |
+|----------|-------------|
+| **Héritage unique** | Impossible d'avoir des commandes sans hériter de `Command` |
+| **Configuration monolithique** | Signature, description et logique mélangées dans une seule classe |
+| **Couplage fort** | La logique métier est couplée à l'affichage (`$this->info()`, `$this->table()`) |
+| **Tests difficiles** | Les commandes Artisan sont complexes à mocker. Impossible de mocker `ask()` ou `confirm()` |
+| **Pas d'extensibilité** | Impossible pour un package d'enregistrer ses propres commandes facilement |
+| **Arguments non typés** | Les arguments et options arrivent sous forme de tableau brut (`array $arguments`) |
+| **Pas de séparation claire** | Le `handle()` contient à la fois la logique métier et l'interface utilisateur |
+
+### Pourquoi un package ne peut pas enregistrer ses commandes facilement avec Artisan ?
+
+Avec Artisan, un package externe doit :
+1. Publier ses commandes via `$this->commands([...])` dans le ServiceProvider
+2. L'utilisateur final doit exécuter `php artisan vendor:publish`
+3. Les commandes sont enregistrées MAIS l'utilisateur ne peut pas les lister sans connaître leur existence
+
+**Avec Laravel Directive, c'est différent :**
+- Le package enregistre ses directives programmatiquement
+- L'utilisateur les voit immédiatement avec `./vendor/bin/directive --list`
+- Aucune action manuelle n'est requise
+
+### La solution : Directives
+
+**Laravel Directive** introduit une architecture propre avec :
+
+- **Séparation des responsabilités** : La logique métier et l'affichage sont découplés
+- **Typage fort** : Arguments et options typés via `ParameterCollection` et `ParameterRecord`
+- **Testabilité exceptionnelle** : Chaque directive est facile à mocker et tester
+- **Extensibilité** : Enregistrez des directives depuis n'importe quel package via `DirectiveRegistrar`
+- **Simplicité** : Une classe = une directive, sans configuration complexe
+
+```php
+// ✅ Une directive propre et testable
+final class UserListDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'user-list {--active} {role?}';
+    }
+
+    public function getDescription(): string
+    {
+        return 'List all users matching criteria';
+    }
+
+    public function execute(): ExitCode
+    {
+        $active = $this->option('active');
+        $role = $this->argument('role');
+        
+        // Votre logique métier ici
+        
+        $this->info('Users listed successfully!');
+        
+        return ExitCode::SUCCESS;
+    }
+}
+```
 
 ---
 
