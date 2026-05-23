@@ -1,5 +1,5 @@
 # Pint Formatting Test Report
-*Generated: sam. 23 mai 2026 18:44:05 WAT*
+*Generated: sam. 23 mai 2026 19:11:49 WAT*
 
 
   ⨯⨯.......................⨯.⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.....⨯⨯⨯⨯⨯..⨯...⨯⨯...⨯⨯⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯⨯⨯..⨯....⨯.⨯.⨯⨯.⨯
@@ -15,7 +15,7 @@
   ⨯ src/Enums/RenderType.php                                                                                                                                              single_quote  
   ⨯ src/Enums/ShortOption.php                                                                                            concat_space, not_operator_with_successor_space, phpdoc_align  
   ⨯ src/Services/DirectiveDiscoveryService.php               concat_space, braces_position, phpdoc_separation, not_operator_with_successor_space, single_line_empty_body, phpdoc_align  
-  ⨯ src/Services/DirectiveExecutionService.php                                              new_with_parentheses, braces_position, single_line_empty_body, blank_line_before_statement  
+  ⨯ src/Services/DirectiveExecutionService.php                                                 braces_position, no_unused_imports, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Services/DirectiveInteractionService.php                                                                  braces_position, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Services/DirectiveNamingService.php                                                                                                                 concat_space, phpdoc_align  
   ⨯ src/Services/DirectiveRegistrar.php                 class_attributes_separation, new_with_parentheses, cast_spaces, not_operator_with_successor_space, blank_line_before_statement  

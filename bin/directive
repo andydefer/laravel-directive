@@ -96,11 +96,10 @@ $interaction = $container->make(DirectiveInteractionService::class);
 $signatureValidator = $container->make(SignatureValidationService::class);
 
 $executionService = new DirectiveExecutionService(
+    discovery: $discovery,
     parser: $parser,
     hydrator: $hydrator,
     renderer: $renderer,
-    registrar: $registrar,
-    interaction: $interaction,
 );
 
 $kernel = new DirectiveKernel(

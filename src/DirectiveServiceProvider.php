@@ -76,7 +76,9 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerFactory(): void
     {
         $this->app->singleton(DirectiveFactoryInterface::class, function ($app) {
-            return new ContainerDirectiveFactory($app);
+            return new ContainerDirectiveFactory(
+                container: $app,
+            );
         });
     }
 
@@ -102,7 +104,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
             return new DirectiveHydratorService(
-                $app->make(DirectiveFactoryInterface::class)
+                factory: $app->make(DirectiveFactoryInterface::class),
             );
         });
     }
@@ -111,9 +113,9 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
             return new DirectiveDiscoveryService(
-                $app->make(DirectiveConfig::class),
-                $app->make(DirectiveHydratorService::class),
-                $app->make(DirectiveRegistrarInterface::class),
+                config: $app->make(DirectiveConfig::class),
+                hydrator: $app->make(DirectiveHydratorService::class),
+                registrar: $app->make(DirectiveRegistrarInterface::class),
             );
         });
     }
@@ -122,7 +124,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveRendererService::class, function ($app) {
             return new DirectiveRendererService(
-                $app->make(RenderTask::class),
+                renderTask: $app->make(RenderTask::class),
             );
         });
     }
@@ -153,7 +155,7 @@ final class DirectiveServiceProvider extends ServiceProvider
             $this->app->singleton($task, function ($app) use ($task) {
                 if ($task === CreateDirectiveFileTask::class) {
                     return new CreateDirectiveFileTask(
-                        $app->make(DirectiveNamingService::class)
+                        namingService: $app->make(DirectiveNamingService::class),
                     );
                 }
                 return new $task();
@@ -172,8 +174,8 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveInteractionService::class, function ($app) {
             return new DirectiveInteractionService(
-                $app->make(RenderTask::class),
-                $app->make(InputTask::class),
+                renderTask: $app->make(RenderTask::class),
+                inputTask: $app->make(InputTask::class),
             );
         });
     }
@@ -182,11 +184,10 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveExecutionService::class, function ($app) {
             return new DirectiveExecutionService(
+                discovery: $app->make(DirectiveDiscoveryService::class),
                 parser: $app->make(DirectiveParserService::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
                 renderer: $app->make(DirectiveRendererService::class),
-                registrar: $app->make(DirectiveRegistrar::class),
-                interaction: $app->make(DirectiveInteractionService::class),
             );
         });
     }
@@ -217,9 +218,9 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveKernel::class, function ($app) {
             return new DirectiveKernel(
-                $app->make(DirectiveExecutionService::class),
-                $app->make(SignatureValidationService::class),
-                $app->make(DirectiveRendererService::class),
+                service: $app->make(DirectiveExecutionService::class),
+                signatureValidator: $app->make(SignatureValidationService::class),
+                renderer: $app->make(DirectiveRendererService::class),
             );
         });
     }

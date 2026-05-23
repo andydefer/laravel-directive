@@ -98,8 +98,6 @@ HELP;
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
 \033[1;32m✅ Available Directives ({{count}})\033[0m
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
-\033[1;37m%-25s \033[1;36m%s\033[0m
-\033[90m──────────────────────────────────────────────────────────────────────\033[0m
 {{rows}}
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
 
@@ -120,6 +118,7 @@ LIST;
   • Check the spelling of the directive name
   • Make sure the directive file exists in \033[33mapp/Directives/\033[0m
   • Run \033[33mcomposer dump-autoload\033[0m if you just added a new directive
+
 NOTFOUND;
     }
 
@@ -154,6 +153,7 @@ NOTFOUND;
 \033[90m💡 Tip: Run './vendor/bin/directive --list' after creating your directive to see it here!\033[0m
 
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
+
 EMPTY;
     }
 
@@ -182,6 +182,7 @@ CONFLICT;
   • api-user-profile
 
 \033[90m💡 Directive names must start with a letter and contain only letters, numbers, and hyphens.\033[0m
+
 VALIDATION_ERROR;
     }
 

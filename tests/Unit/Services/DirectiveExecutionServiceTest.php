@@ -6,18 +6,18 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
+use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
-use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveParserService;
-use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -25,29 +25,26 @@ use PHPUnit\Framework\MockObject\MockObject;
 #[AllowMockObjectsWithoutExpectations]
 final class DirectiveExecutionServiceTest extends TestCase
 {
+    private DirectiveDiscoveryService&MockObject $discovery;
     private DirectiveParserService&MockObject $parser;
     private DirectiveHydratorService&MockObject $hydrator;
     private DirectiveRendererService&MockObject $renderer;
-    private DirectiveRegistrar&MockObject $registrar;
-    private DirectiveInteractionService&MockObject $interaction;
     private DirectiveExecutionService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->discovery = $this->createMock(DirectiveDiscoveryService::class);
         $this->parser = $this->createMock(DirectiveParserService::class);
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->renderer = $this->createMock(DirectiveRendererService::class);
-        $this->registrar = $this->createMock(DirectiveRegistrar::class);
-        $this->interaction = $this->createMock(DirectiveInteractionService::class);
 
         $this->service = new DirectiveExecutionService(
+            discovery: $this->discovery,
             parser: $this->parser,
             hydrator: $this->hydrator,
             renderer: $this->renderer,
-            registrar: $this->registrar,
-            interaction: $this->interaction,
         );
     }
 
@@ -60,12 +57,29 @@ final class DirectiveExecutionServiceTest extends TestCase
         return $collection;
     }
 
-    private function createClassCollection(array $classes): StringTypedCollection
+    private function createDirectivesCollection(): TypedCollection
     {
-        $collection = new StringTypedCollection();
-        foreach ($classes as $class) {
-            $collection->add($class);
-        }
+        $collection = new TypedCollection(DirectiveMetadataRecord::class);
+
+        $aliases1 = new StringTypedCollection();
+        $directive1 = new DirectiveMetadataRecord(
+            signature: 'test-concrete',
+            class: TestConcreteDirective::class,
+            description: 'Test concrete directive',
+            aliases: $aliases1,
+        );
+        $collection->add($directive1);
+
+        $aliases2 = new StringTypedCollection();
+        $aliases2->add('tpkg');
+        $directive2 = new DirectiveMetadataRecord(
+            signature: 'test-package',
+            class: TestPackageDirective::class,
+            description: 'Test package directive',
+            aliases: $aliases2,
+        );
+        $collection->add($directive2);
+
         return $collection;
     }
 
@@ -73,10 +87,11 @@ final class DirectiveExecutionServiceTest extends TestCase
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
     {
-        $this->registrar->expects($this->once())
-            ->method('find')
-            ->with('unknown-cmd')
-            ->willReturn(new StringTypedCollection());
+        $directives = new TypedCollection(DirectiveMetadataRecord::class);
+
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
 
         $this->renderer->expects($this->once())
             ->method('renderNotFound')
@@ -94,12 +109,11 @@ final class DirectiveExecutionServiceTest extends TestCase
 
     public function test_execute_returns_success_when_directive_exists(): void
     {
-        $classes = $this->createClassCollection([TestConcreteDirective::class]);
+        $directives = $this->createDirectivesCollection();
 
-        $this->registrar->expects($this->once())
-            ->method('find')
-            ->with('test-cmd')
-            ->willReturn($classes);
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
             arguments: new StringTypedCollection(),
@@ -125,7 +139,7 @@ final class DirectiveExecutionServiceTest extends TestCase
             ->with('Directive executed successfully');
 
         $arguments = $this->createArguments(['John']);
-        $record = new DirectiveExecutionRecord(signature: 'test-cmd', arguments: $arguments);
+        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
 
         $result = $this->service->execute($record);
 
@@ -134,12 +148,11 @@ final class DirectiveExecutionServiceTest extends TestCase
 
     public function test_execute_returns_failure_when_directive_fails(): void
     {
-        $classes = $this->createClassCollection([TestConcreteDirective::class]);
+        $directives = $this->createDirectivesCollection();
 
-        $this->registrar->expects($this->once())
-            ->method('find')
-            ->with('test-cmd')
-            ->willReturn($classes);
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
             arguments: new StringTypedCollection(),
@@ -165,35 +178,20 @@ final class DirectiveExecutionServiceTest extends TestCase
             ->with('Directive execution failed');
 
         $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'test-cmd', arguments: $arguments);
+        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
 
         $result = $this->service->execute($record);
 
         $this->assertSame(ExitCode::FAILURE, $result);
     }
 
-    // ==================== Tests avec conflit d'alias ====================
-
-    public function test_execute_handles_conflict_and_user_chooses_first_option(): void
+    public function test_execute_handles_directive_by_alias(): void
     {
-        $classes = $this->createClassCollection([TestPackageDirective::class, TestConcreteDirective::class]);
+        $directives = $this->createDirectivesCollection();
 
-        $this->registrar->expects($this->exactly(2))
-            ->method('find')
-            ->with('tpkg')
-            ->willReturn($classes);
-
-        $this->renderer->expects($this->once())
-            ->method('renderConflict')
-            ->with($this->callback(function (ConflictDisplayRecord $record) {
-                return $record->name === 'tpkg'
-                    && $record->classNames->count() === 2;
-            }));
-
-        $this->interaction->expects($this->once())
-            ->method('askUserChoice')
-            ->with('tpkg', 2)
-            ->willReturn(1);
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
             arguments: new StringTypedCollection(),
@@ -201,6 +199,7 @@ final class DirectiveExecutionServiceTest extends TestCase
         );
         $this->parser->expects($this->once())
             ->method('parse')
+            ->with('test-package', $this->createArguments([]))
             ->willReturn($parsedRecord);
 
         $directive = $this->createMock(DirectiveInterface::class);
@@ -225,95 +224,83 @@ final class DirectiveExecutionServiceTest extends TestCase
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_execute_handles_conflict_and_user_chooses_second_option(): void
+    // ==================== Tests des commandes intégrées ====================
+
+    public function test_execute_handles_help_command(): void
     {
-        $classes = $this->createClassCollection([TestPackageDirective::class, TestConcreteDirective::class]);
-
-        $this->registrar->expects($this->exactly(2))
-            ->method('find')
-            ->with('tpkg')
-            ->willReturn($classes);
-
         $this->renderer->expects($this->once())
-            ->method('renderConflict');
-
-        $this->interaction->expects($this->once())
-            ->method('askUserChoice')
-            ->with('tpkg', 2)
-            ->willReturn(2);
-
-        $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new StringTypedCollection(),
-            options: new StringTypedCollection(),
-        );
-        $this->parser->expects($this->once())
-            ->method('parse')
-            ->willReturn($parsedRecord);
-
-        $directive = $this->createMock(DirectiveInterface::class);
-        $directive->expects($this->once())
-            ->method('execute')
-            ->willReturn(ExitCode::SUCCESS);
-
-        $this->hydrator->expects($this->once())
-            ->method('hydrate')
-            ->with(TestConcreteDirective::class, $parsedRecord)
-            ->willReturn($directive);
-
-        $this->renderer->expects($this->once())
-            ->method('renderSuccess')
-            ->with('Directive executed successfully');
+            ->method('renderHelp');
 
         $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'tpkg', arguments: $arguments);
+        $record = new DirectiveExecutionRecord(signature: '--help', arguments: $arguments);
 
         $result = $this->service->execute($record);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_execute_handles_conflict_and_user_choice_invalid(): void
+    public function test_execute_handles_short_help_command(): void
     {
-        $classes = $this->createClassCollection([TestPackageDirective::class, TestConcreteDirective::class]);
-
-        $this->registrar->expects($this->exactly(2))
-            ->method('find')
-            ->with('tpkg')
-            ->willReturn($classes);
-
         $this->renderer->expects($this->once())
-            ->method('renderConflict');
-
-        $this->interaction->expects($this->once())
-            ->method('askUserChoice')
-            ->with('tpkg', 2)
-            ->willReturn(0);
-
-        $this->renderer->expects($this->once())
-            ->method('renderError')
-            ->with('Invalid choice');
-
-        $this->hydrator->expects($this->never())
-            ->method('hydrate');
+            ->method('renderHelp');
 
         $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'tpkg', arguments: $arguments);
+        $record = new DirectiveExecutionRecord(signature: '-h', arguments: $arguments);
 
         $result = $this->service->execute($record);
 
-        $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_execute_handles_list_command(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $this->renderer->expects($this->once())
+            ->method('renderList')
+            ->with($directives);
+
+        $arguments = $this->createArguments([]);
+        $record = new DirectiveExecutionRecord(signature: '--list', arguments: $arguments);
+
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_execute_handles_short_list_command(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $this->renderer->expects($this->once())
+            ->method('renderList')
+            ->with($directives);
+
+        $arguments = $this->createArguments([]);
+        $record = new DirectiveExecutionRecord(signature: '-l', arguments: $arguments);
+
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     // ==================== Tests avec arguments et options ====================
 
     public function test_execute_passes_arguments_and_options_to_parser(): void
     {
-        $classes = $this->createClassCollection([TestConcreteDirective::class]);
+        $directives = $this->createDirectivesCollection();
 
-        $this->registrar->expects($this->once())
-            ->method('find')
-            ->with('test-cmd')
-            ->willReturn($classes);
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
 
         $arguments = $this->createArguments(['John', '--role=admin', '--verbose']);
 
@@ -338,7 +325,7 @@ final class DirectiveExecutionServiceTest extends TestCase
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
 
-        $record = new DirectiveExecutionRecord(signature: 'test-cmd', arguments: $arguments);
+        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
 
         $this->service->execute($record);
     }

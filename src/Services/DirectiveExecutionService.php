@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
+use AndyDefer\Directive\Records\DirectiveMetadataRecord;
+use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 class DirectiveExecutionService
 {
     public function __construct(
+        private readonly DirectiveDiscoveryService $discovery,
         private readonly DirectiveParserService $parser,
         private readonly DirectiveHydratorService $hydrator,
         private readonly DirectiveRendererService $renderer,
-        private readonly DirectiveRegistrar $registrar,
-        private readonly DirectiveInteractionService $interaction,
     ) {}
 
     public function execute(DirectiveExecutionRecord $record): ExitCode
@@ -30,70 +30,48 @@ class DirectiveExecutionService
         }
 
         if ($signature === '--list' || $signature === '-l') {
-            $directives = $this->registrar->getAllDirectivesMetadata();
+            $directives = $this->discovery->discover();
             $this->renderer->renderList($directives);
             return ExitCode::SUCCESS;
         }
 
-        $classes = $this->registrar->find($signature);
+        // Find directive by signature or alias
+        $directives = $this->discovery->discover();
+        $directive = $this->findDirective($directives, $signature);
 
-        if ($classes->isEmpty()) {
+        if ($directive === null) {
             $this->renderer->renderNotFound($signature);
             return ExitCode::NOT_FOUND;
         }
 
-        if ($classes->count() > 1) {
-            return $this->handleConflict($record);
-        }
-
-        $class = $classes->firstItem();
-        return $this->executeDirective($class, $record);
+        return $this->executeDirective($directive->class, $record);
     }
 
-    private function handleConflict(DirectiveExecutionRecord $record): ExitCode
+    private function findDirective(TypedCollection $directives, string $signature): ?DirectiveMetadataRecord
     {
-        $classes = $this->registrar->find($record->signature);
-        $classNames = new StringTypedCollection();
-        $signatures = new StringTypedCollection();
-        $descriptions = new StringTypedCollection();
+        foreach ($directives as $directive) {
+            // Extraire le nom de base (ex: 'test-echo' depuis 'test-echo {message?}')
+            $baseSignature = explode(' ', $directive->signature)[0];
 
-        foreach ($classes as $class) {
-            $reflection = new \ReflectionClass($class);
-            $instance = $reflection->newInstanceWithoutConstructor();
-
-            $classNames->add($reflection->getShortName());
-            $signatures->add($instance->getSignature());
-            $descriptions->add($instance->getDescription());
+            // Check by base signature
+            if ($baseSignature === $signature) {
+                return $directive;
+            }
+            // Check by alias
+            if ($directive->aliases->contains($signature)) {
+                return $directive;
+            }
         }
-
-        $conflictRecord = new ConflictDisplayRecord(
-            name: $record->signature,
-            classNames: $classNames,
-            signatures: $signatures,
-            descriptions: $descriptions,
-        );
-
-        $this->renderer->renderConflict($conflictRecord);
-
-        $choice = $this->interaction->askUserChoice($record->signature, $classes->count());
-
-        if ($choice === 0) {
-            $this->renderer->renderError('Invalid choice');
-            return ExitCode::INVALID_ARGUMENT;
-        }
-
-        $selectedClass = $classes->toArray()[$choice - 1];
-
-        return $this->executeDirective($selectedClass, $record);
+        return null;
     }
 
     private function executeDirective(string $class, DirectiveExecutionRecord $record): ExitCode
     {
         $reflection = new \ReflectionClass($class);
         $instance = $reflection->newInstanceWithoutConstructor();
-        $signature = $instance->getSignature();
+        $fullSignature = $instance->getSignature();
 
-        $parsed = $this->parser->parse($signature, $record->arguments);
+        $parsed = $this->parser->parse($fullSignature, $record->arguments);
 
         $directive = $this->hydrator->hydrate($class, $parsed);
 
