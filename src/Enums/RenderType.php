@@ -105,6 +105,7 @@ HELP;
 
 \033[90m💡 Usage: ./vendor/bin/directive <signature> [arguments] [--options]\033[0m
 \033[90m📚 Run './vendor/bin/directive --help' for more information\033[0m
+
 LIST;
     }
 
