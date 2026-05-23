@@ -124,7 +124,7 @@ NOTFOUND;
 
     private function getSuccessContent(): string
     {
-        return "\033[32m✓ {{message}}\033[0m\n";
+        return "\n\033[32m✓ {{message}}\033[0m\n";
     }
 
     private function getErrorContent(): string
@@ -188,6 +188,6 @@ VALIDATION_ERROR;
 
     private function getDisplayMessageContent(): string
     {
-        return "{{color}}{{message}}{{reset}}";
+        return "{{color}}{{message}}{{reset}}\n";
     }
 }
