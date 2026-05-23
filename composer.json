@@ -36,7 +36,7 @@
         }
     },
     "bin": [
-        "directive"
+        "bin/directive"
     ],
     "scripts": {
         "test": "phpunit",
