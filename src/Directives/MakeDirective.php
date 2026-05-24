@@ -38,7 +38,7 @@ final class MakeDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection();
+        $aliases = new StringTypedCollection;
         $aliases->add('create-directive');
         $aliases->add('make-cmd');
 
@@ -51,30 +51,33 @@ final class MakeDirective extends AbstractDirective
 
         if ($name === null) {
             $this->showUsageError();
+
             return ExitCode::INVALID_ARGUMENT;
         }
 
         $validation = $this->signatureValidator->validate($name);
 
-        if (!$validation->isValid) {
+        if (! $validation->isValid) {
             $this->error($validation->error ?? 'Invalid directive name format');
             $this->line('');
             $this->line('Valid examples:');
             $this->line('  • user-create');
             $this->line('  • clean-log');
             $this->line('  • db-migrate-fresh');
+
             return ExitCode::INVALID_ARGUMENT;
         }
 
         $className = $this->namingService->generateClassName($name);
         $result = $this->fileTask->execute($className, $name);
 
-        if (!$result->success) {
+        if (! $result->success) {
             $this->error($result->error ?? 'Failed to create directive');
+
             return ExitCode::FAILURE;
         }
 
-        if (!is_dir(getcwd() . '/app/Directives/')) {
+        if (! is_dir(getcwd().'/app/Directives/')) {
             $this->line('📁 Created directory: app/Directives/');
         }
 

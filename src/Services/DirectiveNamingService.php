@@ -20,7 +20,7 @@ class DirectiveNamingService
      * - db-migrate-fresh -> DbMigrateFreshDirective
      * - api-v2 -> ApiV2Directive
      *
-     * @param string $name The directive name (e.g., 'user-create')
+     * @param  string  $name  The directive name (e.g., 'user-create')
      * @return string Generated class name
      */
     public function generateClassName(string $name): string
@@ -32,26 +32,26 @@ class DirectiveNamingService
             $className .= ucfirst($part);
         }
 
-        return $className . 'Directive';
+        return $className.'Directive';
     }
 
     /**
      * Generate signature with placeholder option.
      *
-     * @param string $name Base directive name
+     * @param  string  $name  Base directive name
      * @return string Full signature with option placeholder
      */
     public function generateSignatureWithOption(string $name): string
     {
-        return $name . ' {--option}';
+        return $name.' {--option}';
     }
 
     /**
      * Replace variables in stub template.
      *
-     * @param string $stub The stub template content
-     * @param string $className The directive class name
-     * @param string $signature The directive signature
+     * @param  string  $stub  The stub template content
+     * @param  string  $className  The directive class name
+     * @param  string  $signature  The directive signature
      * @return string Processed content
      */
     public function replaceStubVariables(string $stub, string $className, string $signature): string

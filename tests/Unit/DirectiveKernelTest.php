@@ -11,16 +11,19 @@ use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
 #[AllowMockObjectsWithoutExpectations]
-final class DirectiveKernelTest extends TestCase
+final class DirectiveKernelTest extends UnitTestCase
 {
     private DirectiveExecutionService&MockObject $executionService;
+
     private SignatureValidationService&MockObject $signatureValidator;
+
     private DirectiveRendererService&MockObject $renderer;
+
     private DirectiveKernel $kernel;
 
     protected function setUp(): void

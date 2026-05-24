@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Feature;
 
-use AndyDefer\Directive\Tests\TestCase;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDatabaseDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
+use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-final class DirectiveIntegrationTest extends TestCase
+final class DirectiveIntegrationTest extends IntegrationTestCase
 {
     private DirectiveKernel $kernel;
 
@@ -210,5 +212,51 @@ final class DirectiveIntegrationTest extends TestCase
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
         $this->assertStringContainsString('test-echo', $response['output']);
+    }
+
+    // ==================== Tests du bootstrap Laravel optionnel ====================
+
+    public function test_kernel_boots_laravel_when_directive_requests_it(): void
+    {
+        // Enregistrer une directive qui demande Laravel
+        $registrar = $this->app->make(DirectiveRegistrar::class);
+        $classes = new StringTypedCollection();
+        $classes->add(TestLaravelDirective::class);
+        $registrar->register($classes);
+
+        // Réinitialiser le kernel pour prendre en compte les nouvelles directives
+        $this->kernel = $this->app->make(DirectiveKernel::class);
+
+        $response = $this->runAndCaptureOutput(['directive', 'test-laravel']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        // La directive TestLaravelDirective affiche "Test Laravel directive executed"
+        $this->assertStringContainsString('Test Laravel directive executed', $response['output']);
+        $this->assertStringContainsString('Laravel is available', $response['output']);
+    }
+
+    public function test_kernel_does_not_boot_laravel_when_directive_does_not_request_it(): void
+    {
+        $response = $this->runAndCaptureOutput(['directive', 'test-echo']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        // Aucun message de bootstrap Laravel ne doit apparaître
+        $this->assertStringNotContainsString('Laravel', $response['output']);
+        $this->assertStringNotContainsString('bootstrapped', strtolower($response['output']));
+    }
+
+    public function test_kernel_executes_directive_with_laravel_features_when_available(): void
+    {
+        $registrar = $this->app->make(DirectiveRegistrar::class);
+        $classes = new StringTypedCollection();
+        $classes->add(TestLaravelDatabaseDirective::class);
+        $registrar->register($classes);
+
+        $this->kernel = $this->app->make(DirectiveKernel::class);
+
+        $response = $this->runAndCaptureOutput(['directive', 'test-laravel-db']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        $this->assertStringContainsString('Database query successful', $response['output']);
     }
 }

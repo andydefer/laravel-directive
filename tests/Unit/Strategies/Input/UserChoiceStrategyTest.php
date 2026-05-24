@@ -7,12 +7,13 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies\Input;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\UserChoiceRecord;
 use AndyDefer\Directive\Strategies\Input\UserChoiceStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\EmptyRecord;
 
-final class UserChoiceStrategyTest extends TestCase
+final class UserChoiceStrategyTest extends UnitTestCase
 {
     private UserChoiceStrategy $strategy;
+
     private $inputStream;
 
     protected function setUp(): void
@@ -30,7 +31,7 @@ final class UserChoiceStrategyTest extends TestCase
 
     private function setUserInput(string $input): void
     {
-        fwrite($this->inputStream, $input . "\n");
+        fwrite($this->inputStream, $input."\n");
         rewind($this->inputStream);
     }
 
@@ -134,7 +135,7 @@ final class UserChoiceStrategyTest extends TestCase
     public function test_execute_returns_null_for_invalid_record(): void
     {
         $this->setUserInput('2');
-        $record = new EmptyRecord();
+        $record = new EmptyRecord;
 
         $response = $this->runAndCaptureOutput(function () use ($record) {
             return $this->strategy->execute($record, InputType::USER_CHOICE);

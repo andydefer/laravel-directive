@@ -12,31 +12,34 @@ use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 class DirectiveRegistrar implements DirectiveRegistrarInterface
 {
     private StringTypedCollection $registeredDirectives;
+
     private array $signatureMap = [];
+
     private array $aliasMap = [];
+
     private array $directivesMetadata = [];
 
     public function __construct()
     {
-        $this->registeredDirectives = new StringTypedCollection();
+        $this->registeredDirectives = new StringTypedCollection;
     }
 
     public function register(StringTypedCollection $directiveClasses): self
     {
         foreach ($directiveClasses as $class) {
-            if (!is_string($class)) {
+            if (! is_string($class)) {
                 continue;
             }
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 continue;
             }
 
-            if (!is_subclass_of($class, DirectiveInterface::class)) {
+            if (! is_subclass_of($class, DirectiveInterface::class)) {
                 continue;
             }
 
-            if (!$this->registeredDirectives->contains($class)) {
+            if (! $this->registeredDirectives->contains($class)) {
                 $this->registeredDirectives->add($class);
                 $this->buildMaps($class);
             }
@@ -53,22 +56,22 @@ class DirectiveRegistrar implements DirectiveRegistrarInterface
         $signature = $instance->getSignature();
 
         // Store by full signature
-        if (!isset($this->signatureMap[$signature])) {
-            $this->signatureMap[$signature] = new StringTypedCollection();
+        if (! isset($this->signatureMap[$signature])) {
+            $this->signatureMap[$signature] = new StringTypedCollection;
         }
         $this->signatureMap[$signature]->add($class);
 
         // Also store by command name (without arguments)
         $commandName = explode(' ', $signature)[0];
-        if (!isset($this->signatureMap[$commandName])) {
-            $this->signatureMap[$commandName] = new StringTypedCollection();
+        if (! isset($this->signatureMap[$commandName])) {
+            $this->signatureMap[$commandName] = new StringTypedCollection;
         }
-        if (!$this->signatureMap[$commandName]->contains($class)) {
+        if (! $this->signatureMap[$commandName]->contains($class)) {
             $this->signatureMap[$commandName]->add($class);
         }
 
         // Store metadata
-        $this->directivesMetadata[$commandName] = (object)[
+        $this->directivesMetadata[$commandName] = (object) [
             'signature' => $commandName,
             'fullSignature' => $signature,
             'class' => $class,
@@ -78,8 +81,8 @@ class DirectiveRegistrar implements DirectiveRegistrarInterface
 
         $aliases = $instance->getAliases();
         foreach ($aliases as $alias) {
-            if (!isset($this->aliasMap[$alias])) {
-                $this->aliasMap[$alias] = new StringTypedCollection();
+            if (! isset($this->aliasMap[$alias])) {
+                $this->aliasMap[$alias] = new StringTypedCollection;
             }
             $this->aliasMap[$alias]->add($class);
         }
@@ -95,7 +98,7 @@ class DirectiveRegistrar implements DirectiveRegistrarInterface
             return $this->signatureMap[$name];
         }
 
-        return new StringTypedCollection();
+        return new StringTypedCollection;
     }
 
     public function getAllDirectivesMetadata(): TypedCollection
@@ -104,12 +107,14 @@ class DirectiveRegistrar implements DirectiveRegistrarInterface
         foreach ($this->directivesMetadata as $metadata) {
             $collection->add($metadata);
         }
+
         return $collection;
     }
 
     public function hasConflict(string $name): bool
     {
         $matches = $this->find($name);
+
         return $matches->count() > 1;
     }
 
@@ -135,10 +140,11 @@ class DirectiveRegistrar implements DirectiveRegistrarInterface
 
     public function clear(): self
     {
-        $this->registeredDirectives = new StringTypedCollection();
+        $this->registeredDirectives = new StringTypedCollection;
         $this->signatureMap = [];
         $this->aliasMap = [];
         $this->directivesMetadata = [];
+
         return $this;
     }
 

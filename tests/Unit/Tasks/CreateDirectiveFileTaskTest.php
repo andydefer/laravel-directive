@@ -6,25 +6,26 @@ namespace AndyDefer\Directive\Tests\Unit\Tasks;
 
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class CreateDirectiveFileTaskTest extends TestCase
+final class CreateDirectiveFileTaskTest extends UnitTestCase
 {
     private string $tempDir;
+
     private CreateDirectiveFileTask $task;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        $this->tempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
         mkdir($this->tempDir);
         chdir($this->tempDir);
 
         // Create stubs directory inside temp dir
-        mkdir($this->tempDir . '/stubs');
+        mkdir($this->tempDir.'/stubs');
         file_put_contents(
-            $this->tempDir . '/stubs/directive.stub',
+            $this->tempDir.'/stubs/directive.stub',
             <<<'PHP'
 <?php
 
@@ -57,8 +58,8 @@ PHP
 
         // Pass stub path directly to constructor
         $this->task = new CreateDirectiveFileTask(
-            new DirectiveNamingService(),
-            $this->tempDir . '/stubs/directive.stub'
+            new DirectiveNamingService,
+            $this->tempDir.'/stubs/directive.stub'
         );
     }
 
@@ -67,24 +68,24 @@ PHP
         parent::tearDown();
 
         // Clean up temp directory files
-        $files = glob($this->tempDir . '/app/Directives/*.php');
+        $files = glob($this->tempDir.'/app/Directives/*.php');
         if ($files) {
             foreach ($files as $file) {
                 unlink($file);
             }
         }
 
-        if (is_dir($this->tempDir . '/app/Directives')) {
-            rmdir($this->tempDir . '/app/Directives');
+        if (is_dir($this->tempDir.'/app/Directives')) {
+            rmdir($this->tempDir.'/app/Directives');
         }
-        if (is_dir($this->tempDir . '/app')) {
-            rmdir($this->tempDir . '/app');
+        if (is_dir($this->tempDir.'/app')) {
+            rmdir($this->tempDir.'/app');
         }
-        if (file_exists($this->tempDir . '/stubs/directive.stub')) {
-            unlink($this->tempDir . '/stubs/directive.stub');
+        if (file_exists($this->tempDir.'/stubs/directive.stub')) {
+            unlink($this->tempDir.'/stubs/directive.stub');
         }
-        if (is_dir($this->tempDir . '/stubs')) {
-            rmdir($this->tempDir . '/stubs');
+        if (is_dir($this->tempDir.'/stubs')) {
+            rmdir($this->tempDir.'/stubs');
         }
         if (is_dir($this->tempDir)) {
             rmdir($this->tempDir);
@@ -139,6 +140,6 @@ PHP
         $result = $this->task->execute($className, $signature);
 
         $this->assertTrue($result->success);
-        $this->assertDirectoryExists($this->tempDir . '/app/Directives');
+        $this->assertDirectoryExists($this->tempDir.'/app/Directives');
     }
 }

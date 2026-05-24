@@ -8,6 +8,7 @@ use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ValidationResultRecord;
+use AndyDefer\Records\Recordable;
 
 final class ValidationErrorRenderStrategy implements RenderStrategyInterface
 {
@@ -16,12 +17,13 @@ final class ValidationErrorRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::VALIDATION_ERROR;
     }
 
-    public function execute(object $record, RenderType $type): ReplacementCollection
+    public function execute(Recordable $record, RenderType $type): ReplacementCollection
     {
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
-        if (!$record instanceof ValidationResultRecord) {
+        if (! $record instanceof ValidationResultRecord) {
             $replacements->addReplacement('{{error}}', 'Invalid signature');
+
             return $replacements;
         }
 

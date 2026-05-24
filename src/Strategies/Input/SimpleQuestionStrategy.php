@@ -25,11 +25,12 @@ final class SimpleQuestionStrategy implements InputStrategyInterface
 
     public function execute(Recordable $record, InputType $type): mixed
     {
-        if (!$record instanceof QuestionRecord) {
+        if (! $record instanceof QuestionRecord) {
             return '';
         }
 
-        echo $record->question . $type->getPromptSuffix();
+        echo $record->question.$type->getPromptSuffix();
+
         return trim(fgets($this->inputStream));
     }
 }

@@ -10,8 +10,10 @@ use AndyDefer\Directive\Collections\WidthCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\DisplayTableRecord;
+use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\Records\Recordable;
 
 final class TableRenderStrategy implements RenderStrategyInterface
 {
@@ -20,15 +22,16 @@ final class TableRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::TABLE;
     }
 
-    public function execute(object $record, RenderType $type): ReplacementCollection
+    public function execute(Recordable $record, RenderType $type): ReplacementCollection
     {
         $replacements = new ReplacementCollection();
 
-        if (!$record instanceof DisplayTableRecord) {
-            return $replacements;
+        // CORRECTION : Extraire le DisplayTableRecord du RenderRecord
+        if ($record instanceof RenderRecord && $record->tableRecord instanceof DisplayTableRecord) {
+            $replacements->addReplacement('{{table}}', $this->renderTable($record->tableRecord));
+        } elseif ($record instanceof DisplayTableRecord) {
+            $replacements->addReplacement('{{table}}', $this->renderTable($record));
         }
-
-        $replacements->addReplacement('{{table}}', $this->renderTable($record));
 
         return $replacements;
     }

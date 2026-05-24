@@ -8,17 +8,17 @@ use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\ConflictRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-final class ConflictRenderStrategyTest extends TestCase
+final class ConflictRenderStrategyTest extends UnitTestCase
 {
     private ConflictRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new ConflictRenderStrategy();
+        $this->strategy = new ConflictRenderStrategy;
     }
 
     public function test_supports_conflict_type(): void
@@ -29,13 +29,13 @@ final class ConflictRenderStrategyTest extends TestCase
 
     public function test_execute_returns_replacements(): void
     {
-        $classNames = new StringTypedCollection();
+        $classNames = new StringTypedCollection;
         $classNames->add('TestDirective');
 
-        $signatures = new StringTypedCollection();
+        $signatures = new StringTypedCollection;
         $signatures->add('test-cmd');
 
-        $descriptions = new StringTypedCollection();
+        $descriptions = new StringTypedCollection;
         $descriptions->add('Test description');
 
         $record = new ConflictDisplayRecord(

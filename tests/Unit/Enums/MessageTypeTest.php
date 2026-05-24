@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Directive\Unit\Enums;
 
 use AndyDefer\Directive\Enums\MessageType;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class MessageTypeTest extends TestCase
+final class MessageTypeTest extends UnitTestCase
 {
     public function test_values_returns_all_message_type_values(): void
     {

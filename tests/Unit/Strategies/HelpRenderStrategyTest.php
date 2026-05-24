@@ -7,16 +7,16 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\HelpRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class HelpRenderStrategyTest extends TestCase
+final class HelpRenderStrategyTest extends UnitTestCase
 {
     private HelpRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new HelpRenderStrategy();
+        $this->strategy = new HelpRenderStrategy;
     }
 
     public function test_supports_help_type(): void

@@ -29,7 +29,7 @@ final class TestEchoDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection();
+        $aliases = new StringTypedCollection;
         $aliases->add('echo');
 
         return $aliases;

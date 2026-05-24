@@ -67,7 +67,7 @@ enum ShortOption: string
      */
     public function getDisplayString(): string
     {
-        return '-' . $this->value . ', --' . $this->getLongOption();
+        return '-'.$this->value.', --'.$this->getLongOption();
     }
 
     /**
@@ -83,7 +83,7 @@ enum ShortOption: string
     /**
      * Check if a character is an allowed short option.
      *
-     * @param string $char The character to check
+     * @param  string  $char  The character to check
      * @return bool True if the character is an allowed short option
      */
     public static function isAllowed(string $char): bool
@@ -94,12 +94,12 @@ enum ShortOption: string
     /**
      * Validate and parse a short option string.
      *
-     * @param string $shortOption The short option string (e.g., '-h', '-vl')
+     * @param  string  $shortOption  The short option string (e.g., '-h', '-vl')
      * @return array<string>|null Array of valid option characters or null if invalid
      */
     public static function parse(string $shortOption): ?array
     {
-        if (!str_starts_with($shortOption, '-') || str_starts_with($shortOption, '--')) {
+        if (! str_starts_with($shortOption, '-') || str_starts_with($shortOption, '--')) {
             return null;
         }
 
@@ -113,7 +113,7 @@ enum ShortOption: string
         $validChars = [];
 
         foreach ($chars as $char) {
-            if (!self::isAllowed($char)) {
+            if (! self::isAllowed($char)) {
                 return null;
             }
             $validChars[] = $char;
@@ -125,7 +125,7 @@ enum ShortOption: string
     /**
      * Check if a short option string is valid.
      *
-     * @param string $shortOption The short option string (e.g., '-h', '-vl')
+     * @param  string  $shortOption  The short option string (e.g., '-h', '-vl')
      * @return bool True if all characters are allowed
      */
     public static function isValid(string $shortOption): bool

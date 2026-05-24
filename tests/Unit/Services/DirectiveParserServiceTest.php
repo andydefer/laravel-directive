@@ -7,10 +7,10 @@ namespace AndyDefer\Directive\Tests\Directive\Unit\Services;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ParameterType;
 use AndyDefer\Directive\Services\DirectiveParserService;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-final class DirectiveParserServiceTest extends TestCase
+final class DirectiveParserServiceTest extends UnitTestCase
 {
     private DirectiveParserService $service;
 

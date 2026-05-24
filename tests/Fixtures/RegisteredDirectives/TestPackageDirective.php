@@ -29,7 +29,7 @@ final class TestPackageDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection();
+        $aliases = new StringTypedCollection;
         $aliases->add('tpkg');
 
         return $aliases;

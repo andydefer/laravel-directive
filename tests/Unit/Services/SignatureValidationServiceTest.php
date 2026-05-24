@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class SignatureValidationServiceTest extends TestCase
+final class SignatureValidationServiceTest extends UnitTestCase
 {
     private SignatureValidationService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new SignatureValidationService();
+        $this->service = new SignatureValidationService;
     }
 
     // ==================== Valid directive names ====================

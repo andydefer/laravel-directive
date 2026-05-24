@@ -7,12 +7,13 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies\Input;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Strategies\Input\SimpleQuestionStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\EmptyRecord;
 
-final class SimpleQuestionStrategyTest extends TestCase
+final class SimpleQuestionStrategyTest extends UnitTestCase
 {
     private SimpleQuestionStrategy $strategy;
+
     private $inputStream;
 
     protected function setUp(): void
@@ -30,7 +31,7 @@ final class SimpleQuestionStrategyTest extends TestCase
 
     private function setUserInput(string $input): void
     {
-        fwrite($this->inputStream, $input . "\n");
+        fwrite($this->inputStream, $input."\n");
         rewind($this->inputStream);
     }
 
@@ -95,7 +96,7 @@ final class SimpleQuestionStrategyTest extends TestCase
     public function test_execute_returns_empty_string_for_invalid_record(): void
     {
         $this->setUserInput('Test');
-        $record = new EmptyRecord();
+        $record = new EmptyRecord;
 
         $response = $this->runAndCaptureOutput(function () use ($record) {
             return $this->strategy->execute($record, InputType::SIMPLE_QUESTION);

@@ -17,6 +17,7 @@ use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
 use AndyDefer\Directive\Tasks\InputTask;
@@ -32,6 +33,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerConfig();
+        $this->registerLaravelBootstrapper();
         $this->registerFactory();
         $this->registerRegistrar();
         $this->registerParser();
@@ -52,7 +54,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/config/directive.php' => config_path('directive.php'),
+            __DIR__.'/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -73,6 +75,13 @@ final class DirectiveServiceProvider extends ServiceProvider
         });
     }
 
+    private function registerLaravelBootstrapper(): void
+    {
+        $this->app->singleton(LaravelBootstrapper::class, function ($app) {
+            return new LaravelBootstrapper;
+        });
+    }
+
     private function registerFactory(): void
     {
         $this->app->singleton(DirectiveFactoryInterface::class, function ($app) {
@@ -85,7 +94,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerRegistrar(): void
     {
         $this->app->singleton(DirectiveRegistrarInterface::class, function ($app) {
-            return new DirectiveRegistrar();
+            return new DirectiveRegistrar;
         });
 
         $this->app->singleton(DirectiveRegistrar::class, function ($app) {
@@ -96,16 +105,23 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerParser(): void
     {
         $this->app->singleton(DirectiveParserService::class, function ($app) {
-            return new DirectiveParserService();
+            return new DirectiveParserService;
         });
     }
 
     private function registerHydrator(): void
     {
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
-            return new DirectiveHydratorService(
+            $hydrator = new DirectiveHydratorService(
                 factory: $app->make(DirectiveFactoryInterface::class),
             );
+
+            // Injecter le bootstrapper si disponible
+            if ($app->bound(LaravelBootstrapper::class)) {
+                $hydrator->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
+            }
+
+            return $hydrator;
         });
     }
 
@@ -132,14 +148,14 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerSignatureValidation(): void
     {
         $this->app->singleton(SignatureValidationService::class, function ($app) {
-            return new SignatureValidationService();
+            return new SignatureValidationService;
         });
     }
 
     private function registerNamingService(): void
     {
         $this->app->singleton(DirectiveNamingService::class, function ($app) {
-            return new DirectiveNamingService();
+            return new DirectiveNamingService;
         });
     }
 
@@ -158,7 +174,8 @@ final class DirectiveServiceProvider extends ServiceProvider
                         namingService: $app->make(DirectiveNamingService::class),
                     );
                 }
-                return new $task();
+
+                return new $task;
             });
         }
     }
@@ -166,7 +183,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerInputTask(): void
     {
         $this->app->singleton(InputTask::class, function ($app) {
-            return new InputTask();
+            return new InputTask;
         });
     }
 
@@ -183,12 +200,19 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerExecution(): void
     {
         $this->app->singleton(DirectiveExecutionService::class, function ($app) {
-            return new DirectiveExecutionService(
+            $executionService = new DirectiveExecutionService(
                 discovery: $app->make(DirectiveDiscoveryService::class),
                 parser: $app->make(DirectiveParserService::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
                 renderer: $app->make(DirectiveRendererService::class),
             );
+
+            // Injecter le bootstrapper si disponible
+            if ($app->bound(LaravelBootstrapper::class)) {
+                $executionService->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
+            }
+
+            return $executionService;
         });
     }
 
@@ -207,7 +231,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerBuiltInDirectives(): void
     {
         $this->app->afterResolving(DirectiveRegistrarInterface::class, function ($registrar) {
-            $classes = new StringTypedCollection();
+            $classes = new StringTypedCollection;
             $classes->add(MakeDirective::class);
 
             $registrar->register($classes);

@@ -16,16 +16,18 @@ use AndyDefer\Directive\Records\UserChoiceRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
 #[AllowMockObjectsWithoutExpectations]
-final class DirectiveInteractionServiceTest extends TestCase
+final class DirectiveInteractionServiceTest extends UnitTestCase
 {
     private RenderTask&MockObject $renderTask;
+
     private InputTask&MockObject $inputTask;
+
     private DirectiveInteractionService $service;
 
     protected function setUp(): void
@@ -190,11 +192,11 @@ final class DirectiveInteractionServiceTest extends TestCase
 
     public function test_table_renders_table(): void
     {
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John Doe', 'john@example.com');
         $rows->add($row);
 
@@ -216,10 +218,10 @@ final class DirectiveInteractionServiceTest extends TestCase
 
     public function test_table_handles_empty_rows(): void
     {
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
         $this->renderTask->expects($this->once())
             ->method('execute')
@@ -237,9 +239,9 @@ final class DirectiveInteractionServiceTest extends TestCase
 
     public function test_table_handles_empty_headers(): void
     {
-        $headers = new StringTypedCollection();
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $headers = new StringTypedCollection;
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John Doe');
         $rows->add($row);
 

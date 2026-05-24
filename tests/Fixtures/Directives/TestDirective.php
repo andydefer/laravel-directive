@@ -11,7 +11,9 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 final class TestDirective extends AbstractDirective
 {
     private string $signature;
+
     private string $description;
+
     private ?ExitCode $exitCode;
 
     public function __construct(

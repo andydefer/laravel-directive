@@ -25,11 +25,11 @@ final class ConfirmationStrategy implements InputStrategyInterface
 
     public function execute(Recordable $record, InputType $type): mixed
     {
-        if (!$record instanceof QuestionRecord) {
+        if (! $record instanceof QuestionRecord) {
             return false;
         }
 
-        echo $record->question . $type->getPromptSuffix();
+        echo $record->question.$type->getPromptSuffix();
         $answer = strtolower(trim(fgets($this->inputStream)));
 
         return in_array($answer, ['y', 'yes'], true);

@@ -9,17 +9,17 @@ use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\TableRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-final class TableRenderStrategyTest extends TestCase
+final class TableRenderStrategyTest extends UnitTestCase
 {
     private TableRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new TableRenderStrategy();
+        $this->strategy = new TableRenderStrategy;
     }
 
     public function test_supports_table_type(): void
@@ -30,11 +30,11 @@ final class TableRenderStrategyTest extends TestCase
 
     public function test_execute_returns_replacements(): void
     {
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John', 'john@example.com');
         $rows->add($row);
 

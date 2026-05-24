@@ -7,16 +7,16 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\MessageRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class MessageRenderStrategyTest extends TestCase
+final class MessageRenderStrategyTest extends UnitTestCase
 {
     private MessageRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new MessageRenderStrategy();
+        $this->strategy = new MessageRenderStrategy;
     }
 
     public function test_supports_success_and_error_types(): void

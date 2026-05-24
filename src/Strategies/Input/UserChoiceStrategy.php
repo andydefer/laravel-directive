@@ -25,14 +25,14 @@ final class UserChoiceStrategy implements InputStrategyInterface
 
     public function execute(Recordable $record, InputType $type): mixed
     {
-        if (!$record instanceof UserChoiceRecord) {
+        if (! $record instanceof UserChoiceRecord) {
             return null;
         }
 
         echo "Which one do you want to use? [1-{$record->max}]: ";
         $input = trim(fgets($this->inputStream));
 
-        if (!is_numeric($input)) {
+        if (! is_numeric($input)) {
             return null;
         }
 

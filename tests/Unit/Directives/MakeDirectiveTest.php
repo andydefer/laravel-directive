@@ -7,19 +7,19 @@ namespace AndyDefer\Directive\Tests\Unit\Directives;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Directives\MakeDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Records\CreateDirectiveFileRecord;
+use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
 #[AllowMockObjectsWithoutExpectations]
-final class MakeDirectiveTest extends TestCase
+final class MakeDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
     private SignatureValidationService&MockObject $signatureValidator;
@@ -68,7 +68,7 @@ final class MakeDirectiveTest extends TestCase
     {
         $reflection = new \ReflectionClass(MakeDirective::class);
         $property = $reflection->getProperty('arguments');
-        $property->setAccessible(true);
+        // setAccessible() n'est plus nécessaire en PHP 8.1+
         $property->setValue($this->directive, new ParameterCollection());
 
         $result = $this->directive->execute();
@@ -79,11 +79,10 @@ final class MakeDirectiveTest extends TestCase
     {
         $reflection = new \ReflectionClass(MakeDirective::class);
         $property = $reflection->getProperty('arguments');
-        $property->setAccessible(true);
 
         $arguments = new ParameterCollection();
         $arguments->add(new ParameterRecord(name: 'name', value: 'user-create'));
-        $property->setValue($this->directive, $arguments);
+        $property->setValue($this->directive, $arguments);  // Plus de setAccessible
 
         $this->signatureValidator->expects($this->once())
             ->method('validate')
@@ -116,11 +115,10 @@ final class MakeDirectiveTest extends TestCase
     {
         $reflection = new \ReflectionClass(MakeDirective::class);
         $property = $reflection->getProperty('arguments');
-        $property->setAccessible(true);
 
         $arguments = new ParameterCollection();
         $arguments->add(new ParameterRecord(name: 'name', value: 'user create'));
-        $property->setValue($this->directive, $arguments);
+        $property->setValue($this->directive, $arguments);  // Plus de setAccessible
 
         $this->signatureValidator->expects($this->once())
             ->method('validate')
@@ -142,11 +140,10 @@ final class MakeDirectiveTest extends TestCase
     {
         $reflection = new \ReflectionClass(MakeDirective::class);
         $property = $reflection->getProperty('arguments');
-        $property->setAccessible(true);
 
         $arguments = new ParameterCollection();
         $arguments->add(new ParameterRecord(name: 'name', value: 'user-create'));
-        $property->setValue($this->directive, $arguments);
+        $property->setValue($this->directive, $arguments);  // Plus de setAccessible
 
         $this->signatureValidator->expects($this->once())
             ->method('validate')

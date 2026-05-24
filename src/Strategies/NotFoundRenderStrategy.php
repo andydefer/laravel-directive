@@ -8,6 +8,7 @@ use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
+use AndyDefer\Records\Recordable;
 
 final class NotFoundRenderStrategy implements RenderStrategyInterface
 {
@@ -16,12 +17,13 @@ final class NotFoundRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::NOT_FOUND;
     }
 
-    public function execute(object $record, RenderType $type): ReplacementCollection
+    public function execute(Recordable $record, RenderType $type): ReplacementCollection
     {
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
-        if (!$record instanceof RenderRecord) {
+        if (! $record instanceof RenderRecord) {
             $replacements->addReplacement('{{signature}}', 'unknown');
+
             return $replacements;
         }
 

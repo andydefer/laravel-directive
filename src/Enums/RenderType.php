@@ -16,12 +16,16 @@ enum RenderType: string
     case TABLE = 'table';
     case VALIDATION_ERROR = 'validation-error';
     case DISPLAY_MESSAGE = 'display-message';
+    case WARNING = 'warning';
+    case DEBUG = 'debug';
+    case VERSION = 'version';
 
     public function getDefaultMessage(): string
     {
         return match ($this) {
             self::SUCCESS => 'Directive executed successfully',
             self::ERROR => 'Directive execution failed',
+            self::WARNING => 'Warning',
             default => '',
         };
     }
@@ -50,6 +54,9 @@ enum RenderType: string
             self::TABLE => $this->getTableContent(),
             self::VALIDATION_ERROR => $this->getValidationErrorContent(),
             self::DISPLAY_MESSAGE => $this->getDisplayMessageContent(),
+            self::WARNING => $this->getWarningContent(),
+            self::DEBUG => $this->getDebugContent(),
+            self::VERSION => $this->getVersionContent(),
         };
     }
 
@@ -67,6 +74,7 @@ enum RenderType: string
 \033[1;32mCOMMANDS:\033[0m
   \033[33m--list, -l\033[0m      List all available directives
   \033[33m--help, -h\033[0m      Show this help message
+  \033[33m--version, -v\033[0m   Show version information
 
 \033[1;32mEXAMPLES:\033[0m
   \033[36m# Run a simple directive\033[0m
@@ -132,6 +140,32 @@ NOTFOUND;
         return "\033[31m✗ {{message}}\033[0m\n";
     }
 
+    private function getWarningContent(): string
+    {
+        return "\033[33m⚠️ {{message}}\033[0m\n";
+    }
+
+    private function getDebugContent(): string
+    {
+        return "\033[36m[DEBUG] {{message}}\033[0m\n";
+    }
+
+    private function getVersionContent(): string
+    {
+        return <<<VERSION
+\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
+\033[1;33m📦 Laravel Directive\033[0m
+\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
+
+\033[1;32mVersion:\033[0m {{version}}
+\033[1;32mPHP Version:\033[0m {{php_version}}
+\033[1;32mLaravel:\033[0m {{laravel_status}}
+
+\033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
+
+VERSION;
+    }
+
     private function getEmptyContent(): string
     {
         return <<<EMPTY
@@ -168,7 +202,7 @@ CONFLICT;
 
     private function getTableContent(): string
     {
-        return "{{table}}";
+        return '{{table}}';
     }
 
     private function getValidationErrorContent(): string

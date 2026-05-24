@@ -9,6 +9,7 @@ use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\Records\Recordable;
 
 final class ListRenderStrategy implements RenderStrategyInterface
 {
@@ -17,13 +18,13 @@ final class ListRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::LIST || $type === RenderType::EMPTY;
     }
 
-    public function execute(object $record, RenderType $type): ReplacementCollection
+    public function execute(Recordable $record, RenderType $type): ReplacementCollection
     {
-        if (!$record instanceof RenderRecord) {
-            return new ReplacementCollection();
+        if (! $record instanceof RenderRecord) {
+            return new ReplacementCollection;
         }
 
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
         if ($type === RenderType::EMPTY) {
             return $replacements;
@@ -33,7 +34,7 @@ final class ListRenderStrategy implements RenderStrategyInterface
             return $replacements;
         }
 
-        $replacements->addReplacement('{{count}}', (string)$record->directives->count());
+        $replacements->addReplacement('{{count}}', (string) $record->directives->count());
         $replacements->addReplacement('{{rows}}', $this->buildListRows($record->directives));
 
         return $replacements;
@@ -45,7 +46,7 @@ final class ListRenderStrategy implements RenderStrategyInterface
 
         foreach ($directives as $directive) {
             $aliases = $directive->aliases->count() > 0
-                ? ' (' . implode(', ', $directive->aliases->toArray()) . ')'
+                ? ' ('.implode(', ', $directive->aliases->toArray()).')'
                 : '';
 
             $rows[] = sprintf(

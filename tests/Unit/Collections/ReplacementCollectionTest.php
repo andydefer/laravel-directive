@@ -6,13 +6,13 @@ namespace AndyDefer\Directive\Tests\Unit\Collections;
 
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Records\ReplacementRecord;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class ReplacementCollectionTest extends TestCase
+final class ReplacementCollectionTest extends UnitTestCase
 {
     public function test_construct_creates_empty_collection(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
 
         $this->assertTrue($collection->isEmpty());
         $this->assertSame(0, $collection->count());
@@ -20,7 +20,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_add_replacement_adds_record(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection->addReplacement('{{name}}', 'John');
 
         $this->assertSame(1, $collection->count());
@@ -33,7 +33,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_add_replacement_returns_self_for_chaining(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $result = $collection->addReplacement('{{name}}', 'John');
 
         $this->assertSame($collection, $result);
@@ -41,7 +41,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_add_multiple_replacements(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection
             ->addReplacement('{{name}}', 'John')
             ->addReplacement('{{email}}', 'john@example.com');
@@ -51,7 +51,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_get_placeholders_returns_string_typed_collection(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection
             ->addReplacement('{{name}}', 'John')
             ->addReplacement('{{email}}', 'john@example.com');
@@ -65,7 +65,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_get_placeholders_returns_empty_when_no_replacements(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $placeholders = $collection->getPlaceholders();
 
         $this->assertTrue($placeholders->isEmpty());
@@ -73,7 +73,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_get_values_returns_string_typed_collection(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection
             ->addReplacement('{{name}}', 'John')
             ->addReplacement('{{email}}', 'john@example.com');
@@ -87,7 +87,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_get_values_returns_empty_when_no_replacements(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $values = $collection->getValues();
 
         $this->assertTrue($values->isEmpty());
@@ -95,7 +95,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_to_associative_array_returns_empty_array_for_empty_collection(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $result = $collection->toAssociativeArray();
 
         $this->assertIsArray($result);
@@ -104,7 +104,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_to_associative_array_converts_single_replacement(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection->addReplacement('{{name}}', 'John');
 
         $result = $collection->toAssociativeArray();
@@ -117,7 +117,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_to_associative_array_converts_multiple_replacements(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection
             ->addReplacement('{{name}}', 'John')
             ->addReplacement('{{email}}', 'john@example.com')
@@ -137,7 +137,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_to_associative_array_preserves_order(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection
             ->addReplacement('{{first}}', 'First')
             ->addReplacement('{{second}}', 'Second')
@@ -152,7 +152,7 @@ final class ReplacementCollectionTest extends TestCase
 
     public function test_to_associative_array_works_after_multiple_operations(): void
     {
-        $collection = new ReplacementCollection();
+        $collection = new ReplacementCollection;
         $collection->addReplacement('{{name}}', 'John');
         $collection->addReplacement('{{email}}', 'john@example.com');
 

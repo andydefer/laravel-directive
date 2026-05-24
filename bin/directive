@@ -4,6 +4,17 @@
 // bin/directive
 declare(strict_types=1);
 
+// Load environment variables from .env if available (optional)
+if (file_exists(getcwd() . '/.env')) {
+    $lines = file(getcwd() . '/.env');
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line && !str_starts_with($line, '#')) {
+            putenv($line);
+        }
+    }
+}
+
 // Trouver l'autoloader
 $autoloadPaths = [
     __DIR__ . '/../vendor/autoload.php',
@@ -34,6 +45,7 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\DirectiveRegistrar;
+use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Config\DirectiveConfig;
@@ -64,6 +76,10 @@ $container->singleton(SignatureValidationService::class, function () {
     return new SignatureValidationService();
 });
 
+$container->singleton(LaravelBootstrapper::class, function () {
+    return new LaravelBootstrapper();
+});
+
 $projectRoot = getcwd();
 $directivesPath = $projectRoot . '/app/Directives';
 
@@ -84,6 +100,10 @@ $factory = new ContainerDirectiveFactory($container);
 $parser = new DirectiveParserService();
 $hydrator = new DirectiveHydratorService($factory);
 $registrar = new DirectiveRegistrar();
+$laravelBootstrapper = $container->make(LaravelBootstrapper::class);
+
+// Injecter le bootstrapper dans l'hydrator
+$hydrator->setLaravelBootstrapper($laravelBootstrapper);
 
 // Enregistrer la directive make-directive
 $classes = new StringTypedCollection();
@@ -101,6 +121,7 @@ $executionService = new DirectiveExecutionService(
     hydrator: $hydrator,
     renderer: $renderer,
 );
+$executionService->setLaravelBootstrapper($laravelBootstrapper);
 
 $kernel = new DirectiveKernel(
     $executionService,

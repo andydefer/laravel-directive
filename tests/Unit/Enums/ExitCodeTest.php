@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Directive\Unit\Enums;
 
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class ExitCodeTest extends TestCase
+final class ExitCodeTest extends UnitTestCase
 {
     public function test_values_returns_all_exit_code_values(): void
     {

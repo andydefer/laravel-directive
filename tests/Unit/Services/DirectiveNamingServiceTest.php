@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Services\DirectiveNamingService;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class DirectiveNamingServiceTest extends TestCase
+final class DirectiveNamingServiceTest extends UnitTestCase
 {
     private DirectiveNamingService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveNamingService();
+        $this->service = new DirectiveNamingService;
     }
 
     public function test_generate_class_name_converts_simple_name(): void

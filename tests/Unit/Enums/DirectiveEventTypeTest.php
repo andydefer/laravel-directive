@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Directive\Unit\Enums;
 
 use AndyDefer\Directive\Enums\DirectiveEventType;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class DirectiveEventTypeTest extends TestCase
+final class DirectiveEventTypeTest extends UnitTestCase
 {
     public function test_values_returns_all_event_type_values(): void
     {

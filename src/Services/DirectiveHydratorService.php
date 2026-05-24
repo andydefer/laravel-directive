@@ -12,13 +12,25 @@ use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 
 class DirectiveHydratorService
 {
+    private ?LaravelBootstrapper $laravelBootstrapper = null;
+
     public function __construct(
         private readonly DirectiveFactoryInterface $factory,
     ) {}
 
+    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
+    {
+        $this->laravelBootstrapper = $bootstrapper;
+    }
+
     public function hydrate(string $class, ParsedDirectiveRecord $parsed): DirectiveInterface
     {
         $directive = $this->factory->make($class);
+
+        // Injecter le bootstrapper si disponible
+        if ($this->laravelBootstrapper !== null && method_exists($directive, 'setLaravelBootstrapper')) {
+            $directive->setLaravelBootstrapper($this->laravelBootstrapper);
+        }
 
         if (method_exists($directive, 'setArguments')) {
             $directive->setArguments(
@@ -37,11 +49,25 @@ class DirectiveHydratorService
 
     public function hydrateBlueprint(string $class): DirectiveBlueprintRecord
     {
-        return $this->factory->make($class)->getBlueprint();
+        $directive = $this->factory->make($class);
+
+        // Injecter le bootstrapper si disponible
+        if ($this->laravelBootstrapper !== null && method_exists($directive, 'setLaravelBootstrapper')) {
+            $directive->setLaravelBootstrapper($this->laravelBootstrapper);
+        }
+
+        return $directive->getBlueprint();
     }
 
     public function hydrateForAliases(string $class): DirectiveInterface
     {
-        return $this->factory->make($class);
+        $directive = $this->factory->make($class);
+
+        // Injecter le bootstrapper si disponible
+        if ($this->laravelBootstrapper !== null && method_exists($directive, 'setLaravelBootstrapper')) {
+            $directive->setLaravelBootstrapper($this->laravelBootstrapper);
+        }
+
+        return $directive;
     }
 }

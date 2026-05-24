@@ -7,16 +7,17 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Strategies\ValidationErrorRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\Records\EmptyRecord;
 
-final class ValidationErrorRenderStrategyTest extends TestCase
+final class ValidationErrorRenderStrategyTest extends UnitTestCase
 {
     private ValidationErrorRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new ValidationErrorRenderStrategy();
+        $this->strategy = new ValidationErrorRenderStrategy;
     }
 
     public function test_supports_validation_error_type(): void
@@ -53,7 +54,7 @@ final class ValidationErrorRenderStrategyTest extends TestCase
 
     public function test_execute_with_invalid_record_uses_default(): void
     {
-        $record = new \stdClass();
+        $record = new EmptyRecord;
 
         $replacements = $this->strategy->execute($record, RenderType::VALIDATION_ERROR);
 

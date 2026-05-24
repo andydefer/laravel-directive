@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Enums;
 
 use AndyDefer\Directive\Enums\RenderType;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class RenderTypeTest extends TestCase
+final class RenderTypeTest extends UnitTestCase
 {
     public function test_success_returns_correct_message(): void
     {
@@ -29,6 +29,49 @@ final class RenderTypeTest extends TestCase
         $this->assertStringContainsString("\033[0m", $result);
     }
 
+    public function test_warning_returns_correct_message(): void
+    {
+        $replacements = ['{{message}}' => 'Warning message'];
+        $result = RenderType::WARNING->render($replacements);
+
+        $this->assertStringContainsString('Warning message', $result);
+        $this->assertStringContainsString("\033[33m", $result);
+        $this->assertStringContainsString('⚠️', $result);
+    }
+
+    public function test_debug_returns_correct_message(): void
+    {
+        $replacements = ['{{message}}' => 'Debug info'];
+        $result = RenderType::DEBUG->render($replacements);
+
+        $this->assertStringContainsString('Debug info', $result);
+        $this->assertStringContainsString("\033[36m", $result);
+        $this->assertStringContainsString('[DEBUG]', $result);
+    }
+
+    public function test_version_contains_placeholders(): void
+    {
+        $result = RenderType::VERSION->render();
+
+        $this->assertStringContainsString('{{version}}', $result);
+        $this->assertStringContainsString('{{php_version}}', $result);
+        $this->assertStringContainsString('{{laravel_status}}', $result);
+    }
+
+    public function test_version_with_replacements_renders_correctly(): void
+    {
+        $replacements = [
+            '{{version}}' => '1.0.0',
+            '{{php_version}}' => '8.2.0',
+            '{{laravel_status}}' => 'Bootstrapped ✓',
+        ];
+        $result = RenderType::VERSION->render($replacements);
+
+        $this->assertStringContainsString('1.0.0', $result);
+        $this->assertStringContainsString('8.2.0', $result);
+        $this->assertStringContainsString('Bootstrapped ✓', $result);
+    }
+
     public function test_help_contains_required_sections(): void
     {
         $result = RenderType::HELP->render();
@@ -38,6 +81,7 @@ final class RenderTypeTest extends TestCase
         $this->assertStringContainsString('COMMANDS:', $result);
         $this->assertStringContainsString('EXAMPLES:', $result);
         $this->assertStringContainsString('CREATE YOUR OWN DIRECTIVE:', $result);
+        $this->assertStringContainsString('--version, -v', $result);
     }
 
     public function test_list_contains_placeholders(): void
@@ -52,7 +96,7 @@ final class RenderTypeTest extends TestCase
     {
         $replacements = [
             '{{count}}' => '2',
-            '{{rows}}' => "  test-cmd          Test command",
+            '{{rows}}' => '  test-cmd          Test command',
         ];
         $result = RenderType::LIST->render($replacements);
 
@@ -82,7 +126,6 @@ final class RenderTypeTest extends TestCase
     {
         $result = RenderType::EMPTY->render();
 
-        // Check for key phrases instead of exact strings
         $this->assertStringContainsString('No Directives Found', $result);
         $this->assertStringContainsString('first directive', $result);
         $this->assertStringContainsString('mkdir', $result);
@@ -172,6 +215,9 @@ final class RenderTypeTest extends TestCase
     {
         $this->assertSame('Directive executed successfully', RenderType::SUCCESS->getDefaultMessage());
         $this->assertSame('Directive execution failed', RenderType::ERROR->getDefaultMessage());
+        $this->assertSame('Warning', RenderType::WARNING->getDefaultMessage());
+        $this->assertSame('', RenderType::DEBUG->getDefaultMessage());
+        $this->assertSame('', RenderType::VERSION->getDefaultMessage());
         $this->assertSame('', RenderType::HELP->getDefaultMessage());
         $this->assertSame('', RenderType::LIST->getDefaultMessage());
         $this->assertSame('', RenderType::NOT_FOUND->getDefaultMessage());

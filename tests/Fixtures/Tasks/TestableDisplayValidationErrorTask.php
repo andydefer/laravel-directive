@@ -17,7 +17,7 @@ final class TestableDisplayValidationErrorTask extends DisplayValidationErrorTas
     {
         $stream = fopen('php://memory', 'r+');
 
-        fwrite($stream, "\e[31m✗ Error:\e[0m " . $error . "\n");
+        fwrite($stream, "\e[31m✗ Error:\e[0m ".$error."\n");
         fwrite($stream, "\n\e[33mValid examples:\e[0m\n");
         fwrite($stream, "  • user:list\n");
         fwrite($stream, "  • cache-clear\n");

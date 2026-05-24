@@ -6,10 +6,10 @@ namespace AndyDefer\Directive\Tests\Unit\Collections;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Records\ParameterRecord;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\TypedCollection;
-use PHPUnit\Framework\TestCase;
 
-final class ParameterCollectionTest extends TestCase
+final class ParameterCollectionTest extends UnitTestCase
 {
     // ==================== Constructor Tests ====================
 

@@ -12,5 +12,5 @@ return [
     | system will automatically discover all directives in this directory.
     |
     */
-    'path' => getcwd() . '/app/Directives',
+    'path' => getcwd().'/app/Directives',
 ];

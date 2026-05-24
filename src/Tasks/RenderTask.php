@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tasks;
 
 use AndyDefer\Directive\Collections\ReplacementCollection;
-use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
+use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Strategies\ConflictRenderStrategy;
+use AndyDefer\Directive\Strategies\DebugRenderStrategy;
 use AndyDefer\Directive\Strategies\DisplayMessageRenderStrategy;
 use AndyDefer\Directive\Strategies\HelpRenderStrategy;
 use AndyDefer\Directive\Strategies\ListRenderStrategy;
@@ -16,22 +17,52 @@ use AndyDefer\Directive\Strategies\MessageRenderStrategy;
 use AndyDefer\Directive\Strategies\NotFoundRenderStrategy;
 use AndyDefer\Directive\Strategies\TableRenderStrategy;
 use AndyDefer\Directive\Strategies\ValidationErrorRenderStrategy;
+use AndyDefer\Directive\Strategies\VersionRenderStrategy;
+use AndyDefer\Directive\Strategies\WarningRenderStrategy;
 
 class RenderTask
 {
     private array $strategies;
 
-    public function __construct()
+    private ?LaravelBootstrapper $laravelBootstrapper = null;
+
+    public function __construct(?LaravelBootstrapper $laravelBootstrapper = null)
     {
+        $this->laravelBootstrapper = $laravelBootstrapper;
+        $this->initializeStrategies();
+    }
+
+    private function initializeStrategies(): void
+    {
+        $helpStrategy = new HelpRenderStrategy;
+        $listStrategy = new ListRenderStrategy;
+        $notFoundStrategy = new NotFoundRenderStrategy;
+        $messageStrategy = new MessageRenderStrategy;
+        $conflictStrategy = new ConflictRenderStrategy;
+        $tableStrategy = new TableRenderStrategy;
+        $validationErrorStrategy = new ValidationErrorRenderStrategy;
+        $displayMessageStrategy = new DisplayMessageRenderStrategy;
+        $warningStrategy = new WarningRenderStrategy;
+        $debugStrategy = new DebugRenderStrategy;
+        $versionStrategy = new VersionRenderStrategy;
+
+        // Injecter le bootstrapper dans la stratégie version
+        if ($this->laravelBootstrapper !== null) {
+            $versionStrategy->setLaravelBootstrapper($this->laravelBootstrapper);
+        }
+
         $this->strategies = [
-            new HelpRenderStrategy(),
-            new ListRenderStrategy(),
-            new NotFoundRenderStrategy(),
-            new MessageRenderStrategy(),
-            new ConflictRenderStrategy(),
-            new TableRenderStrategy(),
-            new ValidationErrorRenderStrategy(),
-            new DisplayMessageRenderStrategy(),
+            $helpStrategy,
+            $listStrategy,
+            $notFoundStrategy,
+            $messageStrategy,
+            $conflictStrategy,
+            $tableStrategy,
+            $validationErrorStrategy,
+            $displayMessageStrategy,
+            $warningStrategy,
+            $debugStrategy,
+            $versionStrategy,
         ];
     }
 
@@ -48,7 +79,7 @@ class RenderTask
 
     private function isEmptyDirectives(object $record): bool
     {
-        if (!$record instanceof RenderRecord) {
+        if (! $record instanceof RenderRecord) {
             return true;
         }
 
@@ -63,6 +94,6 @@ class RenderTask
             }
         }
 
-        return new ReplacementCollection();
+        return new ReplacementCollection;
     }
 }

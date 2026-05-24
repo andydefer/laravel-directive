@@ -48,6 +48,28 @@ class DirectiveRendererService
         echo $this->renderTask->execute($record, RenderType::ERROR);
     }
 
+    public function renderWarning(string $message): void
+    {
+        $record = new RenderRecord(type: RenderType::WARNING, message: $message);
+        echo $this->renderTask->execute($record, RenderType::WARNING);
+    }
+
+    public function renderDebug(string $message): void
+    {
+        $debug = getenv('DIRECTIVE_DEBUG') === 'true' || getenv('APP_DEBUG') === 'true';
+
+        if ($debug) {
+            $record = new RenderRecord(type: RenderType::DEBUG, message: $message);
+            echo $this->renderTask->execute($record, RenderType::DEBUG);
+        }
+    }
+
+    public function renderVersion(): void
+    {
+        $record = new RenderRecord(type: RenderType::VERSION);
+        echo $this->renderTask->execute($record, RenderType::VERSION);
+    }
+
     public function renderConflict(ConflictDisplayRecord $record): void
     {
         echo $this->renderTask->execute($record, RenderType::CONFLICT);

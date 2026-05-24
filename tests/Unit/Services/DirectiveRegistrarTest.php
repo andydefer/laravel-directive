@@ -7,22 +7,22 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-final class DirectiveRegistrarTest extends TestCase
+final class DirectiveRegistrarTest extends UnitTestCase
 {
     private DirectiveRegistrar $registrar;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->registrar = new DirectiveRegistrar();
+        $this->registrar = new DirectiveRegistrar;
     }
 
     public function test_register_adds_directive_classes(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class);
 
         $result = $this->registrar->register($classes);
@@ -34,7 +34,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_register_adds_multiple_directive_classes(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class);
         $classes->add(TestConcreteDirective::class);
 
@@ -47,7 +47,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_register_ignores_nonexistent_classes(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add('NonexistentClass');
 
         $this->registrar->register($classes);
@@ -57,7 +57,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_register_ignores_classes_not_implementing_directive_interface(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(\stdClass::class);
 
         $this->registrar->register($classes);
@@ -67,7 +67,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_register_ignores_duplicate_classes(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class, TestPackageDirective::class);
 
         $this->registrar->register($classes);
@@ -77,7 +77,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_get_registered_returns_collection_of_strings(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class);
         $this->registrar->register($classes);
 
@@ -94,7 +94,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_clear_removes_all_registered_directives(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class);
         $this->registrar->register($classes);
         $this->assertSame(1, $this->registrar->count());
@@ -108,7 +108,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_register_returns_self_for_chaining(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class);
 
         $result = $this->registrar->register($classes);
@@ -123,7 +123,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_find_returns_class_by_signature(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestConcreteDirective::class);
         $this->registrar->register($classes);
 
@@ -135,7 +135,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_find_returns_class_by_alias(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class);
         $this->registrar->register($classes);
 
@@ -154,7 +154,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_has_conflict_returns_false_for_unique_directive(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestConcreteDirective::class);
         $this->registrar->register($classes);
 
@@ -165,7 +165,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_get_all_directives_metadata_returns_collection(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestConcreteDirective::class);
         $this->registrar->register($classes);
 
@@ -176,7 +176,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_get_signature_map_returns_array(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestConcreteDirective::class);
         $this->registrar->register($classes);
 
@@ -187,7 +187,7 @@ final class DirectiveRegistrarTest extends TestCase
 
     public function test_get_alias_map_returns_array(): void
     {
-        $classes = new StringTypedCollection();
+        $classes = new StringTypedCollection;
         $classes->add(TestPackageDirective::class);
         $this->registrar->register($classes);
 

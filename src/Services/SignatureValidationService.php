@@ -33,7 +33,7 @@ class SignatureValidationService
             return new ValidationResultRecord(isValid: true, error: null);
         }
 
-        if (!preg_match(self::PATTERN, $signature)) {
+        if (! preg_match(self::PATTERN, $signature)) {
             return new ValidationResultRecord(
                 isValid: false,
                 error: sprintf(

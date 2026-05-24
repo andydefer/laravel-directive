@@ -20,15 +20,15 @@ final class DisplayMessageRenderStrategy implements RenderStrategyInterface
 
     public function execute(Recordable $record, RenderType $type): ReplacementCollection
     {
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
-        if (!$record instanceof RenderRecord) {
+        if (! $record instanceof RenderRecord) {
             return $replacements;
         }
 
         $messageRecord = $record->messageRecord;
 
-        if (!$messageRecord instanceof DisplayMessageRecord) {
+        if (! $messageRecord instanceof DisplayMessageRecord) {
             return $replacements;
         }
 

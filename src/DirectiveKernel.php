@@ -43,8 +43,9 @@ class DirectiveKernel
 
         $validation = $this->signatureValidator->validate($signature);
 
-        if (!$validation->isValid) {
+        if (! $validation->isValid) {
             $this->renderer->renderValidationError($validation);
+
             return ExitCode::INVALID_ARGUMENT;
         }
 
@@ -55,7 +56,7 @@ class DirectiveKernel
 
     private function executeDirective(string $signature, array $arguments): ExitCode
     {
-        $argumentCollection = new StringTypedCollection();
+        $argumentCollection = new StringTypedCollection;
 
         foreach ($arguments as $argument) {
             $argumentCollection->add($argument);

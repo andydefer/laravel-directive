@@ -9,25 +9,21 @@ use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-/**
- * Abstract base class for all directive implementations.
- *
- * Provides common functionality for argument/option handling, user interaction
- * (asking questions, displaying messages), and table rendering. All concrete
- * directives must extend this class.
- */
 abstract class AbstractDirective implements DirectiveInterface
 {
     protected ParameterCollection $arguments;
+
     protected ParameterCollection $options;
 
     public function __construct(
         protected readonly DirectiveInteractionService $interaction,
+        protected ?LaravelBootstrapper $laravelBootstrapper = null,
     ) {
-        $this->arguments = new ParameterCollection();
-        $this->options = new ParameterCollection();
+        $this->arguments = new ParameterCollection;
+        $this->options = new ParameterCollection;
     }
 
     public function getBlueprint(): DirectiveBlueprintRecord
@@ -41,7 +37,60 @@ abstract class AbstractDirective implements DirectiveInterface
 
     public function getAliases(): StringTypedCollection
     {
-        return new StringTypedCollection();
+        return new StringTypedCollection;
+    }
+
+    /**
+     * Override this method to enable Laravel bootstrapping for this directive.
+     *
+     * Set to true if your directive needs:
+     * - Eloquent models (User::find(), etc.)
+     * - Database connections (DB::table())
+     * - Laravel cache, queues, events, or any Laravel service
+     *
+     * When set to true, the directive will automatically bootstrap Laravel
+     * before executing, making all Laravel features available.
+     *
+     * Default is false for optimal performance (no Laravel bootstrap overhead).
+     *
+     * @return bool True if Laravel should be bootstrapped for this directive
+     */
+    public function shouldBootLaravel(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Check if Laravel has been bootstrapped and is available.
+     *
+     * Use this method in your directive to check if Laravel features
+     * (Eloquent, DB, Cache, etc.) are available.
+     *
+     * @return bool True if Laravel is bootstrapped and available
+     */
+    protected function hasLaravel(): bool
+    {
+        return $this->laravelBootstrapper !== null && $this->laravelBootstrapper->isBootstrapped();
+    }
+
+    /**
+     * Get the Laravel application instance if available.
+     *
+     * @return object|null The Laravel application instance or null if not available
+     */
+    protected function getLaravel(): ?object
+    {
+        return $this->laravelBootstrapper?->getApplication();
+    }
+
+    /**
+     * Set the Laravel bootstrapper instance.
+     */
+    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self
+    {
+        $this->laravelBootstrapper = $bootstrapper;
+
+        return $this;
     }
 
     // ==================== Argument Management ====================
@@ -49,6 +98,7 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setArguments(ParameterCollection $arguments): self
     {
         $this->arguments = $arguments;
+
         return $this;
     }
 
@@ -68,6 +118,7 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setOptions(ParameterCollection $options): self
     {
         $this->options = $options;
+
         return $this;
     }
 

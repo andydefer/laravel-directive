@@ -21,24 +21,27 @@ final class ReplacementCollection extends TypedCollection
     public function addReplacement(string $placeholder, string $value): self
     {
         $this->add(new ReplacementRecord($placeholder, $value));
+
         return $this;
     }
 
     public function getPlaceholders(): StringTypedCollection
     {
-        $placeholders = new StringTypedCollection();
+        $placeholders = new StringTypedCollection;
         foreach ($this->items as $replacement) {
             $placeholders->add($replacement->placeholder);
         }
+
         return $placeholders;
     }
 
     public function getValues(): StringTypedCollection
     {
-        $values = new StringTypedCollection();
+        $values = new StringTypedCollection;
         foreach ($this->items as $replacement) {
             $values->add($replacement->value);
         }
+
         return $values;
     }
 
@@ -53,6 +56,7 @@ final class ReplacementCollection extends TypedCollection
         foreach ($this->items as $replacement) {
             $result[$replacement->placeholder] = $replacement->value;
         }
+
         return $result;
     }
 }

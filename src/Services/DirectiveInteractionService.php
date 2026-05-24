@@ -61,18 +61,21 @@ class DirectiveInteractionService
     public function ask(string $question): string
     {
         $record = new QuestionRecord($question);
+
         return $this->inputTask->execute($record, InputType::SIMPLE_QUESTION);
     }
 
     public function confirm(string $question): bool
     {
         $record = new QuestionRecord($question);
+
         return $this->inputTask->execute($record, InputType::CONFIRMATION);
     }
 
     public function askUserChoice(string $name, int $max): int
     {
         $record = new UserChoiceRecord(choice: 0, max: $max);
+
         return $this->inputTask->execute($record, InputType::USER_CHOICE);
     }
 

@@ -8,6 +8,7 @@ use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
+use AndyDefer\Records\Recordable;
 
 final class ConflictRenderStrategy implements RenderStrategyInterface
 {
@@ -16,11 +17,11 @@ final class ConflictRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::CONFLICT;
     }
 
-    public function execute(object $record, RenderType $type): ReplacementCollection
+    public function execute(Recordable $record, RenderType $type): ReplacementCollection
     {
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
-        if (!$record instanceof ConflictDisplayRecord) {
+        if (! $record instanceof ConflictDisplayRecord) {
             return $replacements;
         }
 
@@ -39,10 +40,10 @@ final class ConflictRenderStrategy implements RenderStrategyInterface
         $options = [];
 
         for ($i = 0; $i < count($classNames); $i++) {
-            $option = ($i + 1) . ". " . $classNames[$i] . " (signature: {$signatures[$i]})";
+            $option = ($i + 1).'. '.$classNames[$i]." (signature: {$signatures[$i]})";
 
-            if (!empty($descriptions[$i])) {
-                $option .= "\n   " . $descriptions[$i];
+            if (! empty($descriptions[$i])) {
+                $option .= "\n   ".$descriptions[$i];
             }
 
             $options[] = $option;

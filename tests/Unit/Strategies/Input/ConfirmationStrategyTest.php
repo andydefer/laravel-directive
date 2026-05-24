@@ -7,12 +7,13 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies\Input;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Strategies\Input\ConfirmationStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\EmptyRecord;
 
-final class ConfirmationStrategyTest extends TestCase
+final class ConfirmationStrategyTest extends UnitTestCase
 {
     private ConfirmationStrategy $strategy;
+
     private $inputStream;
 
     protected function setUp(): void
@@ -30,7 +31,7 @@ final class ConfirmationStrategyTest extends TestCase
 
     private function setUserInput(string $input): void
     {
-        fwrite($this->inputStream, $input . "\n");
+        fwrite($this->inputStream, $input."\n");
         rewind($this->inputStream);
     }
 
@@ -79,7 +80,7 @@ final class ConfirmationStrategyTest extends TestCase
         $this->assertStringContainsString('Continue? (y/n)', $response['output']);
     }
 
-    public function test_execute_returns_true_for_Y_uppercase(): void
+    public function test_execute_returns_true_for_y_uppercase(): void
     {
         $this->setUserInput('Y');
         $record = new QuestionRecord('Continue?');
@@ -92,7 +93,7 @@ final class ConfirmationStrategyTest extends TestCase
         $this->assertStringContainsString('Continue? (y/n)', $response['output']);
     }
 
-    public function test_execute_returns_true_for_YES_uppercase(): void
+    public function test_execute_returns_true_for_ye_s_uppercase(): void
     {
         $this->setUserInput('YES');
         $record = new QuestionRecord('Continue?');
@@ -160,7 +161,7 @@ final class ConfirmationStrategyTest extends TestCase
     public function test_execute_returns_false_for_invalid_record(): void
     {
         $this->setUserInput('y');
-        $record = new EmptyRecord();
+        $record = new EmptyRecord;
 
         $response = $this->runAndCaptureOutput(function () use ($record) {
             return $this->strategy->execute($record, InputType::CONFIRMATION);

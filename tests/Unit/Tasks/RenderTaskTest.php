@@ -7,19 +7,22 @@ namespace AndyDefer\Directive\Tests\Unit\Tasks;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\RenderRecord;
+use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Tasks\RenderTask;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
-final class RenderTaskTest extends TestCase
+#[AllowMockObjectsWithoutExpectations]
+final class RenderTaskTest extends UnitTestCase
 {
     private RenderTask $task;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->task = new RenderTask();
+        $this->task = new RenderTask;
     }
 
     public function test_render_help(): void
@@ -34,10 +37,10 @@ final class RenderTaskTest extends TestCase
     public function test_render_list_with_directives(): void
     {
         $directives = new TypedCollection(\stdClass::class);
-        $directive = new \stdClass();
+        $directive = new \stdClass;
         $directive->signature = 'test-cmd';
         $directive->description = 'Test command';
-        $directive->aliases = new StringTypedCollection();
+        $directive->aliases = new StringTypedCollection;
         $directives->add($directive);
 
         $record = new RenderRecord(type: RenderType::LIST, directives: $directives);
@@ -83,15 +86,49 @@ final class RenderTaskTest extends TestCase
         $this->assertStringContainsString("\033[31m", $result);
     }
 
+    public function test_render_warning(): void
+    {
+        $record = new RenderRecord(type: RenderType::WARNING, message: 'Be careful');
+        $result = $this->task->execute($record, RenderType::WARNING);
+
+        $this->assertStringContainsString('Be careful', $result);
+        $this->assertStringContainsString("\033[33m", $result);
+        $this->assertStringContainsString('⚠️', $result);
+    }
+
+    public function test_render_debug(): void
+    {
+        $record = new RenderRecord(type: RenderType::DEBUG, message: 'Debug info');
+        $result = $this->task->execute($record, RenderType::DEBUG);
+
+        $this->assertStringContainsString('Debug info', $result);
+        $this->assertStringContainsString("\033[36m", $result);
+        $this->assertStringContainsString('[DEBUG]', $result);
+    }
+
+    public function test_render_version(): void
+    {
+        $bootstrapper = $this->createMock(LaravelBootstrapper::class);
+        $bootstrapper->method('isBootstrapped')->willReturn(false);
+
+        $task = new RenderTask($bootstrapper);
+        $record = new RenderRecord(type: RenderType::VERSION);
+        $result = $task->execute($record, RenderType::VERSION);
+
+        $this->assertStringContainsString('Laravel Directive', $result);
+        $this->assertStringContainsString('PHP Version:', $result);
+        $this->assertStringContainsString('Laravel:', $result);
+    }
+
     public function test_render_conflict(): void
     {
-        $classNames = new StringTypedCollection();
+        $classNames = new StringTypedCollection;
         $classNames->add('UserCreateDirective');
 
-        $signatures = new StringTypedCollection();
+        $signatures = new StringTypedCollection;
         $signatures->add('user-create');
 
-        $descriptions = new StringTypedCollection();
+        $descriptions = new StringTypedCollection;
         $descriptions->add('Create a user');
 
         $record = new ConflictDisplayRecord(

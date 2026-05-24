@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Enums;
 
 use AndyDefer\Directive\Enums\InputType;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class InputTypeTest extends TestCase
+final class InputTypeTest extends UnitTestCase
 {
     public function test_get_prompt_suffix_returns_correct_suffix(): void
     {

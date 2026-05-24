@@ -7,18 +7,18 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\ListRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-final class ListRenderStrategyTest extends TestCase
+final class ListRenderStrategyTest extends UnitTestCase
 {
     private ListRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new ListRenderStrategy();
+        $this->strategy = new ListRenderStrategy;
     }
 
     public function test_supports_list_and_empty_types(): void
@@ -31,10 +31,10 @@ final class ListRenderStrategyTest extends TestCase
     public function test_execute_with_directives_returns_replacements(): void
     {
         $directives = new TypedCollection(\stdClass::class);
-        $directive = new \stdClass();
+        $directive = new \stdClass;
         $directive->signature = 'test-cmd';
         $directive->description = 'Test command';
-        $directive->aliases = new StringTypedCollection();
+        $directive->aliases = new StringTypedCollection;
         $directives->add($directive);
 
         $record = new RenderRecord(type: RenderType::LIST, directives: $directives);

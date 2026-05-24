@@ -7,16 +7,16 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\NotFoundRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class NotFoundRenderStrategyTest extends TestCase
+final class NotFoundRenderStrategyTest extends UnitTestCase
 {
     private NotFoundRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new NotFoundRenderStrategy();
+        $this->strategy = new NotFoundRenderStrategy;
     }
 
     public function test_supports_not_found_type(): void

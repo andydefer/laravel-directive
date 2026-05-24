@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Enums;
 
 use AndyDefer\Directive\Enums\ShortOption;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class ShortOptionTest extends TestCase
+final class ShortOptionTest extends UnitTestCase
 {
     public function test_get_allowed_characters_returns_all_values(): void
     {

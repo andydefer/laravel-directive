@@ -8,11 +8,12 @@ use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
 use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class InputTaskTest extends TestCase
+final class InputTaskTest extends UnitTestCase
 {
     private InputTask $task;
+
     private $inputStream;
 
     protected function setUp(): void
@@ -30,7 +31,7 @@ final class InputTaskTest extends TestCase
 
     private function setUserInput(string $input): void
     {
-        fwrite($this->inputStream, $input . "\n");
+        fwrite($this->inputStream, $input."\n");
         rewind($this->inputStream);
     }
 

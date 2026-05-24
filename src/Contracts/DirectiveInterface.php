@@ -7,6 +7,7 @@ namespace AndyDefer\Directive\Contracts;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
+use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Records\Collections\TypedCollection;
 
 /**
@@ -93,4 +94,29 @@ interface DirectiveInterface
      * @return bool True if the option exists, false otherwise
      */
     public function hasOption(string $key): bool;
+
+    /**
+     * Override this method to enable Laravel bootstrapping for this directive.
+     *
+     * Set to true if your directive needs:
+     * - Eloquent models (User::find(), etc.)
+     * - Database connections (DB::table())
+     * - Laravel cache, queues, events, or any Laravel service
+     *
+     * Default is false for optimal performance (no Laravel bootstrap overhead).
+     *
+     * @return bool True if Laravel should be bootstrapped for this directive
+     */
+    public function shouldBootLaravel(): bool;
+
+    /**
+     * Set the Laravel bootstrapper instance for this directive.
+     *
+     * This method is used by the framework to inject the bootstrapper
+     * when Laravel support is needed. You don't need to call it manually.
+     *
+     * @param  LaravelBootstrapper|null  $bootstrapper  The Laravel bootstrapper instance
+     * @return self Returns the directive instance for method chaining
+     */
+    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self;
 }

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Enums;
 
 use AndyDefer\Directive\Enums\ParameterType;
-use PHPUnit\Framework\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 
-final class ParameterTypeTest extends TestCase
+final class ParameterTypeTest extends UnitTestCase
 {
     public function test_values(): void
     {

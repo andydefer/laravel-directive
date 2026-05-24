@@ -9,17 +9,17 @@ use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\DisplayMessageRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\DisplayMessageRenderStrategy;
-use AndyDefer\Directive\Tests\TestCase;
+use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\EmptyRecord;
 
-final class DisplayMessageRenderStrategyTest extends TestCase
+final class DisplayMessageRenderStrategyTest extends UnitTestCase
 {
     private DisplayMessageRenderStrategy $strategy;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new DisplayMessageRenderStrategy();
+        $this->strategy = new DisplayMessageRenderStrategy;
     }
 
     public function test_supports_display_message_type(): void
@@ -97,7 +97,7 @@ final class DisplayMessageRenderStrategyTest extends TestCase
 
     public function test_execute_with_invalid_record_returns_empty_replacements(): void
     {
-        $record = new EmptyRecord();
+        $record = new EmptyRecord;
 
         $replacements = $this->strategy->execute($record, RenderType::DISPLAY_MESSAGE);
 
