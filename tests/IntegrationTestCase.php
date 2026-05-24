@@ -8,11 +8,7 @@ namespace AndyDefer\Directive\Tests;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveServiceProvider;
-use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
-use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDatabaseDirective;
-use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
-use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Carbon\Carbon;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -41,8 +37,10 @@ abstract class IntegrationTestCase extends Orchestra
         // 3. Configurer le chemin des directives
         $this->configureDirectivesPath();
 
-        // 4. Enregistrer les directives de test
-        $this->registerTestDirectives();
+        // 4. 🔥 Plus besoin d'enregistrer les directives de test manuellement
+        // Les directives sont automatiquement découvertes dans :
+        // - tests/Fixtures/Directives/ (via le chemin configuré)
+        // - vendor/*/src/Directives/ (pour les packages)
 
         // 5. Run migrations
         $this->runDatabaseMigrations();
@@ -64,18 +62,6 @@ abstract class IntegrationTestCase extends Orchestra
         $config = DirectiveConfig::default()->withDirectivesPath($fixturesPath);
         $this->app->instance(DirectiveConfig::class, $config);
         $this->app['config']->set('directive.path', $fixturesPath);
-    }
-
-    private function registerTestDirectives(): void
-    {
-        $registrar = $this->app->make(DirectiveRegistrar::class);
-
-        $classes = new StringTypedCollection();
-        $classes->add(TestLaravelDatabaseDirective::class);
-        $classes->add(TestLaravelDirective::class);
-        $classes->add(TestPackageDirective::class);
-
-        $registrar->register($classes);
     }
 
     protected function getEnvironmentSetUp($app): void
