@@ -110,6 +110,23 @@ interface DirectiveInterface
     public function shouldBootLaravel(): bool;
 
     /**
+     * Check if Laravel has been bootstrapped and is available.
+     *
+     * Use this method in your directive to check if Laravel features
+     * (Eloquent, DB, Cache, etc.) are available.
+     *
+     * @return bool True if Laravel is bootstrapped and available
+     */
+    public function hasLaravel(): bool;
+
+    /**
+     * Get the Laravel application instance if available.
+     *
+     * @return object|null The Laravel application instance or null if not available
+     */
+    public function getLaravel(): ?object;
+
+    /**
      * Set the Laravel bootstrapper instance for this directive.
      *
      * This method is used by the framework to inject the bootstrapper

@@ -1,11 +1,12 @@
 # Pint Formatting Test Report
-*Generated: dim. 24 mai 2026 10:22:27 WAT*
+*Generated: dim. 24 mai 2026 11:00:11 WAT*
 
 
-  ............................................⨯.........⨯................⨯⨯....⨯.................⨯......................⨯......⨯......
+  ............................................⨯.⨯.......⨯................⨯⨯....⨯.................⨯......................⨯......⨯......
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................. 132 files, 8 style issues  
+    FAIL   ................................................................................................................................................. 132 files, 9 style issues  
+  ⨯ src/AbstractDirective.php                                                                                                 class_attributes_separation, blank_line_before_statement  
   ⨯ src/Services/DirectiveExecutionService.php                                                                    braces_position, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Strategies/TableRenderStrategy.php                                                                                                          new_with_parentheses, concat_space  
   ⨯ tests/Feature/DirectiveIntegrationTest.php                                                                                                      new_with_parentheses, concat_space  
