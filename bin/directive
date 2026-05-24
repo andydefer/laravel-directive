@@ -37,14 +37,12 @@ use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 
 $container = new Container();
@@ -93,18 +91,15 @@ $directiveConfig = DirectiveConfig::default()->withDirectivesPath($directivesPat
 $factory = new ContainerDirectiveFactory($container);
 $parser = new DirectiveParserService();
 $hydrator = new DirectiveHydratorService($factory);
-$registrar = new DirectiveRegistrar();
 $laravelBootstrapper = $container->make(LaravelBootstrapper::class);
 
 // Injecter le bootstrapper dans l'hydrator
 $hydrator->setLaravelBootstrapper($laravelBootstrapper);
 
-// Enregistrer la directive make-directive
-$classes = new StringTypedCollection();
-$classes->add(\AndyDefer\Directive\Directives\MakeDirective::class);
-$registrar->register($classes);
+// 🔥 PLUS BESOIN DU REGISTRAR - La directive MakeDirective est automatiquement découverte
+// via le dossier vendor/andydefer/laravel-directive/src/Directives/
 
-$discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $registrar);
+$discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator);
 $renderer = new DirectiveRendererService($container->make(RenderTask::class));
 $interaction = $container->make(DirectiveInteractionService::class);
 $signatureValidator = $container->make(SignatureValidationService::class);
