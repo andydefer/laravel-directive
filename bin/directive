@@ -5,8 +5,9 @@
 declare(strict_types=1);
 
 // Load environment variables from .env if available (optional)
-if (file_exists(getcwd() . '/.env')) {
-    $lines = file(getcwd() . '/.env');
+$envFile = getcwd() . '/.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile);
     foreach ($lines as $line) {
         $line = trim($line);
         if ($line && !str_starts_with($line, '#')) {
@@ -15,26 +16,18 @@ if (file_exists(getcwd() . '/.env')) {
     }
 }
 
-// Trouver l'autoloader
-$autoloadPaths = [
-    __DIR__ . '/../vendor/autoload.php',
-    __DIR__ . '/../../vendor/autoload.php',
-    __DIR__ . '/vendor/autoload.php',
-    getcwd() . '/vendor/autoload.php',
-];
-
-$autoloadFound = false;
-foreach ($autoloadPaths as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        $autoloadFound = true;
-        break;
-    }
-}
-
-if (!$autoloadFound) {
-    fwrite(STDERR, "ERROR: Autoloader not found. Run 'composer install' first.\n");
+// 🔥 CHARGER L'AUTOLOADER DU PROJET D'ABORD
+$projectAutoload = getcwd() . '/vendor/autoload.php';
+if (!file_exists($projectAutoload)) {
+    fwrite(STDERR, "ERROR: Autoloader not found at {$projectAutoload}. Run 'composer install' first.\n");
     exit(1);
+}
+require_once $projectAutoload;
+
+// 🔥 PUIS CHARGER L'AUTOLOADER DU PACKAGE (si différent)
+$packageAutoload = __DIR__ . '/../vendor/autoload.php';
+if (file_exists($packageAutoload) && $packageAutoload !== $projectAutoload) {
+    require_once $packageAutoload;
 }
 
 use AndyDefer\Directive\DirectiveKernel;
@@ -84,8 +77,9 @@ $projectRoot = getcwd();
 $directivesPath = $projectRoot . '/app/Directives';
 
 // Lire la configuration si elle existe
-if (file_exists($projectRoot . '/config/directive.php')) {
-    $config = require $projectRoot . '/config/directive.php';
+$configFile = $projectRoot . '/config/directive.php';
+if (file_exists($configFile)) {
+    $config = require $configFile;
     if (isset($config['path']) && is_string($config['path'])) {
         $path = $config['path'];
         if (str_starts_with($path, 'app_path()')) {

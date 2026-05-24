@@ -27,7 +27,6 @@ class DirectiveHydratorService
     {
         $directive = $this->factory->make($class);
 
-        // Injecter le bootstrapper si disponible
         if ($this->laravelBootstrapper !== null && method_exists($directive, 'setLaravelBootstrapper')) {
             $directive->setLaravelBootstrapper($this->laravelBootstrapper);
         }
@@ -47,11 +46,16 @@ class DirectiveHydratorService
         return $directive;
     }
 
+    /**
+     * Hydrate UNIQUEMENT le blueprint sans utiliser le constructeur
+     */
     public function hydrateBlueprint(string $class): DirectiveBlueprintRecord
     {
-        $directive = $this->factory->make($class);
+        // 🔥 SOLUTION : Créer l'instance sans constructeur
+        $reflection = new \ReflectionClass($class);
+        $directive = $reflection->newInstanceWithoutConstructor();
 
-        // Injecter le bootstrapper si disponible
+        // Injecter le bootstrapper si disponible (pour hasLaravel etc.)
         if ($this->laravelBootstrapper !== null && method_exists($directive, 'setLaravelBootstrapper')) {
             $directive->setLaravelBootstrapper($this->laravelBootstrapper);
         }
@@ -59,11 +63,15 @@ class DirectiveHydratorService
         return $directive->getBlueprint();
     }
 
+    /**
+     * Hydrate UNIQUEMENT pour les alias sans utiliser le constructeur
+     */
     public function hydrateForAliases(string $class): DirectiveInterface
     {
-        $directive = $this->factory->make($class);
+        // 🔥 SOLUTION : Créer l'instance sans constructeur
+        $reflection = new \ReflectionClass($class);
+        $directive = $reflection->newInstanceWithoutConstructor();
 
-        // Injecter le bootstrapper si disponible
         if ($this->laravelBootstrapper !== null && method_exists($directive, 'setLaravelBootstrapper')) {
             $directive->setLaravelBootstrapper($this->laravelBootstrapper);
         }

@@ -7,24 +7,27 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class TestDirective extends AbstractDirective
 {
-    private string $signature;
-
-    private string $description;
-
-    private ?ExitCode $exitCode;
+    private string $signature = 'test-directive';
+    private string $description = 'Test directive';
+    private ?ExitCode $exitCode = null;
 
     public function __construct(
         DirectiveInteractionService $interaction,
-        string $signature = 'test-directive',
-        string $description = 'Test directive',
-        ?ExitCode $exitCode = ExitCode::SUCCESS,
+        ?string $signature = null,
+        ?string $description = null,
+        ?ExitCode $exitCode = null,
     ) {
         parent::__construct($interaction);
-        $this->signature = $signature;
-        $this->description = $description;
+        if ($signature !== null) {
+            $this->signature = $signature;
+        }
+        if ($description !== null) {
+            $this->description = $description;
+        }
         $this->exitCode = $exitCode;
     }
 
@@ -36,6 +39,11 @@ final class TestDirective extends AbstractDirective
     public function getDescription(): string
     {
         return $this->description;
+    }
+
+    public function getAliases(): StringTypedCollection
+    {
+        return new StringTypedCollection();
     }
 
     public function execute(): ExitCode

@@ -38,7 +38,7 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerRegistrar();
         $this->registerParser();
         $this->registerHydrator();
-        $this->registerDiscovery();
+        $this->registerDiscovery();  // ← L'ordre est important : après bootstrapper
         $this->registerRenderer();
         $this->registerSignatureValidation();
         $this->registerNamingService();
@@ -54,7 +54,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/config/directive.php' => config_path('directive.php'),
+            __DIR__ . '/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -128,11 +128,18 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerDiscovery(): void
     {
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
-            return new DirectiveDiscoveryService(
+            $discovery = new DirectiveDiscoveryService(
                 config: $app->make(DirectiveConfig::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
                 registrar: $app->make(DirectiveRegistrarInterface::class),
             );
+
+            // 🔥 CRUCIAL : Injecter le bootstrapper dans le DiscoveryService
+            if ($app->bound(LaravelBootstrapper::class)) {
+                $discovery->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
+            }
+
+            return $discovery;
         });
     }
 
