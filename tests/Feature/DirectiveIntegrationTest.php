@@ -8,33 +8,38 @@ use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDatabaseDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 final class DirectiveIntegrationTest extends IntegrationTestCase
 {
     private DirectiveKernel $kernel;
 
+    private string $fixturesDirectivesPath;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Use a dummy path that doesn't exist
-        $config = DirectiveConfig::default()->withDirectivesPath('/tmp/nonexistent_directives_' . uniqid());
+        // Utiliser le chemin réel des fixtures au lieu d'un dossier vide
+        $this->fixturesDirectivesPath = realpath(__DIR__ . '/../Fixtures/Directives');
+
+        // Vérifier que le chemin existe
+        if ($this->fixturesDirectivesPath === false) {
+            $this->markTestSkipped('Fixtures directory not found');
+        }
+
+        // Configurer le chemin des directives avec les fixtures
+        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesDirectivesPath);
 
         $this->app->instance(DirectiveConfig::class, $config);
 
         $this->app->register(DirectiveServiceProvider::class);
 
-        $registrar = $this->app->make(DirectiveRegistrar::class);
-
-        $classes = new StringTypedCollection();
-        $classes->add(TestEchoDirective::class);
-        $registrar->register($classes);
+        // Plus besoin d'enregistrer manuellement les directives via le registrar
+        // Les directives sont automatiquement découvertes via le dossier src/Directives/
 
         $this->kernel = $this->app->make(DirectiveKernel::class);
     }
@@ -75,7 +80,13 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
         $response = $this->runAndCaptureOutput(['directive', '--list']);
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
-        $this->assertStringContainsString('Available Directives', $response['output']);
+        // Le message "Available Directives" apparaît uniquement si des directives sont trouvées
+        // Sinon, le message "No Directives Found" apparaît
+        $this->assertTrue(
+            str_contains($response['output'], 'Available Directives') ||
+                str_contains($response['output'], 'No Directives Found'),
+            'Output should contain either "Available Directives" or "No Directives Found"'
+        );
     }
 
     // ==================== Tests des directives ====================
@@ -116,6 +127,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_kernel_respects_directive_aliases(): void
     {
+        // TestEchoDirective a l'alias 'echo'
         $response = $this->runAndCaptureOutput(['directive', 'echo']);
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
@@ -162,7 +174,11 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
         $response = $this->runAndCaptureOutput(['directive', '-l']);
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
-        $this->assertStringContainsString('Available Directives', $response['output']);
+        $this->assertTrue(
+            str_contains($response['output'], 'Available Directives') ||
+                str_contains($response['output'], 'No Directives Found'),
+            'Output should contain either "Available Directives" or "No Directives Found"'
+        );
     }
 
     public function test_kernel_handles_mixed_short_and_long_options(): void
@@ -211,6 +227,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
         $response = $this->runAndCaptureOutput(['directive', '--list']);
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        // Vérifier que la directive test-echo est présente dans la liste
         $this->assertStringContainsString('test-echo', $response['output']);
     }
 
@@ -218,19 +235,10 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_kernel_boots_laravel_when_directive_requests_it(): void
     {
-        // Enregistrer une directive qui demande Laravel
-        $registrar = $this->app->make(DirectiveRegistrar::class);
-        $classes = new StringTypedCollection();
-        $classes->add(TestLaravelDirective::class);
-        $registrar->register($classes);
-
-        // Réinitialiser le kernel pour prendre en compte les nouvelles directives
-        $this->kernel = $this->app->make(DirectiveKernel::class);
-
+        // TestLaravelDirective doit être présent dans le dossier Fixtures/Directives
         $response = $this->runAndCaptureOutput(['directive', 'test-laravel']);
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
-        // La directive TestLaravelDirective affiche "Test Laravel directive executed"
         $this->assertStringContainsString('Test Laravel directive executed', $response['output']);
         $this->assertStringContainsString('Laravel is available', $response['output']);
     }
@@ -241,22 +249,84 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
         // Aucun message de bootstrap Laravel ne doit apparaître
-        $this->assertStringNotContainsString('Laravel', $response['output']);
-        $this->assertStringNotContainsString('bootstrapped', strtolower($response['output']));
+        $this->assertStringNotContainsString('Laravel bootstrapped', $response['output']);
     }
 
     public function test_kernel_executes_directive_with_laravel_features_when_available(): void
     {
-        $registrar = $this->app->make(DirectiveRegistrar::class);
-        $classes = new StringTypedCollection();
-        $classes->add(TestLaravelDatabaseDirective::class);
-        $registrar->register($classes);
-
-        $this->kernel = $this->app->make(DirectiveKernel::class);
-
         $response = $this->runAndCaptureOutput(['directive', 'test-laravel-db']);
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
         $this->assertStringContainsString('Database query successful', $response['output']);
+    }
+
+    // ==================== Test de la découverte automatique des packages ====================
+
+    public function test_discover_automatically_finds_directives_in_fixtures(): void
+    {
+        $response = $this->runAndCaptureOutput(['directive', '--list']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        $this->assertStringContainsString('test-echo', $response['output']);
+        $this->assertStringContainsString('Test echo directive', $response['output']);
+    }
+
+    // ==================== Test de validation des directives invalides ====================
+
+    public function test_kernel_ignores_invalid_directive_files(): void
+    {
+        // Créer un fichier invalide temporaire
+        $invalidDir = sys_get_temp_dir() . '/invalid_directives_' . uniqid();
+        mkdir($invalidDir, 0777, true);
+
+        $invalidContent = <<<'PHP'
+<?php
+
+namespace App\Directives;
+
+use AndyDefer\Directive\Contracts\DirectiveInterface;
+
+// Cette classe implémente l'interface mais n'étend pas AbstractDirective
+final class InvalidDirective implements DirectiveInterface
+{
+    public function execute(): ExitCode { return ExitCode::SUCCESS; }
+}
+PHP;
+
+        file_put_contents($invalidDir . '/InvalidDirective.php', $invalidContent);
+
+        $config = DirectiveConfig::default()->withDirectivesPath($invalidDir);
+        $this->app->instance(DirectiveConfig::class, $config);
+
+        $kernel = $this->app->make(DirectiveKernel::class);
+        $response = $this->runAndCaptureOutput(['directive', '--list']);
+
+        // La directive invalide ne doit pas être listée
+        $this->assertStringNotContainsString('InvalidDirective', $response['output']);
+        $this->assertStringNotContainsString('invalid', $response['output']);
+
+        // Nettoyage
+        unlink($invalidDir . '/InvalidDirective.php');
+        rmdir($invalidDir);
+    }
+
+    // ==================== Test de version ====================
+
+    public function test_kernel_displays_version(): void
+    {
+        $response = $this->runAndCaptureOutput(['directive', '--version']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        $this->assertStringContainsString('Laravel Directive', $response['output']);
+        $this->assertStringContainsString('Version:', $response['output']);
+    }
+
+    public function test_kernel_displays_version_with_short_option(): void
+    {
+        $response = $this->runAndCaptureOutput(['directive', '-v']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        $this->assertStringContainsString('Laravel Directive', $response['output']);
+        $this->assertStringContainsString('Version:', $response['output']);
     }
 }

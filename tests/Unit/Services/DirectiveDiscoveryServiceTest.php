@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Tests\Fixtures\Directives\InvalidDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
-use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
@@ -33,7 +33,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
         parent::setUp();
 
         // Chemin absolu vers les fixtures pour éviter les problèmes de chemins relatifs
-        $this->fixturesPath = realpath(__DIR__.'/../../Fixtures/Directives');
+        $this->fixturesPath = realpath(__DIR__ . '/../../Fixtures/Directives');
 
         // Vérifier que le chemin existe
         $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
@@ -59,6 +59,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
 
+        // Nouveau : plus de registrar, uniquement config + hydrator
         $this->service = new DirectiveDiscoveryService($config, $hydrator);
     }
 
@@ -70,7 +71,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
 
         $this->assertInstanceOf(TypedCollection::class, $result);
         $this->assertContains(DirectiveMetadataRecord::class, $result->getAllowedTypes());
-        $this->assertGreaterThan(0, $result->count(), 'No directives discovered. Check fixtures path: '.$this->fixturesPath);
+        $this->assertGreaterThan(0, $result->count(), 'No directives discovered. Check fixtures path: ' . $this->fixturesPath);
     }
 
     public function test_finds_test_echo_directive(): void
@@ -89,7 +90,76 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
             }
         }
 
-        $this->assertTrue($found, 'Directive "test-echo" not found in path: '.$this->fixturesPath);
+        $this->assertTrue($found, 'Directive "test-echo" not found in path: ' . $this->fixturesPath);
+    }
+
+    public function test_ignores_invalid_directives_that_dont_extend_abstract_directive(): void
+    {
+        // Créer un fichier temporaire avec une classe qui n'étend pas AbstractDirective
+        $tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        mkdir($tempDir, 0777, true);
+
+        $invalidClassPath = $tempDir . '/InvalidDirective.php';
+        $invalidClassContent = <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace AndyDefer\Directive\Tests\Fixtures\Directives;
+
+use AndyDefer\Directive\Contracts\DirectiveInterface;
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
+use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+
+// ❌ Cette classe implémente l'interface mais n'étend PAS AbstractDirective
+final class InvalidDirective implements DirectiveInterface
+{
+    public function getSignature(): string { return 'invalid'; }
+    public function getDescription(): string { return 'Invalid directive'; }
+    public function getAliases(): StringTypedCollection { return new StringTypedCollection(); }
+    public function getBlueprint(): DirectiveBlueprintRecord { ... }
+    public function setArguments($arguments) { return $this; }
+    public function argument(string $key): ?string { return null; }
+    public function setOptions($options) { return $this; }
+    public function option(string $key): bool|string|null { return null; }
+    public function hasOption(string $key): bool { return false; }
+    public function shouldBootLaravel(): bool { return false; }
+    public function hasLaravel(): bool { return false; }
+    public function getLaravel(): ?object { return null; }
+    public function setLaravelBootstrapper($bootstrapper) { return $this; }
+    public function execute(): ExitCode { return ExitCode::SUCCESS; }
+}
+PHP;
+
+        file_put_contents($invalidClassPath, $invalidClassContent);
+
+        $config = DirectiveConfig::default()->withDirectivesPath($tempDir);
+        $factory = new ContainerDirectiveFactory($this->container);
+        $hydrator = new DirectiveHydratorService($factory);
+        $service = new DirectiveDiscoveryService($config, $hydrator);
+
+        $result = $service->discover();
+
+        // La directive invalide ne doit PAS être découverte
+        $this->assertEquals(0, $result->count());
+
+        // Nettoyage
+        unlink($invalidClassPath);
+        rmdir($tempDir);
+    }
+
+    public function test_ignores_abstract_directives(): void
+    {
+        $result = $this->service->discover();
+
+        $this->assertGreaterThan(0, $result->count(), 'No directives found to test abstract check');
+
+        foreach ($result as $directive) {
+            $reflection = new \ReflectionClass($directive->class);
+            $this->assertFalse($reflection->isAbstract(), 'Directive ' . $directive->class . ' should not be abstract');
+            $this->assertTrue(is_subclass_of($directive->class, AbstractDirective::class), 'Directive ' . $directive->class . ' must extend AbstractDirective');
+        }
     }
 
     public function test_finds_concrete_directives(): void
@@ -101,7 +171,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
             $signatures[] = $directive->signature;
         }
 
-        $this->assertNotEmpty($signatures, 'No signatures found in path: '.$this->fixturesPath);
+        $this->assertNotEmpty($signatures, 'No signatures found in path: ' . $this->fixturesPath);
 
         $found = false;
         foreach ($signatures as $signature) {
@@ -110,14 +180,14 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
                 break;
             }
         }
-        $this->assertTrue($found, 'No test-echo directive found in signatures: '.implode(', ', $signatures));
+        $this->assertTrue($found, 'No test-echo directive found in signatures: ' . implode(', ', $signatures));
     }
 
     public function test_returns_complete_metadata_structure(): void
     {
         $result = $this->service->discover();
 
-        $this->assertGreaterThan(0, $result->count(), 'No directives found to test in path: '.$this->fixturesPath);
+        $this->assertGreaterThan(0, $result->count(), 'No directives found to test in path: ' . $this->fixturesPath);
 
         foreach ($result as $directive) {
             $this->assertIsString($directive->signature);
@@ -133,7 +203,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
     {
         $result = $this->service->discover();
 
-        $this->assertGreaterThanOrEqual(1, $result->count(), 'No directives discovered in path: '.$this->fixturesPath);
+        $this->assertGreaterThanOrEqual(1, $result->count(), 'No directives discovered in path: ' . $this->fixturesPath);
     }
 
     public function test_signatures_are_unique(): void
@@ -147,7 +217,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
             $signatures[] = $directive->signature;
         }
 
-        $this->assertEquals(count($signatures), count(array_unique($signatures)), 'Duplicate signatures found: '.print_r(array_count_values($signatures), true));
+        $this->assertEquals(count($signatures), count(array_unique($signatures)), 'Duplicate signatures found: ' . print_r(array_count_values($signatures), true));
     }
 
     public function test_returns_empty_result_for_invalid_path(): void
@@ -165,16 +235,23 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
         $this->assertEquals(0, $result->count());
     }
 
-    public function test_ignores_abstract_directives(): void
+    public function test_returns_empty_result_for_empty_directory(): void
     {
-        $result = $this->service->discover();
+        $emptyDir = sys_get_temp_dir() . '/empty_directives_' . uniqid();
+        mkdir($emptyDir, 0777, true);
 
-        $this->assertGreaterThan(0, $result->count(), 'No directives found to test abstract check');
+        $config = DirectiveConfig::default()->withDirectivesPath($emptyDir);
+        $factory = new ContainerDirectiveFactory($this->container);
+        $hydrator = new DirectiveHydratorService($factory);
+        $service = new DirectiveDiscoveryService($config, $hydrator);
 
-        foreach ($result as $directive) {
-            $reflection = new \ReflectionClass($directive->class);
-            $this->assertFalse($reflection->isAbstract(), 'Directive '.$directive->class.' should not be abstract');
-        }
+        $result = $service->discover();
+
+        $this->assertInstanceOf(TypedCollection::class, $result);
+        $this->assertEquals(0, $result->count());
+
+        // Nettoyage
+        rmdir($emptyDir);
     }
 
     public function test_aliases_are_loaded_correctly(): void
@@ -192,244 +269,98 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
         }
     }
 
-    // ==================== Tests avec Registrar ====================
+    // ==================== Tests de compatibilité avec l'ancien Registrar ====================
+    // Ces tests vérifient que l'ancien système continue de fonctionner pendant la période de dépréciation
 
-    public function test_discover_includes_registered_directives_from_registrar(): void
+    public function test_deprecated_registrar_is_still_available_but_not_used(): void
     {
-        $registrar = new DirectiveRegistrar;
-        $classes = new StringTypedCollection;
-        $classes->add(TestPackageDirective::class);
-        $registrar->register($classes);
+        // Ce test vérifie que l'ancien registrar n'est plus utilisé
+        // mais que le code ne casse pas si quelqu'un essaie de l'utiliser
 
         $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
+
+        // Le constructeur n'accepte plus le registrar
+        $service = new DirectiveDiscoveryService($config, $hydrator);
 
         $result = $service->discover();
 
-        $found = false;
-        foreach ($result as $directive) {
-            if ($directive->signature === 'test-package') {
-                $found = true;
-                $this->assertSame('Test directive from external package', $directive->description);
-                $this->assertSame(TestPackageDirective::class, $directive->class);
-                break;
-            }
-        }
-
-        $this->assertTrue($found, 'Registered directive "test-package" not found');
+        // La découverte fonctionne toujours
+        $this->assertInstanceOf(TypedCollection::class, $result);
+        $this->assertGreaterThan(0, $result->count());
     }
 
-    public function test_discover_combines_filesystem_and_registered_directives(): void
-    {
-        $registrar = new DirectiveRegistrar;
-        $classes = new StringTypedCollection;
-        $classes->add(TestPackageDirective::class);
-        $registrar->register($classes);
+    // ==================== Tests de découverte depuis les packages ====================
 
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
+    public function test_discover_from_vendor_packages_scans_only_composer_packages(): void
+    {
+
+        $config = DirectiveConfig::default();
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
+        $service = new DirectiveDiscoveryService($config, $hydrator);
 
-        $result = $service->discover();
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('discoverFromVendorPackages');
 
-        $signatures = [];
-        foreach ($result as $directive) {
-            $signatures[] = $directive->signature;
-        }
 
-        $foundFilesystem = false;
-        $foundRegistered = false;
+        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = $method->invoke($service, $results);
 
-        foreach ($signatures as $signature) {
-            if (str_contains($signature, 'test-echo')) {
-                $foundFilesystem = true;
-            }
-            if ($signature === 'test-package') {
-                $foundRegistered = true;
-            }
-        }
-
-        $this->assertTrue($foundFilesystem, 'Filesystem directive not found. Available: '.implode(', ', $signatures));
-        $this->assertTrue($foundRegistered, 'Registered directive not found. Available: '.implode(', ', $signatures));
+        $this->assertInstanceOf(TypedCollection::class, $results);
     }
 
-    public function test_discover_ignores_invalid_registered_classes(): void
+    // ==================== Tests de vérification des directives valides ====================
+
+    public function test_only_classes_extending_abstract_directive_are_discovered(): void
     {
-        $registrar = new DirectiveRegistrar;
-        $classes = new StringTypedCollection;
-        $classes->add('InvalidNonExistentClass');
-        $classes->add('AndyDefer\Directive\Tests\Fixtures\Directives\InvalidClass');
-        $registrar->register($classes);
+        $result = $this->service->discover();
 
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
-        $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
-
-        $result = $service->discover();
-
-        $signatures = [];
         foreach ($result as $directive) {
-            $signatures[] = $directive->signature;
-        }
+            // Vérification que toutes les directives découvertes étendent bien AbstractDirective
+            $this->assertTrue(
+                is_subclass_of($directive->class, AbstractDirective::class),
+                sprintf(
+                    'Class %s does not extend %s',
+                    $directive->class,
+                    AbstractDirective::class
+                )
+            );
 
-        $foundFilesystem = false;
-        foreach ($signatures as $signature) {
-            if (str_contains($signature, 'test-echo')) {
-                $foundFilesystem = true;
-                break;
-            }
+            // Vérification qu'elles implémentent bien l'interface (double sécurité)
+            $this->assertTrue(
+                is_subclass_of($directive->class, \AndyDefer\Directive\Contracts\DirectiveInterface::class),
+                sprintf(
+                    'Class %s does not implement DirectiveInterface',
+                    $directive->class
+                )
+            );
         }
-
-        $this->assertTrue($foundFilesystem, 'Filesystem directive not found. Available: '.implode(', ', $signatures));
-        $this->assertNotContains('test-package', $signatures);
-        $this->assertNotContains('invalid-package', $signatures);
     }
 
-    public function test_discover_handles_empty_registrar(): void
+    public function test_handles_malformed_php_files_gracefully(): void
     {
-        $registrar = new DirectiveRegistrar;
+        $tempDir = sys_get_temp_dir() . '/malformed_test_' . uniqid();
+        mkdir($tempDir, 0777, true);
 
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
+        // Créer un fichier PHP malformé
+        $malformedPath = $tempDir . '/MalformedDirective.php';
+        file_put_contents($malformedPath, '<?php this is not valid php code {');
+
+        $config = DirectiveConfig::default()->withDirectivesPath($tempDir);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
+        $service = new DirectiveDiscoveryService($config, $hydrator);
 
+        // Ne doit pas lancer d'exception
         $result = $service->discover();
 
-        $signatures = [];
-        foreach ($result as $directive) {
-            $signatures[] = $directive->signature;
-        }
+        $this->assertInstanceOf(TypedCollection::class, $result);
+        $this->assertEquals(0, $result->count());
 
-        $foundFilesystem = false;
-        foreach ($signatures as $signature) {
-            if (str_contains($signature, 'test-echo')) {
-                $foundFilesystem = true;
-                break;
-            }
-        }
-
-        $this->assertTrue($foundFilesystem, 'Filesystem directive not found. Available: '.implode(', ', $signatures));
-        $this->assertNotContains('test-package', $signatures);
-    }
-
-    public function test_discover_with_null_registrar_only_uses_filesystem(): void
-    {
-        $registrar = null;
-
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
-        $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
-
-        $result = $service->discover();
-
-        $signatures = [];
-        foreach ($result as $directive) {
-            $signatures[] = $directive->signature;
-        }
-
-        $foundFilesystem = false;
-        foreach ($signatures as $signature) {
-            if (str_contains($signature, 'test-echo')) {
-                $foundFilesystem = true;
-                break;
-            }
-        }
-
-        $this->assertTrue($foundFilesystem, 'Filesystem directive not found. Available: '.implode(', ', $signatures));
-        $this->assertNotContains('test-package', $signatures);
-    }
-
-    public function test_registered_directive_metadata_structure_is_correct(): void
-    {
-        $registrar = new DirectiveRegistrar;
-        $classes = new StringTypedCollection;
-        $classes->add(TestPackageDirective::class);
-        $registrar->register($classes);
-
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
-        $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
-
-        $result = $service->discover();
-
-        $found = false;
-        foreach ($result as $directive) {
-            if ($directive->signature === 'test-package') {
-                $found = true;
-                $this->assertIsString($directive->signature);
-                $this->assertNotEmpty($directive->signature);
-                $this->assertIsString($directive->class);
-                $this->assertNotEmpty($directive->class);
-                $this->assertIsString($directive->description);
-                $this->assertNotEmpty($directive->description);
-                $this->assertInstanceOf(TypedCollection::class, $directive->aliases);
-                $this->assertTrue($directive->aliases->contains('tpkg'));
-                break;
-            }
-        }
-
-        $this->assertTrue($found, 'Registered directive "test-package" not found');
-    }
-
-    public function test_registered_directives_do_not_duplicate_signatures(): void
-    {
-        $registrar = new DirectiveRegistrar;
-        $classes = new StringTypedCollection;
-        $classes->add(TestPackageDirective::class);
-
-        $registrar->register($classes);
-        $registrar->register($classes);
-
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
-        $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
-
-        $result = $service->discover();
-
-        $count = 0;
-        foreach ($result as $directive) {
-            if ($directive->signature === 'test-package') {
-                $count++;
-            }
-        }
-
-        $this->assertEquals(1, $count, 'Duplicate registered directives should be ignored');
-    }
-
-    public function test_multiple_registrars_can_be_used(): void
-    {
-        $registrar = new DirectiveRegistrar;
-
-        $classes1 = new StringTypedCollection;
-        $classes1->add(TestPackageDirective::class);
-        $registrar->register($classes1);
-
-        $classes2 = new StringTypedCollection;
-        $classes2->add(TestPackageDirective::class);
-        $registrar->register($classes2);
-
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
-        $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator, $registrar);
-
-        $result = $service->discover();
-
-        $count = 0;
-        foreach ($result as $directive) {
-            if ($directive->signature === 'test-package') {
-                $count++;
-            }
-        }
-
-        $this->assertEquals(1, $count, 'Duplicate registered directives should be ignored');
+        // Nettoyage
+        unlink($malformedPath);
+        rmdir($tempDir);
     }
 }

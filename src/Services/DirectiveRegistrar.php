@@ -9,6 +9,18 @@ use AndyDefer\Directive\Contracts\DirectiveRegistrarInterface;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
+/**
+ * @deprecated Depuis la version 7.0.0, sera supprimée dans la version 10.0.0
+ * 
+ * Cette classe est remplacée par la découverte automatique via le dossier src/Directives/
+ * 
+ * MIGRATION :
+ * - Avant : Les packages devaient appeler $registrar->register() dans leur ServiceProvider
+ * 
+ * Plus aucune action n'est requise de la part des packages. La découverte est automatique.
+ * 
+ * @see DirectiveDiscoveryService::discoverFromVendorPackages()
+ */
 class DirectiveRegistrar implements DirectiveRegistrarInterface
 {
     private StringTypedCollection $registeredDirectives;
@@ -21,6 +33,15 @@ class DirectiveRegistrar implements DirectiveRegistrarInterface
 
     public function __construct()
     {
+        // Émettre un warning de dépréciation uniquement en mode développement
+        if (getenv('APP_ENV') === 'local' || getenv('APP_DEBUG') === 'true') {
+            trigger_error(
+                'DirectiveRegistrar is deprecated since version 7.0.0 and will be removed in version 10.0.0. ' .
+                    'Use automatic discovery via src/Directives/ folder instead.',
+                E_USER_DEPRECATED
+            );
+        }
+
         $this->registeredDirectives = new StringTypedCollection;
     }
 

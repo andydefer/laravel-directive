@@ -68,7 +68,6 @@ final class MakeDirectiveTest extends UnitTestCase
     {
         $reflection = new \ReflectionClass(MakeDirective::class);
         $property = $reflection->getProperty('arguments');
-        // setAccessible() n'est plus nécessaire en PHP 8.1+
         $property->setValue($this->directive, new ParameterCollection());
 
         $result = $this->directive->execute();
@@ -82,7 +81,7 @@ final class MakeDirectiveTest extends UnitTestCase
 
         $arguments = new ParameterCollection();
         $arguments->add(new ParameterRecord(name: 'name', value: 'user-create'));
-        $property->setValue($this->directive, $arguments);  // Plus de setAccessible
+        $property->setValue($this->directive, $arguments);
 
         $this->signatureValidator->expects($this->once())
             ->method('validate')
@@ -118,7 +117,7 @@ final class MakeDirectiveTest extends UnitTestCase
 
         $arguments = new ParameterCollection();
         $arguments->add(new ParameterRecord(name: 'name', value: 'user create'));
-        $property->setValue($this->directive, $arguments);  // Plus de setAccessible
+        $property->setValue($this->directive, $arguments);
 
         $this->signatureValidator->expects($this->once())
             ->method('validate')

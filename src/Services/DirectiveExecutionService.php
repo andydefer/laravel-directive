@@ -78,10 +78,8 @@ class DirectiveExecutionService
         $reflection = new \ReflectionClass($class);
         $tempInstance = $reflection->newInstanceWithoutConstructor();
 
-        // Injecter le bootstrapper si disponible (sans setAccessible)
         if ($this->laravelBootstrapper !== null && property_exists($tempInstance, 'laravelBootstrapper')) {
             $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
-            // setAccessible() n'est plus nécessaire en PHP 8.1+
             $reflectionProperty->setValue($tempInstance, $this->laravelBootstrapper);
         }
 

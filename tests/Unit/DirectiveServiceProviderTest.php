@@ -6,7 +6,6 @@ namespace AndyDefer\Directive\Tests\Unit;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
-use AndyDefer\Directive\Contracts\DirectiveRegistrarInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Directives\MakeDirective;
 use AndyDefer\Directive\DirectiveServiceProvider;
@@ -16,7 +15,6 @@ use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
-use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
@@ -57,8 +55,6 @@ final class DirectiveServiceProviderTest extends UnitTestCase
         $this->addToAssertionCount(1);
     }
 
-    // test_boot_does_not_throw_exception est supprimé car inutile en unit test
-
     public function test_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
@@ -75,13 +71,6 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     {
         $this->provider->register();
         $this->assertTrue($this->container->bound(DirectiveFactoryInterface::class));
-    }
-
-    public function test_registrar_is_registered_as_singleton(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveRegistrarInterface::class));
-        $this->assertTrue($this->container->bound(DirectiveRegistrar::class));
     }
 
     public function test_parser_is_registered_as_singleton(): void

@@ -6,7 +6,6 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
-use AndyDefer\Directive\Contracts\DirectiveRegistrarInterface;
 use AndyDefer\Directive\Directives\MakeDirective;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -15,14 +14,12 @@ use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
-use AndyDefer\Directive\Services\DirectiveRegistrar;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -35,10 +32,9 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerLaravelBootstrapper();
         $this->registerFactory();
-        $this->registerRegistrar();
         $this->registerParser();
         $this->registerHydrator();
-        $this->registerDiscovery();  // ← L'ordre est important : après bootstrapper
+        $this->registerDiscovery();
         $this->registerRenderer();
         $this->registerSignatureValidation();
         $this->registerNamingService();
@@ -47,7 +43,6 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerInteractionService();
         $this->registerExecution();
         $this->registerMakeDirective();
-        $this->registerBuiltInDirectives();
         $this->registerKernel();
     }
 
@@ -91,17 +86,6 @@ final class DirectiveServiceProvider extends ServiceProvider
         });
     }
 
-    private function registerRegistrar(): void
-    {
-        $this->app->singleton(DirectiveRegistrarInterface::class, function ($app) {
-            return new DirectiveRegistrar;
-        });
-
-        $this->app->singleton(DirectiveRegistrar::class, function ($app) {
-            return $app->make(DirectiveRegistrarInterface::class);
-        });
-    }
-
     private function registerParser(): void
     {
         $this->app->singleton(DirectiveParserService::class, function ($app) {
@@ -116,7 +100,6 @@ final class DirectiveServiceProvider extends ServiceProvider
                 factory: $app->make(DirectiveFactoryInterface::class),
             );
 
-            // Injecter le bootstrapper si disponible
             if ($app->bound(LaravelBootstrapper::class)) {
                 $hydrator->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
             }
@@ -131,10 +114,8 @@ final class DirectiveServiceProvider extends ServiceProvider
             $discovery = new DirectiveDiscoveryService(
                 config: $app->make(DirectiveConfig::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
-                registrar: $app->make(DirectiveRegistrarInterface::class),
             );
 
-            // 🔥 CRUCIAL : Injecter le bootstrapper dans le DiscoveryService
             if ($app->bound(LaravelBootstrapper::class)) {
                 $discovery->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
             }
@@ -214,7 +195,6 @@ final class DirectiveServiceProvider extends ServiceProvider
                 renderer: $app->make(DirectiveRendererService::class),
             );
 
-            // Injecter le bootstrapper si disponible
             if ($app->bound(LaravelBootstrapper::class)) {
                 $executionService->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
             }
@@ -232,16 +212,6 @@ final class DirectiveServiceProvider extends ServiceProvider
                 namingService: $app->make(DirectiveNamingService::class),
                 fileTask: $app->make(CreateDirectiveFileTask::class),
             );
-        });
-    }
-
-    private function registerBuiltInDirectives(): void
-    {
-        $this->app->afterResolving(DirectiveRegistrarInterface::class, function ($registrar) {
-            $classes = new StringTypedCollection;
-            $classes->add(MakeDirective::class);
-
-            $registrar->register($classes);
         });
     }
 
