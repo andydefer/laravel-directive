@@ -31,9 +31,34 @@ final class {{class}} extends AbstractDirective
         return $aliases;
     }
 
+    /**
+     * Override this method to enable Laravel bootstrapping.
+     * 
+     * Set to true if your directive needs:
+     * - Eloquent models (User::find(), etc.)
+     * - Database connections (DB::table())
+     * - Laravel cache, queues, events, or any Laravel service
+     * 
+     * When set to true, the directive will automatically bootstrap Laravel
+     * before executing, making all Laravel features available.
+     * 
+     * Default is false for optimal performance (no Laravel bootstrap overhead).
+     */
+    public function shouldBootLaravel(): bool
+    {
+        return false;
+    }
+
     public function execute(): ExitCode
     {
         // TODO: Implement your directive logic here
+
+        // Check if Laravel is available (if you enabled it)
+        if ($this->hasLaravel()) {
+            $this->info('Laravel is available!');
+            // You can now use Eloquent models, DB facade, etc.
+            // Example: $user = \App\Models\User::find(1);
+        }
 
         $this->info('Directive executed successfully!');
 
