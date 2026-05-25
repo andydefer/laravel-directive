@@ -17,10 +17,6 @@ use InvalidArgumentException;
 
 /**
  * Parses console command signatures and extracts arguments and options.
- *
- * This service handles the parsing of directive signatures similar to Laravel
- * Artisan commands, extracting named arguments and options (both long --option
- * and short -o formats) into structured collections.
  */
 class DirectiveParserService
 {
@@ -30,38 +26,172 @@ class DirectiveParserService
 
     /**
      * Parse a directive signature with its arguments.
-     *
-     * @param  string  $signature  The directive signature (e.g., "user:list {--active} {name}")
-     * @param  StringTypedCollection  $argv  Command-line arguments to parse
-     * @return ParsedDirectiveRecord Structured record with parsed arguments and options
-     *
-     * @throws InvalidArgumentException If the signature format is invalid
      */
     public function parse(string $signature, StringTypedCollection $argv): ParsedDirectiveRecord
     {
         $arguments = new StringTypedCollection;
         $options = new StringTypedCollection;
-        $parameterNames = $this->extractParameterNames($signature);
 
-        $argIndex = 0;
+        // Extraire et valider les paramètres
+        $parameters = $this->extractAndValidateParameters($signature);
+
+        $providedArgs = [];
+
+        // Séparer les options des arguments
         foreach ($argv as $arg) {
             if ($this->isLongOption($arg)) {
                 $this->parseLongOption($arg, $options);
             } elseif ($this->isShortOption($arg)) {
                 $this->parseShortOption($arg, $options);
             } else {
-                $this->parseArgument($arg, $arguments, $parameterNames, $argIndex);
+                $providedArgs[] = $arg;
             }
         }
+
+        // Appliquer les valeurs par défaut et valider les arguments requis
+        $this->applyArgumentDefaultsAndValidation($parameters, $providedArgs, $arguments);
 
         return new ParsedDirectiveRecord($arguments, $options);
     }
 
     /**
+     * Extract and validate parameters order
+     * Ordre imposé:
+     * 1. Arguments requis {name}
+     * 2. Arguments avec valeur par défaut {role=user}
+     * 3. Arguments optionnels sans valeur par défaut {count?}
+     * 4. Options {--force} {-v}
+     */
+    private function extractAndValidateParameters(string $signature): array
+    {
+        $matches = $this->findSignatureParameters($signature);
+        $parameters = [];
+
+        $foundRequired = false;
+        $foundDefault = false;
+        $foundOptional = false;
+        $foundOption = false;
+
+        foreach ($matches as $param) {
+            $isOption = $this->isLongOption($param) || $this->isShortOption($param);
+            $name = $this->cleanParameterName($param);
+            $default = null;
+            $required = true;
+            $type = 'argument';
+
+            if (!$isOption) {
+                // Vérifier si c'est un argument avec valeur par défaut
+                if (preg_match('/^([^=]+)=(.+)$/', $param, $matches)) {
+                    $name = $matches[1];
+                    $default = $matches[2];
+                    $required = false;
+                    $type = 'argument_with_default';
+                }
+                // Vérifier si l'argument est optionnel
+                elseif (str_ends_with($param, $this->config->optionalMarker)) {
+                    $name = rtrim($name, $this->config->optionalMarker);
+                    $required = false;
+                    $type = 'argument_optional';
+                } else {
+                    $type = 'argument_required';
+                }
+            } else {
+                $type = 'option';
+                $required = false;
+            }
+
+            // Valider l'ordre
+            if ($type === 'argument_required') {
+                if ($foundDefault || $foundOptional || $foundOption) {
+                    throw new InvalidArgumentException(
+                        'Invalid signature format: Required arguments must come before arguments with default values, optional arguments, and options. ' .
+                            "Problem with: {{$param}}"
+                    );
+                }
+                $foundRequired = true;
+            } elseif ($type === 'argument_with_default') {
+                if ($foundOptional || $foundOption) {
+                    throw new InvalidArgumentException(
+                        'Invalid signature format: Arguments with default values must come before optional arguments and options. ' .
+                            "Problem with: {{$param}}"
+                    );
+                }
+                $foundDefault = true;
+            } elseif ($type === 'argument_optional') {
+                if ($foundOption) {
+                    throw new InvalidArgumentException(
+                        'Invalid signature format: Optional arguments must come before options. ' .
+                            "Problem with: {{$param}}"
+                    );
+                }
+                $foundOptional = true;
+            } elseif ($type === 'option') {
+                // Une fois qu'on a trouvé une option, on ne peut plus avoir d'arguments
+                $foundOption = true;
+            }
+
+            $parameters[] = [
+                'name' => $name,
+                'isOption' => $isOption,
+                'required' => $required,
+                'default' => $default,
+                'raw' => $param,
+                'type' => $type,
+            ];
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * Apply default values and validate required arguments
+     */
+    private function applyArgumentDefaultsAndValidation(
+        array $parameters,
+        array $providedArgs,
+        StringTypedCollection $arguments
+    ): void {
+        // Filtrer pour n'avoir que les arguments (pas les options)
+        $argumentParams = array_filter($parameters, fn($p) => !$p['isOption']);
+        $argumentParams = array_values($argumentParams);
+
+        $providedIndex = 0;
+        $totalProvided = count($providedArgs);
+
+        foreach ($argumentParams as $index => $param) {
+            $value = null;
+
+            // Vérifier si un argument a été fourni à cette position
+            if ($providedIndex < $totalProvided) {
+                $value = $providedArgs[$providedIndex];
+                $providedIndex++;
+            }
+            // Sinon, utiliser la valeur par défaut si disponible
+            elseif ($param['default'] !== null) {
+                $value = $param['default'];
+            }
+            // Vérifier si l'argument est requis
+            elseif ($param['required']) {
+                throw new InvalidArgumentException(
+                    sprintf('Not enough arguments (missing: "%s")', $param['name'])
+                );
+            }
+
+            // Ajouter l'argument SEULEMENT si une valeur existe
+            if ($value !== null) {
+                $arguments->add((string) $value);
+                $arguments->add($param['name']);
+            }
+        }
+
+        // Vérifier qu'il n'y a pas trop d'arguments
+        if ($providedIndex < $totalProvided) {
+            throw new InvalidArgumentException('Too many arguments provided');
+        }
+    }
+
+    /**
      * Extract help information from a directive signature.
-     *
-     * @param  string  $signature  The directive signature
-     * @return TypedCollection<ParsedParameterRecord> Collection of parameter help data
      */
     public function extractHelp(string $signature): TypedCollection
     {
@@ -69,7 +199,7 @@ class DirectiveParserService
         $matches = $this->findSignatureParameters($signature);
 
         foreach ($matches as $param) {
-            if ($this->isLongOption($param)) {
+            if ($this->isLongOption($param) || $this->isShortOption($param)) {
                 $params->add($this->extractOptionHelp($param));
             } else {
                 $params->add($this->extractArgumentHelp($param));
@@ -81,9 +211,6 @@ class DirectiveParserService
 
     /**
      * Convert a parsed directive record to a ParsedResultRecord.
-     *
-     * @param  ParsedDirectiveRecord  $parsed  The parsed directive record
-     * @return ParsedResultRecord Record containing typed parameter collections
      */
     public function toResult(ParsedDirectiveRecord $parsed): ParsedResultRecord
     {
@@ -95,9 +222,6 @@ class DirectiveParserService
 
     /**
      * Convert a parsed directive record to JSON string.
-     *
-     * @param  ParsedDirectiveRecord  $parsed  The parsed directive record
-     * @return string JSON representation of the parsed data
      */
     public function toJson(ParsedDirectiveRecord $parsed): string
     {
@@ -111,30 +235,6 @@ class DirectiveParserService
 
     // ==================== Private Methods ====================
 
-    /**
-     * Extract parameter names from signature braces.
-     *
-     * @param  string  $signature  Directive signature
-     * @return StringTypedCollection Cleaned parameter names
-     */
-    private function extractParameterNames(string $signature): StringTypedCollection
-    {
-        $matches = $this->findSignatureParameters($signature);
-        $cleanedNames = new StringTypedCollection;
-
-        foreach ($matches as $param) {
-            $cleanedNames->add($this->cleanParameterName($param));
-        }
-
-        return $cleanedNames;
-    }
-
-    /**
-     * Find all parameters within curly braces in the signature.
-     *
-     * @param  string  $signature  Directive signature
-     * @return StringTypedCollection Raw parameter strings
-     */
     private function findSignatureParameters(string $signature): StringTypedCollection
     {
         preg_match_all('/\{([^}]+)\}/', $signature, $matches);
@@ -147,12 +247,6 @@ class DirectiveParserService
         return $result;
     }
 
-    /**
-     * Clean a parameter name by removing option prefixes and optional markers.
-     *
-     * @param  string  $param  Raw parameter string
-     * @return string Cleaned parameter name
-     */
     private function cleanParameterName(string $param): string
     {
         // Remove leading hyphens for options
@@ -164,6 +258,11 @@ class DirectiveParserService
             $param = explode($this->config->optionValueSeparator, $param)[0];
         }
 
+        // Remove =default value for arguments
+        if (str_contains($param, '=')) {
+            $param = explode('=', $param)[0];
+        }
+
         // Remove trailing ? for optional arguments
         if (str_ends_with($param, $this->config->optionalMarker)) {
             $param = substr($param, 0, -1);
@@ -172,35 +271,18 @@ class DirectiveParserService
         return $param;
     }
 
-    /**
-     * Check if an argument is a long option (--option).
-     *
-     * @param  string  $arg  Argument to check
-     * @return bool True if it's a long option
-     */
     private function isLongOption(string $arg): bool
     {
         return str_starts_with($arg, $this->config->longOptionPrefix);
     }
 
-    /**
-     * Check if an argument is a short option (-o).
-     *
-     * @param  string  $arg  Argument to check
-     * @return bool True if it's a short option
-     */
     private function isShortOption(string $arg): bool
     {
         return str_starts_with($arg, $this->config->shortOptionPrefix)
-            && ! str_starts_with($arg, $this->config->longOptionPrefix);
+            && ! str_starts_with($arg, $this->config->longOptionPrefix)
+            && strlen($arg) > 1;
     }
 
-    /**
-     * Parse a long option (--name=value or --name).
-     *
-     * @param  string  $arg  The option string
-     * @param  StringTypedCollection  $options  Collection to store parsed options
-     */
     private function parseLongOption(string $arg, StringTypedCollection $options): void
     {
         $parts = explode(
@@ -213,53 +295,27 @@ class DirectiveParserService
         $options->add($parts[1] ?? $this->config->trueValue);
     }
 
-    /**
-     * Parse a short option (-f).
-     *
-     * @param  string  $arg  The option string
-     * @param  StringTypedCollection  $options  Collection to store parsed options
-     */
     private function parseShortOption(string $arg, StringTypedCollection $options): void
     {
-        $options->add(substr($arg, strlen($this->config->shortOptionPrefix)));
-        $options->add($this->config->trueValue);
-    }
+        $option = substr($arg, strlen($this->config->shortOptionPrefix));
 
-    /**
-     * Parse a positional argument.
-     *
-     * @param  string  $arg  Argument value
-     * @param  StringTypedCollection  $arguments  Collection for argument values
-     * @param  StringTypedCollection  $parameterNames  Expected parameter names
-     * @param  int  $argIndex  Current argument index
-     */
-    private function parseArgument(
-        string $arg,
-        StringTypedCollection $arguments,
-        StringTypedCollection $parameterNames,
-        int &$argIndex
-    ): void {
-        $parameterNamesArray = $parameterNames->toArray();
-
-        if (isset($parameterNamesArray[$argIndex])) {
-            $arguments->add($arg);
-            $arguments->add($parameterNamesArray[$argIndex]);
+        if (strlen($option) > 1) {
+            $chars = str_split($option);
+            foreach ($chars as $char) {
+                $options->add($char);
+                $options->add($this->config->trueValue);
+            }
         } else {
-            $arguments->add($arg);
+            $options->add($option);
+            $options->add($this->config->trueValue);
         }
-
-        $argIndex++;
     }
 
-    /**
-     * Extract help information for an option parameter.
-     *
-     * @param  string  $param  Option parameter string
-     * @return ParsedParameterRecord Help data for the option
-     */
     private function extractOptionHelp(string $param): ParsedParameterRecord
     {
-        $cleanParam = substr($param, strlen($this->config->longOptionPrefix));
+        $isLong = $this->isLongOption($param);
+        $prefix = $isLong ? $this->config->longOptionPrefix : $this->config->shortOptionPrefix;
+        $cleanParam = substr($param, strlen($prefix));
 
         if (str_contains($cleanParam, $this->config->optionValueSeparator)) {
             $parts = explode($this->config->optionValueSeparator, $cleanParam, 2);
@@ -280,30 +336,30 @@ class DirectiveParserService
         );
     }
 
-    /**
-     * Extract help information for an argument parameter.
-     *
-     * @param  string  $param  Argument parameter string
-     * @return ParsedParameterRecord Help data for the argument
-     */
     private function extractArgumentHelp(string $param): ParsedParameterRecord
     {
-        $isOptional = str_ends_with($param, $this->config->optionalMarker);
+        $default = null;
+        $name = $param;
+
+        if (preg_match('/^([^=]+)=(.+)$/', $param, $matches)) {
+            $name = $matches[1];
+            $default = $matches[2];
+        }
+
+        $isOptional = str_ends_with($name, $this->config->optionalMarker) || $default !== null;
+
+        if (str_ends_with($name, $this->config->optionalMarker)) {
+            $name = substr($name, 0, -1);
+        }
 
         return new ParsedParameterRecord(
-            name: $isOptional ? substr($param, 0, -1) : $param,
+            name: $name,
             type: ParameterType::ARGUMENT,
-            required: ! $isOptional,
-            default: null,
+            required: !$isOptional,
+            default: $default,
         );
     }
 
-    /**
-     * Convert arguments collection to a ParameterCollection.
-     *
-     * @param  StringTypedCollection  $arguments  Arguments in flat format [value1, name1, value2, name2]
-     * @return ParameterCollection Collection of ParameterRecord
-     */
     private function argumentsToCollection(StringTypedCollection $arguments): ParameterCollection
     {
         $result = new ParameterCollection;
@@ -321,12 +377,6 @@ class DirectiveParserService
         return $result;
     }
 
-    /**
-     * Convert options collection to a ParameterCollection.
-     *
-     * @param  StringTypedCollection  $options  Options in flat format [name1, value1, name2, value2]
-     * @return ParameterCollection Collection of ParameterRecord
-     */
     private function optionsToCollection(StringTypedCollection $options): ParameterCollection
     {
         $result = new ParameterCollection;
@@ -347,12 +397,6 @@ class DirectiveParserService
         return $result;
     }
 
-    /**
-     * Normalize option value to proper boolean or string type.
-     *
-     * @param  string  $value  Raw option value
-     * @return bool|string Normalized value
-     */
     private function normalizeOptionValue(string $value): bool|string
     {
         return match ($value) {

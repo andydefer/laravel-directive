@@ -65,6 +65,61 @@ final class AbstractDirectiveTest extends UnitTestCase
         $this->assertNull($result);
     }
 
+    public function test_argument_returns_null_when_value_is_empty_string(): void
+    {
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'comment', value: ''));
+        $this->directive->setArguments($arguments);
+
+        $result = $this->directive->argument('comment');
+
+        $this->assertNull($result);
+    }
+
+    public function test_has_argument_returns_true_when_argument_exists_with_non_empty_value(): void
+    {
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
+        $this->directive->setArguments($arguments);
+
+        $result = $this->directive->hasArgument('name');
+
+        $this->assertTrue($result);
+    }
+
+    public function test_has_argument_returns_false_when_argument_does_not_exist(): void
+    {
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
+        $this->directive->setArguments($arguments);
+
+        $result = $this->directive->hasArgument('email');
+
+        $this->assertFalse($result);
+    }
+
+    public function test_has_argument_returns_false_for_argument_with_empty_string_value(): void
+    {
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'comment', value: ''));
+        $this->directive->setArguments($arguments);
+
+        $result = $this->directive->hasArgument('comment');
+
+        $this->assertFalse($result);
+    }
+
+    public function test_has_argument_returns_false_for_argument_with_null_value(): void
+    {
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'optional', value: null));
+        $this->directive->setArguments($arguments);
+
+        $result = $this->directive->hasArgument('optional');
+
+        $this->assertFalse($result);
+    }
+
     public function test_set_arguments_returns_self_for_chaining(): void
     {
         $arguments = new ParameterCollection;
@@ -102,7 +157,18 @@ final class AbstractDirectiveTest extends UnitTestCase
         $this->assertNull($result);
     }
 
-    public function test_has_option_returns_true_when_option_exists(): void
+    public function test_option_returns_null_for_empty_string_value(): void
+    {
+        $options = new ParameterCollection;
+        $options->add(new ParameterRecord(name: 'role', value: ''));
+        $this->directive->setOptions($options);
+
+        $result = $this->directive->option('role');
+
+        $this->assertNull($result);
+    }
+
+    public function test_has_option_returns_true_when_option_exists_with_non_empty_value(): void
     {
         $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
@@ -120,6 +186,17 @@ final class AbstractDirectiveTest extends UnitTestCase
         $this->directive->setOptions($options);
 
         $result = $this->directive->hasOption('unknown');
+
+        $this->assertFalse($result);
+    }
+
+    public function test_has_option_returns_false_for_option_with_empty_string_value(): void
+    {
+        $options = new ParameterCollection;
+        $options->add(new ParameterRecord(name: 'role', value: ''));
+        $this->directive->setOptions($options);
+
+        $result = $this->directive->hasOption('role');
 
         $this->assertFalse($result);
     }
@@ -246,6 +323,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     {
         $result = $this->directive->argument('anything');
         $this->assertNull($result);
+        $this->assertFalse($this->directive->hasArgument('anything'));
     }
 
     public function test_options_are_empty_by_default(): void

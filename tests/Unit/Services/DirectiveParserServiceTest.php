@@ -9,6 +9,7 @@ use AndyDefer\Directive\Enums\ParameterType;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use InvalidArgumentException;
 
 final class DirectiveParserServiceTest extends UnitTestCase
 {
@@ -24,74 +25,123 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_arguments_only(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('John Doe', 'john@example.com');
 
-        // Act
         $result = $this->service->parse('user:create {name} {email}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertSame('John Doe', $parsed->arguments->get('name'));
         $this->assertSame('john@example.com', $parsed->arguments->get('email'));
         $this->assertTrue($parsed->options->isEmpty());
     }
 
+    public function test_parse_with_argument_default_value(): void
+    {
+        $argv = new StringTypedCollection;
+
+        $result = $this->service->parse('user:list {count=10}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertSame('10', $parsed->arguments->get('count'));
+    }
+
+    public function test_parse_with_argument_default_value_overridden(): void
+    {
+        $argv = new StringTypedCollection;
+        $argv->add('5');
+
+        $result = $this->service->parse('user:list {count=10}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertSame('5', $parsed->arguments->get('count'));
+    }
+
+    public function test_parse_with_optional_argument(): void
+    {
+        $argv = new StringTypedCollection;
+        $argv->add('John');
+
+        $result = $this->service->parse('user:create {name?}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertSame('John', $parsed->arguments->get('name'));
+    }
+
+    public function test_parse_with_missing_optional_argument(): void
+    {
+        $argv = new StringTypedCollection;
+
+        $result = $this->service->parse('user:create {name?}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertTrue($parsed->arguments->isEmpty());
+        $this->assertTrue($parsed->options->isEmpty());
+    }
+
+    public function test_parse_with_missing_required_argument_throws_exception(): void
+    {
+        $argv = new StringTypedCollection;
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Not enough arguments (missing: "name")');
+
+        $this->service->parse('user:create {name}', $argv);
+    }
+
+    public function test_parse_with_too_many_arguments_throws_exception(): void
+    {
+        $argv = new StringTypedCollection;
+        $argv->add('John', 'Doe', 'Extra');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Too many arguments provided');
+
+        $this->service->parse('user:create {first} {last}', $argv);
+    }
+
     public function test_parse_with_long_options(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('John Doe', '--role=admin');
 
-        // Act
         $result = $this->service->parse('user:create {name} {--role=}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertSame('John Doe', $parsed->arguments->get('name'));
         $this->assertSame('admin', $parsed->options->get('role'));
     }
 
     public function test_parse_with_flag_option(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('--force');
 
-        // Act
         $result = $this->service->parse('cache:clear {--force}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertTrue($parsed->options->get('force'));
     }
 
     public function test_parse_with_short_option(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('-v');
 
-        // Act
         $result = $this->service->parse('app:run {-v}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertTrue($parsed->options->get('v'));
     }
 
     public function test_parse_with_mixed_arguments_and_options(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('John', 'john@example.com', '--role=admin', '--active');
 
-        // Act
         $result = $this->service->parse('user:create {name} {email} {--role=} {--active}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertSame('John', $parsed->arguments->get('name'));
         $this->assertSame('john@example.com', $parsed->arguments->get('email'));
         $this->assertSame('admin', $parsed->options->get('role'));
@@ -100,71 +150,94 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_options_between_arguments(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('John', '--role=admin', 'john@example.com', '--active');
 
-        // Act
         $result = $this->service->parse('user:create {name} {email} {--role=} {--active}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertSame('John', $parsed->arguments->get('name'));
         $this->assertSame('john@example.com', $parsed->arguments->get('email'));
         $this->assertSame('admin', $parsed->options->get('role'));
         $this->assertTrue($parsed->options->get('active'));
     }
 
-    public function test_parse_with_optional_argument(): void
-    {
-        // Arrange
-        $argv = new StringTypedCollection;
-        $argv->add('John');
-
-        // Act
-        $result = $this->service->parse('user:create {name?}', $argv);
-        $parsed = $this->service->toResult($result);
-
-        // Assert
-        $this->assertSame('John', $parsed->arguments->get('name'));
-    }
-
-    public function test_parse_with_missing_optional_argument(): void
-    {
-        // Arrange
-        $argv = new StringTypedCollection;
-
-        // Act
-        $result = $this->service->parse('user:create {name?}', $argv);
-        $parsed = $this->service->toResult($result);
-
-        // Assert
-        $this->assertTrue($parsed->arguments->isEmpty());
-        $this->assertTrue($parsed->options->isEmpty());
-    }
-
     public function test_parse_with_option_without_value(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('--role=');
 
-        // Act
         $result = $this->service->parse('user:create {--role=}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertTrue($parsed->options->get('role'));
+    }
+
+    // ==================== Order Validation Tests ====================
+
+    public function test_invalid_order_required_after_default_throws_exception(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Required arguments must come before arguments with default values');
+
+        $this->service->parse('user:create {role=user} {name}', new StringTypedCollection);
+    }
+
+    public function test_invalid_order_required_after_optional_throws_exception(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Required arguments must come before arguments with default values');
+
+        $this->service->parse('user:create {name?} {email}', new StringTypedCollection);
+    }
+
+    public function test_invalid_order_required_after_option_throws_exception(): void
+    {
+        $argv = new StringTypedCollection;
+        $argv->add('John');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Required arguments must come before arguments with default values');
+
+        $this->service->parse('user:create {--force} {name}', $argv);
+    }
+
+    public function test_invalid_order_default_after_option_throws_exception(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Arguments with default values must come before optional arguments and options');
+
+        $this->service->parse('user:create {--force} {role=user}', new StringTypedCollection);
+    }
+
+    public function test_invalid_order_optional_after_option_throws_exception(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Optional arguments must come before options');
+
+        $this->service->parse('user:create {--force} {name?}', new StringTypedCollection);
+    }
+
+    public function test_valid_order_required_then_default_then_optional_then_options(): void
+    {
+        $argv = new StringTypedCollection;
+        $argv->add('John');
+
+        $result = $this->service->parse('user:create {name} {role=user} {count?} {--force}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertSame('John', $parsed->arguments->get('name'));
+        $this->assertSame('user', $parsed->arguments->get('role'));
+        $this->assertNull($parsed->arguments->get('count'));
+        $this->assertNull($parsed->options->get('force'));
     }
 
     // ==================== ExtractHelp Tests ====================
 
     public function test_extract_help_with_arguments(): void
     {
-        // Act
         $result = $this->service->extractHelp('user:create {name} {email}');
 
-        // Assert
         $this->assertSame(2, $result->count());
 
         $first = $result->firstItem();
@@ -180,12 +253,23 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->assertNull($second->default);
     }
 
+    public function test_extract_help_with_argument_default_value(): void
+    {
+        $result = $this->service->extractHelp('user:list {count=10}');
+
+        $this->assertSame(1, $result->count());
+
+        $item = $result->firstItem();
+        $this->assertSame('count', $item->name);
+        $this->assertSame(ParameterType::ARGUMENT, $item->type);
+        $this->assertFalse($item->required);
+        $this->assertSame('10', $item->default);
+    }
+
     public function test_extract_help_with_options(): void
     {
-        // Act
         $result = $this->service->extractHelp('user:create {--role=} {--active}');
 
-        // Assert
         $this->assertSame(2, $result->count());
 
         $first = $result->firstItem();
@@ -203,10 +287,8 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_extract_help_with_option_default_value(): void
     {
-        // Act
         $result = $this->service->extractHelp('user:create {--role=admin}');
 
-        // Assert
         $this->assertSame(1, $result->count());
 
         $item = $result->firstItem();
@@ -218,10 +300,8 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_extract_help_with_optional_argument(): void
     {
-        // Act
         $result = $this->service->extractHelp('user:create {name?}');
 
-        // Assert
         $this->assertSame(1, $result->count());
 
         $item = $result->firstItem();
@@ -235,15 +315,12 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_result_converts_parsed_record_correctly(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('John', '--role=admin', '--active');
 
-        // Act
         $parsed = $this->service->parse('user:create {name} {--role=} {--active}', $argv);
         $result = $this->service->toResult($parsed);
 
-        // Assert
         $this->assertInstanceOf(ParameterCollection::class, $result->arguments);
         $this->assertInstanceOf(ParameterCollection::class, $result->options);
         $this->assertSame('John', $result->arguments->get('name'));
@@ -253,14 +330,11 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_result_with_empty_parsed_record(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
 
-        // Act
         $parsed = $this->service->parse('test:cmd', $argv);
         $result = $this->service->toResult($parsed);
 
-        // Assert
         $this->assertTrue($result->arguments->isEmpty());
         $this->assertTrue($result->options->isEmpty());
     }
@@ -269,15 +343,12 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_json_returns_valid_json(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('John', '--role=admin');
 
-        // Act
         $parsed = $this->service->parse('user:create {name} {--role=}', $argv);
         $json = $this->service->toJson($parsed);
 
-        // Assert
         $this->assertJson($json);
 
         $decoded = json_decode($json, true);
@@ -291,14 +362,11 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_json_with_empty_parsed_record(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
 
-        // Act
         $parsed = $this->service->parse('test:cmd', $argv);
         $json = $this->service->toJson($parsed);
 
-        // Assert
         $this->assertJson($json);
 
         $decoded = json_decode($json, true);
@@ -310,45 +378,71 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_multiple_short_options(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('-v', '-f', '--verbose');
 
-        // Act
         $result = $this->service->parse('test:cmd {-v} {-f} {--verbose}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertTrue($parsed->options->get('v'));
         $this->assertTrue($parsed->options->get('f'));
         $this->assertTrue($parsed->options->get('verbose'));
     }
 
+    public function test_parse_with_short_options_grouped(): void
+    {
+        $argv = new StringTypedCollection;
+        $argv->add('-vf');
+
+        $result = $this->service->parse('test:cmd {-v} {-f}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertTrue($parsed->options->get('v'));
+        $this->assertTrue($parsed->options->get('f'));
+    }
+
     public function test_parse_with_option_value_containing_equals(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('--message=Hello=World');
 
-        // Act
         $result = $this->service->parse('test:cmd {--message=}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertSame('Hello=World', $parsed->options->get('message'));
     }
 
     public function test_parse_with_false_option_value(): void
     {
-        // Arrange
         $argv = new StringTypedCollection;
         $argv->add('--active=false');
 
-        // Act
         $result = $this->service->parse('test:cmd {--active}', $argv);
         $parsed = $this->service->toResult($result);
 
-        // Assert
         $this->assertFalse($parsed->options->get('active'));
+    }
+
+    public function test_parse_with_multiple_arguments_and_defaults(): void
+    {
+        $argv = new StringTypedCollection;
+        $argv->add('John');
+
+        $result = $this->service->parse('user:create {name} {role=user} {status=active}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertSame('John', $parsed->arguments->get('name'));
+        $this->assertSame('user', $parsed->arguments->get('role'));
+        $this->assertSame('active', $parsed->arguments->get('status'));
+    }
+
+    public function test_parse_with_optional_argument_null_when_not_provided(): void
+    {
+        $argv = new StringTypedCollection;
+
+        $result = $this->service->parse('user:create {name?}', $argv);
+        $parsed = $this->service->toResult($result);
+
+        $this->assertNull($parsed->arguments->get('name'));
     }
 }

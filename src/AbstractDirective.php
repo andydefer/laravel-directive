@@ -83,15 +83,36 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this;
     }
 
+    /**
+     * Get an argument value by its key.
+     * Returns null if the argument is not provided or empty.
+     *
+     * @param string $key The argument name
+     * @return string|null The argument value, or null if not provided or empty
+     */
     public function argument(string $key): ?string
     {
         $value = $this->arguments->get($key);
 
-        if ($value === null || $value === true || $value === false) {
+        if ($value === null || $value === true || $value === false || $value === '') {
             return null;
         }
 
         return $value;
+    }
+
+    /**
+     * Check if an argument exists and has a non-empty value.
+     * Empty strings are considered as not provided.
+     *
+     * @param string $key The argument name
+     * @return bool True if the argument exists and has a non-empty value, false otherwise
+     */
+    public function hasArgument(string $key): bool
+    {
+        $value = $this->arguments->get($key);
+
+        return $value !== null && $value !== '' && $value !== true && $value !== false;
     }
 
     // ==================== Option Management ====================
@@ -103,14 +124,45 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this;
     }
 
+    /**
+     * Get an option value by its key.
+     *
+     * @param string $key The option name
+     * @return bool|string|null The option value (boolean for flags, string for values), or null if not found
+     */
     public function option(string $key): bool|string|null
     {
-        return $this->options->get($key);
+        $value = $this->options->get($key);
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return $value;
     }
 
+    /**
+     * Check if an option exists and has a non-empty value.
+     * Empty strings are considered as not provided.
+     *
+     * @param string $key The option name
+     * @return bool True if the option exists and has a non-empty value, false otherwise
+     */
     public function hasOption(string $key): bool
     {
-        return $this->options->has($key);
+        $value = $this->options->get($key);
+
+        if ($value === null || $value === '') {
+            return false;
+        }
+
+        // Pour les booléens, true est considéré comme présent
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        // Pour les chaînes, on vérifie qu'elles ne sont pas vides
+        return $value !== '';
     }
 
     // ==================== Display Methods ====================

@@ -9,6 +9,7 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Records\Collections\TypedCollection;
+use InvalidArgumentException;
 
 class DirectiveExecutionService
 {
@@ -79,38 +80,49 @@ class DirectiveExecutionService
 
     private function executeDirective(string $class, DirectiveExecutionRecord $record): ExitCode
     {
-        $reflection = new \ReflectionClass($class);
-        $tempInstance = $reflection->newInstanceWithoutConstructor();
+        try {
+            $reflection = new \ReflectionClass($class);
+            $tempInstance = $reflection->newInstanceWithoutConstructor();
 
-        if ($this->laravelBootstrapper !== null && property_exists($tempInstance, 'laravelBootstrapper')) {
-            $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
-            $reflectionProperty->setValue($tempInstance, $this->laravelBootstrapper);
+            if ($this->laravelBootstrapper !== null && property_exists($tempInstance, 'laravelBootstrapper')) {
+                $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
+                $reflectionProperty->setValue($tempInstance, $this->laravelBootstrapper);
+            }
+
+            if ($tempInstance->shouldBootLaravel() && $this->laravelBootstrapper !== null) {
+                $this->bootLaravelIfNeeded();
+            }
+
+            $fullSignature = $tempInstance->getSignature();
+
+            try {
+                $parsed = $this->parser->parse($fullSignature, $record->arguments);
+            } catch (InvalidArgumentException $e) {
+                $this->renderer->renderError($e->getMessage());
+                return ExitCode::INVALID_ARGUMENT;
+            }
+
+            $directive = $this->hydrator->hydrate($class, $parsed);
+
+            if ($this->laravelBootstrapper !== null && $directive instanceof AbstractDirective) {
+                $reflection = new \ReflectionClass($directive);
+                $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
+                $reflectionProperty->setValue($directive, $this->laravelBootstrapper);
+            }
+
+            $result = $directive->execute();
+
+            if ($result->isSuccess()) {
+                $this->renderer->renderSuccess('Directive executed successfully');
+            } else {
+                $this->renderer->renderError('Directive execution failed');
+            }
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->renderer->renderError($e->getMessage());
+            return ExitCode::FAILURE;
         }
-
-        if ($tempInstance->shouldBootLaravel() && $this->laravelBootstrapper !== null) {
-            $this->bootLaravelIfNeeded();
-        }
-
-        $fullSignature = $tempInstance->getSignature();
-        $parsed = $this->parser->parse($fullSignature, $record->arguments);
-
-        $directive = $this->hydrator->hydrate($class, $parsed);
-
-        if ($this->laravelBootstrapper !== null && $directive instanceof AbstractDirective) {
-            $reflection = new \ReflectionClass($directive);
-            $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
-            $reflectionProperty->setValue($directive, $this->laravelBootstrapper);
-        }
-
-        $result = $directive->execute();
-
-        if ($result->isSuccess()) {
-            $this->renderer->renderSuccess('Directive executed successfully');
-        } else {
-            $this->renderer->renderError('Directive execution failed');
-        }
-
-        return $result;
     }
 
     private function bootLaravelIfNeeded(): void

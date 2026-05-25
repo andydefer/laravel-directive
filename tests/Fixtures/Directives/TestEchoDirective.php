@@ -19,7 +19,7 @@ final class TestEchoDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'test-echo {message?}';
+        return 'test-echo {message?} {extra?}';
     }
 
     public function getDescription(): string
@@ -39,6 +39,10 @@ final class TestEchoDirective extends AbstractDirective
     {
         $message = $this->argument('message') ?? 'Hello World';
         $this->line($message);
+
+        if ($this->hasArgument('extra')) {
+            $this->line($this->argument('extra'));
+        }
 
         return ExitCode::SUCCESS;
     }

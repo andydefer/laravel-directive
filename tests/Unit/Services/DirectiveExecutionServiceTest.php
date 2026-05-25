@@ -21,6 +21,7 @@ use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\TypedCollection;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -37,7 +38,6 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     private DirectiveExecutionService $service;
 
-    // Changement: protected au lieu de private pour correspondre à TestCase
     protected LaravelBootstrapper $laravelBootstrapper;
 
     private string|false $originalDebug;
@@ -60,17 +60,15 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $this->service->setLaravelBootstrapper($this->laravelBootstrapper);
 
-        // Sauvegarder l'état original de DIRECTIVE_DEBUG
         $this->originalDebug = getenv('DIRECTIVE_DEBUG');
     }
 
     protected function tearDown(): void
     {
-        // Restaurer l'état original de DIRECTIVE_DEBUG
         if ($this->originalDebug === false) {
             putenv('DIRECTIVE_DEBUG');
         } else {
-            putenv('DIRECTIVE_DEBUG='.$this->originalDebug);
+            putenv('DIRECTIVE_DEBUG=' . $this->originalDebug);
         }
 
         $this->laravelBootstrapper->reset();
@@ -437,5 +435,111 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $result = $this->service->execute($record);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    // ==================== Tests de capture des erreurs du parser ====================
+
+    public function test_execute_captures_parser_invalid_argument_exception_and_returns_invalid_argument(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $errorMessage = 'Not enough arguments (missing: "message")';
+        $this->parser->expects($this->once())
+            ->method('parse')
+            ->with('test-concrete', $this->createArguments([]))
+            ->willThrowException(new InvalidArgumentException($errorMessage));
+
+        $this->renderer->expects($this->once())
+            ->method('renderError')
+            ->with($errorMessage);
+
+        $arguments = $this->createArguments([]);
+        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
+    }
+
+    public function test_execute_captures_parser_too_many_arguments_exception(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $errorMessage = 'Too many arguments provided';
+        $this->parser->expects($this->once())
+            ->method('parse')
+            ->with('test-concrete', $this->createArguments(['arg1', 'arg2', 'arg3']))
+            ->willThrowException(new InvalidArgumentException($errorMessage));
+
+        $this->renderer->expects($this->once())
+            ->method('renderError')
+            ->with($errorMessage);
+
+        $arguments = $this->createArguments(['arg1', 'arg2', 'arg3']);
+        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
+    }
+
+    public function test_execute_captures_parser_invalid_signature_format_exception(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $errorMessage = 'Invalid signature format: Required arguments must come before arguments with default values';
+        $this->parser->expects($this->once())
+            ->method('parse')
+            ->with('test-concrete', $this->createArguments([]))
+            ->willThrowException(new InvalidArgumentException($errorMessage));
+
+        $this->renderer->expects($this->once())
+            ->method('renderError')
+            ->with($errorMessage);
+
+        $arguments = $this->createArguments([]);
+        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
+    }
+
+    public function test_execute_captures_generic_exception_and_returns_failure(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->once())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $errorMessage = 'Unexpected database error';
+        $this->parser->expects($this->once())
+            ->method('parse')
+            ->with('test-concrete', $this->createArguments(['John']))
+            ->willThrowException(new \RuntimeException($errorMessage));
+
+        $this->renderer->expects($this->once())
+            ->method('renderError')
+            ->with($errorMessage);
+
+        $arguments = $this->createArguments(['John']);
+        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::FAILURE, $result);
     }
 }
