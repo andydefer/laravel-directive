@@ -49,7 +49,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/config/directive.php' => config_path('directive.php'),
+            __DIR__ . '/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -114,6 +114,7 @@ final class DirectiveServiceProvider extends ServiceProvider
             $discovery = new DirectiveDiscoveryService(
                 config: $app->make(DirectiveConfig::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
+                loader: null, // Le loader par défaut sera le service lui-même (chargement depuis filesystem)
             );
 
             if ($app->bound(LaravelBootstrapper::class)) {
@@ -210,7 +211,7 @@ final class DirectiveServiceProvider extends ServiceProvider
                 interaction: $app->make(DirectiveInteractionService::class),
                 signatureValidator: $app->make(SignatureValidationService::class),
                 namingService: $app->make(DirectiveNamingService::class),
-                stubPath: __DIR__.'/../stubs/directive.stub',
+                stubPath: __DIR__ . '/../stubs/directive.stub',
             );
         });
     }
