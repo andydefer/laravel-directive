@@ -8,6 +8,8 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\DirectiveNamingService;
+use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Records\Collections\TypedCollection;
 
 final class TestDirectiveRegistry implements DirectiveLoaderInterface
@@ -16,10 +18,22 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     private array $directives = [];
 
     private ?DirectiveInteractionService $interaction = null;
+    private ?SignatureValidationService $signatureValidator = null;
+    private ?DirectiveNamingService $namingService = null;
 
     public function setInteraction(DirectiveInteractionService $interaction): void
     {
         $this->interaction = $interaction;
+    }
+
+    public function setSignatureValidator(SignatureValidationService $signatureValidator): void
+    {
+        $this->signatureValidator = $signatureValidator;
+    }
+
+    public function setNamingService(DirectiveNamingService $namingService): void
+    {
+        $this->namingService = $namingService;
     }
 
     public function register(string $signature, AbstractDirective $directive): void
@@ -34,16 +48,31 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     public function registerByClass(string $className, array $constructorArgs = []): AbstractDirective
     {
         $reflection = new \ReflectionClass($className);
+        $constructor = $reflection->getConstructor();
 
-        if (empty($constructorArgs) && $reflection->getConstructor()) {
-            $params = $reflection->getConstructor()->getParameters();
+        if (empty($constructorArgs) && $constructor) {
+            $params = $constructor->getParameters();
             foreach ($params as $param) {
                 $paramType = $param->getType();
+                $paramName = $param->getName();
+
                 if ($paramType && $paramType->getName() === DirectiveInteractionService::class) {
                     if ($this->interaction === null) {
-                        throw new \RuntimeException('DirectiveInteractionService not set in TestDirectiveRegistry. Call setInteraction() first.');
+                        throw new \RuntimeException('DirectiveInteractionService not set. Call setInteraction() first.');
                     }
                     $constructorArgs[] = $this->interaction;
+                } elseif ($paramType && $paramType->getName() === SignatureValidationService::class) {
+                    if ($this->signatureValidator === null) {
+                        $this->signatureValidator = new SignatureValidationService();
+                    }
+                    $constructorArgs[] = $this->signatureValidator;
+                } elseif ($paramType && $paramType->getName() === DirectiveNamingService::class) {
+                    if ($this->namingService === null) {
+                        $this->namingService = new DirectiveNamingService();
+                    }
+                    $constructorArgs[] = $this->namingService;
+                } elseif ($paramName === 'stubPath') {
+                    $constructorArgs[] = null;
                 } else {
                     $constructorArgs[] = null;
                 }

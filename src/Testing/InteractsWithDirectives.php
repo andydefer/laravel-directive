@@ -14,6 +14,7 @@ use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
@@ -64,6 +65,10 @@ trait InteractsWithDirectives
             return new SignatureValidationService();
         });
 
+        $this->directiveContainer->singleton(DirectiveNamingService::class, function () {
+            return new DirectiveNamingService();
+        });
+
         $this->directiveContainer->singleton(LaravelBootstrapper::class, function () {
             return new LaravelBootstrapper();
         });
@@ -78,15 +83,19 @@ trait InteractsWithDirectives
         $hydrator->setLaravelBootstrapper($laravelBootstrapper);
 
         $interaction = $this->directiveContainer->make(DirectiveInteractionService::class);
+        $signatureValidator = $this->directiveContainer->make(SignatureValidationService::class);
+        $namingService = $this->directiveContainer->make(DirectiveNamingService::class);
 
         $this->directiveRegistry = new TestDirectiveRegistry();
         $this->directiveRegistry->setInteraction($interaction);
+        $this->directiveRegistry->setSignatureValidator($signatureValidator);
+        $this->directiveRegistry->setNamingService($namingService);
 
         $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $this->directiveRegistry);
         $discovery->setLaravelBootstrapper($laravelBootstrapper);
 
         $renderer = new DirectiveRendererService($this->directiveContainer->make(RenderTask::class));
-        $signatureValidator = $this->directiveContainer->make(SignatureValidationService::class);
+        $signatureValidatorService = $this->directiveContainer->make(SignatureValidationService::class);
 
         $executionService = new DirectiveExecutionService(
             discovery: $discovery,
@@ -98,7 +107,7 @@ trait InteractsWithDirectives
 
         $this->directiveKernel = new DirectiveKernel(
             $executionService,
-            $signatureValidator,
+            $signatureValidatorService,
             $renderer,
         );
 

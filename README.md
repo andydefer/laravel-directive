@@ -5,6 +5,7 @@
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://php.net)
 [![Laravel Version](https://img.shields.io/badge/Laravel-12.x%20%7C%2013.x%20%7C%2014.x%20%7C%2015.x-blue)](https://laravel.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
 ---
 
 ## Installation
@@ -692,6 +693,277 @@ Laravel Version: 13.0.0
 
 ---
 
+## Tester vos directives
+
+Le package fournit un trait `InteractsWithDirectives` qui permet de tester vos directives dans un environnement isolé, sans avoir à créer de fichiers réels ou à dépendre du système de fichiers.
+
+### Installation des dépendances de test
+
+```bash
+composer require --dev orchestra/testbench phpunit/phpunit
+```
+
+### Configuration du test
+
+```php
+<?php
+
+namespace Tests\Unit\Directives;
+
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Testing\InteractsWithDirectives;
+use App\Directives\UserListDirective;
+use PHPUnit\Framework\TestCase;
+
+final class UserListDirectiveTest extends TestCase
+{
+    use InteractsWithDirectives;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Initialise l'environnement de test
+        $this->initDirectiveTesting();
+    }
+
+    protected function tearDown(): void
+    {
+        // Nettoie l'environnement de test
+        $this->destroyDirectiveTesting();
+        parent::tearDown();
+    }
+
+    public function test_directive_returns_success(): void
+    {
+        // Enregistre la directive à tester
+        $this->registerDirectiveClass(UserListDirective::class);
+        
+        // Exécute la directive
+        $response = $this->runDirective('user-list');
+        
+        // Vérifie le résultat
+        $response->assertSuccess();
+        $this->assertStringContainsString('Total users:', $response->getOutput());
+    }
+}
+```
+
+### Méthodes du trait `InteractsWithDirectives`
+
+| Méthode | Description |
+|---------|-------------|
+| `initDirectiveTesting()` | Initialise l'environnement de test (répertoire temporaire, conteneur, kernel) |
+| `destroyDirectiveTesting()` | Nettoie l'environnement de test |
+| `registerDirective(AbstractDirective $directive)` | Enregistre une instance de directive |
+| `registerDirectiveClass(string $className, array $constructorArgs = [])` | Enregistre une directive par nom de classe |
+| `registerDirectives(array $directives)` | Enregistre plusieurs directives |
+| `clearRegisteredDirectives()` | Supprime toutes les directives enregistrées |
+| `createTestDirective(string $signature, callable $execute)` | Crée une directive temporaire avec une closure |
+| `runDirective(string $signature, array $arguments = [])` | Exécute une directive et retourne un objet `DirectiveResponse` |
+| `runAndAssert(string $signature, array $arguments = [])` | Exécute une directive et vérifie automatiquement le succès |
+
+### L'objet `DirectiveResponse`
+
+La méthode `runDirective()` retourne un objet `DirectiveResponse` avec les méthodes suivantes :
+
+| Méthode | Description |
+|---------|-------------|
+| `getExitCode(): ExitCode` | Retourne le code de sortie |
+| `getOutput(): string` | Retourne la sortie console |
+| `getArguments(): array` | Retourne les arguments passés |
+| `isSuccess(): bool` | Vérifie si l'exécution a réussi |
+| `isFailure(): bool` | Vérifie si l'exécution a échoué |
+| `getExitCodeValue(): int` | Retourne la valeur numérique du code de sortie |
+| `assertSuccess(): self` | Vérifie que la directive a réussi |
+| `assertFailure(?int $expectedExitCode = null): self` | Vérifie que la directive a échoué |
+| `assertOutputContains(string $expected): self` | Vérifie que la sortie contient une chaîne |
+| `assertOutputNotContains(string $expected): self` | Vérifie que la sortie ne contient pas une chaîne |
+| `assertOutputMatches(string $pattern): self` | Vérifie que la sortie correspond à une expression régulière |
+| `assertOutputEquals(string $expected): self` | Vérifie que la sortie est exactement égale |
+| `assertOutputEmpty(): self` | Vérifie que la sortie est vide |
+
+### Exemple : Tester la directive `MakeDirective`
+
+```php
+<?php
+
+namespace Tests\Unit\Directives;
+
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Testing\InteractsWithDirectives;
+use AndyDefer\Directive\Directives\MakeDirective;
+use PHPUnit\Framework\TestCase;
+
+final class MakeDirectiveTest extends TestCase
+{
+    use InteractsWithDirectives;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->initDirectiveTesting();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->destroyDirectiveTesting();
+        parent::tearDown();
+    }
+
+    public function test_get_signature_returns_make_directive(): void
+    {
+        $directive = $this->registerDirectiveClass(MakeDirective::class);
+        
+        $this->assertSame('make-directive {name}', $directive->getSignature());
+    }
+
+    public function test_execute_creates_file_with_correct_replacements(): void
+    {
+        $this->registerDirectiveClass(MakeDirective::class);
+        
+        $response = $this->runDirective('make-directive', ['user-create']);
+        
+        $response->assertSuccess();
+        $this->assertStringContainsString('✅ Directive created successfully!', $response->getOutput());
+        
+        // Vérifier le contenu du fichier créé
+        $expectedPath = $this->directiveTempDir . '/app/Directives/UserCreateDirective.php';
+        $this->assertFileExists($expectedPath);
+        
+        $content = file_get_contents($expectedPath);
+        $this->assertStringContainsString('class UserCreateDirective', $content);
+        $this->assertStringContainsString("return 'user-create'", $content);
+        $this->assertStringContainsString('namespace App\\Directives;', $content);
+    }
+
+    public function test_execute_creates_file_in_subdirectory(): void
+    {
+        $this->registerDirectiveClass(MakeDirective::class);
+        
+        $response = $this->runDirective('make-directive', ['user/domain/hello-directive']);
+        
+        $response->assertSuccess();
+        
+        $expectedPath = $this->directiveTempDir . '/app/Directives/User/Domain/HelloDirective.php';
+        $this->assertFileExists($expectedPath);
+        
+        $content = file_get_contents($expectedPath);
+        $this->assertStringContainsString('namespace App\\Directives\\User\\Domain;', $content);
+        $this->assertStringContainsString('class HelloDirective', $content);
+        $this->assertStringContainsString("return 'hello-directive'", $content);
+    }
+
+    public function test_execute_rejects_invalid_directive_name(): void
+    {
+        $this->registerDirectiveClass(MakeDirective::class);
+        
+        $response = $this->runDirective('make-directive', ['user@create']);
+        
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->getExitCode());
+        $this->assertStringContainsString('Invalid directive name', $response->getOutput());
+    }
+
+    public function test_execute_returns_error_when_name_missing(): void
+    {
+        $this->registerDirectiveClass(MakeDirective::class);
+        
+        $response = $this->runDirective('make-directive');
+        
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->getExitCode());
+        $this->assertStringContainsString('Not enough arguments', $response->getOutput());
+    }
+}
+```
+
+### Exemple : Créer une directive temporaire avec une closure
+
+```php
+public function test_temporary_directive_with_closure(): void
+{
+    $executed = false;
+    
+    $this->createTestDirective('test-closure', function ($directive) use (&$executed) {
+        $executed = true;
+        $directive->line('Closure executed');
+        return ExitCode::SUCCESS;
+    });
+    
+    $response = $this->runDirective('test-closure');
+    
+    $response->assertSuccess();
+    $this->assertTrue($executed);
+    $this->assertStringContainsString('Closure executed', $response->getOutput());
+}
+```
+
+### Exemple : Tester une directive avec des options
+
+```php
+public function test_directive_with_options(): void
+{
+    $this->registerDirectiveClass(UserListDirective::class);
+    
+    $response = $this->runDirective('user-list', ['--verbose', '--limit=10']);
+    
+    $response->assertSuccess();
+    $this->assertStringContainsString('Verbose mode', $response->getOutput());
+}
+```
+
+### Exemple : Chaîner les assertions
+
+```php
+public function test_chained_assertions(): void
+{
+    $this->registerDirectiveClass(CalculatorDirective::class);
+    
+    $this->runDirective('calculator', ['add', '15', '25'])
+        ->assertSuccess()
+        ->assertOutputContains('40')
+        ->assertOutputNotContains('0')
+        ->assertOutputMatches('/\d+/');
+}
+```
+
+### Exemple : Nettoyer les directives enregistrées
+
+```php
+public function test_clear_registered_directives(): void
+{
+    $this->createTestDirective('temp', fn($d) => ExitCode::SUCCESS);
+    
+    // La directive existe
+    $response = $this->runDirective('temp');
+    $response->assertSuccess();
+    
+    // Nettoyer
+    $this->clearRegisteredDirectives();
+    
+    // La directive n'existe plus
+    $response = $this->runDirective('temp');
+    $this->assertSame(ExitCode::NOT_FOUND, $response->getExitCode());
+}
+```
+
+### Comment ça fonctionne ?
+
+Le trait `InteractsWithDirectives` :
+
+1. **Crée un environnement isolé** : Un répertoire temporaire est créé pour simuler l'application
+2. **Initialise un conteneur** : Un conteneur Illuminate est configuré avec tous les services nécessaires
+3. **Enregistre les directives** : Les directives sont stockées dans un registry au lieu d'être lues depuis le filesystem
+4. **Exécute les directives** : Le kernel normal est utilisé, mais avec un loader personnalisé
+5. **Nettoie automatiquement** : Le répertoire temporaire est supprimé après les tests
+
+### Points importants
+
+- Le trait doit être utilisé dans une classe qui étend `PHPUnit\Framework\TestCase`
+- Appelez `initDirectiveTesting()` dans `setUp()` et `destroyDirectiveTesting()` dans `tearDown()`
+- Les directives doivent être enregistrées AVANT de les exécuter
+- Le répertoire temporaire est accessible via `$this->directiveTempDir` pour vérifier les fichiers créés
+
+---
+
 ## Pourquoi ce package ?
 
 ### Les faiblesses d'Artisan (Laravel natif)
@@ -801,18 +1073,14 @@ final class UserListDirectiveTest extends TestCase
 
     public function test_directive_declares_laravel_needed(): void
     {
-        // Vérifie que la directive demande Laravel
         $this->assertTrue($this->directive->shouldBootLaravel());
     }
 
     public function test_execute_returns_success(): void
     {
-        // Mock des arguments
         $arguments = new ParameterCollection();
-        $arguments->add(new ParameterRecord(name: '--active', value: 'true'));
-        $this->directive->setOptions($arguments);
+        $this->directive->setArguments($arguments);
         
-        // Mock de hasLaravel pour simuler Laravel disponible
         $reflection = new \ReflectionClass($this->directive);
         $property = $reflection->getProperty('laravelBootstrapper');
         $mockBootstrapper = $this->createMock(LaravelBootstrapper::class);
@@ -1326,4 +1594,3 @@ Which one do you want to use? [1-2]:
 ## Licence
 
 MIT © [Andy Defer](https://github.com/andydefer)
-```

@@ -1,5 +1,5 @@
 # Pint Formatting Test Report
-*Generated: mar. 26 mai 2026 00:30:46 WAT*
+*Generated: mar. 26 mai 2026 00:46:15 WAT*
 
 
   ⨯...........................⨯⨯⨯⨯⨯⨯..⨯⨯.............⨯...⨯..⨯...⨯⨯.........⨯...⨯....⨯⨯⨯⨯.....................⨯..⨯..........⨯.⨯....⨯⨯......⨯......!!
@@ -21,14 +21,14 @@
   ⨯ src/Testing/DirectiveResponse.php                                          braces_position, not_operator_with_successor_space, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Testing/InteractsWithDirectives.php            class_attributes_separation, new_with_parentheses, concat_space, not_operator_with_successor_space, blank_line_before_statement  
   ⨯ src/Testing/TestDirectiveDiscoveryService.php                                                                       not_operator_with_successor_space, blank_line_before_statement  
-  ⨯ src/Testing/TestDirectiveRegistry.php                                                                                                                  blank_line_before_statement  
+  ⨯ src/Testing/TestDirectiveRegistry.php                                                               class_attributes_separation, new_with_parentheses, blank_line_before_statement  
   ⨯ src/Traits/FileCreator.php                                     new_with_parentheses, concat_space, not_operator_with_successor_space, blank_line_before_statement, ordered_imports  
   ⨯ tests/Feature/DirectiveIntegrationTest.php                                                                                                                            concat_space  
   ⨯ tests/Fixtures/Directives/AnotherTestDirective.php                                                                                                            new_with_parentheses  
   ⨯ tests/Fixtures/Directives/TestCalculatorDirective.php                                                                                                  blank_line_before_statement  
   ⨯ tests/Fixtures/Directives/TestDirectiveWithArgs.php                                                                                                           new_with_parentheses  
   ⨯ tests/IntegrationTestCase.php                                                                               concat_space, unary_operator_spaces, not_operator_with_successor_space  
-  ⨯ tests/Unit/Directives/MakeDirectiveTest.php                                                           class_attributes_separation, concat_space, not_operator_with_successor_space  
+  ⨯ tests/Unit/Directives/MakeDirectiveTest.php                                                                            fully_qualified_strict_types, concat_space, ordered_imports  
   ⨯ tests/Unit/Services/DirectiveDiscoveryServiceTest.php                                                        concat_space, not_operator_with_successor_space, no_extra_blank_lines  
   ⨯ tests/Unit/Services/DirectiveExecutionServiceTest.php                                                                                                                 concat_space  
   ⨯ tests/Unit/Testing/ClosureDirectiveTest.php class_attributes_separation, new_with_parentheses, function_declaration, fully_qualified_strict_types, blank_line_before_statement, o…  
