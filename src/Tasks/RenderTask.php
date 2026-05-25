@@ -46,10 +46,6 @@ class RenderTask
         $debugStrategy = new DebugRenderStrategy;
         $versionStrategy = new VersionRenderStrategy;
 
-        // Injecter le bootstrapper dans la stratégie version
-        if ($this->laravelBootstrapper !== null) {
-            $versionStrategy->setLaravelBootstrapper($this->laravelBootstrapper);
-        }
 
         $this->strategies = [
             $helpStrategy,

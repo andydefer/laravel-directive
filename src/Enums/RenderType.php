@@ -159,7 +159,7 @@ NOTFOUND;
 
 \033[1;32mVersion:\033[0m {{version}}
 \033[1;32mPHP Version:\033[0m {{php_version}}
-\033[1;32mLaravel:\033[0m {{laravel_status}}
+\033[1;32mLaravel Version:\033[0m {{laravel_version}}
 
 \033[36m═══════════════════════════════════════════════════════════════════════════\033[0m
 

@@ -9,7 +9,6 @@ namespace AndyDefer\Directive\Tests\Unit\Strategies;
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Strategies\VersionRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
 
@@ -31,7 +30,7 @@ final class VersionRenderStrategyTest extends UnitTestCase
         $this->assertFalse($this->strategy->supports(RenderType::ERROR));
     }
 
-    public function test_execute_returns_replacements_without_bootstrapper(): void
+    public function test_execute_returns_replacements(): void
     {
         $record = new RenderRecord(type: RenderType::VERSION);
         $result = $this->strategy->execute($record, RenderType::VERSION);
@@ -42,23 +41,9 @@ final class VersionRenderStrategyTest extends UnitTestCase
 
         $this->assertArrayHasKey('{{version}}', $replacements);
         $this->assertArrayHasKey('{{php_version}}', $replacements);
-        $this->assertArrayHasKey('{{laravel_status}}', $replacements);
+        $this->assertArrayHasKey('{{laravel_version}}', $replacements);
 
-        $this->assertEquals('Not bootstrapped', $replacements['{{laravel_status}}']);
         $this->assertEquals(PHP_VERSION, $replacements['{{php_version}}']);
-    }
-
-    public function test_execute_returns_replacements_with_bootstrapper_not_bootstrapped(): void
-    {
-        $bootstrapper = new LaravelBootstrapper;
-        $this->strategy->setLaravelBootstrapper($bootstrapper);
-
-        $record = new RenderRecord(type: RenderType::VERSION);
-        $result = $this->strategy->execute($record, RenderType::VERSION);
-
-        $replacements = $result->toAssociativeArray();
-
-        $this->assertEquals('Not bootstrapped', $replacements['{{laravel_status}}']);
     }
 
     public function test_version_placeholder_contains_valid_version(): void
@@ -80,5 +65,28 @@ final class VersionRenderStrategyTest extends UnitTestCase
         $replacements = $result->toAssociativeArray();
 
         $this->assertEquals(PHP_VERSION, $replacements['{{php_version}}']);
+    }
+
+    public function test_laravel_version_placeholder_contains_version_string(): void
+    {
+        $record = new RenderRecord(type: RenderType::VERSION);
+        $result = $this->strategy->execute($record, RenderType::VERSION);
+
+        $replacements = $result->toAssociativeArray();
+
+        // La version de Laravel peut être 'unknown' ou un numéro de version comme '^13.0'
+        $this->assertIsString($replacements['{{laravel_version}}']);
+    }
+
+    public function test_all_placeholders_are_strings(): void
+    {
+        $record = new RenderRecord(type: RenderType::VERSION);
+        $result = $this->strategy->execute($record, RenderType::VERSION);
+
+        $replacements = $result->toAssociativeArray();
+
+        foreach ($replacements as $placeholder => $value) {
+            $this->assertIsString($value, "Placeholder {$placeholder} should be a string");
+        }
     }
 }

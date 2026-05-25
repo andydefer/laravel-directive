@@ -55,7 +55,7 @@ final class RenderTypeTest extends UnitTestCase
 
         $this->assertStringContainsString('{{version}}', $result);
         $this->assertStringContainsString('{{php_version}}', $result);
-        $this->assertStringContainsString('{{laravel_status}}', $result);
+        $this->assertStringContainsString('{{laravel_version}}', $result);
     }
 
     public function test_version_with_replacements_renders_correctly(): void
@@ -63,13 +63,25 @@ final class RenderTypeTest extends UnitTestCase
         $replacements = [
             '{{version}}' => '1.0.0',
             '{{php_version}}' => '8.2.0',
-            '{{laravel_status}}' => 'Bootstrapped ✓',
+            '{{laravel_version}}' => '11.0.0',
         ];
         $result = RenderType::VERSION->render($replacements);
 
         $this->assertStringContainsString('1.0.0', $result);
         $this->assertStringContainsString('8.2.0', $result);
-        $this->assertStringContainsString('Bootstrapped ✓', $result);
+        $this->assertStringContainsString('11.0.0', $result);
+        $this->assertStringNotContainsString('Bootstrapped', $result);
+        $this->assertStringNotContainsString('Not bootstrapped', $result);
+    }
+
+    public function test_version_displays_laravel_version_correctly(): void
+    {
+        $result = RenderType::VERSION->render();
+
+        $this->assertStringContainsString('Laravel Directive', $result);
+        $this->assertStringContainsString('Version:', $result);
+        $this->assertStringContainsString('PHP Version:', $result);
+        $this->assertStringContainsString('Laravel Version:', $result);
     }
 
     public function test_help_contains_required_sections(): void

@@ -7,7 +7,6 @@ namespace AndyDefer\Directive\Tests\Unit\Tasks;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Records\Collections\TypedCollection;
@@ -108,16 +107,13 @@ final class RenderTaskTest extends UnitTestCase
 
     public function test_render_version(): void
     {
-        $bootstrapper = $this->createMock(LaravelBootstrapper::class);
-        $bootstrapper->method('isBootstrapped')->willReturn(false);
-
-        $task = new RenderTask($bootstrapper);
         $record = new RenderRecord(type: RenderType::VERSION);
-        $result = $task->execute($record, RenderType::VERSION);
+        $result = $this->task->execute($record, RenderType::VERSION);
 
         $this->assertStringContainsString('Laravel Directive', $result);
+        $this->assertStringContainsString('Version:', $result);
         $this->assertStringContainsString('PHP Version:', $result);
-        $this->assertStringContainsString('Laravel:', $result);
+        $this->assertStringContainsString('Laravel Version:', $result);
     }
 
     public function test_render_conflict(): void
