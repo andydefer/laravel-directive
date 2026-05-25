@@ -289,6 +289,37 @@ Les signatures de directives doivent respecter un format strict pour garantir la
 | **Pas de délimiteur final** | `user-` est interdit |
 | **Pas de délimiteur initial** | `-list` est interdit |
 
+### Ordre des paramètres
+
+Le parser impose un ordre strict dans la définition des signatures :
+
+| Ordre | Type | Syntaxe | Exemple |
+|-------|------|---------|---------|
+| 1 | Arguments requis | `{name}` | `{name} {email}` |
+| 2 | Arguments avec valeur par défaut | `{role=user}` | `{role=admin}` |
+| 3 | Arguments optionnels | `{count?}` | `{limit?}` |
+| 4 | Options | `{--force}` ou `{-v}` | `{--verbose} {-f}` |
+
+```php
+// ✅ Ordre correct
+public function getSignature(): string
+{
+    return 'user:create {name} {email} {role=user} {count?} {--force} {-v}';
+}
+
+// ❌ Ordre incorrect - Argument requis après optionnel
+public function getSignature(): string
+{
+    return 'user:create {name?} {email}'; // Exception!
+}
+
+// ❌ Ordre incorrect - Option avant argument
+public function getSignature(): string
+{
+    return 'user:create {--force} {name}'; // Exception!
+}
+```
+
 ### Format de signature
 
 ```
@@ -363,6 +394,7 @@ public function getSignature(): string
 |---------|---------|-------------|
 | Argument requis | `{name}` | Paramètre positionnel obligatoire |
 | Argument optionnel | `{name?}` | Paramètre positionnel optionnel |
+| Argument avec valeur par défaut | `{count=10}` | Valeur par défaut si non fourni |
 | Option avec valeur | `{--role=}` | Option avec valeur par défaut optionnelle |
 | Option flag | `{--force}` | Option sans valeur (true/false) |
 | Option avec valeur par défaut | `{--role=admin}` | Option avec valeur par défaut |
@@ -418,6 +450,37 @@ public function execute(): ExitCode
         $this->error('Name is required');
         return ExitCode::INVALID_ARGUMENT;
     }
+    
+    return ExitCode::SUCCESS;
+}
+```
+
+### Vérifier l'existence d'un argument
+
+```php
+// Signature: user-create {name} {count?}
+public function execute(): ExitCode
+{
+    // Vérifier si l'argument a été fourni (même vide)
+    if ($this->hasArgument('count')) {
+        $count = $this->argument('count'); // Peut être '5' ou ''
+        $this->info("Count provided: {$count}");
+    } else {
+        $this->info("Count not provided, using default");
+    }
+    
+    return ExitCode::SUCCESS;
+}
+```
+
+### Valeurs par défaut pour les arguments
+
+```php
+// Signature: user-list {limit=10}
+public function execute(): ExitCode
+{
+    $limit = $this->argument('limit'); // '10' si non fourni
+    $this->info("Limit: {$limit}");
     
     return ExitCode::SUCCESS;
 }
@@ -545,48 +608,41 @@ $this->table($headers, $rows);
 ```bash
 # Créer une directive simple
 ./vendor/bin/directive make-directive user-list
+
+# Créer une directive dans un sous-dossier
+./vendor/bin/directive make-directive user/domain/hello-directive
 ```
 
-**Génère :** `app/Directives/UserListDirective.php`
+**Génère :** `app/Directives/User/Domain/HelloDirective.php`
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace App\Directives;
+namespace App\Directives\User\Domain;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-/**
- * Generated directive for user-list
- * Created at: 2026-05-23 10:30:00
- */
-final class UserListDirective extends AbstractDirective
+final class HelloDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'user-list {--option}';
+        return 'hello-directive';
     }
 
     public function getDescription(): string
     {
-        return 'Generated directive for user-list';
+        return 'Description for hello-directive';
     }
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection();
-        // $aliases->add('your-alias');
-        return $aliases;
+        return new StringTypedCollection();
     }
 
-    /**
-     * Override this method to enable Laravel bootstrapping.
-     * Set to true if you need Eloquent, DB, Cache, etc.
-     */
     public function shouldBootLaravel(): bool
     {
         return false;
@@ -594,19 +650,17 @@ final class UserListDirective extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        // TODO: Implement your directive logic here
-
-        // Check if Laravel is available (if you enabled it)
-        if ($this->hasLaravel()) {
-            $this->info('Laravel is available!');
-        }
-
         $this->info('Directive executed successfully!');
-
+        
         return ExitCode::SUCCESS;
     }
 }
 ```
+
+**Sous-dossiers supportés :**
+- `user/hello-directive` → `App\Directives\User\HelloDirective`
+- `admin/user-list` → `App\Directives\Admin\UserListDirective`
+- `api/v2/users` → `App\Directives\Api\V2\UsersDirective`
 
 ### `--version` - Afficher la version
 
@@ -620,9 +674,9 @@ Sortie :
 📦 Laravel Directive
 ═══════════════════════════════════════════════════════════════════════════
 
-Version: 7.0.0
+Version: 1.1.0
 PHP Version: 8.2.0
-Laravel: Bootstrapped ✓
+Laravel Version: 13.0.0
 
 ═══════════════════════════════════════════════════════════════════════════
 ```
@@ -662,6 +716,8 @@ Laravel: Bootstrapped ✓
 - **Extensibilité** : Les packages peuvent enregistrer leurs directives automatiquement via le dossier `src/Directives/`
 - **Simplicité** : Une classe = une directive, sans configuration complexe
 - **Laravel à la demande** : Bootstrap optionnel uniquement quand nécessaire
+- **Validation stricte** : Format et ordre des signatures validés automatiquement
+- **Messages d'erreur clairs** : Erreurs de parsing capturées et affichées proprement
 
 ```php
 // ✅ Une directive propre et testable
@@ -779,7 +835,7 @@ final class UserListDirectiveTest extends TestCase
 | 0 | `ExitCode::SUCCESS` | Exécution réussie |
 | 1 | `ExitCode::FAILURE` | Erreur générale |
 | 3 | `ExitCode::NOT_FOUND` | Directive non trouvée |
-| 4 | `ExitCode::INVALID_ARGUMENT` | Argument invalide |
+| 4 | `ExitCode::INVALID_ARGUMENT` | Argument invalide ou signature invalide |
 
 ```php
 public function execute(): ExitCode
@@ -819,7 +875,7 @@ final class UserCreateDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'user-create {name} {email} {--role=user} {--notify}';
+        return 'user-create {name} {email} {role=user} {--notify}';
     }
 
     public function getDescription(): string
@@ -837,7 +893,7 @@ final class UserCreateDirective extends AbstractDirective
             return ExitCode::INVALID_ARGUMENT;
         }
         
-        $role = $this->option('role');
+        $role = $this->argument('role');
         $notify = $this->option('notify');
         
         $this->info("User {$name} created with role {$role}");
@@ -854,7 +910,7 @@ final class UserCreateDirective extends AbstractDirective
 **Utilisation :**
 
 ```bash
-./vendor/bin/directive user-create "John Doe" john@example.com --role=admin --notify
+./vendor/bin/directive user-create "John Doe" john@example.com --notify
 ```
 
 ### Directive avec Laravel et base de données
@@ -1051,10 +1107,10 @@ Les directives sont automatiquement découvertes dans :
 |-----------|------|
 | `DirectiveKernel` | Point d'entrée, parsing des arguments bruts, validation des signatures |
 | `SignatureValidationService` | Valide le format des signatures de directives |
-| `DirectiveParserService` | Parse les signatures et les arguments |
+| `DirectiveParserService` | Parse les signatures et les arguments avec validation d'ordre |
 | `DirectiveHydratorService` | Hydrate les directives avec les arguments typés |
 | `DirectiveDiscoveryService` | Découvre les directives (filesystem + packages) |
-| `DirectiveExecutionService` | Exécute la directive demandée |
+| `DirectiveExecutionService` | Exécute la directive demandée avec capture d'erreurs |
 | `DirectiveInteractionService` | Gère les interactions utilisateur (messages, questions, tables) |
 | `DirectiveNamingService` | Génère les noms de classes et signatures |
 | `LaravelBootstrapper` | Charge Laravel à la demande pour les directives qui en ont besoin |
@@ -1169,6 +1225,12 @@ public function getSignature(): string
     return 'api-user-profile';    // Délimiteurs multiples
 }
 
+// ✅ BON - Ordre correct
+public function getSignature(): string
+{
+    return 'user-create {name} {email} {role=user} {count?} {--force}';
+}
+
 // ❌ MAUVAIS - Signatures invalides
 public function getSignature(): string
 {
@@ -1176,6 +1238,13 @@ public function getSignature(): string
     return 'user@list';           // Caractère '@' interdit
     return 'create_user';         // Underscore '_' interdit
     return 'user-';               // Délimiteur final interdit
+}
+
+// ❌ MAUVAIS - Ordre incorrect
+public function getSignature(): string
+{
+    return 'user-create {name?} {email}';  // Requis après optionnel
+    return 'user-create {--force} {name}'; // Option avant argument
 }
 ```
 
@@ -1213,9 +1282,10 @@ Which one do you want to use? [1-2]:
 | `getLaravel()` | `?object` | Instance de l'application Laravel |
 | `setLaravelBootstrapper()` | `self` | Injecte le bootstrapper |
 | `execute()` | `ExitCode` | Logique métier |
-| `argument(string $key)` | `?string` | Valeur d'un argument |
-| `option(string $key)` | `bool\|string\|null` | Valeur d'une option |
-| `hasOption(string $key)` | `bool` | Option présente ? |
+| `argument(string $key)` | `?string` | Valeur d'un argument (null si non fourni ou vide) |
+| `hasArgument(string $key)` | `bool` | Argument existe et a une valeur non vide ? |
+| `option(string $key)` | `bool\|string\|null` | Valeur d'une option (null si non fournie) |
+| `hasOption(string $key)` | `bool` | Option existe et a une valeur non vide ? |
 | `line(string $message)` | `void` | Affiche un message |
 | `info(string $message)` | `void` | Affiche en vert |
 | `error(string $message)` | `void` | Affiche en rouge |
@@ -1237,7 +1307,7 @@ Which one do you want to use? [1-2]:
 
 | Commande | Description |
 |----------|-------------|
-| `./vendor/bin/directive make-directive {name}` | Crée une nouvelle directive |
+| `./vendor/bin/directive make-directive {name}` | Crée une nouvelle directive (supporte les sous-dossiers) |
 | `./vendor/bin/directive --list` | Liste toutes les directives |
 | `./vendor/bin/directive --help` | Affiche l'aide |
 | `./vendor/bin/directive --version` | Affiche la version |
