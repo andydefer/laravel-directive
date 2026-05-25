@@ -20,12 +20,17 @@ class DirectiveDiscoveryService
 
     private string $vendorDir;
 
+    /**
+     * @var array<string, bool> Cache des packages déjà scannés
+     */
+    private array $scannedPackages = [];
+
     public function __construct(
         private readonly DirectiveConfig $config,
         private readonly DirectiveHydratorService $hydrator,
     ) {
         $this->projectRoot = getcwd();
-        $this->vendorDir = $this->projectRoot.'/vendor';
+        $this->vendorDir = $this->projectRoot . '/vendor';
     }
 
     public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
@@ -40,8 +45,8 @@ class DirectiveDiscoveryService
         // 1. Découverte depuis le filesystem de l'application (app/Directives/)
         $results = $this->discoverFromFilesystem($results);
 
-        // 2. Découverte depuis les packages installés (vendor/*/*/src/Directives/)
-        $results = $this->discoverFromVendorPackages($results);
+        // 2. Découverte depuis les packages installés (récursive jusqu'à profondeur 2)
+        $results = $this->discoverFromVendorPackagesRecursive($results);
 
         return $results;
     }
@@ -50,7 +55,7 @@ class DirectiveDiscoveryService
     {
         $path = $this->config->directivesPath;
 
-        if ($path === '' || ! is_dir($path)) {
+        if ($path === '' || !is_dir($path)) {
             return $results;
         }
 
@@ -58,59 +63,133 @@ class DirectiveDiscoveryService
     }
 
     /**
-     * Découvre les directives dans les packages installés via Composer.
+     * Découvre les directives dans les packages installés (profondeur 2).
      *
-     * Parcourt tous les packages dans vendor/ et cherche dans src/Directives/
+     * Parcourt les packages du composer.json racine,
+     * puis pour chaque package, parcourt ses propres dépendances.
      */
-    private function discoverFromVendorPackages(TypedCollection $results): TypedCollection
+    private function discoverFromVendorPackagesRecursive(TypedCollection $results): TypedCollection
     {
-        $composerFile = $this->projectRoot.'/composer.json';
+        $composerFile = $this->projectRoot . '/composer.json';
 
-        if (! file_exists($composerFile)) {
+        if (!file_exists($composerFile)) {
             return $results;
         }
 
         $composer = json_decode(file_get_contents($composerFile), true);
 
         // Récupérer tous les packages requis (y compris dev)
-        $packages = array_merge(
+        $rootPackages = array_merge(
             $composer['require'] ?? [],
             $composer['require-dev'] ?? []
         );
 
-        foreach ($packages as $packageName => $version) {
-            // Ignorer les packages PHP internes
-            if (str_starts_with($packageName, 'php') || $packageName === 'php') {
-                continue;
-            }
+        $this->scannedPackages = [];
 
-            $packagePath = $this->vendorDir.'/'.$packageName;
-
-            if (! is_dir($packagePath)) {
-                continue;
-            }
-
-            // Chercher dans src/Directives
-            $directivesPath = $packagePath.'/src/Directives';
-
-            if (is_dir($directivesPath)) {
-                $results = $this->scanDirectoryForDirectives($results, $directivesPath);
-            }
-
-            // Optionnel : Chercher aussi dans un dossier alternatif pour compatibilité
-            $altPaths = [
-                $packagePath.'/Directives',
-                $packagePath.'/src/Directive',
-            ];
-
-            foreach ($altPaths as $altPath) {
-                if (is_dir($altPath) && $altPath !== $directivesPath) {
-                    $results = $this->scanDirectoryForDirectives($results, $altPath);
-                }
-            }
+        // Parcours des packages racine (profondeur 1)
+        foreach ($rootPackages as $packageName => $version) {
+            $this->scanPackage($results, $packageName, 1);
         }
 
         return $results;
+    }
+
+    /**
+     * Scanne un package spécifique à une profondeur donnée.
+     *
+     * @param TypedCollection $results Collection des résultats
+     * @param string $packageName Nom du package
+     * @param int $depth Profondeur actuelle (1 = racine, 2 = dépendance)
+     */
+    private function scanPackage(TypedCollection $results, string $packageName, int $depth): void
+    {
+        // Éviter de scanner deux fois le même package
+        if (isset($this->scannedPackages[$packageName])) {
+            return;
+        }
+
+        // Limiter à une profondeur de 2
+        if ($depth > 2) {
+            return;
+        }
+
+        // Ignorer les packages PHP internes
+        if (str_starts_with($packageName, 'php') || $packageName === 'php') {
+            return;
+        }
+
+        $packagePath = $this->vendorDir . '/' . $packageName;
+
+        if (!is_dir($packagePath)) {
+            return;
+        }
+
+        // Marquer comme scanné
+        $this->scannedPackages[$packageName] = true;
+
+        // Scanner les directives du package actuel
+        $this->scanPackageDirectories($results, $packagePath);
+
+        // Si on est à profondeur 1, scanner les dépendances de ce package (profondeur 2)
+        if ($depth === 1) {
+            $this->scanPackageDependencies($results, $packagePath, $depth);
+        }
+    }
+
+    /**
+     * Scanne les dépendances d'un package.
+     *
+     * @param TypedCollection $results Collection des résultats
+     * @param string $packagePath Chemin du package
+     * @param int $currentDepth Profondeur actuelle
+     */
+    private function scanPackageDependencies(TypedCollection $results, string $packagePath, int $currentDepth): void
+    {
+        $composerFile = $packagePath . '/composer.json';
+
+        if (!file_exists($composerFile)) {
+            return;
+        }
+
+        $composer = json_decode(file_get_contents($composerFile), true);
+
+        if ($composer === null) {
+            return;
+        }
+
+        // Récupérer les dépendances du package
+        $dependencies = array_merge(
+            $composer['require'] ?? [],
+            $composer['require-dev'] ?? []
+        );
+
+        foreach ($dependencies as $dependencyName => $version) {
+            // Scanner la dépendance à profondeur 2
+            $this->scanPackage($results, $dependencyName, $currentDepth + 1);
+        }
+    }
+
+    /**
+     * Scanne les répertoires de directives d'un package.
+     *
+     * @param TypedCollection $results Collection des résultats
+     * @param string $packagePath Chemin du package
+     */
+    private function scanPackageDirectories(TypedCollection $results, string $packagePath): void
+    {
+        // Chemins possibles pour les directives
+        $possiblePaths = [
+            $packagePath . '/src/Directives',
+            $packagePath . '/Directives',
+            $packagePath . '/src/Directive',
+            $packagePath . '/Directive',
+        ];
+
+        foreach ($possiblePaths as $directivesPath) {
+            if (is_dir($directivesPath)) {
+                $this->scanDirectoryForDirectives($results, $directivesPath);
+            }
+        }
     }
 
     /**
@@ -118,7 +197,7 @@ class DirectiveDiscoveryService
      */
     private function scanDirectoryForDirectives(TypedCollection $results, string $directory): TypedCollection
     {
-        $files = glob($directory.'/*.php');
+        $files = glob($directory . '/*.php');
 
         if ($files === false) {
             return $results;
@@ -126,7 +205,7 @@ class DirectiveDiscoveryService
 
         foreach ($files as $file) {
             $metadata = $this->extractMetadataFromFile($file);
-            if ($metadata !== null && ! $this->isAlreadyRegistered($results, $metadata->signature)) {
+            if ($metadata !== null && !$this->isAlreadyRegistered($results, $metadata->signature)) {
                 $results->add($metadata);
             }
         }
@@ -155,7 +234,7 @@ class DirectiveDiscoveryService
     {
         $class = $this->getClassFromFile($file);
 
-        if ($class === '' || ! class_exists($class)) {
+        if ($class === '' || !class_exists($class)) {
             return null;
         }
 
@@ -168,38 +247,25 @@ class DirectiveDiscoveryService
 
         // Vérification 1 : La classe ne doit pas être abstraite
         if ($reflection->isAbstract()) {
-            $debug = getenv('DIRECTIVE_DEBUG') === 'true';
-            if ($debug) {
-                fwrite(STDERR, "[DEBUG] Skipping abstract class: {$class}\n");
-            }
-
+            $this->debug("Skipping abstract class: {$class}");
             return null;
         }
 
         // Vérification 2 : La classe doit étendre AbstractDirective
-        if (! is_subclass_of($class, AbstractDirective::class)) {
-            $debug = getenv('DIRECTIVE_DEBUG') === 'true';
-            if ($debug) {
-                fwrite(STDERR, "[DEBUG] Skipping {$class}: does not extend ".AbstractDirective::class."\n");
-            }
-
+        if (!is_subclass_of($class, AbstractDirective::class)) {
+            $this->debug("Skipping {$class}: does not extend " . AbstractDirective::class);
             return null;
         }
 
         // Vérification 3 : La classe doit implémenter DirectiveInterface
-        // (Normalement true si elle étend AbstractDirective, mais vérification de sécurité)
-        if (! is_subclass_of($class, DirectiveInterface::class)) {
-            $debug = getenv('DIRECTIVE_DEBUG') === 'true';
-            if ($debug) {
-                fwrite(STDERR, "[DEBUG] Skipping {$class}: does not implement ".DirectiveInterface::class."\n");
-            }
-
+        if (!is_subclass_of($class, DirectiveInterface::class)) {
+            $this->debug("Skipping {$class}: does not implement " . DirectiveInterface::class);
             return null;
         }
 
         $needsLaravel = $this->checkIfNeedsLaravel($class);
 
-        if ($needsLaravel && $this->laravelBootstrapper !== null && ! self::$bootstrapped) {
+        if ($needsLaravel && $this->laravelBootstrapper !== null && !self::$bootstrapped) {
             $this->laravelBootstrapper->bootstrap();
             self::$bootstrapped = true;
         }
@@ -216,11 +282,7 @@ class DirectiveDiscoveryService
                 aliases: $aliases,
             );
         } catch (\Throwable $e) {
-            $debug = getenv('DIRECTIVE_DEBUG') === 'true';
-            if ($debug) {
-                fwrite(STDERR, "[DEBUG] Failed to extract metadata for {$class}: ".$e->getMessage()."\n");
-            }
-
+            $this->debug("Failed to extract metadata for {$class}: " . $e->getMessage());
             return null;
         }
     }
@@ -230,7 +292,7 @@ class DirectiveDiscoveryService
         try {
             $reflection = new \ReflectionClass($class);
 
-            if (! $reflection->hasMethod('shouldBootLaravel')) {
+            if (!$reflection->hasMethod('shouldBootLaravel')) {
                 return false;
             }
 
@@ -257,6 +319,14 @@ class DirectiveDiscoveryService
             return $class;
         }
 
-        return $namespace.'\\'.$class;
+        return $namespace . '\\' . $class;
+    }
+
+    private function debug(string $message): void
+    {
+        $debug = getenv('DIRECTIVE_DEBUG') === 'true';
+        if ($debug) {
+            fwrite(STDERR, "[DEBUG] {$message}\n");
+        }
     }
 }
