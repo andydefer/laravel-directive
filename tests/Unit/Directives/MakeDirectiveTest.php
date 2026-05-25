@@ -41,13 +41,13 @@ final class MakeDirectiveTest extends UnitTestCase
         $this->tempDir = sys_get_temp_dir() . '/make_directive_test_' . uniqid();
         mkdir($this->tempDir, 0755, true);
 
-        // Créer un stub temporaire PLUS COMPLET
+        // Créer un stub temporaire avec namespace
         $stubPath = $this->tempDir . '/directive.stub';
         file_put_contents($stubPath, '<?php
 
 declare(strict_types=1);
 
-namespace App\Directives;
+namespace {{namespace}};
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
@@ -111,7 +111,10 @@ final class {{class}} extends AbstractDirective
     public function test_get_description_returns_description(): void
     {
         $description = $this->directive->getDescription();
-        $this->assertSame('Create a new directive class', $description);
+        $this->assertSame(
+            'Create a new directive class (supports subdirectories like "user/hello-directive")',
+            $description
+        );
     }
 
     public function test_get_aliases_returns_aliases(): void
@@ -145,15 +148,11 @@ final class {{class}} extends AbstractDirective
         $arguments->add(new ParameterRecord(name: 'name', value: 'user-create'));
         $property->setValue($this->directive, $arguments);
 
+        // La validation ne devrait être appelée que sur le nom de base
         $this->signatureValidator->expects($this->once())
             ->method('validate')
             ->with('user-create')
             ->willReturn(new ValidationResultRecord(isValid: true));
-
-        $this->namingService->expects($this->once())
-            ->method('generateClassName')
-            ->with('user-create')
-            ->willReturn('UserCreateDirective');
 
         $this->interaction->expects($this->atLeastOnce())
             ->method('info')
@@ -206,11 +205,6 @@ final class {{class}} extends AbstractDirective
             ->with('user-create')
             ->willReturn(new ValidationResultRecord(isValid: true));
 
-        $this->namingService->expects($this->once())
-            ->method('generateClassName')
-            ->with('user-create')
-            ->willReturn('UserCreateDirective');
-
         $this->interaction->expects($this->atLeastOnce())
             ->method('info');
 
@@ -225,6 +219,7 @@ final class {{class}} extends AbstractDirective
         $content = file_get_contents($expectedPath);
         $this->assertStringContainsString('class UserCreateDirective', $content);
         $this->assertStringContainsString("return 'user-create'", $content);
+        $this->assertStringContainsString('namespace App\\Directives;', $content);
     }
 
     public function test_execute_creates_directory_when_not_exists(): void
@@ -241,11 +236,6 @@ final class {{class}} extends AbstractDirective
             ->with('test-command')
             ->willReturn(new ValidationResultRecord(isValid: true));
 
-        $this->namingService->expects($this->once())
-            ->method('generateClassName')
-            ->with('test-command')
-            ->willReturn('TestCommandDirective');
-
         $this->interaction->expects($this->atLeastOnce())
             ->method('info');
 
@@ -261,6 +251,103 @@ final class {{class}} extends AbstractDirective
         $this->assertFileExists($expectedPath);
     }
 
+    public function test_execute_creates_file_in_subdirectory(): void
+    {
+        $reflection = new \ReflectionClass(MakeDirective::class);
+        $property = $reflection->getProperty('arguments');
+
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'name', value: 'user/domain/hello-directive'));
+        $property->setValue($this->directive, $arguments);
+
+        // La validation doit être appelée sur le nom de base seulement
+        $this->signatureValidator->expects($this->once())
+            ->method('validate')
+            ->with('hello-directive')
+            ->willReturn(new ValidationResultRecord(isValid: true));
+
+        $this->interaction->expects($this->atLeastOnce())
+            ->method('info');
+
+        $result = $this->directive->execute();
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        // Vérifier le dossier et le fichier
+        $expectedPath = $this->tempDir . '/app/Directives/User/Domain/HelloDirective.php';
+        $this->assertFileExists($expectedPath);
+        $this->assertDirectoryExists($this->tempDir . '/app/Directives/User/Domain');
+
+        // Vérifier le contenu
+        $content = file_get_contents($expectedPath);
+        $this->assertStringContainsString('namespace App\\Directives\\User\\Domain;', $content);
+        $this->assertStringContainsString('class HelloDirective', $content);
+        // CORRECTION : La signature doit être "hello-directive" et non "hello"
+        $this->assertStringContainsString("return 'hello-directive'", $content);
+    }
+
+    public function test_execute_adds_directive_suffix_automatically(): void
+    {
+        $reflection = new \ReflectionClass(MakeDirective::class);
+        $property = $reflection->getProperty('arguments');
+
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'name', value: 'hello'));
+        $property->setValue($this->directive, $arguments);
+
+        $this->signatureValidator->expects($this->once())
+            ->method('validate')
+            ->with('hello')
+            ->willReturn(new ValidationResultRecord(isValid: true));
+
+        $this->interaction->expects($this->atLeastOnce())
+            ->method('info');
+
+        $result = $this->directive->execute();
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        $expectedPath = $this->tempDir . '/app/Directives/HelloDirective.php';
+        $this->assertFileExists($expectedPath);
+
+        $content = file_get_contents($expectedPath);
+        $this->assertStringContainsString('class HelloDirective', $content);
+        $this->assertStringNotContainsString('HelloDirectiveDirective', $content);
+        // CORRECTION : La signature doit être "hello" (pas de suffixe "directive")
+        $this->assertStringContainsString("return 'hello'", $content);
+    }
+
+    public function test_execute_does_not_double_directive_suffix(): void
+    {
+        $reflection = new \ReflectionClass(MakeDirective::class);
+        $property = $reflection->getProperty('arguments');
+
+        $arguments = new ParameterCollection;
+        $arguments->add(new ParameterRecord(name: 'name', value: 'hello-directive'));
+        $property->setValue($this->directive, $arguments);
+
+        $this->signatureValidator->expects($this->once())
+            ->method('validate')
+            ->with('hello-directive')
+            ->willReturn(new ValidationResultRecord(isValid: true));
+
+        $this->interaction->expects($this->atLeastOnce())
+            ->method('info');
+
+        $result = $this->directive->execute();
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        $expectedPath = $this->tempDir . '/app/Directives/HelloDirective.php';
+        $this->assertFileExists($expectedPath);
+
+        $content = file_get_contents($expectedPath);
+        $this->assertStringContainsString('class HelloDirective', $content);
+        $this->assertStringNotContainsString('HelloDirectiveDirective', $content);
+        // CORRECTION : La signature doit être "hello-directive" et non "hello"
+        $this->assertStringContainsString("return 'hello-directive'", $content);
+    }
+
     public function test_execute_shows_usage_examples_on_error(): void
     {
         $reflection = new \ReflectionClass(MakeDirective::class);
@@ -271,12 +358,14 @@ final class {{class}} extends AbstractDirective
             ->method('error')
             ->with('Directive name is required');
 
-        // Permettre plusieurs appels à line
-        $this->interaction->expects($this->exactly(4))
+        $this->interaction->expects($this->exactly(7))
             ->method('line')
             ->with($this->logicalOr(
                 $this->equalTo('Usage: directive make-directive <name>'),
-                $this->equalTo('Example: directive make-directive user-create'),
+                $this->equalTo('Examples:'),
+                $this->equalTo('  • directive make-directive user-create'),
+                $this->equalTo('  • directive make-directive user/domain/hello-directive'),
+                $this->equalTo('  • directive make-directive admin/user-list'),
                 $this->equalTo(''),
                 $this->equalTo('Use only letters, numbers, and hyphens. Must start with a letter.')
             ));

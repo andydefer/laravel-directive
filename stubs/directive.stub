@@ -1,17 +1,14 @@
 <?php
+// stubs/directive.stub
 
 declare(strict_types=1);
 
-namespace App\Directives;
+namespace {{namespace}};
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-/**
- * Generated directive for {{signature}}
- * Created at: {{date}}
- */
 final class {{class}} extends AbstractDirective
 {
     public function getSignature(): string
@@ -26,24 +23,9 @@ final class {{class}} extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection();
-        // $aliases->add('your-alias');
-        return $aliases;
+        return new StringTypedCollection();
     }
 
-    /**
-     * Override this method to enable Laravel bootstrapping.
-     * 
-     * Set to true if your directive needs:
-     * - Eloquent models (User::find(), etc.)
-     * - Database connections (DB::table())
-     * - Laravel cache, queues, events, or any Laravel service
-     * 
-     * When set to true, the directive will automatically bootstrap Laravel
-     * before executing, making all Laravel features available.
-     * 
-     * Default is false for optimal performance (no Laravel bootstrap overhead).
-     */
     public function shouldBootLaravel(): bool
     {
         return false;
@@ -51,17 +33,8 @@ final class {{class}} extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        // TODO: Implement your directive logic here
-
-        // Check if Laravel is available (if you enabled it)
-        if ($this->hasLaravel()) {
-            $this->info('Laravel is available!');
-            // You can now use Eloquent models, DB facade, etc.
-            // Example: $user = \App\Models\User::find(1);
-        }
-
         $this->info('Directive executed successfully!');
-
+        
         return ExitCode::SUCCESS;
     }
 }
