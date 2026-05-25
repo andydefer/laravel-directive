@@ -19,7 +19,9 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveHydratorServiceTest extends UnitTestCase
 {
     private DirectiveFactoryInterface&MockObject $factory;
+
     private DirectiveInteractionService&MockObject $interaction;
+
     private DirectiveHydratorService $service;
 
     protected function setUp(): void
@@ -42,6 +44,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
         foreach ($items as $item) {
             $collection->add($item);
         }
+
         return $collection;
     }
 
@@ -55,7 +58,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['John Doe', 'name', 'john@example.com', 'email']);
-        $options = new StringTypedCollection();
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -77,7 +80,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $options = $this->createMixedCollection(['active', 'true', 'verbose', null, 'role', 'admin']);
 
         $parsed = new ParsedDirectiveRecord(
@@ -101,7 +104,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
-        $options = new StringTypedCollection();
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -123,8 +126,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
-        $options = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -146,7 +149,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createMixedCollection(['value1', 'key1', 'value2']);
-        $options = new StringTypedCollection();
+        $options = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -166,7 +169,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $options = $this->createMixedCollection(['active', 'true', 'verbose']);
 
         $parsed = new ParsedDirectiveRecord(
@@ -187,7 +190,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $options = $this->createMixedCollection([
             'string_value',
             'hello',

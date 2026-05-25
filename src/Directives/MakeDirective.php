@@ -9,7 +9,7 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
+use AndyDefer\Directive\Traits\FileCreator;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
 /**
@@ -17,13 +17,21 @@ use AndyDefer\Records\Collections\Utility\StringTypedCollection;
  */
 final class MakeDirective extends AbstractDirective
 {
+    use FileCreator;
+
+    private const DIRECTIVES_PATH = '/app/Directives/';
+
+    private string $stubPath;
+
     public function __construct(
         DirectiveInteractionService $interaction,
         private readonly SignatureValidationService $signatureValidator,
         private readonly DirectiveNamingService $namingService,
-        private readonly CreateDirectiveFileTask $fileTask,
+        ?string $stubPath = null,
     ) {
         parent::__construct($interaction);
+        $this->initFileCreator();
+        $this->stubPath = $stubPath ?? __DIR__.'/../../stubs/directive.stub';
     }
 
     public function getSignature(): string
@@ -69,21 +77,20 @@ final class MakeDirective extends AbstractDirective
         }
 
         $className = $this->namingService->generateClassName($name);
-        $result = $this->fileTask->execute($className, $name);
+        $destinationPath = $this->getAppPath(self::DIRECTIVES_PATH, $className);
 
-        if (! $result->success) {
-            $this->error($result->error ?? 'Failed to create directive');
-
+        if (! $this->createFile($this->stubPath, $destinationPath, [
+            '{{signature}}' => $name,
+            '{{class}}' => $className,
+            '{{description}}' => "Description for {$className}",
+            '{{date}}' => date('Y-m-d H:i:s'),
+        ])) {
             return ExitCode::FAILURE;
-        }
-
-        if (! is_dir(getcwd().'/app/Directives/')) {
-            $this->line('📁 Created directory: app/Directives/');
         }
 
         $this->info('✅ Directive created successfully!');
         $this->line("   Class: {$className}");
-        $this->line("   Path: {$result->path}");
+        $this->line("   Path: {$destinationPath}");
         $this->line("   Signature: {$name}");
 
         return ExitCode::SUCCESS;

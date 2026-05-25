@@ -32,17 +32,20 @@ class DirectiveExecutionService
 
         if ($signature === '--help' || $signature === '-h') {
             $this->renderer->renderHelp();
+
             return ExitCode::SUCCESS;
         }
 
         if ($signature === '--list' || $signature === '-l') {
             $directives = $this->discovery->discover();
             $this->renderer->renderList($directives);
+
             return ExitCode::SUCCESS;
         }
 
         if ($signature === '--version' || $signature === '-v') {
             $this->renderer->renderVersion();
+
             return ExitCode::SUCCESS;
         }
 
@@ -51,6 +54,7 @@ class DirectiveExecutionService
 
         if ($directive === null) {
             $this->renderer->renderNotFound($signature);
+
             return ExitCode::NOT_FOUND;
         }
 
@@ -95,7 +99,6 @@ class DirectiveExecutionService
         if ($this->laravelBootstrapper !== null && $directive instanceof AbstractDirective) {
             $reflection = new \ReflectionClass($directive);
             $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
-            // setAccessible() n'est plus nécessaire en PHP 8.1+
             $reflectionProperty->setValue($directive, $this->laravelBootstrapper);
         }
 
@@ -114,6 +117,7 @@ class DirectiveExecutionService
     {
         if ($this->laravelBootstrapper === null) {
             $this->renderer->renderWarning('Laravel bootstrapper not available.');
+
             return;
         }
 

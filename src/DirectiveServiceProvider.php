@@ -49,7 +49,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/config/directive.php' => config_path('directive.php'),
+            __DIR__.'/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -210,7 +210,7 @@ final class DirectiveServiceProvider extends ServiceProvider
                 interaction: $app->make(DirectiveInteractionService::class),
                 signatureValidator: $app->make(SignatureValidationService::class),
                 namingService: $app->make(DirectiveNamingService::class),
-                fileTask: $app->make(CreateDirectiveFileTask::class),
+                stubPath: __DIR__.'/../stubs/directive.stub',
             );
         });
     }

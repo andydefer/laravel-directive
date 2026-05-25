@@ -13,8 +13,11 @@ use AndyDefer\Records\Collections\TypedCollection;
 class DirectiveDiscoveryService
 {
     private ?LaravelBootstrapper $laravelBootstrapper = null;
+
     private static bool $bootstrapped = false;
+
     private string $projectRoot;
+
     private string $vendorDir;
 
     public function __construct(
@@ -22,7 +25,7 @@ class DirectiveDiscoveryService
         private readonly DirectiveHydratorService $hydrator,
     ) {
         $this->projectRoot = getcwd();
-        $this->vendorDir = $this->projectRoot . '/vendor';
+        $this->vendorDir = $this->projectRoot.'/vendor';
     }
 
     public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
@@ -47,7 +50,7 @@ class DirectiveDiscoveryService
     {
         $path = $this->config->directivesPath;
 
-        if ($path === '' || !is_dir($path)) {
+        if ($path === '' || ! is_dir($path)) {
             return $results;
         }
 
@@ -56,14 +59,14 @@ class DirectiveDiscoveryService
 
     /**
      * Découvre les directives dans les packages installés via Composer.
-     * 
+     *
      * Parcourt tous les packages dans vendor/ et cherche dans src/Directives/
      */
     private function discoverFromVendorPackages(TypedCollection $results): TypedCollection
     {
-        $composerFile = $this->projectRoot . '/composer.json';
+        $composerFile = $this->projectRoot.'/composer.json';
 
-        if (!file_exists($composerFile)) {
+        if (! file_exists($composerFile)) {
             return $results;
         }
 
@@ -81,14 +84,14 @@ class DirectiveDiscoveryService
                 continue;
             }
 
-            $packagePath = $this->vendorDir . '/' . $packageName;
+            $packagePath = $this->vendorDir.'/'.$packageName;
 
-            if (!is_dir($packagePath)) {
+            if (! is_dir($packagePath)) {
                 continue;
             }
 
             // Chercher dans src/Directives
-            $directivesPath = $packagePath . '/src/Directives';
+            $directivesPath = $packagePath.'/src/Directives';
 
             if (is_dir($directivesPath)) {
                 $results = $this->scanDirectoryForDirectives($results, $directivesPath);
@@ -96,8 +99,8 @@ class DirectiveDiscoveryService
 
             // Optionnel : Chercher aussi dans un dossier alternatif pour compatibilité
             $altPaths = [
-                $packagePath . '/Directives',
-                $packagePath . '/src/Directive',
+                $packagePath.'/Directives',
+                $packagePath.'/src/Directive',
             ];
 
             foreach ($altPaths as $altPath) {
@@ -115,7 +118,7 @@ class DirectiveDiscoveryService
      */
     private function scanDirectoryForDirectives(TypedCollection $results, string $directory): TypedCollection
     {
-        $files = glob($directory . '/*.php');
+        $files = glob($directory.'/*.php');
 
         if ($files === false) {
             return $results;
@@ -123,7 +126,7 @@ class DirectiveDiscoveryService
 
         foreach ($files as $file) {
             $metadata = $this->extractMetadataFromFile($file);
-            if ($metadata !== null && !$this->isAlreadyRegistered($results, $metadata->signature)) {
+            if ($metadata !== null && ! $this->isAlreadyRegistered($results, $metadata->signature)) {
                 $results->add($metadata);
             }
         }
@@ -152,7 +155,7 @@ class DirectiveDiscoveryService
     {
         $class = $this->getClassFromFile($file);
 
-        if ($class === '' || !class_exists($class)) {
+        if ($class === '' || ! class_exists($class)) {
             return null;
         }
 
@@ -169,31 +172,34 @@ class DirectiveDiscoveryService
             if ($debug) {
                 fwrite(STDERR, "[DEBUG] Skipping abstract class: {$class}\n");
             }
+
             return null;
         }
 
         // Vérification 2 : La classe doit étendre AbstractDirective
-        if (!is_subclass_of($class, AbstractDirective::class)) {
+        if (! is_subclass_of($class, AbstractDirective::class)) {
             $debug = getenv('DIRECTIVE_DEBUG') === 'true';
             if ($debug) {
-                fwrite(STDERR, "[DEBUG] Skipping {$class}: does not extend " . AbstractDirective::class . "\n");
+                fwrite(STDERR, "[DEBUG] Skipping {$class}: does not extend ".AbstractDirective::class."\n");
             }
+
             return null;
         }
 
         // Vérification 3 : La classe doit implémenter DirectiveInterface
         // (Normalement true si elle étend AbstractDirective, mais vérification de sécurité)
-        if (!is_subclass_of($class, DirectiveInterface::class)) {
+        if (! is_subclass_of($class, DirectiveInterface::class)) {
             $debug = getenv('DIRECTIVE_DEBUG') === 'true';
             if ($debug) {
-                fwrite(STDERR, "[DEBUG] Skipping {$class}: does not implement " . DirectiveInterface::class . "\n");
+                fwrite(STDERR, "[DEBUG] Skipping {$class}: does not implement ".DirectiveInterface::class."\n");
             }
+
             return null;
         }
 
         $needsLaravel = $this->checkIfNeedsLaravel($class);
 
-        if ($needsLaravel && $this->laravelBootstrapper !== null && !self::$bootstrapped) {
+        if ($needsLaravel && $this->laravelBootstrapper !== null && ! self::$bootstrapped) {
             $this->laravelBootstrapper->bootstrap();
             self::$bootstrapped = true;
         }
@@ -212,8 +218,9 @@ class DirectiveDiscoveryService
         } catch (\Throwable $e) {
             $debug = getenv('DIRECTIVE_DEBUG') === 'true';
             if ($debug) {
-                fwrite(STDERR, "[DEBUG] Failed to extract metadata for {$class}: " . $e->getMessage() . "\n");
+                fwrite(STDERR, "[DEBUG] Failed to extract metadata for {$class}: ".$e->getMessage()."\n");
             }
+
             return null;
         }
     }
@@ -223,11 +230,12 @@ class DirectiveDiscoveryService
         try {
             $reflection = new \ReflectionClass($class);
 
-            if (!$reflection->hasMethod('shouldBootLaravel')) {
+            if (! $reflection->hasMethod('shouldBootLaravel')) {
                 return false;
             }
 
             $tempInstance = $reflection->newInstanceWithoutConstructor();
+
             return $tempInstance->shouldBootLaravel();
         } catch (\Throwable $e) {
             return false;
@@ -249,6 +257,6 @@ class DirectiveDiscoveryService
             return $class;
         }
 
-        return $namespace . '\\' . $class;
+        return $namespace.'\\'.$class;
     }
 }

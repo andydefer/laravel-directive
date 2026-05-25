@@ -35,8 +35,9 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
     {
         $this->info('Testing Laravel database integration...');
 
-        if (!$this->hasLaravel()) {
+        if (! $this->hasLaravel()) {
             $this->error('Laravel is not available!');
+
             return ExitCode::FAILURE;
         }
 
@@ -47,17 +48,17 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
             $this->info("✓ Found {$userCount} users in database");
 
             $activeUsers = TestUser::active()->get();
-            $this->info('✓ Found ' . $activeUsers->count() . ' active users');
+            $this->info('✓ Found '.$activeUsers->count().' active users');
 
             $verifiedUsers = TestUser::verified()->with('posts')->get();
 
             if ($verifiedUsers->isNotEmpty()) {
-                $headers = new StringTypedCollection();
+                $headers = new StringTypedCollection;
                 $headers->add('User', 'Email', 'Posts Count', 'Published Posts');
 
-                $rows = new RowCollection();
+                $rows = new RowCollection;
                 foreach ($verifiedUsers as $user) {
-                    $row = new RowCollection();
+                    $row = new RowCollection;
                     $row->add(
                         $user->name,
                         $user->email,
@@ -73,12 +74,14 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
             }
 
             $publishedPosts = TestPost::published()->with('user')->get();
-            $this->info('✓ Found ' . $publishedPosts->count() . ' published posts');
+            $this->info('✓ Found '.$publishedPosts->count().' published posts');
 
             $this->info('Database query successful');
+
             return ExitCode::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Database error: ' . $e->getMessage());
+            $this->error('Database error: '.$e->getMessage());
+
             return ExitCode::FAILURE;
         }
     }

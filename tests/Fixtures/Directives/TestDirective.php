@@ -12,7 +12,9 @@ use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 final class TestDirective extends AbstractDirective
 {
     private string $signature = 'test-directive';
+
     private string $description = 'Test directive';
+
     private ?ExitCode $exitCode = null;
 
     public function __construct(
@@ -43,7 +45,7 @@ final class TestDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        return new StringTypedCollection();
+        return new StringTypedCollection;
     }
 
     public function execute(): ExitCode

@@ -24,7 +24,7 @@ final class TableRenderStrategy implements RenderStrategyInterface
 
     public function execute(Recordable $record, RenderType $type): ReplacementCollection
     {
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
         // CORRECTION : Extraire le DisplayTableRecord du RenderRecord
         if ($record instanceof RenderRecord && $record->tableRecord instanceof DisplayTableRecord) {
@@ -57,7 +57,7 @@ final class TableRenderStrategy implements RenderStrategyInterface
 
     private function calculateColumnWidths(DisplayTableRecord $record): WidthCollection
     {
-        $widths = new WidthCollection();
+        $widths = new WidthCollection;
         $headersArray = $record->headers->toArray();
         $columnCount = count($headersArray);
 
@@ -108,7 +108,7 @@ final class TableRenderStrategy implements RenderStrategyInterface
             $parts[] = str_pad($header, $width);
         }
 
-        return '| ' . implode(' | ', $parts) . ' |';
+        return '| '.implode(' | ', $parts).' |';
     }
 
     private function formatDataRow(RowCollection $row, WidthCollection $widths): string
@@ -121,7 +121,7 @@ final class TableRenderStrategy implements RenderStrategyInterface
             $parts[] = str_pad($formattedValue, $width);
         }
 
-        return '| ' . implode(' | ', $parts) . ' |';
+        return '| '.implode(' | ', $parts).' |';
     }
 
     private function formatValue(mixed $value): string
@@ -149,6 +149,6 @@ final class TableRenderStrategy implements RenderStrategyInterface
             $parts[] = str_repeat('-', $width);
         }
 
-        return '|-' . implode('-|-', $parts) . '-|';
+        return '|-'.implode('-|-', $parts).'-|';
     }
 }

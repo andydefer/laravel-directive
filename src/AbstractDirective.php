@@ -15,6 +15,7 @@ use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 abstract class AbstractDirective implements DirectiveInterface
 {
     protected ParameterCollection $arguments;
+
     protected ParameterCollection $options;
 
     public function __construct(
@@ -69,6 +70,7 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self
     {
         $this->laravelBootstrapper = $bootstrapper;
+
         return $this;
     }
 
@@ -77,6 +79,7 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setArguments(ParameterCollection $arguments): self
     {
         $this->arguments = $arguments;
+
         return $this;
     }
 
@@ -96,6 +99,7 @@ abstract class AbstractDirective implements DirectiveInterface
     public function setOptions(ParameterCollection $options): self
     {
         $this->options = $options;
+
         return $this;
     }
 

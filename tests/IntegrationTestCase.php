@@ -8,8 +8,8 @@ namespace AndyDefer\Directive\Tests;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveServiceProvider;
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Carbon\Carbon;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -23,15 +23,15 @@ abstract class IntegrationTestCase extends Orchestra
         Carbon::setTestNow(Carbon::create(2024, 1, 1, 12, 0, 0));
 
         // 1. Créer le bootstrapper avec le chemin personnalisé
-        $this->laravelBootstrapper = new LaravelBootstrapper();
-        $this->laravelBootstrapper->setCustomBootstrapPath(__DIR__ . '/bootstrap/app.php');
+        $this->laravelBootstrapper = new LaravelBootstrapper;
+        $this->laravelBootstrapper->setCustomBootstrapPath(__DIR__.'/bootstrap/app.php');
         $this->app->instance(LaravelBootstrapper::class, $this->laravelBootstrapper);
 
         // 2. Bootstrap Laravel
         $success = $this->laravelBootstrapper->bootstrap();
 
-        if (!$success) {
-            $this->markTestSkipped('Laravel bootstrap failed: ' . $this->laravelBootstrapper->getError());
+        if (! $success) {
+            $this->markTestSkipped('Laravel bootstrap failed: '.$this->laravelBootstrapper->getError());
         }
 
         // 3. Configurer le chemin des directives
@@ -46,7 +46,7 @@ abstract class IntegrationTestCase extends Orchestra
         $this->runDatabaseMigrations();
 
         // 6. Forcer la recréation du DiscoveryService
-        $this->app->forgetInstance(\AndyDefer\Directive\Services\DirectiveDiscoveryService::class);
+        $this->app->forgetInstance(DirectiveDiscoveryService::class);
     }
 
     protected function tearDown(): void
@@ -58,7 +58,7 @@ abstract class IntegrationTestCase extends Orchestra
 
     private function configureDirectivesPath(): void
     {
-        $fixturesPath = __DIR__ . '/Fixtures/Directives';
+        $fixturesPath = __DIR__.'/Fixtures/Directives';
         $config = DirectiveConfig::default()->withDirectivesPath($fixturesPath);
         $this->app->instance(DirectiveConfig::class, $config);
         $this->app['config']->set('directive.path', $fixturesPath);
@@ -75,13 +75,13 @@ abstract class IntegrationTestCase extends Orchestra
         ]);
 
         $app['config']->set('cache.default', 'array');
-        $app['config']->set('view.compiled', __DIR__ . '/storage/framework/views');
-        $app['config']->set('directive.path', __DIR__ . '/Fixtures/Directives');
+        $app['config']->set('view.compiled', __DIR__.'/storage/framework/views');
+        $app['config']->set('directive.path', __DIR__.'/Fixtures/Directives');
     }
 
     protected function defineEnvironment($app): void
     {
-        $app['config']->set('view.paths', [__DIR__ . '/Fixtures/views']);
+        $app['config']->set('view.paths', [__DIR__.'/Fixtures/views']);
     }
 
     protected function getPackageProviders($app)
@@ -93,7 +93,7 @@ abstract class IntegrationTestCase extends Orchestra
 
     protected function runDatabaseMigrations(): void
     {
-        $migrationPath = __DIR__ . '/database/migrations';
+        $migrationPath = __DIR__.'/database/migrations';
 
         if (is_dir($migrationPath)) {
             $this->loadMigrationsFrom($migrationPath);

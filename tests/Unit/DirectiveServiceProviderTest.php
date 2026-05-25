@@ -27,19 +27,22 @@ use Illuminate\Container\Container;
 final class DirectiveServiceProviderTest extends UnitTestCase
 {
     private Container $container;
+
     private DirectiveServiceProvider $provider;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->container = new Container();
+        $this->container = new Container;
 
-        $this->container->instance('config', new class {
+        $this->container->instance('config', new class
+        {
             public function get($key, $default = null)
             {
                 return $default;
             }
+
             public function has($key)
             {
                 return false;
