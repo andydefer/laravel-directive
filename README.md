@@ -1,3 +1,6 @@
+Voici la documentation complète enrichie avec la section sur le bootstrapping Laravel dans les tests :
+
+```markdown
 # Laravel Directive
 
 **A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between business logic and presentation.**
@@ -675,7 +678,7 @@ Sortie :
 📦 Laravel Directive
 ═══════════════════════════════════════════════════════════════════════════
 
-Version: 1.1.0
+Version: 2.2.0
 PHP Version: 8.2.0
 Laravel Version: 13.0.0
 
@@ -748,11 +751,70 @@ final class UserListDirectiveTest extends TestCase
 }
 ```
 
+### Tester des directives qui nécessitent Laravel
+
+Pour les directives qui utilisent `shouldBootLaravel()`, vous pouvez activer l'environnement Laravel complet dans vos tests :
+
+```php
+<?php
+
+namespace Tests\Unit\Directives;
+
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Testing\InteractsWithDirectives;
+use App\Directives\UserStatsDirective;
+use PHPUnit\Framework\TestCase;
+
+final class UserStatsDirectiveTest extends TestCase
+{
+    use InteractsWithDirectives;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Active l'environnement Laravel complet
+        $this->initDirectiveTesting(bootLaravel: true);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->destroyDirectiveTesting();
+        parent::tearDown();
+    }
+
+    public function test_directive_with_laravel_bootstrapped(): void
+    {
+        $this->registerDirectiveClass(UserStatsDirective::class);
+        
+        $response = $this->runDirective('user-stats', ['--active']);
+        
+        $response->assertSuccess();
+        $this->assertStringContainsString('Total users:', $response->getOutput());
+    }
+}
+```
+
+### Que fait `bootLaravel: true` ?
+
+Lorsque vous activez cette option, le trait crée dynamiquement :
+
+1. **La structure complète d'une application Laravel** :
+   - `bootstrap/app.php` - Le fichier de démarrage de l'application
+   - `config/app.php` - La configuration minimale
+   - `storage/` - Les dossiers de stockage (framework, logs, cache)
+   - `app/Http/` et `app/Models/` - Les dossiers de base
+
+2. **Une instance de l'application Laravel** prête à être utilisée
+
+3. **Le `LaravelBootstrapper` configuré** avec le chemin personnalisé vers l'application
+
+Tout cela est fait **sans utiliser de réflexion** et de manière totalement isolée dans un répertoire temporaire.
+
 ### Méthodes du trait `InteractsWithDirectives`
 
 | Méthode | Description |
 |---------|-------------|
-| `initDirectiveTesting()` | Initialise l'environnement de test (répertoire temporaire, conteneur, kernel) |
+| `initDirectiveTesting(bool $bootLaravel = false)` | Initialise l'environnement de test (répertoire temporaire, conteneur, kernel). Optionnellement bootstrap Laravel |
 | `destroyDirectiveTesting()` | Nettoie l'environnement de test |
 | `registerDirective(AbstractDirective $directive)` | Enregistre une instance de directive |
 | `registerDirectiveClass(string $className, array $constructorArgs = [])` | Enregistre une directive par nom de classe |
@@ -951,9 +1013,10 @@ Le trait `InteractsWithDirectives` :
 
 1. **Crée un environnement isolé** : Un répertoire temporaire est créé pour simuler l'application
 2. **Initialise un conteneur** : Un conteneur Illuminate est configuré avec tous les services nécessaires
-3. **Enregistre les directives** : Les directives sont stockées dans un registry au lieu d'être lues depuis le filesystem
-4. **Exécute les directives** : Le kernel normal est utilisé, mais avec un loader personnalisé
-5. **Nettoie automatiquement** : Le répertoire temporaire est supprimé après les tests
+3. **Optionnellement bootstrap Laravel** : Si `bootLaravel: true` est passé, crée une structure Laravel complète
+4. **Enregistre les directives** : Les directives sont stockées dans un registry au lieu d'être lues depuis le filesystem
+5. **Exécute les directives** : Le kernel normal est utilisé, mais avec un loader personnalisé
+6. **Nettoie automatiquement** : Le répertoire temporaire est supprimé après les tests
 
 ### Points importants
 
@@ -961,6 +1024,7 @@ Le trait `InteractsWithDirectives` :
 - Appelez `initDirectiveTesting()` dans `setUp()` et `destroyDirectiveTesting()` dans `tearDown()`
 - Les directives doivent être enregistrées AVANT de les exécuter
 - Le répertoire temporaire est accessible via `$this->directiveTempDir` pour vérifier les fichiers créés
+- Pour les directives qui nécessitent Laravel, utilisez `initDirectiveTesting(bootLaravel: true)`
 
 ---
 
@@ -1042,10 +1106,10 @@ final class UserListDirective extends AbstractDirective
 | **Test des options** | Doit passer par la ligne de commande | Accès direct via `option()` mocké |
 | **Test des sorties** | Capture via `$this->expectsOutput()` | Mock des services d'affichage |
 | **Test des interactions** | Impossible de mocker `ask()` et `confirm()` | Mock du service d'interaction |
-| **Test de Laravel** | Nécessite un environnement complet | Possible avec `shouldBootLaravel()` mocké |
+| **Test de Laravel** | Nécessite un environnement complet | Possible avec `shouldBootLaravel()` mocké ou `bootLaravel: true` |
 | **Isolement** | La commande s'exécute réellement | La logique métier est isolée |
 
-### Exemple : Tester une directive avec Laravel
+### Exemple : Tester une directive avec Laravel (sans bootstrapping)
 
 ```php
 <?php
@@ -1090,6 +1154,47 @@ final class UserListDirectiveTest extends TestCase
         $result = $this->directive->execute();
         
         $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+}
+```
+
+### Exemple : Tester une directive avec Laravel (avec bootstrapping réel)
+
+```php
+<?php
+
+namespace Tests\Unit\Directives;
+
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Testing\InteractsWithDirectives;
+use App\Directives\UserStatsDirective;
+use PHPUnit\Framework\TestCase;
+
+final class UserStatsDirectiveTest extends TestCase
+{
+    use InteractsWithDirectives;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Active un environnement Laravel complet
+        $this->initDirectiveTesting(bootLaravel: true);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->destroyDirectiveTesting();
+        parent::tearDown();
+    }
+
+    public function test_execute_with_laravel_available(): void
+    {
+        $this->registerDirectiveClass(UserStatsDirective::class);
+        
+        $response = $this->runDirective('user-stats', ['--active']);
+        
+        $response->assertSuccess();
+        $this->assertStringContainsString('Total users:', $response->getOutput());
     }
 }
 ```
@@ -1594,3 +1699,4 @@ Which one do you want to use? [1-2]:
 ## Licence
 
 MIT © [Andy Defer](https://github.com/andydefer)
+```
