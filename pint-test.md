@@ -1,11 +1,11 @@
 # Pint Formatting Test Report
-*Generated: mar. 26 mai 2026 00:46:15 WAT*
+*Generated: mar. 26 mai 2026 09:03:51 WAT*
 
 
-  ⨯...........................⨯⨯⨯⨯⨯⨯..⨯⨯.............⨯...⨯..⨯...⨯⨯.........⨯...⨯....⨯⨯⨯⨯.....................⨯..⨯..........⨯.⨯....⨯⨯......⨯......!!
+  ⨯...........................⨯⨯⨯⨯⨯⨯..⨯⨯.............⨯...⨯..⨯...⨯⨯.........⨯...⨯....⨯⨯⨯⨯⨯.....................⨯..⨯..........⨯.⨯....⨯⨯......⨯......!!
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ...................................................................................................................................... 145 files, 2 errors, 27 style issues  
+    FAIL   ...................................................................................................................................... 146 files, 2 errors, 28 style issues  
   ! app/Directives/TestCommandDirective.php                                                                         Parse error: syntax error, unexpected token "namespace" on line 1.  
   ! app/Directives/UserCreateDirective.php                                                                          Parse error: syntax error, unexpected token "namespace" on line 1.  
   ⨯ src/AbstractDirective.php                                                                                                                                             phpdoc_align  
@@ -21,7 +21,7 @@
   ⨯ src/Testing/DirectiveResponse.php                                          braces_position, not_operator_with_successor_space, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Testing/InteractsWithDirectives.php            class_attributes_separation, new_with_parentheses, concat_space, not_operator_with_successor_space, blank_line_before_statement  
   ⨯ src/Testing/TestDirectiveDiscoveryService.php                                                                       not_operator_with_successor_space, blank_line_before_statement  
-  ⨯ src/Testing/TestDirectiveRegistry.php                                                               class_attributes_separation, new_with_parentheses, blank_line_before_statement  
+  ⨯ src/Testing/TestDirectiveRegistry.php                                            class_attributes_separation, new_with_parentheses, no_unused_imports, blank_line_before_statement  
   ⨯ src/Traits/FileCreator.php                                     new_with_parentheses, concat_space, not_operator_with_successor_space, blank_line_before_statement, ordered_imports  
   ⨯ tests/Feature/DirectiveIntegrationTest.php                                                                                                                            concat_space  
   ⨯ tests/Fixtures/Directives/AnotherTestDirective.php                                                                                                            new_with_parentheses  
@@ -34,5 +34,6 @@
   ⨯ tests/Unit/Testing/ClosureDirectiveTest.php class_attributes_separation, new_with_parentheses, function_declaration, fully_qualified_strict_types, blank_line_before_statement, o…  
   ⨯ tests/Unit/Testing/InteractsWithDirectivesTest.php                                                                                       concat_space, blank_line_before_statement  
   ⨯ tests/Unit/Testing/TestDirectiveDiscoveryServiceTest.php                                                                                               class_attributes_separation  
+  ⨯ tests/Unit/Testing/TestDirectiveRegistryTest.php                                  class_attributes_separation, new_with_parentheses, fully_qualified_strict_types, ordered_imports  
   ⨯ tests/Unit/Traits/FileCreatorTest.php                                                                 class_attributes_separation, concat_space, not_operator_with_successor_space  
 

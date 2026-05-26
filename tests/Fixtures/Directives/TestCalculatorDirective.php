@@ -9,7 +9,7 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 
-final class TestCalculatorDirective extends AbstractDirective
+class TestCalculatorDirective extends AbstractDirective
 {
     public function __construct(
         DirectiveInteractionService $interaction,

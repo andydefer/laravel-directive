@@ -23,6 +23,7 @@ use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Records\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
+use Illuminate\Foundation\Application;
 
 trait InteractsWithDirectives
 {
@@ -32,18 +33,27 @@ trait InteractsWithDirectives
     private bool $directiveTestingInitialized = false;
     private string $directiveTempDir;
     private string $originalCwd;
+    private ?Application $laravelApp = null;
+    private bool $bootLaravelEnabled = false;
 
-    protected function initDirectiveTesting(): void
+    protected function initDirectiveTesting(bool $bootLaravel = false): void
     {
         if ($this->directiveTestingInitialized) {
             return;
         }
 
+        $this->bootLaravelEnabled = $bootLaravel;
         $this->directiveTempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
         mkdir($this->directiveTempDir, 0777, true);
 
         $this->originalCwd = getcwd();
         chdir($this->directiveTempDir);
+
+        // Créer la structure Laravel complète si demandé
+        if ($bootLaravel) {
+            $this->createLaravelStructure();
+            $this->laravelApp = $this->createApplication();
+        }
 
         $this->directiveContainer = new Container();
 
@@ -69,8 +79,17 @@ trait InteractsWithDirectives
             return new DirectiveNamingService();
         });
 
+        // Configuration du LaravelBootstrapper - utilisant setCustomBootstrapPath
         $this->directiveContainer->singleton(LaravelBootstrapper::class, function () {
-            return new LaravelBootstrapper();
+            $bootstrapper = new LaravelBootstrapper();
+
+            if ($this->laravelApp !== null) {
+                // Configurer le chemin personnalisé vers le fichier bootstrap
+                $bootstrapPath = $this->directiveTempDir . '/bootstrap/app.php';
+                $bootstrapper->setCustomBootstrapPath($bootstrapPath);
+            }
+
+            return $bootstrapper;
         });
 
         $directiveConfig = DirectiveConfig::default()->withDirectivesPath($this->directiveTempDir . '/app/Directives');
@@ -90,6 +109,7 @@ trait InteractsWithDirectives
         $this->directiveRegistry->setInteraction($interaction);
         $this->directiveRegistry->setSignatureValidator($signatureValidator);
         $this->directiveRegistry->setNamingService($namingService);
+        $this->directiveRegistry->setLaravelBootstrapper($laravelBootstrapper);
 
         $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $this->directiveRegistry);
         $discovery->setLaravelBootstrapper($laravelBootstrapper);
@@ -114,21 +134,100 @@ trait InteractsWithDirectives
         $this->directiveTestingInitialized = true;
     }
 
+    private function createLaravelStructure(): void
+    {
+        // Dossier bootstrap
+        $bootstrapDir = $this->directiveTempDir . '/bootstrap';
+        mkdir($bootstrapDir, 0777, true);
+
+        $appPhp = <<<'PHP'
+<?php
+
+$app = new Illuminate\Foundation\Application(
+    $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
+);
+
+$app->singleton(
+    Illuminate\Contracts\Http\Kernel::class,
+    Illuminate\Foundation\Http\Kernel::class
+);
+
+$app->singleton(
+    Illuminate\Contracts\Console\Kernel::class,
+    Illuminate\Foundation\Console\Kernel::class
+);
+
+$app->singleton(
+    Illuminate\Contracts\Debug\ExceptionHandler::class,
+    Illuminate\Foundation\Exceptions\Handler::class
+);
+
+return $app;
+PHP;
+        file_put_contents($bootstrapDir . '/app.php', $appPhp);
+
+        // Dossier config
+        $configDir = $this->directiveTempDir . '/config';
+        mkdir($configDir, 0777, true);
+
+        $configApp = <<<'PHP'
+<?php
+
+return [
+    'name' => 'Laravel Test Application',
+    'env' => 'testing',
+    'debug' => true,
+    'url' => 'http://localhost',
+    'timezone' => 'UTC',
+    'locale' => 'en',
+    'fallback_locale' => 'en',
+    'faker_locale' => 'en_US',
+    'key' => 'base64:' . base64_encode(random_bytes(32)),
+    'cipher' => 'AES-256-CBC',
+    'providers' => [],
+];
+PHP;
+        file_put_contents($configDir . '/app.php', $configApp);
+
+        // Dossier storage
+        $storageDir = $this->directiveTempDir . '/storage';
+        mkdir($storageDir, 0777, true);
+        mkdir($storageDir . '/framework', 0777, true);
+        mkdir($storageDir . '/framework/views', 0777, true);
+        mkdir($storageDir . '/framework/cache', 0777, true);
+        mkdir($storageDir . '/logs', 0777, true);
+
+        // Dossier app
+        mkdir($this->directiveTempDir . '/app', 0777, true);
+        mkdir($this->directiveTempDir . '/app/Http', 0777, true);
+        mkdir($this->directiveTempDir . '/app/Models', 0777, true);
+    }
+
+    private function createApplication(): Application
+    {
+        $app = require $this->directiveTempDir . '/bootstrap/app.php';
+
+        $app->useStoragePath($this->directiveTempDir . '/storage');
+        $app->instance('path.config', $this->directiveTempDir . '/config');
+
+        return $app;
+    }
+
     protected function registerDirective(AbstractDirective $directive): void
     {
-        $this->initDirectiveTesting();
+        $this->initDirectiveTesting($this->bootLaravelEnabled);
         $this->directiveRegistry->register($directive->getSignature(), $directive);
     }
 
     protected function registerDirectiveClass(string $className, array $constructorArgs = []): AbstractDirective
     {
-        $this->initDirectiveTesting();
+        $this->initDirectiveTesting($this->bootLaravelEnabled);
         return $this->directiveRegistry->registerByClass($className, $constructorArgs);
     }
 
     protected function registerDirectives(array $directives): void
     {
-        $this->initDirectiveTesting();
+        $this->initDirectiveTesting($this->bootLaravelEnabled);
         foreach ($directives as $directive) {
             $this->registerDirective($directive);
         }
@@ -143,7 +242,7 @@ trait InteractsWithDirectives
 
     protected function createTestDirective(string $signature, callable $execute): ClosureDirective
     {
-        $this->initDirectiveTesting();
+        $this->initDirectiveTesting($this->bootLaravelEnabled);
 
         $directive = new ClosureDirective(
             signature: $signature,
@@ -157,17 +256,14 @@ trait InteractsWithDirectives
 
     protected function runDirective(string $signature, array $arguments = []): DirectiveResponse
     {
-        $this->initDirectiveTesting();
+        $this->initDirectiveTesting($this->bootLaravelEnabled);
 
-        // Vérifier si la directive est dans le registry
         $directive = $this->directiveRegistry->getDirective($signature);
 
         if ($directive !== null) {
-            // Exécuter directement sans passer par le kernel
             return $this->executeDirectly($directive, $arguments);
         }
 
-        // Sinon passer par le kernel normal
         $argv = array_merge(['directive', $signature], $arguments);
 
         ob_start();
@@ -194,7 +290,6 @@ trait InteractsWithDirectives
         try {
             $parsed = $parser->parse($fullSignature, $argumentCollection);
 
-            // Utiliser l'instance existante, pas en créer une nouvelle
             if (method_exists($directive, 'setArguments')) {
                 $directive->setArguments(
                     ParameterCollection::fromFlatArguments($parsed->arguments)
@@ -225,7 +320,6 @@ trait InteractsWithDirectives
         }
     }
 
-
     protected function runAndAssert(string $signature, array $arguments = []): DirectiveResponse
     {
         $response = $this->runDirective($signature, $arguments);
@@ -248,6 +342,8 @@ trait InteractsWithDirectives
             chdir($this->originalCwd);
         }
 
+        $this->laravelApp = null;
+        $this->bootLaravelEnabled = false;
         $this->directiveTestingInitialized = false;
     }
 

@@ -9,8 +9,10 @@ use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
+use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Records\Collections\TypedCollection;
+use Illuminate\Foundation\Application;
 
 final class TestDirectiveRegistry implements DirectiveLoaderInterface
 {
@@ -20,6 +22,7 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     private ?DirectiveInteractionService $interaction = null;
     private ?SignatureValidationService $signatureValidator = null;
     private ?DirectiveNamingService $namingService = null;
+    private ?LaravelBootstrapper $laravelBootstrapper = null;
 
     public function setInteraction(DirectiveInteractionService $interaction): void
     {
@@ -34,6 +37,11 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     public function setNamingService(DirectiveNamingService $namingService): void
     {
         $this->namingService = $namingService;
+    }
+
+    public function setLaravelBootstrapper(LaravelBootstrapper $laravelBootstrapper): void
+    {
+        $this->laravelBootstrapper = $laravelBootstrapper;
     }
 
     public function register(string $signature, AbstractDirective $directive): void
@@ -71,6 +79,11 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
                         $this->namingService = new DirectiveNamingService();
                     }
                     $constructorArgs[] = $this->namingService;
+                } elseif ($paramType && $paramType->getName() === LaravelBootstrapper::class) {
+                    if ($this->laravelBootstrapper === null) {
+                        $this->laravelBootstrapper = new LaravelBootstrapper();
+                    }
+                    $constructorArgs[] = $this->laravelBootstrapper;
                 } elseif ($paramName === 'stubPath') {
                     $constructorArgs[] = null;
                 } else {

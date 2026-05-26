@@ -9,7 +9,9 @@ use AndyDefer\Directive\Testing\DirectiveResponse;
 use AndyDefer\Directive\Testing\InteractsWithDirectives;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
+#[AllowMockObjectsWithoutExpectations]
 final class InteractsWithDirectivesTest extends UnitTestCase
 {
     use InteractsWithDirectives;
@@ -205,5 +207,44 @@ final class InteractsWithDirectivesTest extends UnitTestCase
             ->assertSuccess()
             ->assertOutputContains('42')
             ->assertOutputContains('Operation: add');
+    }
+
+    // ==================== Nouveaux tests pour bootLaravel ====================
+
+    public function test_init_directive_testing_with_boot_laravel(): void
+    {
+        $this->destroyDirectiveTesting();
+        $this->initDirectiveTesting(bootLaravel: true);
+
+        $this->assertFileExists($this->directiveTempDir . '/bootstrap/app.php');
+        $this->assertFileExists($this->directiveTempDir . '/config/app.php');
+        $this->assertDirectoryExists($this->directiveTempDir . '/storage');
+
+        $directive = $this->registerDirectiveClass(TestCalculatorDirective::class);
+        $this->assertInstanceOf(TestCalculatorDirective::class, $directive);
+    }
+
+    public function test_run_directive_with_boot_laravel_enabled(): void
+    {
+        $this->destroyDirectiveTesting();
+        $this->initDirectiveTesting(bootLaravel: true);
+
+        $this->registerDirectiveClass(TestCalculatorDirective::class);
+
+        $response = $this->runDirective('calculator', ['add', '5', '3']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->getExitCode());
+        $this->assertStringContainsString('8', $response->getOutput());
+    }
+
+    public function test_multiple_directive_testing_initializations(): void
+    {
+        $this->initDirectiveTesting();
+        $firstTempDir = $this->directiveTempDir;
+
+        // Deuxième appel ne devrait pas recréer l'environnement
+        $this->initDirectiveTesting();
+
+        $this->assertSame($firstTempDir, $this->directiveTempDir);
     }
 }
