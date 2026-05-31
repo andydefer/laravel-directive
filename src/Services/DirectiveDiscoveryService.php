@@ -50,10 +50,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     public function discover(): DirectiveMetadataCollection
     {
-        return $this->loader->load();
+        $result = $this->loader->load();
+        return $result;
     }
-
-    // ==== Implémentation de DirectiveLoaderInterface pour le chargement depuis le filesystem ====
 
     public function load(): DirectiveMetadataCollection
     {
@@ -63,7 +62,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
     protected function loadFromFilesystem(): DirectiveMetadataCollection
     {
         $results = new DirectiveMetadataCollection;
+
         $results = $this->discoverFromFilesystem($results);
+
         $results = $this->discoverFromVendorPackagesRecursive($results);
 
         return $results;
@@ -77,6 +78,8 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
             return $results;
         }
 
+        $files = glob($path . '/*.php');
+
         return $this->scanDirectoryForDirectives($results, $path);
     }
 
@@ -89,7 +92,6 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         }
 
         $composer = json_decode(file_get_contents($composerFile), true);
-
         $rootPackages = array_merge(
             $composer['require'] ?? [],
             $composer['require-dev'] ?? []
@@ -142,7 +144,6 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         }
 
         $composer = json_decode(file_get_contents($composerFile), true);
-
         if ($composer === null) {
             return;
         }
@@ -181,10 +182,12 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
             return $results;
         }
 
+
         foreach ($files as $file) {
             $metadata = $this->extractMetadataFromFile($file);
             if ($metadata !== null && ! $this->isAlreadyRegistered($results, $metadata->signature)) {
                 $results->add($metadata);
+            } elseif ($metadata === null) {
             }
         }
 
@@ -221,20 +224,14 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         $reflection = new \ReflectionClass($class);
 
         if ($reflection->isAbstract()) {
-            $this->debug("Skipping abstract class: {$class}");
-
             return null;
         }
 
         if (! is_subclass_of($class, AbstractDirective::class)) {
-            $this->debug("Skipping {$class}: does not extend " . AbstractDirective::class);
-
             return null;
         }
 
         if (! is_subclass_of($class, DirectiveInterface::class)) {
-            $this->debug("Skipping {$class}: does not implement " . DirectiveInterface::class);
-
             return null;
         }
 
@@ -257,8 +254,6 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
                 aliases: $aliases,
             );
         } catch (\Throwable $e) {
-            $this->debug("Failed to extract metadata for {$class}: " . $e->getMessage());
-
             return null;
         }
     }

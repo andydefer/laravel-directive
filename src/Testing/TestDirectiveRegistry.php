@@ -8,106 +8,70 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Services\DirectiveNamingService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
-use AndyDefer\Directive\Services\SignatureValidationService;
 
 final class TestDirectiveRegistry implements DirectiveLoaderInterface
 {
-    /** @var array<string, AbstractDirective> */
+    /**
+     * Stockage par classe (FQCN)
+     * @var array<class-string<AbstractDirective>, AbstractDirective>
+     */
     private array $directives = [];
 
-    private ?DirectiveInteractionService $interaction = null;
+    /**
+     * Index de recherche : signature/alias/nom de base -> FQCN
+     * @var array<string, class-string<AbstractDirective>>
+     */
+    private array $index = [];
 
-    private ?SignatureValidationService $signatureValidator = null;
-
-    private ?DirectiveNamingService $namingService = null;
-
-    private ?LaravelBootstrapper $laravelBootstrapper = null;
-
-    public function setInteraction(DirectiveInteractionService $interaction): void
+    /**
+     * Enregistre une directive par son instance
+     */
+    public function register(AbstractDirective $directive): void
     {
-        $this->interaction = $interaction;
-    }
+        $className = get_class($directive);
 
-    public function setSignatureValidator(SignatureValidationService $signatureValidator): void
-    {
-        $this->signatureValidator = $signatureValidator;
-    }
+        if (isset($this->directives[$className])) {
+            return;
+        }
 
-    public function setNamingService(DirectiveNamingService $namingService): void
-    {
-        $this->namingService = $namingService;
-    }
+        $this->directives[$className] = $directive;
 
-    public function setLaravelBootstrapper(LaravelBootstrapper $laravelBootstrapper): void
-    {
-        $this->laravelBootstrapper = $laravelBootstrapper;
-    }
+        $signature = $directive->getSignature();
 
-    public function register(string $signature, AbstractDirective $directive): void
-    {
-        $this->directives[$signature] = $directive;
+        // Indexer la signature complète
+        $this->index[$signature] = $className;
 
+        // Indexer le nom de base (sans les {} ni les paramètres)
+        $baseSignature = explode(' ', $signature)[0];
+        $baseSignature = explode('{', $baseSignature)[0];
+        $this->index[$baseSignature] = $className;
+
+        // Indexer les alias
         foreach ($directive->getAliases() as $alias) {
-            $this->directives[$alias] = $directive;
+            $this->index[$alias] = $className;
         }
     }
 
-    public function registerByClass(string $className, array $constructorArgs = []): AbstractDirective
+    /**
+     * Enregistre plusieurs directives
+     *
+     * @param array<AbstractDirective> $directives
+     */
+    public function registerAll(array $directives): void
     {
-        $reflection = new \ReflectionClass($className);
-        $constructor = $reflection->getConstructor();
-
-        if (empty($constructorArgs) && $constructor) {
-            $params = $constructor->getParameters();
-            foreach ($params as $param) {
-                $paramType = $param->getType();
-                $paramName = $param->getName();
-
-                if ($paramType && $paramType->getName() === DirectiveInteractionService::class) {
-                    if ($this->interaction === null) {
-                        throw new \RuntimeException('DirectiveInteractionService not set. Call setInteraction() first.');
-                    }
-                    $constructorArgs[] = $this->interaction;
-                } elseif ($paramType && $paramType->getName() === SignatureValidationService::class) {
-                    if ($this->signatureValidator === null) {
-                        $this->signatureValidator = new SignatureValidationService;
-                    }
-                    $constructorArgs[] = $this->signatureValidator;
-                } elseif ($paramType && $paramType->getName() === DirectiveNamingService::class) {
-                    if ($this->namingService === null) {
-                        $this->namingService = new DirectiveNamingService;
-                    }
-                    $constructorArgs[] = $this->namingService;
-                } elseif ($paramType && $paramType->getName() === LaravelBootstrapper::class) {
-                    if ($this->laravelBootstrapper === null) {
-                        $this->laravelBootstrapper = new LaravelBootstrapper;
-                    }
-                    $constructorArgs[] = $this->laravelBootstrapper;
-                } elseif ($paramName === 'stubPath') {
-                    $constructorArgs[] = null;
-                } else {
-                    $constructorArgs[] = null;
-                }
-            }
+        foreach ($directives as $directive) {
+            $this->register($directive);
         }
-
-        $directive = $reflection->newInstanceArgs($constructorArgs);
-        $this->register($directive->getSignature(), $directive);
-
-        return $directive;
     }
 
     public function load(): DirectiveMetadataCollection
     {
         $results = new DirectiveMetadataCollection;
 
-        foreach ($this->directives as $signature => $directive) {
+        foreach ($this->directives as $className => $directive) {
             $results->add(new DirectiveMetadataRecord(
-                signature: $signature,
-                class: get_class($directive),
+                signature: $directive->getSignature(),
+                class: $className,
                 description: $directive->getDescription(),
                 aliases: $directive->getAliases(),
             ));
@@ -116,13 +80,59 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
         return $results;
     }
 
-    public function getDirective(string $signature): ?AbstractDirective
+    /**
+     * Récupère une directive par FQCN, signature, alias ou nom de base
+     */
+    public function getDirective(string $identifier): ?AbstractDirective
     {
-        return $this->directives[$signature] ?? null;
+        // 1. Chercher par FQCN
+        if (isset($this->directives[$identifier])) {
+            return $this->directives[$identifier];
+        }
+
+        // 2. Chercher dans l'index (signature exacte, alias, ou nom de base)
+        if (isset($this->index[$identifier])) {
+            $className = $this->index[$identifier];
+            return $this->directives[$className] ?? null;
+        }
+
+        return null;
     }
 
+    /**
+     * Vérifie si une directive est enregistrée par son FQCN
+     */
+    public function hasDirective(string $className): bool
+    {
+        return isset($this->directives[$className]);
+    }
+
+    /**
+     * Retourne toutes les directives enregistrées
+     *
+     * @return array<class-string<AbstractDirective>, AbstractDirective>
+     */
+    public function getAllDirectives(): array
+    {
+        return $this->directives;
+    }
+
+    /**
+     * Retourne toutes les clés de l'index (signatures, alias, noms de base)
+     *
+     * @return array<string>
+     */
+    public function getAllSignatures(): array
+    {
+        return array_keys($this->index);
+    }
+
+    /**
+     * Vide le registry
+     */
     public function clear(): void
     {
         $this->directives = [];
+        $this->index = [];
     }
 }

@@ -25,27 +25,26 @@ class DirectiveKernel
 
     public function run(array $argv): ExitCode
     {
+
         if (count($argv) < 2) {
             return $this->showDefaultHelp();
         }
 
         $signature = $argv[1];
 
-        // Check for long options --help, --list
         if (str_starts_with($signature, '--')) {
             return $this->executeDirective($signature, []);
         }
 
-        // Check for allowed short options -h, -l, -v
         if (ShortOption::isValid($signature)) {
             return $this->executeDirective($signature, []);
         }
 
         $validation = $this->signatureValidator->validate($signature);
 
+
         if (! $validation->isValid) {
             $this->renderer->renderValidationError($validation);
-
             return ExitCode::INVALID_ARGUMENT;
         }
 
@@ -56,18 +55,22 @@ class DirectiveKernel
 
     private function executeDirective(string $signature, array $arguments): ExitCode
     {
+
         $argumentCollection = new StringTypedCollection;
 
         foreach ($arguments as $argument) {
             $argumentCollection->add($argument);
         }
 
+
         $record = new DirectiveExecutionRecord(
             signature: $signature,
             arguments: $argumentCollection,
         );
 
-        return $this->service->execute($record);
+        $result = $this->service->execute($record);
+
+        return $result;
     }
 
     private function showDefaultHelp(): ExitCode

@@ -10,7 +10,6 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
-use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 use InvalidArgumentException;
 
 class DirectiveExecutionService
@@ -30,15 +29,27 @@ class DirectiveExecutionService
     }
 
     /**
-     * Find a directive metadata by signature or alias.
+     * Find a directive metadata by signature, alias, or base name.
      */
     private function findDirective(DirectiveMetadataCollection $directives, string $signature): ?DirectiveMetadataRecord
     {
         foreach ($directives as $directive) {
+            // 1. Correspondance exacte de la signature complète
             if ($directive->signature === $signature) {
                 return $directive;
             }
+
+            // 2. Correspondance par alias
             if ($directive->aliases->contains($signature)) {
+                return $directive;
+            }
+
+            // 3. Correspondance par nom de base (ex: 'test-echo' au lieu de 'test-echo {message?} {extra?}')
+            $baseSignature = explode(' ', $directive->signature)[0];
+            $baseSignature = explode('{', $baseSignature)[0];
+            $baseSignature = rtrim($baseSignature, '-');
+
+            if ($baseSignature === $signature) {
                 return $directive;
             }
         }
@@ -70,7 +81,7 @@ class DirectiveExecutionService
         // Load directives
         $directives = $this->discovery->discover();
 
-        // Find directive by signature or alias
+        // Find directive by signature, alias, or base name
         $directiveMetadata = $this->findDirective($directives, $record->signature);
 
         if ($directiveMetadata === null) {
