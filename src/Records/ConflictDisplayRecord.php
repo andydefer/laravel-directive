@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Records;
 
-use AndyDefer\Records\AbstractRecord;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class ConflictDisplayRecord extends AbstractRecord
 {

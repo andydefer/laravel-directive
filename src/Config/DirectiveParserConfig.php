@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Config;
 
-use AndyDefer\Records\AbstractRecord;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 /**
  * Configuration for directive parsing behavior.

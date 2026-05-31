@@ -15,7 +15,7 @@ use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
  * Service for directive user interaction (messages, questions, tables).

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Collections;
 
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 
 /**
  * Type-safe collection for table rows.
@@ -17,6 +17,13 @@ final class RowCollection extends IndexedCollection
 {
     public function __construct()
     {
-        parent::__construct('string', 'int', 'float', 'bool', 'null', TypedCollection::class);
+        parent::__construct(
+            'string',
+            'int',
+            'float',
+            'bool',
+            'null',
+            RowCollection::class
+        );
     }
 }

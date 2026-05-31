@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Collections;
 
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Abstracts\AbstractTypedCollection;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 
 /**
  * Abstract base collection with index-based access.
@@ -13,7 +14,7 @@ use AndyDefer\Records\Collections\TypedCollection;
  *
  * @extends TypedCollection<TValue>
  */
-abstract class IndexedCollection extends TypedCollection
+abstract class IndexedCollection extends AbstractTypedCollection
 {
     /**
      * Get value at specific index.

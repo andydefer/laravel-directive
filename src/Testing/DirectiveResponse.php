@@ -37,7 +37,7 @@ final class DirectiveResponse
 
     public function isFailure(): bool
     {
-        return !$this->exitCode->isSuccess();
+        return ! $this->exitCode->isSuccess();
     }
 
     public function getExitCodeValue(): int
@@ -51,6 +51,7 @@ final class DirectiveResponse
             $this->isSuccess(),
             "Directive failed with exit code {$this->exitCode->value}. Output: {$this->output}"
         );
+
         return $this;
     }
 
@@ -68,36 +69,42 @@ final class DirectiveResponse
                 "Expected failure but directive succeeded. Output: {$this->output}"
             );
         }
+
         return $this;
     }
 
     public function assertOutputContains(string $expected): self
     {
         Assert::assertStringContainsString($expected, $this->output);
+
         return $this;
     }
 
     public function assertOutputNotContains(string $expected): self
     {
         Assert::assertStringNotContainsString($expected, $this->output);
+
         return $this;
     }
 
     public function assertOutputMatches(string $pattern): self
     {
         Assert::assertMatchesRegularExpression($pattern, $this->output);
+
         return $this;
     }
 
     public function assertOutputEquals(string $expected): self
     {
         Assert::assertSame($expected, $this->output);
+
         return $this;
     }
 
     public function assertOutputEmpty(): self
     {
         Assert::assertEmpty($this->output);
+
         return $this;
     }
 }

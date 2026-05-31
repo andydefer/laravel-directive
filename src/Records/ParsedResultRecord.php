@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Records;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
-use AndyDefer\Records\AbstractRecord;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 /**
  * Represents the complete parsed result of a directive.

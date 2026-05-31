@@ -9,7 +9,7 @@ use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\ConflictRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class ConflictRenderStrategyTest extends UnitTestCase
 {

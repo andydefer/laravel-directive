@@ -1,7 +1,0 @@
-\033[31m✗ Directive '\033[1;33m{{signature}}\033[0m\033[31m' not found\033[0m
-
-\033[90m💡 Suggestions:\033[0m
-  • Run \033[33m./vendor/bin/directive --list\033[0m to see available directives
-  • Check the spelling of the directive name
-  • Make sure the directive file exists in \033[33mapp/Directives/\033[0m
-  • Run \033[33mcomposer dump-autoload\033[0m if you just added a new directive

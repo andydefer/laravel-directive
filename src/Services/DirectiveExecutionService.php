@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\Directive\Records\ParsedDirectiveRecord;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 use InvalidArgumentException;
 
 class DirectiveExecutionService
 {
-    private ?LaravelBootstrapper $laravelBootstrapper = null;
-
     public function __construct(
         private readonly DirectiveDiscoveryService $discovery,
         private readonly DirectiveParserService $parser,
@@ -22,52 +22,20 @@ class DirectiveExecutionService
         private readonly DirectiveRendererService $renderer,
     ) {}
 
+    private ?LaravelBootstrapper $laravelBootstrapper = null;
+
     public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
     {
         $this->laravelBootstrapper = $bootstrapper;
     }
 
-    public function execute(DirectiveExecutionRecord $record): ExitCode
-    {
-        $signature = $record->signature;
-
-        if ($signature === '--help' || $signature === '-h') {
-            $this->renderer->renderHelp();
-
-            return ExitCode::SUCCESS;
-        }
-
-        if ($signature === '--list' || $signature === '-l') {
-            $directives = $this->discovery->discover();
-            $this->renderer->renderList($directives);
-
-            return ExitCode::SUCCESS;
-        }
-
-        if ($signature === '--version' || $signature === '-v') {
-            $this->renderer->renderVersion();
-
-            return ExitCode::SUCCESS;
-        }
-
-        $directives = $this->discovery->discover();
-        $directive = $this->findDirective($directives, $signature);
-
-        if ($directive === null) {
-            $this->renderer->renderNotFound($signature);
-
-            return ExitCode::NOT_FOUND;
-        }
-
-        return $this->executeDirective($directive->class, $record);
-    }
-
-    private function findDirective(TypedCollection $directives, string $signature): ?DirectiveMetadataRecord
+    /**
+     * Find a directive metadata by signature or alias.
+     */
+    private function findDirective(DirectiveMetadataCollection $directives, string $signature): ?DirectiveMetadataRecord
     {
         foreach ($directives as $directive) {
-            $baseSignature = explode(' ', $directive->signature)[0];
-
-            if ($baseSignature === $signature) {
+            if ($directive->signature === $signature) {
                 return $directive;
             }
             if ($directive->aliases->contains($signature)) {
@@ -78,68 +46,89 @@ class DirectiveExecutionService
         return null;
     }
 
-    private function executeDirective(string $class, DirectiveExecutionRecord $record): ExitCode
+    public function execute(DirectiveExecutionRecord $record): ExitCode
     {
+        // Help command
+        if ($record->signature === '--help' || $record->signature === '-h') {
+            $this->renderer->renderHelp();
+            return ExitCode::SUCCESS;
+        }
+
+        // List command
+        if ($record->signature === '--list' || $record->signature === '-l') {
+            $directives = $this->discovery->discover();
+            $this->renderer->renderList($directives);
+            return ExitCode::SUCCESS;
+        }
+
+        // Version command
+        if ($record->signature === '--version' || $record->signature === '-v') {
+            $this->renderer->renderVersion();
+            return ExitCode::SUCCESS;
+        }
+
+        // Load directives
+        $directives = $this->discovery->discover();
+
+        // Find directive by signature or alias
+        $directiveMetadata = $this->findDirective($directives, $record->signature);
+
+        if ($directiveMetadata === null) {
+            $this->renderer->renderNotFound($record->signature);
+            return ExitCode::NOT_FOUND;
+        }
+
         try {
-            $reflection = new \ReflectionClass($class);
-            $tempInstance = $reflection->newInstanceWithoutConstructor();
+            // Parse arguments
+            $parsed = $this->parser->parse($directiveMetadata->signature, $record->arguments);
 
-            if ($this->laravelBootstrapper !== null && property_exists($tempInstance, 'laravelBootstrapper')) {
-                $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
-                $reflectionProperty->setValue($tempInstance, $this->laravelBootstrapper);
+            // Boot Laravel if needed
+            if ($this->shouldBootLaravel($directiveMetadata->class)) {
+                $this->bootLaravel();
             }
 
-            if ($tempInstance->shouldBootLaravel() && $this->laravelBootstrapper !== null) {
-                $this->bootLaravelIfNeeded();
-            }
+            // Hydrate directive
+            $directive = $this->hydrator->hydrate($directiveMetadata->class, $parsed);
 
-            $fullSignature = $tempInstance->getSignature();
-
-            try {
-                $parsed = $this->parser->parse($fullSignature, $record->arguments);
-            } catch (InvalidArgumentException $e) {
-                $this->renderer->renderError($e->getMessage());
-                return ExitCode::INVALID_ARGUMENT;
-            }
-
-            $directive = $this->hydrator->hydrate($class, $parsed);
-
-            if ($this->laravelBootstrapper !== null && $directive instanceof AbstractDirective) {
-                $reflection = new \ReflectionClass($directive);
-                $reflectionProperty = $reflection->getProperty('laravelBootstrapper');
-                $reflectionProperty->setValue($directive, $this->laravelBootstrapper);
-            }
-
+            // Execute
             $result = $directive->execute();
 
-            if ($result->isSuccess()) {
+            if ($result === ExitCode::SUCCESS) {
                 $this->renderer->renderSuccess('Directive executed successfully');
             } else {
                 $this->renderer->renderError('Directive execution failed');
             }
 
             return $result;
+        } catch (InvalidArgumentException $e) {
+            $this->renderer->renderError($e->getMessage());
+            return ExitCode::INVALID_ARGUMENT;
         } catch (\Throwable $e) {
             $this->renderer->renderError($e->getMessage());
             return ExitCode::FAILURE;
         }
     }
 
-    private function bootLaravelIfNeeded(): void
+    private function shouldBootLaravel(string $class): bool
+    {
+        try {
+            $reflection = new \ReflectionClass($class);
+            if (!$reflection->hasMethod('shouldBootLaravel')) {
+                return false;
+            }
+            $tempInstance = $reflection->newInstanceWithoutConstructor();
+            return $tempInstance->shouldBootLaravel();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function bootLaravel(): void
     {
         if ($this->laravelBootstrapper === null) {
-            $this->renderer->renderWarning('Laravel bootstrapper not available.');
-
+            $this->renderer->renderWarning('Laravel bootstrap file not found');
             return;
         }
-
-        if ($this->laravelBootstrapper->bootstrap()) {
-            $this->renderer->renderDebug('Laravel bootstrapped successfully.');
-        } else {
-            $error = $this->laravelBootstrapper->getError();
-            $this->renderer->renderWarning(
-                $error ?? 'Could not bootstrap Laravel. Running without Laravel features.'
-            );
-        }
+        $this->laravelBootstrapper->bootstrap();
     }
 }

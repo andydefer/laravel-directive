@@ -21,7 +21,7 @@ use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
 

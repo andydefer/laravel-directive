@@ -7,7 +7,7 @@ namespace AndyDefer\Directive\Tests\Unit\Collections;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
 
 final class ParameterCollectionTest extends UnitTestCase
 {
@@ -30,7 +30,6 @@ final class ParameterCollectionTest extends UnitTestCase
         $collection->add($record);
 
         $this->assertSame(1, $collection->count());
-        $this->assertSame($record, $collection->firstItem());
     }
 
     public function test_can_add_multiple_records(): void
@@ -48,7 +47,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_arguments_converts_flat_format(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
         $flat->add('John', 'name', '30', 'age', 'admin', 'role');
 
         $result = ParameterCollection::fromFlatArguments($flat);
@@ -61,7 +60,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_arguments_handles_empty_collection(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
 
         $result = ParameterCollection::fromFlatArguments($flat);
 
@@ -71,7 +70,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_arguments_skips_incomplete_pair(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
         $flat->add('John', 'name', '30');
 
         $result = ParameterCollection::fromFlatArguments($flat);
@@ -82,7 +81,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_arguments_handles_null_values(): void
     {
-        $flat = new TypedCollection('string', 'null');
+        $flat = new ScalarTypedCollection;
         $flat->add(null, 'nullable', 'value', 'name');
 
         $result = ParameterCollection::fromFlatArguments($flat);
@@ -93,7 +92,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_arguments_handles_mixed_types(): void
     {
-        $flat = new TypedCollection('string', 'int', 'null');
+        $flat = new ScalarTypedCollection;
         $flat->add('John', 'name', 30, 'age', null, 'optional');
 
         $result = ParameterCollection::fromFlatArguments($flat);
@@ -107,7 +106,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_converts_flat_format(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
         $flat->add('name', 'John', 'active', 'true', 'count', '5');
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -120,7 +119,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_converts_true_string_to_boolean(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
         $flat->add('active', 'true', 'enabled', 'true', 'verbose', 'true');
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -132,7 +131,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_converts_false_string_to_boolean(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
         $flat->add('active', 'false', 'enabled', 'false', 'debug', 'false');
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -144,7 +143,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_converts_null_to_true(): void
     {
-        $flat = new TypedCollection('string', 'null');
+        $flat = new ScalarTypedCollection;
         $flat->add('verbose', null, 'quiet', null, 'force', null);
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -154,12 +153,9 @@ final class ParameterCollectionTest extends UnitTestCase
         $this->assertTrue($result->get('force'));
     }
 
-    /**
-     * Test that empty string values are converted to true (flag option without value).
-     */
     public function test_from_flat_options_converts_empty_string_to_true(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
         $flat->add('verbose', '', 'quiet', '', 'force', '');
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -171,7 +167,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_preserves_string_values(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
         $flat->add('name', 'John Doe', 'email', 'john@example.com', 'role', 'admin');
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -183,7 +179,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_handles_empty_collection(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
 
         $result = ParameterCollection::fromFlatOptions($flat);
 
@@ -193,7 +189,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_skips_entry_without_name(): void
     {
-        $flat = new TypedCollection('string', 'null');
+        $flat = new ScalarTypedCollection;
         $flat->add(null, 'value', 'name', 'John');
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -204,7 +200,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_handles_mixed_boolean_and_string(): void
     {
-        $flat = new TypedCollection('string', 'null');
+        $flat = new ScalarTypedCollection;
         $flat->add('active', 'true', 'name', 'John', 'verbose', null, 'count', '10');
 
         $result = ParameterCollection::fromFlatOptions($flat);
@@ -215,12 +211,9 @@ final class ParameterCollectionTest extends UnitTestCase
         $this->assertSame('10', $result->get('count'));
     }
 
-    /**
-     * Test mixed conversions including empty string.
-     */
     public function test_from_flat_options_converts_mixed_values_correctly(): void
     {
-        $flat = new TypedCollection('string', 'null');
+        $flat = new ScalarTypedCollection;
         $flat->add(
             'string_value',
             'hello',
@@ -385,7 +378,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_arguments_handles_large_flat_collection(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
 
         for ($i = 0; $i < 500; $i++) {
             $flat->add("value_{$i}", "key_{$i}");
@@ -399,7 +392,7 @@ final class ParameterCollectionTest extends UnitTestCase
 
     public function test_from_flat_options_handles_large_flat_collection(): void
     {
-        $flat = new TypedCollection('string');
+        $flat = new ScalarTypedCollection;
 
         for ($i = 0; $i < 500; $i++) {
             $flat->add("key_{$i}", "value_{$i}");

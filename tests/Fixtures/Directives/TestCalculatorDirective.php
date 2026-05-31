@@ -7,7 +7,7 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 class TestCalculatorDirective extends AbstractDirective
 {
@@ -32,6 +32,7 @@ class TestCalculatorDirective extends AbstractDirective
         $aliases = new StringTypedCollection;
         $aliases->add('calc');
         $aliases->add('math');
+
         return $aliases;
     }
 
@@ -43,6 +44,7 @@ class TestCalculatorDirective extends AbstractDirective
 
         if ($operation === null) {
             $this->error('Operation is required');
+
             return ExitCode::INVALID_ARGUMENT;
         }
 
@@ -58,6 +60,7 @@ class TestCalculatorDirective extends AbstractDirective
 
         if ($result === null) {
             $this->error("Unknown operation: {$operation}");
+
             return ExitCode::INVALID_ARGUMENT;
         }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Records;
 
 use AndyDefer\Directive\Enums\ParameterType;
-use AndyDefer\Records\AbstractRecord;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 /**
  * Represents a parsed parameter help information.

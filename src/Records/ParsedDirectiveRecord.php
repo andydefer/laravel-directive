@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Records;
 
-use AndyDefer\Records\AbstractRecord;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
+use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class ParsedDirectiveRecord extends AbstractRecord
 {
     public function __construct(
-        public readonly TypedCollection $arguments,
-        public readonly TypedCollection $options,
+        public readonly ScalarTypedCollection $arguments,
+        public readonly ScalarTypedCollection $options,
     ) {}
 }

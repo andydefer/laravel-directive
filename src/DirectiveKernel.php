@@ -10,7 +10,7 @@ use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
  * Core kernel that orchestrates directive execution from CLI.

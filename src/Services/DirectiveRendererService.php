@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Tasks\RenderTask;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 
 class DirectiveRendererService
 {
@@ -24,7 +25,7 @@ class DirectiveRendererService
         echo $this->renderTask->execute($record, RenderType::HELP);
     }
 
-    public function renderList(TypedCollection $directives): void
+    public function renderList(DirectiveMetadataCollection $directives): void
     {
         $record = new RenderRecord(type: RenderType::LIST, directives: $directives);
         echo $this->renderTask->execute($record, RenderType::LIST);

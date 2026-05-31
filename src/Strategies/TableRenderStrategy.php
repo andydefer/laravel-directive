@@ -11,9 +11,9 @@ use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
-use AndyDefer\Records\Recordable;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TableRenderStrategy implements RenderStrategyInterface
 {
@@ -22,7 +22,7 @@ final class TableRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::TABLE;
     }
 
-    public function execute(Recordable $record, RenderType $type): ReplacementCollection
+    public function execute(AbstractRecord $record, RenderType $type): ReplacementCollection
     {
         $replacements = new ReplacementCollection;
 

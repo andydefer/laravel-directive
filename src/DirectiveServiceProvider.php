@@ -6,7 +6,6 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
-use AndyDefer\Directive\Directives\MakeDirective;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
@@ -42,14 +41,13 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerInputTask();
         $this->registerInteractionService();
         $this->registerExecution();
-        $this->registerMakeDirective();
         $this->registerKernel();
     }
 
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/config/directive.php' => config_path('directive.php'),
+            __DIR__.'/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -201,18 +199,6 @@ final class DirectiveServiceProvider extends ServiceProvider
             }
 
             return $executionService;
-        });
-    }
-
-    private function registerMakeDirective(): void
-    {
-        $this->app->singleton(MakeDirective::class, function ($app) {
-            return new MakeDirective(
-                interaction: $app->make(DirectiveInteractionService::class),
-                signatureValidator: $app->make(SignatureValidationService::class),
-                namingService: $app->make(DirectiveNamingService::class),
-                stubPath: __DIR__ . '/../stubs/directive.stub',
-            );
         });
     }
 

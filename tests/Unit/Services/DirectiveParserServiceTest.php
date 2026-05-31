@@ -8,7 +8,7 @@ use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ParameterType;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 
 final class DirectiveParserServiceTest extends UnitTestCase

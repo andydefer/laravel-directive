@@ -10,7 +10,7 @@ use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 abstract class AbstractDirective implements DirectiveInterface
 {
@@ -87,7 +87,7 @@ abstract class AbstractDirective implements DirectiveInterface
      * Get an argument value by its key.
      * Returns null if the argument is not provided or empty.
      *
-     * @param string $key The argument name
+     * @param  string  $key  The argument name
      * @return string|null The argument value, or null if not provided or empty
      */
     public function argument(string $key): ?string
@@ -105,7 +105,7 @@ abstract class AbstractDirective implements DirectiveInterface
      * Check if an argument exists and has a non-empty value.
      * Empty strings are considered as not provided.
      *
-     * @param string $key The argument name
+     * @param  string  $key  The argument name
      * @return bool True if the argument exists and has a non-empty value, false otherwise
      */
     public function hasArgument(string $key): bool
@@ -127,7 +127,7 @@ abstract class AbstractDirective implements DirectiveInterface
     /**
      * Get an option value by its key.
      *
-     * @param string $key The option name
+     * @param  string  $key  The option name
      * @return bool|string|null The option value (boolean for flags, string for values), or null if not found
      */
     public function option(string $key): bool|string|null
@@ -145,7 +145,7 @@ abstract class AbstractDirective implements DirectiveInterface
      * Check if an option exists and has a non-empty value.
      * Empty strings are considered as not provided.
      *
-     * @param string $key The option name
+     * @param  string  $key  The option name
      * @return bool True if the option exists and has a non-empty value, false otherwise
      */
     public function hasOption(string $key): bool

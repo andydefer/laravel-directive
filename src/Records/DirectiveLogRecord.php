@@ -6,7 +6,7 @@ namespace AndyDefer\Directive\Records;
 
 use AndyDefer\Directive\Enums\DirectiveEventType;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Records\AbstractRecord;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 final class DirectiveLogRecord extends AbstractRecord
 {

@@ -8,7 +8,7 @@ use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Records\Recordable;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 final class NotFoundRenderStrategy implements RenderStrategyInterface
 {
@@ -17,7 +17,7 @@ final class NotFoundRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::NOT_FOUND;
     }
 
-    public function execute(Recordable $record, RenderType $type): ReplacementCollection
+    public function execute(AbstractRecord $record, RenderType $type): ReplacementCollection
     {
         $replacements = new ReplacementCollection;
 

@@ -7,7 +7,7 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TestDirective extends AbstractDirective
 {

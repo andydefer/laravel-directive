@@ -52,6 +52,7 @@ final class InteractsWithDirectivesTest extends UnitTestCase
         $this->createTestDirective('test-closure', function ($d) use (&$executed) {
             $executed = true;
             $d->line('Closure executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -114,6 +115,7 @@ final class InteractsWithDirectivesTest extends UnitTestCase
 
         $this->createTestDirective($uniqueName, function ($d) {
             $d->line('Temp directive executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -126,6 +128,9 @@ final class InteractsWithDirectivesTest extends UnitTestCase
         $response = $this->runDirective($uniqueName);
         $this->assertSame(ExitCode::NOT_FOUND, $response->getExitCode(), 'La directive devrait être introuvable après nettoyage');
         $this->assertStringContainsString('not found', $response->getOutput());
+
+        // Ré-enregistrer pour les tests suivants
+        $this->registerDirectiveClass(TestCalculatorDirective::class);
     }
 
     public function test_calculator_add_operation(): void
@@ -209,7 +214,7 @@ final class InteractsWithDirectivesTest extends UnitTestCase
             ->assertOutputContains('Operation: add');
     }
 
-    // ==================== Nouveaux tests pour bootLaravel ====================
+    // ==================== Tests pour bootLaravel ====================
 
     public function test_init_directive_testing_with_boot_laravel(): void
     {
@@ -242,7 +247,6 @@ final class InteractsWithDirectivesTest extends UnitTestCase
         $this->initDirectiveTesting();
         $firstTempDir = $this->directiveTempDir;
 
-        // Deuxième appel ne devrait pas recréer l'environnement
         $this->initDirectiveTesting();
 
         $this->assertSame($firstTempDir, $this->directiveTempDir);

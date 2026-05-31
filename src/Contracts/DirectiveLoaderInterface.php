@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contracts;
 
-use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 
 interface DirectiveLoaderInterface
 {
-    public function load(): TypedCollection;
+    public function load(): DirectiveMetadataCollection;
 }

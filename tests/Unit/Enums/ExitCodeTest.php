@@ -67,10 +67,9 @@ final class ExitCodeTest extends UnitTestCase
         $this->assertFalse(ExitCode::isValid(-1));
     }
 
-    public function test_is_valid_returns_false_for_string_values(): void
+    public function test_is_valid_returns_false_for_non_numeric_strings(): void
     {
-        // ExitCode est un enum int, les strings ne sont pas valides
-        $this->assertFalse(ExitCode::isValid('0'));
+        // Les strings non numériques ne sont pas valides
         $this->assertFalse(ExitCode::isValid('success'));
         $this->assertFalse(ExitCode::isValid(''));
     }
@@ -91,54 +90,40 @@ final class ExitCodeTest extends UnitTestCase
         $this->assertNull(ExitCode::fromValue(-1));
     }
 
-    public function test_from_value_throws_type_error_for_string_values(): void
+    public function test_from_value_accepts_numeric_strings(): void
     {
-        // ExitCode est un enum int, passer une string est une erreur de type
-        $this->expectException(\TypeError::class);
-        ExitCode::fromValue('0');
+        // En PHP 8, les strings numériques sont converties automatiquement
+        $this->assertSame(ExitCode::SUCCESS, ExitCode::fromValue('0'));
+        $this->assertSame(ExitCode::FAILURE, ExitCode::fromValue('1'));
     }
 
     public function test_try_from_works_natively(): void
     {
-        // Test de la méthode native tryFrom
         $this->assertSame(ExitCode::SUCCESS, ExitCode::tryFrom(0));
         $this->assertSame(ExitCode::FAILURE, ExitCode::tryFrom(1));
         $this->assertNull(ExitCode::tryFrom(99));
     }
 
-    public function test_try_from_throws_type_error_for_string_value(): void
-    {
-        // ExitCode est un enum int, tryFrom attend un int
-        $this->expectException(\TypeError::class);
-        ExitCode::tryFrom('0');
-    }
-
     public function test_from_throws_exception_for_invalid_value(): void
     {
-        // Test que from() lance une exception pour valeur invalide
         $this->expectException(\ValueError::class);
         ExitCode::from(99);
     }
 
     public function test_match_exhaustif_returns_correct_value_for_every_case(): void
     {
-        // Test que le match est exhaustif (tous les cas sont couverts)
         $this->assertSame('Success', ExitCode::SUCCESS->getLabel());
         $this->assertSame('Failure', ExitCode::FAILURE->getLabel());
         $this->assertSame('Not Found', ExitCode::NOT_FOUND->getLabel());
         $this->assertSame('Invalid Argument', ExitCode::INVALID_ARGUMENT->getLabel());
 
-        // Le match fonctionne sans default (exhaustif)
         $cases = ExitCode::cases();
         $this->assertCount(4, $cases);
     }
 
     public function test_exit_code_values_match_unix_convention(): void
     {
-        // 0 = succès (convention UNIX)
         $this->assertSame(0, ExitCode::SUCCESS->value);
-
-        // Non-zéro = échec (convention UNIX)
         $this->assertNotSame(0, ExitCode::FAILURE->value);
         $this->assertNotSame(0, ExitCode::NOT_FOUND->value);
         $this->assertNotSame(0, ExitCode::INVALID_ARGUMENT->value);

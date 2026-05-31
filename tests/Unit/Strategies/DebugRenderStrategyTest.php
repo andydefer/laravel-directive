@@ -11,7 +11,7 @@ use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\DebugRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\EmptyRecord;
+use AndyDefer\DomainStructures\Utils\EmptyRecord;
 
 final class DebugRenderStrategyTest extends UnitTestCase
 {

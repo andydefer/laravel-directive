@@ -17,7 +17,7 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 

@@ -8,7 +8,7 @@ use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\UserChoiceRecord;
 use AndyDefer\Directive\Strategies\Input\UserChoiceStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\EmptyRecord;
+use AndyDefer\DomainStructures\Utils\EmptyRecord;
 
 final class UserChoiceStrategyTest extends UnitTestCase
 {

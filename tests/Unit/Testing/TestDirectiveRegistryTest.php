@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Testing;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
@@ -11,6 +12,8 @@ use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -18,16 +21,20 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class TestDirectiveRegistryTest extends UnitTestCase
 {
     private TestDirectiveRegistry $registry;
+
     private DirectiveInteractionService&MockObject $interaction;
+
     private SignatureValidationService&MockObject $signatureValidator;
+
     private DirectiveNamingService&MockObject $namingService;
+
     private LaravelBootstrapper&MockObject $laravelBootstrapper;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->registry = new TestDirectiveRegistry();
+        $this->registry = new TestDirectiveRegistry;
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
         $this->signatureValidator = $this->createMock(SignatureValidationService::class);
         $this->namingService = $this->createMock(DirectiveNamingService::class);
@@ -86,7 +93,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_register_directive_by_class_throws_exception_when_interaction_missing(): void
     {
-        $registry = new TestDirectiveRegistry();
+        $registry = new TestDirectiveRegistry;
         // Ne pas setInteraction()
 
         $this->expectException(\RuntimeException::class);
@@ -102,7 +109,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
         $collection = $this->registry->load();
 
-        $this->assertInstanceOf(\AndyDefer\Records\Collections\TypedCollection::class, $collection);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $collection);
         $this->assertGreaterThan(0, $collection->count());
     }
 
@@ -141,7 +148,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
         $directive = $this->createMock(TestCalculatorDirective::class);
         $directive->method('getSignature')->willReturn('test-cmd');
 
-        $aliases = new \AndyDefer\Records\Collections\Utility\StringTypedCollection();
+        $aliases = new StringTypedCollection;
         $aliases->add('t1');
         $aliases->add('t2');
         $directive->method('getAliases')->willReturn($aliases);

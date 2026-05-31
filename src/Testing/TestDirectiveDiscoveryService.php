@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Testing;
 
 use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
-use AndyDefer\Records\Collections\TypedCollection;
 
 class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
 {
@@ -41,6 +41,7 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
         $reflection = new \ReflectionClass($className);
         $directive = $reflection->newInstanceArgs($constructorArgs);
         $this->registerDirective($directive);
+
         return $directive;
     }
 
@@ -54,13 +55,11 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
         return $this->registeredDirectives;
     }
 
-    public function discover(): TypedCollection
+    public function discover(): DirectiveMetadataCollection
     {
-        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = new DirectiveMetadataCollection;
 
         foreach ($this->registeredDirectives as $directive) {
-            // ⚠️ CRUCIAL : Utiliser l'instance DÉJÀ créée avec son constructeur
-            // Ne PAS utiliser hydrateBlueprint qui recrée une instance sans constructeur
             $metadata = new DirectiveMetadataRecord(
                 signature: $directive->getSignature(),
                 class: get_class($directive),
@@ -70,7 +69,7 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
             $results->add($metadata);
         }
 
-        if (!$this->disableFilesystemDiscovery) {
+        if (! $this->disableFilesystemDiscovery) {
             $results = $this->discoverFromFilesystem($results);
             $results = $this->discoverFromVendorPackagesRecursive($results);
         }

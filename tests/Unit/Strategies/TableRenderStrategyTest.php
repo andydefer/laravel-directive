@@ -10,7 +10,7 @@ use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\TableRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TableRenderStrategyTest extends UnitTestCase
 {

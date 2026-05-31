@@ -1,8 +1,0 @@
-\033[31m✗ Error:\033[0m {{error}}
-
-\033[33mValid examples:\033[0m
-  • user-create
-  • cache-clear
-  • api-user-profile
-
-\033[90m💡 Directive names must start with a letter and contain only letters, numbers, and hyphens.\033[0m

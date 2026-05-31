@@ -10,7 +10,7 @@ use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 

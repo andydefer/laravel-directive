@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Strategies;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Recordable;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 
 final class ListRenderStrategy implements RenderStrategyInterface
 {
@@ -18,7 +19,7 @@ final class ListRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::LIST || $type === RenderType::EMPTY;
     }
 
-    public function execute(Recordable $record, RenderType $type): ReplacementCollection
+    public function execute(AbstractRecord $record, RenderType $type): ReplacementCollection
     {
         if (! $record instanceof RenderRecord) {
             return new ReplacementCollection;
@@ -40,13 +41,13 @@ final class ListRenderStrategy implements RenderStrategyInterface
         return $replacements;
     }
 
-    private function buildListRows(TypedCollection $directives): string
+    private function buildListRows(DirectiveMetadataCollection $directives): string
     {
         $rows = [];
 
         foreach ($directives as $directive) {
             $aliases = $directive->aliases->count() > 0
-                ? ' ('.implode(', ', $directive->aliases->toArray()).')'
+                ? ' (' . implode(', ', $directive->aliases->toArray()) . ')'
                 : '';
 
             $rows[] = sprintf(

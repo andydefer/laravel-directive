@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Records;
 
-use AndyDefer\Records\AbstractRecord;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 
 final class HydrationResultRecord extends AbstractRecord
 {

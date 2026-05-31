@@ -13,6 +13,7 @@ use PHPUnit\Framework\TestCase;
 final class FileCreatorTest extends TestCase
 {
     private FileCreatorTestDirective $directive;
+
     private string $tempDir;
 
     protected function setUp(): void
@@ -21,7 +22,7 @@ final class FileCreatorTest extends TestCase
 
         $interaction = $this->createMock(DirectiveInteractionService::class);
 
-        $this->tempDir = sys_get_temp_dir() . '/file_creator_test_' . uniqid();
+        $this->tempDir = sys_get_temp_dir().'/file_creator_test_'.uniqid();
         mkdir($this->tempDir, 0755, true);
 
         $this->directive = new FileCreatorTestDirective($interaction);
@@ -129,10 +130,10 @@ final class FileCreatorTest extends TestCase
 
     public function test_create_file_success(): void
     {
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Hello {{ name }}!');
 
-        $destination = $this->tempDir . '/output.php';
+        $destination = $this->tempDir.'/output.php';
 
         $result = $this->directive->exposeCreateFile($stubPath, $destination, ['{{ name }}' => 'World']);
 
@@ -143,24 +144,24 @@ final class FileCreatorTest extends TestCase
 
     public function test_create_file_creates_directory(): void
     {
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
 
-        $destination = $this->tempDir . '/sub/dir/output.php';
+        $destination = $this->tempDir.'/sub/dir/output.php';
 
         $result = $this->directive->exposeCreateFile($stubPath, $destination, []);
 
         $this->assertTrue($result);
         $this->assertFileExists($destination);
-        $this->assertDirectoryExists($this->tempDir . '/sub/dir');
+        $this->assertDirectoryExists($this->tempDir.'/sub/dir');
     }
 
     public function test_create_file_returns_false_when_file_exists_without_force(): void
     {
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
 
-        $destination = $this->tempDir . '/exists.php';
+        $destination = $this->tempDir.'/exists.php';
         file_put_contents($destination, 'old content');
 
         $result = $this->directive->exposeCreateFile($stubPath, $destination, []);
@@ -172,10 +173,10 @@ final class FileCreatorTest extends TestCase
 
     public function test_create_file_overwrites_when_force_true(): void
     {
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'New content');
 
-        $destination = $this->tempDir . '/exists.php';
+        $destination = $this->tempDir.'/exists.php';
         file_put_contents($destination, 'old content');
 
         $result = $this->directive->exposeCreateFile($stubPath, $destination, [], true);
@@ -186,8 +187,8 @@ final class FileCreatorTest extends TestCase
 
     public function test_create_file_returns_false_when_stub_not_found(): void
     {
-        $stubPath = $this->tempDir . '/not-exist.stub';
-        $destination = $this->tempDir . '/output.php';
+        $stubPath = $this->tempDir.'/not-exist.stub';
+        $destination = $this->tempDir.'/output.php';
 
         $result = $this->directive->exposeCreateFile($stubPath, $destination, []);
 
@@ -198,10 +199,10 @@ final class FileCreatorTest extends TestCase
 
     public function test_create_file_replaces_multiple_variables(): void
     {
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Class {{ class }} extends {{ parent }}');
 
-        $destination = $this->tempDir . '/output.php';
+        $destination = $this->tempDir.'/output.php';
 
         $result = $this->directive->exposeCreateFile($stubPath, $destination, [
             '{{ class }}' => 'UserTask',
@@ -214,10 +215,10 @@ final class FileCreatorTest extends TestCase
 
     public function test_create_file_with_empty_replacement(): void
     {
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Value: {{ value }}');
 
-        $destination = $this->tempDir . '/output.php';
+        $destination = $this->tempDir.'/output.php';
 
         $result = $this->directive->exposeCreateFile($stubPath, $destination, ['{{ value }}' => '']);
 
@@ -229,13 +230,13 @@ final class FileCreatorTest extends TestCase
 
     private function deleteDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             is_dir($path) ? $this->deleteDirectory($path) : unlink($path);
         }
         rmdir($dir);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
@@ -16,7 +17,7 @@ use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use ReflectionClass;
@@ -66,7 +67,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
     {
         $result = $this->service->discover();
 
-        $this->assertInstanceOf(TypedCollection::class, $result);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
         $this->assertContains(DirectiveMetadataRecord::class, $result->getAllowedTypes());
         $this->assertGreaterThan(0, $result->count(), 'No directives discovered. Check fixtures path: ' . $this->fixturesPath);
     }
@@ -80,7 +81,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
             if (str_contains($directive->signature, 'test-echo')) {
                 $found = true;
                 $this->assertSame(TestEchoDirective::class, $directive->class);
-                $this->assertInstanceOf(TypedCollection::class, $directive->aliases);
+                $this->assertInstanceOf(StringTypedCollection::class, $directive->aliases);
                 break;
             }
         }
@@ -104,7 +105,7 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class InvalidDirective implements DirectiveInterface
 {
@@ -186,7 +187,7 @@ PHP;
             $this->assertIsString($directive->class);
             $this->assertNotEmpty($directive->class);
             $this->assertIsString($directive->description);
-            $this->assertInstanceOf(TypedCollection::class, $directive->aliases);
+            $this->assertInstanceOf(StringTypedCollection::class, $directive->aliases);
         }
     }
 
@@ -222,7 +223,7 @@ PHP;
 
         $result = $service->discover();
 
-        $this->assertInstanceOf(TypedCollection::class, $result);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
         $this->assertEquals(0, $result->count());
     }
 
@@ -238,7 +239,7 @@ PHP;
 
         $result = $service->discover();
 
-        $this->assertInstanceOf(TypedCollection::class, $result);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
         $this->assertEquals(0, $result->count());
 
         rmdir($emptyDir);
@@ -251,7 +252,7 @@ PHP;
         $this->assertGreaterThan(0, $result->count(), 'No directives found to test aliases');
 
         foreach ($result as $directive) {
-            $this->assertInstanceOf(TypedCollection::class, $directive->aliases);
+            $this->assertInstanceOf(StringTypedCollection::class, $directive->aliases);
 
             foreach ($directive->aliases as $alias) {
                 $this->assertIsString($alias);
@@ -271,10 +272,10 @@ PHP;
         $reflection = new ReflectionClass($service);
         $method = $reflection->getMethod('discoverFromVendorPackagesRecursive');
 
-        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = new DirectiveMetadataCollection;
         $results = $method->invoke($service, $results);
 
-        $this->assertInstanceOf(TypedCollection::class, $results);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $results);
     }
 
     // ==================== Tests de découverte récursive à profondeur 2 ====================
@@ -289,12 +290,12 @@ PHP;
         $reflection = new ReflectionClass($service);
         $scanPackageMethod = $reflection->getMethod('scanPackage');
 
-        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = new DirectiveMetadataCollection;
 
         // Scanner un package factice (n'existe pas, mais ne doit pas planter)
         $scanPackageMethod->invoke($service, $results, 'andydefer/laravel-directive', 1);
 
-        $this->assertInstanceOf(TypedCollection::class, $results);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $results);
     }
 
     public function test_scan_package_ignores_php_internal_packages(): void
@@ -311,7 +312,7 @@ PHP;
         // Réinitialiser le cache
         $scannedPackagesProperty->setValue($service, []);
 
-        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = new DirectiveMetadataCollection;
 
         // Scanner un package PHP interne
         $scanPackageMethod->invoke($service, $results, 'php', 1);
@@ -332,7 +333,7 @@ PHP;
         $scanPackageMethod = $reflection->getMethod('scanPackage');
 
         // Créer un mock pour suivre les appels
-        $scanPackageMethod->invoke($service, new TypedCollection(DirectiveMetadataRecord::class), 'test-package', 3);
+        $scanPackageMethod->invoke($service, new DirectiveMetadataCollection, 'test-package', 3);
 
         // Ne doit pas lancer d'exception, juste ignorer
         $this->assertTrue(true);
@@ -340,7 +341,6 @@ PHP;
 
     public function test_scan_package_does_not_scan_same_package_twice(): void
     {
-
         $config = DirectiveConfig::default();
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
@@ -353,7 +353,7 @@ PHP;
         // Réinitialiser le cache
         $scannedPackagesProperty->setValue($service, []);
 
-        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = new DirectiveMetadataCollection;
 
         // Créer un package factice avec un vrai dossier
         $tempVendorDir = sys_get_temp_dir() . '/vendor_test_' . uniqid();
@@ -391,7 +391,6 @@ PHP;
         $originalVendorDir = $vendorDirProperty->getValue($service);
 
         $vendorDirProperty->setValue($service, $tempVendorDir);
-
 
         // Premier scan
         $scanPackageMethod->invoke($service, $results, $testPackageName, 1);
@@ -449,7 +448,7 @@ PHP;
 
         file_put_contents($tempPackageDir . '/src/Directives/TestDirective.php', $directiveContent);
 
-        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = new DirectiveMetadataCollection;
 
         // Cette méthode ne doit pas lancer d'exception
         $scanPackageDirectoriesMethod->invoke($service, $results, $tempPackageDir);
@@ -545,7 +544,7 @@ PHP;
 
         $result = $service->discover();
 
-        $this->assertInstanceOf(TypedCollection::class, $result);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
         $this->assertEquals(0, $result->count());
 
         unlink($malformedPath);
@@ -557,7 +556,7 @@ PHP;
      */
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 

@@ -7,7 +7,7 @@ namespace AndyDefer\Directive\Strategies;
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
-use AndyDefer\Records\Recordable;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 final class VersionRenderStrategy implements RenderStrategyInterface
 {
@@ -18,7 +18,7 @@ final class VersionRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::VERSION;
     }
 
-    public function execute(Recordable $record, RenderType $type): ReplacementCollection
+    public function execute(AbstractRecord $record, RenderType $type): ReplacementCollection
     {
         $replacements = new ReplacementCollection;
 
@@ -40,9 +40,9 @@ final class VersionRenderStrategy implements RenderStrategyInterface
      */
     private function getPackageVersion(): string
     {
-        $composerFile = getcwd() . '/composer.json';
+        $composerFile = getcwd().'/composer.json';
 
-        if (!file_exists($composerFile)) {
+        if (! file_exists($composerFile)) {
             return 'unknown';
         }
 
@@ -70,9 +70,9 @@ final class VersionRenderStrategy implements RenderStrategyInterface
      */
     private function getLaravelVersion(): string
     {
-        $composerFile = getcwd() . '/composer.json';
+        $composerFile = getcwd().'/composer.json';
 
-        if (!file_exists($composerFile)) {
+        if (! file_exists($composerFile)) {
             return 'unknown';
         }
 

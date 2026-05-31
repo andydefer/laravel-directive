@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Traits;
 
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
+use Illuminate\Filesystem\Filesystem;
 
 trait FileCreator
 {
@@ -13,7 +13,7 @@ trait FileCreator
 
     protected function initFileCreator(): void
     {
-        $this->files = new Filesystem();
+        $this->files = new Filesystem;
     }
 
     /**
@@ -26,8 +26,9 @@ trait FileCreator
         bool $force = false
     ): bool {
         // Check if file already exists
-        if ($this->files->exists($destinationPath) && !$force) {
+        if ($this->files->exists($destinationPath) && ! $force) {
             $this->error("File already exists: {$destinationPath}");
+
             return false;
         }
 
@@ -39,6 +40,7 @@ trait FileCreator
             $stub = $this->files->get($stubPath);
         } catch (FileNotFoundException $e) {
             $this->error("Stub template not found at: {$stubPath}");
+
             return false;
         }
 
@@ -52,6 +54,7 @@ trait FileCreator
         // Write file
         if ($this->files->put($destinationPath, $content) === false) {
             $this->error("Cannot create file: {$destinationPath}");
+
             return false;
         }
 
@@ -63,7 +66,7 @@ trait FileCreator
      */
     private function ensureDirectoryExists(string $path): void
     {
-        if (!$this->files->isDirectory($path)) {
+        if (! $this->files->isDirectory($path)) {
             $this->files->makeDirectory($path, 0755, true);
         }
     }
@@ -75,6 +78,7 @@ trait FileCreator
     {
         $string = str_replace(['-', '_'], ' ', $string);
         $string = ucwords($string);
+
         return str_replace(' ', '', $string);
     }
 
@@ -93,13 +97,13 @@ trait FileCreator
     {
         $segments = explode('/', $name);
         $className = array_pop($segments);
-        $subPath = !empty($segments) ? implode('/', array_map('ucfirst', $segments)) : '';
+        $subPath = ! empty($segments) ? implode('/', array_map('ucfirst', $segments)) : '';
 
         return [
             'segments' => $segments,
             'className' => $className,
             'subPath' => $subPath,
-            'fullPath' => $subPath ? $subPath . '/' . $className : $className,
+            'fullPath' => $subPath ? $subPath.'/'.$className : $className,
         ];
     }
 
@@ -108,10 +112,11 @@ trait FileCreator
      */
     protected function buildNamespace(string $baseNamespace, string $subPath): string
     {
-        if (!$subPath) {
+        if (! $subPath) {
             return $baseNamespace;
         }
-        return $baseNamespace . '\\' . str_replace('/', '\\', $subPath);
+
+        return $baseNamespace.'\\'.str_replace('/', '\\', $subPath);
     }
 
     /**
@@ -119,10 +124,11 @@ trait FileCreator
      */
     protected function getAppPath(string $baseDir, string $className, string $subPath = ''): string
     {
-        $directory = getcwd() . $baseDir;
+        $directory = getcwd().$baseDir;
         if ($subPath) {
-            $directory .= $subPath . '/';
+            $directory .= $subPath.'/';
         }
-        return $directory . $className . '.php';
+
+        return $directory.$className.'.php';
     }
 }

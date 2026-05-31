@@ -11,6 +11,7 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 class ClosureDirective extends AbstractDirective
 {
     private string $signature;
+
     private \Closure $execute;
 
     public function __construct(

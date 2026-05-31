@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Records;
 
-use AndyDefer\Records\AbstractRecord;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 /**
  * Record containing the result of creating a directive file.

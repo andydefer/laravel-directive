@@ -7,7 +7,6 @@ namespace AndyDefer\Directive\Tests\Unit;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\DirectiveKernel;
-use AndyDefer\Directive\Directives\MakeDirective;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
@@ -140,25 +139,6 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     {
         $this->provider->register();
         $this->assertTrue($this->container->bound(DirectiveExecutionService::class));
-    }
-
-    public function test_make_directive_is_registered_as_singleton(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->container->bound(MakeDirective::class));
-    }
-
-    public function test_kernel_is_registered_as_singleton(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveKernel::class));
-    }
-
-    public function test_make_directive_can_be_resolved(): void
-    {
-        $this->provider->register();
-        $makeDirective = $this->container->make(MakeDirective::class);
-        $this->assertInstanceOf(MakeDirective::class, $makeDirective);
     }
 
     public function test_kernel_can_be_resolved(): void

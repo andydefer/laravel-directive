@@ -11,7 +11,7 @@ use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestPost;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestUser;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TestLaravelDatabaseDirective extends AbstractDirective
 {

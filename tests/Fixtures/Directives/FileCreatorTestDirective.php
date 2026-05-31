@@ -6,7 +6,7 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Traits\FileCreator;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
  * Fixture class that implements the trait and extends AbstractDirective

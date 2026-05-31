@@ -10,7 +10,7 @@ use AndyDefer\Directive\Records\DisplayMessageRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\DisplayMessageRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\EmptyRecord;
+use AndyDefer\DomainStructures\Utils\EmptyRecord;
 
 final class DisplayMessageRenderStrategyTest extends UnitTestCase
 {

@@ -7,7 +7,7 @@ namespace AndyDefer\Directive\Strategies;
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
-use AndyDefer\Records\Recordable;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 final class HelpRenderStrategy implements RenderStrategyInterface
 {
@@ -16,7 +16,7 @@ final class HelpRenderStrategy implements RenderStrategyInterface
         return $type === RenderType::HELP;
     }
 
-    public function execute(Recordable $record, RenderType $type): ReplacementCollection
+    public function execute(AbstractRecord $record, RenderType $type): ReplacementCollection
     {
         return new ReplacementCollection;
     }

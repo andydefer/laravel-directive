@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
@@ -19,8 +20,8 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -85,9 +86,9 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         return $collection;
     }
 
-    private function createDirectivesCollection(): TypedCollection
+    private function createDirectivesCollection(): DirectiveMetadataCollection
     {
-        $collection = new TypedCollection(DirectiveMetadataRecord::class);
+        $collection = new DirectiveMetadataCollection;
 
         $aliases1 = new StringTypedCollection;
         $directive1 = new DirectiveMetadataRecord(
@@ -124,7 +125,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
     {
-        $directives = new TypedCollection(DirectiveMetadataRecord::class);
+        $directives = new DirectiveMetadataCollection;
 
         $this->discovery->expects($this->once())
             ->method('discover')
@@ -153,8 +154,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new StringTypedCollection,
-            options: new StringTypedCollection,
+            arguments: new ScalarTypedCollection,
+            options: new ScalarTypedCollection,
         );
         $this->parser->expects($this->once())
             ->method('parse')
@@ -192,8 +193,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new StringTypedCollection,
-            options: new StringTypedCollection,
+            arguments: new ScalarTypedCollection,
+            options: new ScalarTypedCollection,
         );
         $this->parser->expects($this->once())
             ->method('parse')
@@ -231,8 +232,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new StringTypedCollection,
-            options: new StringTypedCollection,
+            arguments: new ScalarTypedCollection,
+            options: new ScalarTypedCollection,
         );
         $this->parser->expects($this->once())
             ->method('parse')
@@ -371,8 +372,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('parse')
             ->with('test-concrete', $arguments)
             ->willReturn(new ParsedDirectiveRecord(
-                arguments: new StringTypedCollection,
-                options: new StringTypedCollection,
+                arguments: new ScalarTypedCollection,
+                options: new ScalarTypedCollection,
             ));
 
         $directive = $this->createMock(DirectiveInterface::class);
@@ -404,8 +405,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new StringTypedCollection,
-            options: new StringTypedCollection,
+            arguments: new ScalarTypedCollection,
+            options: new ScalarTypedCollection,
         );
         $this->parser->expects($this->once())
             ->method('parse')
@@ -425,9 +426,12 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
 
-        $this->renderer->expects($this->once())
-            ->method('renderWarning')
-            ->with($this->stringContains('Laravel bootstrap file not found'));
+        // Mock le bootstrapper pour qu'il n'y ait pas de warning
+        $mockBootstrapper = $this->createMock(LaravelBootstrapper::class);
+        $mockBootstrapper->expects($this->once())
+            ->method('bootstrap');
+
+        $this->service->setLaravelBootstrapper($mockBootstrapper);
 
         $arguments = $this->createArguments([]);
         $record = new DirectiveExecutionRecord(signature: 'test-laravel', arguments: $arguments);

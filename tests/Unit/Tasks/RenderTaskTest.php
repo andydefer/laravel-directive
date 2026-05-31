@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Tasks;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
+use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -35,11 +37,15 @@ final class RenderTaskTest extends UnitTestCase
 
     public function test_render_list_with_directives(): void
     {
-        $directives = new TypedCollection(\stdClass::class);
-        $directive = new \stdClass;
-        $directive->signature = 'test-cmd';
-        $directive->description = 'Test command';
-        $directive->aliases = new StringTypedCollection;
+        $directives = new DirectiveMetadataCollection;
+
+        $aliases = new StringTypedCollection;
+        $directive = new DirectiveMetadataRecord(
+            signature: 'test-cmd',
+            class: \stdClass::class,
+            description: 'Test command',
+            aliases: $aliases,
+        );
         $directives->add($directive);
 
         $record = new RenderRecord(type: RenderType::LIST, directives: $directives);

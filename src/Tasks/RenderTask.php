@@ -46,7 +46,6 @@ class RenderTask
         $debugStrategy = new DebugRenderStrategy;
         $versionStrategy = new VersionRenderStrategy;
 
-
         $this->strategies = [
             $helpStrategy,
             $listStrategy,

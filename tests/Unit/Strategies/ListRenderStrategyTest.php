@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Strategies;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\RenderType;
+use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\ListRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class ListRenderStrategyTest extends UnitTestCase
 {
@@ -30,11 +32,15 @@ final class ListRenderStrategyTest extends UnitTestCase
 
     public function test_execute_with_directives_returns_replacements(): void
     {
-        $directives = new TypedCollection(\stdClass::class);
-        $directive = new \stdClass;
-        $directive->signature = 'test-cmd';
-        $directive->description = 'Test command';
-        $directive->aliases = new StringTypedCollection;
+        $directives = new DirectiveMetadataCollection;
+
+        $aliases = new StringTypedCollection;
+        $directive = new DirectiveMetadataRecord(
+            signature: 'test-cmd',
+            class: \stdClass::class,
+            description: 'Test command',
+            aliases: $aliases,
+        );
         $directives->add($directive);
 
         $record = new RenderRecord(type: RenderType::LIST, directives: $directives);

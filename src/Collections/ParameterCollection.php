@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Collections;
 
 use AndyDefer\Directive\Records\ParameterRecord;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
 
 /**
  * Type-safe collection for ParameterRecord instances.
  *
- * @extends TypedCollection<ParameterRecord>
+ * @extends AbstractKeyValueCollection<ParameterRecord>
  */
-final class ParameterCollection extends TypedCollection
+final class ParameterCollection extends AbstractKeyValueCollection
 {
     public function __construct()
     {
@@ -24,10 +24,10 @@ final class ParameterCollection extends TypedCollection
      *
      * Flat format: [value1, name1, value2, name2, ...]
      *
-     * @param  TypedCollection  $flat  Flat arguments collection
+     * @param  ScalarTypedCollection  $flat  Flat arguments collection
      * @return self New collection with ParameterRecord objects
      */
-    public static function fromFlatArguments(TypedCollection $flat): self
+    public static function fromFlatArguments(ScalarTypedCollection $flat): self
     {
         $result = new self;
         $items = $flat->toArray();
@@ -49,10 +49,10 @@ final class ParameterCollection extends TypedCollection
      *
      * Flat format: [name1, value1, name2, value2, ...]
      *
-     * @param  TypedCollection  $flat  Flat options collection
+     * @param  ScalarTypedCollection  $flat  Flat options collection
      * @return self New collection with ParameterRecord objects
      */
-    public static function fromFlatOptions(TypedCollection $flat): self
+    public static function fromFlatOptions(ScalarTypedCollection $flat): self
     {
         $result = new self;
         $items = $flat->toArray();
@@ -82,7 +82,7 @@ final class ParameterCollection extends TypedCollection
     /**
      * Convert to associative array.
      *
-     * @return array<string, bool|string>
+     * @return array<string, bool|string|int|null>
      */
     public function toAssociativeArray(): array
     {

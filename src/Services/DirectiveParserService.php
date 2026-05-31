@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
+use AndyDefer\Directive\Collections\ParsedParameterCollection;
 use AndyDefer\Directive\Config\DirectiveParserConfig;
 use AndyDefer\Directive\Enums\ParameterType;
 use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Records\ParsedParameterRecord;
 use AndyDefer\Directive\Records\ParsedResultRecord;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 
 /**
@@ -29,8 +30,8 @@ class DirectiveParserService
      */
     public function parse(string $signature, StringTypedCollection $argv): ParsedDirectiveRecord
     {
-        $arguments = new StringTypedCollection;
-        $options = new StringTypedCollection;
+        $arguments = new ScalarTypedCollection;
+        $options = new ScalarTypedCollection;
 
         // Extraire et valider les paramètres
         $parameters = $this->extractAndValidateParameters($signature);
@@ -79,7 +80,7 @@ class DirectiveParserService
             $required = true;
             $type = 'argument';
 
-            if (!$isOption) {
+            if (! $isOption) {
                 // Vérifier si c'est un argument avec valeur par défaut
                 if (preg_match('/^([^=]+)=(.+)$/', $param, $matches)) {
                     $name = $matches[1];
@@ -126,7 +127,6 @@ class DirectiveParserService
                 }
                 $foundOptional = true;
             } elseif ($type === 'option') {
-                // Une fois qu'on a trouvé une option, on ne peut plus avoir d'arguments
                 $foundOption = true;
             }
 
@@ -149,10 +149,10 @@ class DirectiveParserService
     private function applyArgumentDefaultsAndValidation(
         array $parameters,
         array $providedArgs,
-        StringTypedCollection $arguments
+        ScalarTypedCollection $arguments
     ): void {
         // Filtrer pour n'avoir que les arguments (pas les options)
-        $argumentParams = array_filter($parameters, fn($p) => !$p['isOption']);
+        $argumentParams = array_filter($parameters, fn($p) => ! $p['isOption']);
         $argumentParams = array_values($argumentParams);
 
         $providedIndex = 0;
@@ -192,10 +192,12 @@ class DirectiveParserService
 
     /**
      * Extract help information from a directive signature.
+     *
+     * @return ParsedParameterCollection<ParsedParameterRecord>
      */
-    public function extractHelp(string $signature): TypedCollection
+    public function extractHelp(string $signature): ParsedParameterCollection
     {
-        $params = new TypedCollection(ParsedParameterRecord::class);
+        $params = new ParsedParameterCollection;
         $matches = $this->findSignatureParameters($signature);
 
         foreach ($matches as $param) {
@@ -235,6 +237,9 @@ class DirectiveParserService
 
     // ==================== Private Methods ====================
 
+    /**
+     * @return StringTypedCollection<string>
+     */
     private function findSignatureParameters(string $signature): StringTypedCollection
     {
         preg_match_all('/\{([^}]+)\}/', $signature, $matches);
@@ -283,7 +288,7 @@ class DirectiveParserService
             && strlen($arg) > 1;
     }
 
-    private function parseLongOption(string $arg, StringTypedCollection $options): void
+    private function parseLongOption(string $arg, ScalarTypedCollection $options): void
     {
         $parts = explode(
             $this->config->optionValueSeparator,
@@ -295,7 +300,7 @@ class DirectiveParserService
         $options->add($parts[1] ?? $this->config->trueValue);
     }
 
-    private function parseShortOption(string $arg, StringTypedCollection $options): void
+    private function parseShortOption(string $arg, ScalarTypedCollection $options): void
     {
         $option = substr($arg, strlen($this->config->shortOptionPrefix));
 
@@ -355,12 +360,12 @@ class DirectiveParserService
         return new ParsedParameterRecord(
             name: $name,
             type: ParameterType::ARGUMENT,
-            required: !$isOptional,
+            required: ! $isOptional,
             default: $default,
         );
     }
 
-    private function argumentsToCollection(StringTypedCollection $arguments): ParameterCollection
+    private function argumentsToCollection(ScalarTypedCollection $arguments): ParameterCollection
     {
         $result = new ParameterCollection;
         $items = $arguments->toArray();
@@ -377,7 +382,7 @@ class DirectiveParserService
         return $result;
     }
 
-    private function optionsToCollection(StringTypedCollection $options): ParameterCollection
+    private function optionsToCollection(ScalarTypedCollection $options): ParameterCollection
     {
         $result = new ParameterCollection;
         $items = $options->toArray();

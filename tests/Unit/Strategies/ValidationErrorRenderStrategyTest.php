@@ -8,7 +8,7 @@ use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Strategies\ValidationErrorRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\EmptyRecord;
+use AndyDefer\DomainStructures\Utils\EmptyRecord;
 
 final class ValidationErrorRenderStrategyTest extends UnitTestCase
 {

@@ -6,11 +6,11 @@ namespace AndyDefer\Directive\Contracts;
 
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Enums\RenderType;
-use AndyDefer\Records\Recordable;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 interface RenderStrategyInterface
 {
     public function supports(RenderType $type): bool;
 
-    public function execute(Recordable $record, RenderType $type): ReplacementCollection;
+    public function execute(AbstractRecord $record, RenderType $type): ReplacementCollection;
 }

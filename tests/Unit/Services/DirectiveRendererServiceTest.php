@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
+use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\MockObject\MockObject;
 
 final class DirectiveRendererServiceTest extends UnitTestCase
@@ -43,7 +45,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
 
     public function test_render_list_calls_render_task(): void
     {
-        $directives = new TypedCollection(\stdClass::class);
+        $directives = new DirectiveMetadataCollection;
 
         $this->renderTask->expects($this->once())
             ->method('execute')

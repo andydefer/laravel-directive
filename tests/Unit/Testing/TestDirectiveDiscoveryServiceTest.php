@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Testing;
 
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -20,8 +21,11 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
 {
     private TestDirectiveDiscoveryService $service;
+
     private DirectiveConfig $config;
+
     private DirectiveHydratorService&MockObject $hydrator;
+
     private DirectiveInteractionService&MockObject $interaction;
 
     protected function setUp(): void
@@ -78,7 +82,7 @@ final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
     public function test_register_directive_class_passes_constructor_args(): void
     {
         $customArg = 'custom-value';
-        /** @var AndyDefer\Directive\Tests\Fixtures\Directives\TestDirectiveWithArgs $directive */
+        /** @var TestDirectiveWithArgs $directive */
         $directive = $this->service->registerDirectiveClass(
             TestDirectiveWithArgs::class,
             [$this->interaction, $customArg]
@@ -96,6 +100,7 @@ final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
         $result = $this->service->discover();
 
         $this->assertCount(1, $result);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
 
         $item = $result->firstItem();
         $this->assertInstanceOf(DirectiveMetadataRecord::class, $item);
@@ -108,6 +113,7 @@ final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
         $result = $this->service->discover();
 
         $this->assertCount(0, $result);
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
     }
 
     public function test_discover_includes_all_registered_directives(): void

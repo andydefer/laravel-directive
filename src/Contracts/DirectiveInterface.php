@@ -8,7 +8,7 @@ use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
-use AndyDefer\Records\Collections\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
  * Contract for all console directive implementations.
@@ -42,9 +42,9 @@ interface DirectiveInterface
     /**
      * Get all aliases for this directive.
      *
-     * @return TypedCollection<string> Collection of alias names
+     * @return StringTypedCollection Collection of alias names
      */
-    public function getAliases(): TypedCollection;
+    public function getAliases(): StringTypedCollection;
 
     /**
      * Get the blueprint record containing directive metadata.

@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Testing;
 
 use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Records\Collections\TypedCollection;
-use Illuminate\Foundation\Application;
 
 final class TestDirectiveRegistry implements DirectiveLoaderInterface
 {
@@ -20,8 +19,11 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     private array $directives = [];
 
     private ?DirectiveInteractionService $interaction = null;
+
     private ?SignatureValidationService $signatureValidator = null;
+
     private ?DirectiveNamingService $namingService = null;
+
     private ?LaravelBootstrapper $laravelBootstrapper = null;
 
     public function setInteraction(DirectiveInteractionService $interaction): void
@@ -71,17 +73,17 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
                     $constructorArgs[] = $this->interaction;
                 } elseif ($paramType && $paramType->getName() === SignatureValidationService::class) {
                     if ($this->signatureValidator === null) {
-                        $this->signatureValidator = new SignatureValidationService();
+                        $this->signatureValidator = new SignatureValidationService;
                     }
                     $constructorArgs[] = $this->signatureValidator;
                 } elseif ($paramType && $paramType->getName() === DirectiveNamingService::class) {
                     if ($this->namingService === null) {
-                        $this->namingService = new DirectiveNamingService();
+                        $this->namingService = new DirectiveNamingService;
                     }
                     $constructorArgs[] = $this->namingService;
                 } elseif ($paramType && $paramType->getName() === LaravelBootstrapper::class) {
                     if ($this->laravelBootstrapper === null) {
-                        $this->laravelBootstrapper = new LaravelBootstrapper();
+                        $this->laravelBootstrapper = new LaravelBootstrapper;
                     }
                     $constructorArgs[] = $this->laravelBootstrapper;
                 } elseif ($paramName === 'stubPath') {
@@ -94,12 +96,13 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
 
         $directive = $reflection->newInstanceArgs($constructorArgs);
         $this->register($directive->getSignature(), $directive);
+
         return $directive;
     }
 
-    public function load(): TypedCollection
+    public function load(): DirectiveMetadataCollection
     {
-        $results = new TypedCollection(DirectiveMetadataRecord::class);
+        $results = new DirectiveMetadataCollection;
 
         foreach ($this->directives as $signature => $directive) {
             $results->add(new DirectiveMetadataRecord(

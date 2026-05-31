@@ -5,19 +5,25 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Collections;
 
 use AndyDefer\Directive\Records\ReplacementRecord;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
- * @extends TypedCollection<ReplacementRecord>
+ * @extends AbstractKeyValueCollection<ReplacementRecord>
  */
-final class ReplacementCollection extends TypedCollection
+final class ReplacementCollection extends AbstractKeyValueCollection
 {
     public function __construct()
     {
         parent::__construct(ReplacementRecord::class);
     }
 
+    /**
+     * Add a replacement pair.
+     *
+     * @param  string  $placeholder  The placeholder to replace (e.g., {{name}})
+     * @param  string  $value        The replacement value
+     * @return self
+     */
     public function addReplacement(string $placeholder, string $value): self
     {
         $this->add(new ReplacementRecord($placeholder, $value));
@@ -25,6 +31,11 @@ final class ReplacementCollection extends TypedCollection
         return $this;
     }
 
+    /**
+     * Get all placeholders as a string collection.
+     *
+     * @return StringTypedCollection
+     */
     public function getPlaceholders(): StringTypedCollection
     {
         $placeholders = new StringTypedCollection;
@@ -35,6 +46,11 @@ final class ReplacementCollection extends TypedCollection
         return $placeholders;
     }
 
+    /**
+     * Get all values as a string collection.
+     *
+     * @return StringTypedCollection
+     */
     public function getValues(): StringTypedCollection
     {
         $values = new StringTypedCollection;

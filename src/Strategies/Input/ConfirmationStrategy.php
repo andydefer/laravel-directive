@@ -7,7 +7,7 @@ namespace AndyDefer\Directive\Strategies\Input;
 use AndyDefer\Directive\Contracts\InputStrategyInterface;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\QuestionRecord;
-use AndyDefer\Records\Recordable;
+use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 
 final class ConfirmationStrategy implements InputStrategyInterface
 {
@@ -23,7 +23,7 @@ final class ConfirmationStrategy implements InputStrategyInterface
         return $type === InputType::CONFIRMATION;
     }
 
-    public function execute(Recordable $record, InputType $type): mixed
+    public function execute(AbstractRecord $record, InputType $type): mixed
     {
         if (! $record instanceof QuestionRecord) {
             return false;

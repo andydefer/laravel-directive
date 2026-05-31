@@ -10,8 +10,9 @@ use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\Records\Collections\TypedCollection;
-use AndyDefer\Records\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -38,9 +39,9 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
         return new TestDirective($this->interaction);
     }
 
-    private function createMixedCollection(array $items): TypedCollection
+    private function createScalarCollection(array $items): ScalarTypedCollection
     {
-        $collection = new TypedCollection('string', 'null');
+        $collection = new ScalarTypedCollection;
         foreach ($items as $item) {
             $collection->add($item);
         }
@@ -57,8 +58,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = $this->createMixedCollection(['John Doe', 'name', 'john@example.com', 'email']);
-        $options = new StringTypedCollection;
+        $arguments = $this->createScalarCollection(['John Doe', 'name', 'john@example.com', 'email']);
+        $options = new ScalarTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -80,8 +81,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
-        $options = $this->createMixedCollection(['active', 'true', 'verbose', null, 'role', 'admin']);
+        $arguments = new ScalarTypedCollection;
+        $options = $this->createScalarCollection(['active', 'true', 'verbose', null, 'role', 'admin']);
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -103,8 +104,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = $this->createMixedCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
-        $options = new StringTypedCollection;
+        $arguments = $this->createScalarCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
+        $options = new ScalarTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -126,8 +127,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
-        $options = new StringTypedCollection;
+        $arguments = new ScalarTypedCollection;
+        $options = new ScalarTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -148,8 +149,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = $this->createMixedCollection(['value1', 'key1', 'value2']);
-        $options = new StringTypedCollection;
+        $arguments = $this->createScalarCollection(['value1', 'key1', 'value2']);
+        $options = new ScalarTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -169,8 +170,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
-        $options = $this->createMixedCollection(['active', 'true', 'verbose']);
+        $arguments = new ScalarTypedCollection;
+        $options = $this->createScalarCollection(['active', 'true', 'verbose']);
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -190,8 +191,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new StringTypedCollection;
-        $options = $this->createMixedCollection([
+        $arguments = new ScalarTypedCollection;
+        $options = $this->createScalarCollection([
             'string_value',
             'hello',
             'true_value',
@@ -223,7 +224,6 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
 
     public function test_hydrate_blueprint_returns_blueprint_record(): void
     {
-        // Avec les valeurs par défaut dans TestDirective, ça fonctionne
         $blueprint = $this->service->hydrateBlueprint(TestDirective::class);
 
         $this->assertSame(TestDirective::class, $blueprint->class);
