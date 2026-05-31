@@ -123,12 +123,6 @@ final class DirectiveServiceProviderTest extends UnitTestCase
         $this->assertTrue($this->container->bound(InputTask::class));
     }
 
-    public function test_create_directive_file_task_is_registered_as_singleton(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->container->bound(CreateDirectiveFileTask::class));
-    }
-
     public function test_interaction_service_is_registered_as_singleton(): void
     {
         $this->provider->register();

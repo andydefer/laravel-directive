@@ -47,7 +47,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/config/directive.php' => config_path('directive.php'),
+            __DIR__ . '/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -151,17 +151,10 @@ final class DirectiveServiceProvider extends ServiceProvider
         $tasks = [
             RenderTask::class,
             InputTask::class,
-            CreateDirectiveFileTask::class,
         ];
 
         foreach ($tasks as $task) {
             $this->app->singleton($task, function ($app) use ($task) {
-                if ($task === CreateDirectiveFileTask::class) {
-                    return new CreateDirectiveFileTask(
-                        namingService: $app->make(DirectiveNamingService::class),
-                    );
-                }
-
                 return new $task;
             });
         }

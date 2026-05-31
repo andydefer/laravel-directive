@@ -1,6 +1,3 @@
-Voici la documentation complète enrichie avec la section sur le bootstrapping Laravel dans les tests :
-
-```markdown
 # Laravel Directive
 
 **A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between business logic and presentation.**

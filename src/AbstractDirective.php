@@ -12,20 +12,62 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
+/**
+ * Abstract base class for all CLI directives.
+ *
+ * This class provides the foundation for creating CLI commands with:
+ * - Argument and option management
+ * - User interaction methods (ask, confirm, line, info, error, warn)
+ * - Table display capabilities
+ * - Optional Laravel bootstrapping
+ *
+ * @example
+ * final class UserListDirective extends AbstractDirective
+ * {
+ *     public function getSignature(): string
+ *     {
+ *         return 'user-list {--role=} {--active}';
+ *     }
+ *
+ *     public function getDescription(): string
+ *     {
+ *         return 'List all users with optional filters';
+ *     }
+ *
+ *     public function execute(): ExitCode
+ *     {
+ *         $role = $this->option('role');
+ *         $active = $this->option('active');
+ *
+ *         $this->info("Listing users with role: {$role}");
+ *
+ *         return ExitCode::SUCCESS;
+ *     }
+ * }
+ *
+ * @author Andy Defer
+ */
 abstract class AbstractDirective implements DirectiveInterface
 {
     protected ParameterCollection $arguments;
-
     protected ParameterCollection $options;
 
     public function __construct(
         protected readonly DirectiveInteractionService $interaction,
         protected ?LaravelBootstrapper $laravelBootstrapper = null,
     ) {
-        $this->arguments = new ParameterCollection;
-        $this->options = new ParameterCollection;
+        $this->arguments = new ParameterCollection();
+        $this->options = new ParameterCollection();
     }
 
+    /**
+     * Returns the blueprint record for this directive.
+     *
+     * The blueprint contains metadata about the directive including its class,
+     * signature, and description.
+     *
+     * @return DirectiveBlueprintRecord The blueprint record
+     */
     public function getBlueprint(): DirectiveBlueprintRecord
     {
         return new DirectiveBlueprintRecord(
@@ -35,13 +77,26 @@ abstract class AbstractDirective implements DirectiveInterface
         );
     }
 
+    /**
+     * Returns the aliases for this directive.
+     *
+     * Aliases are alternative names that can be used to invoke this directive.
+     * Override this method to provide custom aliases.
+     *
+     * @return StringTypedCollection Collection of alias strings
+     */
     public function getAliases(): StringTypedCollection
     {
-        return new StringTypedCollection;
+        return new StringTypedCollection();
     }
 
     /**
-     * Override this method to enable Laravel bootstrapping for this directive.
+     * Determines whether Laravel should be bootstrapped before executing this directive.
+     *
+     * Override this method to return true if the directive needs Laravel features
+     * such as Eloquent, database connections, or caching.
+     *
+     * @return bool True if Laravel bootstrapping is required
      */
     public function shouldBootLaravel(): bool
     {
@@ -49,7 +104,9 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * Check if Laravel has been bootstrapped and is available.
+     * Checks if Laravel has been bootstrapped and is available.
+     *
+     * @return bool True if Laravel is available
      */
     public function hasLaravel(): bool
     {
@@ -57,7 +114,9 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * Get the Laravel application instance if available.
+     * Returns the Laravel application instance if available.
+     *
+     * @return object|null The Laravel application instance, or null if not available
      */
     public function getLaravel(): ?object
     {
@@ -65,7 +124,11 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * Set the Laravel bootstrapper instance.
+     * Sets the Laravel bootstrapper instance.
+     *
+     * @param LaravelBootstrapper|null $bootstrapper The bootstrapper instance
+     *
+     * @return self Returns the current instance for method chaining
      */
     public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self
     {
@@ -76,6 +139,13 @@ abstract class AbstractDirective implements DirectiveInterface
 
     // ==================== Argument Management ====================
 
+    /**
+     * Sets the arguments for this directive.
+     *
+     * @param ParameterCollection $arguments The argument collection
+     *
+     * @return self Returns the current instance for method chaining
+     */
     public function setArguments(ParameterCollection $arguments): self
     {
         $this->arguments = $arguments;
@@ -84,11 +154,13 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * Get an argument value by its key.
-     * Returns null if the argument is not provided or empty.
+     * Returns the value of an argument by its key.
      *
-     * @param  string  $key  The argument name
-     * @return string|null The argument value, or null if not provided or empty
+     * Returns null if the argument is not provided, is empty, or is a boolean value.
+     *
+     * @param string $key The argument name
+     *
+     * @return string|null The argument value, or null if not available
      */
     public function argument(string $key): ?string
     {
@@ -102,11 +174,13 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * Check if an argument exists and has a non-empty value.
-     * Empty strings are considered as not provided.
+     * Checks if an argument exists and has a non-empty value.
      *
-     * @param  string  $key  The argument name
-     * @return bool True if the argument exists and has a non-empty value, false otherwise
+     * Empty strings and boolean values are considered not provided.
+     *
+     * @param string $key The argument name
+     *
+     * @return bool True if the argument exists and has a non-empty value
      */
     public function hasArgument(string $key): bool
     {
@@ -117,6 +191,13 @@ abstract class AbstractDirective implements DirectiveInterface
 
     // ==================== Option Management ====================
 
+    /**
+     * Sets the options for this directive.
+     *
+     * @param ParameterCollection $options The option collection
+     *
+     * @return self Returns the current instance for method chaining
+     */
     public function setOptions(ParameterCollection $options): self
     {
         $this->options = $options;
@@ -125,10 +206,14 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * Get an option value by its key.
+     * Returns the value of an option by its key.
      *
-     * @param  string  $key  The option name
-     * @return bool|string|null The option value (boolean for flags, string for values), or null if not found
+     * Returns null if the option is not provided or is an empty string.
+     * Returns boolean for flag options (--force) and string for valued options (--role=admin).
+     *
+     * @param string $key The option name
+     *
+     * @return bool|string|null The option value, or null if not available
      */
     public function option(string $key): bool|string|null
     {
@@ -142,11 +227,11 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * Check if an option exists and has a non-empty value.
-     * Empty strings are considered as not provided.
+     * Checks if an option exists and has a non-empty value.
      *
-     * @param  string  $key  The option name
-     * @return bool True if the option exists and has a non-empty value, false otherwise
+     * @param string $key The option name
+     *
+     * @return bool True if the option exists and has a non-empty value
      */
     public function hasOption(string $key): bool
     {
@@ -156,51 +241,89 @@ abstract class AbstractDirective implements DirectiveInterface
             return false;
         }
 
-        // Pour les booléens, true est considéré comme présent
         if (is_bool($value)) {
             return $value;
         }
 
-        // Pour les chaînes, on vérifie qu'elles ne sont pas vides
         return $value !== '';
     }
 
     // ==================== Display Methods ====================
 
+    /**
+     * Outputs a plain text line.
+     *
+     * @param string $message The message to display
+     */
     public function line(string $message): void
     {
         $this->interaction->line($message);
     }
 
+    /**
+     * Outputs an informational message (typically green).
+     *
+     * @param string $message The message to display
+     */
     public function info(string $message): void
     {
         $this->interaction->info($message);
     }
 
+    /**
+     * Outputs an error message (typically red).
+     *
+     * @param string $message The message to display
+     */
     public function error(string $message): void
     {
         $this->interaction->error($message);
     }
 
+    /**
+     * Outputs a warning message (typically yellow).
+     *
+     * @param string $message The message to display
+     */
     public function warn(string $message): void
     {
         $this->interaction->warn($message);
     }
 
-    // ==================== User Interaction ====================
+    // ==================== User Interaction Methods ====================
 
+    /**
+     * Asks a question and returns the user's answer.
+     *
+     * @param string $question The question to ask
+     *
+     * @return string The user's answer
+     */
     public function ask(string $question): string
     {
         return $this->interaction->ask($question);
     }
 
+    /**
+     * Asks for confirmation and returns the user's choice.
+     *
+     * @param string $question The confirmation question
+     *
+     * @return bool True if the user confirms (y/yes), false otherwise
+     */
     public function confirm(string $question): bool
     {
         return $this->interaction->confirm($question);
     }
 
-    // ==================== Table Display ====================
+    // ==================== Table Display Methods ====================
 
+    /**
+     * Displays a formatted table with headers and rows.
+     *
+     * @param StringTypedCollection $headers The table headers
+     * @param RowCollection         $rows    The table rows
+     */
     public function table(StringTypedCollection $headers, RowCollection $rows): void
     {
         $this->interaction->table($headers, $rows);

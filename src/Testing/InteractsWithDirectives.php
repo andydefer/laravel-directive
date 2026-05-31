@@ -26,6 +26,36 @@ use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
+/**
+ * Trait providing testing utilities for directives.
+ *
+ * This trait allows you to test directives in an isolated environment without
+ * needing to create real files or depend on the filesystem. It provides methods
+ * to register directives, run them, and make assertions on their output.
+ *
+ * @example
+ * class MyDirectiveTest extends TestCase
+ * {
+ *     use InteractsWithDirectives;
+ *
+ *     protected function setUp(): void
+ *     {
+ *         parent::setUp();
+ *         $this->initDirectiveTesting();
+ *     }
+ *
+ *     public function test_directive_executes_successfully(): void
+ *     {
+ *         $directive = new MyDirective($this->interaction);
+ *         $this->registerDirective($directive);
+ *
+ *         $response = $this->runDirective(MyDirective::class, ['arg1', '--option']);
+ *         $response->assertSuccess();
+ *     }
+ * }
+ *
+ * @author Andy Defer
+ */
 trait InteractsWithDirectives
 {
     private Container $directiveContainer;
@@ -38,6 +68,14 @@ trait InteractsWithDirectives
     private ?Application $laravelApp = null;
     private bool $bootLaravelEnabled = false;
 
+    /**
+     * Initializes the testing environment for directives.
+     *
+     * Creates a temporary directory, sets up the service container, and optionally
+     * bootstraps a minimal Laravel application.
+     *
+     * @param bool $bootLaravel Whether to bootstrap Laravel for tests that need it
+     */
     protected function initDirectiveTesting(bool $bootLaravel = false): void
     {
         if ($this->directiveTestingInitialized) {
@@ -129,6 +167,9 @@ trait InteractsWithDirectives
         $this->directiveTestingInitialized = true;
     }
 
+    /**
+     * Creates a minimal Laravel application structure for testing.
+     */
     private function createLaravelStructure(): void
     {
         $bootstrapDir = $this->directiveTempDir . '/bootstrap';
@@ -194,6 +235,11 @@ PHP;
         mkdir($this->directiveTempDir . '/app/Models', 0777, true);
     }
 
+    /**
+     * Creates a Laravel application instance from the temporary structure.
+     *
+     * @return Application The Laravel application instance
+     */
     private function createApplication(): Application
     {
         $app = require $this->directiveTempDir . '/bootstrap/app.php';
@@ -205,7 +251,9 @@ PHP;
     }
 
     /**
-     * Enregistre une directive par son instance
+     * Registers a directive instance for testing.
+     *
+     * @param AbstractDirective $directive The directive instance to register
      */
     protected function registerDirective(AbstractDirective $directive): void
     {
@@ -214,9 +262,9 @@ PHP;
     }
 
     /**
-     * Enregistre plusieurs directives par leurs instances
+     * Registers multiple directive instances for testing.
      *
-     * @param array<AbstractDirective> $directives
+     * @param array<AbstractDirective> $directives The directive instances to register
      */
     protected function registerDirectives(array $directives): void
     {
@@ -224,6 +272,9 @@ PHP;
         $this->directiveRegistry->registerAll($directives);
     }
 
+    /**
+     * Clears all registered directives from the registry.
+     */
     protected function clearRegisteredDirectives(): void
     {
         if ($this->directiveTestingInitialized) {
@@ -231,6 +282,14 @@ PHP;
         }
     }
 
+    /**
+     * Creates a temporary test directive with a closure as execution logic.
+     *
+     * @param string   $signature The directive signature
+     * @param callable $execute   The execution logic
+     *
+     * @return ClosureDirective The created directive instance
+     */
     protected function createTestDirective(string $signature, callable $execute): ClosureDirective
     {
         $this->initDirectiveTesting($this->bootLaravelEnabled);
@@ -246,10 +305,12 @@ PHP;
     }
 
     /**
-     * Exécute une directive par son FQCN (namespace complet)
+     * Runs a directive by its FQCN (fully qualified class name).
      *
-     * @param string $className FQCN de la directive (ex: App\Directives\MyDirective::class)
-     * @param array<string> $arguments Les arguments à passer
+     * @param string         $className FQCN of the directive (e.g., App\Directives\MyDirective::class)
+     * @param array<string>  $arguments The arguments to pass to the directive
+     *
+     * @return DirectiveResponse The response containing exit code and output
      */
     protected function runDirective(string $className, array $arguments = []): DirectiveResponse
     {
@@ -261,7 +322,7 @@ PHP;
             return $this->executeDirectly($directive, $arguments);
         }
 
-        // Fallback: essayer via le kernel avec la signature
+        // Fallback: try via the kernel with the signature
         $argv = array_merge(['directive', $className], $arguments);
 
         ob_start();
@@ -275,6 +336,14 @@ PHP;
         );
     }
 
+    /**
+     * Executes a directive directly without going through the kernel.
+     *
+     * @param AbstractDirective $directive The directive instance
+     * @param array<string>     $arguments The arguments to pass
+     *
+     * @return DirectiveResponse The response containing exit code and output
+     */
     private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponse
     {
         $fullSignature = $directive->getSignature();
@@ -333,17 +402,35 @@ PHP;
         }
     }
 
+    /**
+     * Returns the current output buffer level.
+     *
+     * Useful for debugging buffer-related issues in tests.
+     *
+     * @return int The current output buffer level
+     */
     protected function getBufferLevel(): int
     {
         return ob_get_level();
     }
 
+    /**
+     * Runs a directive and asserts that it executed successfully.
+     *
+     * @param string         $className FQCN of the directive
+     * @param array<string>  $arguments The arguments to pass
+     *
+     * @return DirectiveResponse The response for further assertions
+     */
     protected function runAndAssert(string $className, array $arguments = []): DirectiveResponse
     {
         $response = $this->runDirective($className, $arguments);
         return $response->assertSuccess();
     }
 
+    /**
+     * Destroys the testing environment and cleans up temporary files.
+     */
     protected function destroyDirectiveTesting(): void
     {
         if (!$this->directiveTestingInitialized) {
@@ -365,6 +452,11 @@ PHP;
         $this->directiveTestingInitialized = false;
     }
 
+    /**
+     * Recursively removes a directory and all its contents.
+     *
+     * @param string $dir The directory path to remove
+     */
     private function removeDirectory(string $dir): void
     {
         if (!is_dir($dir)) {
