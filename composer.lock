@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ff6a88727b295e9d4ab156cf40ecf9ff",
+    "content-hash": "2cd1385ebc55dbbe50f9f05673a12dda",
     "packages": [
         {
             "name": "andydefer/domain-structures",
-            "version": "1.11.0",
+            "version": "1.12.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/domain-structures.git",
-                "reference": "1ae34c4fff6e37a882b4acbda049d6e38bff2796"
+                "reference": "89522fac82be0efdac15549da56e0d53eee006e4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/domain-structures/zipball/1ae34c4fff6e37a882b4acbda049d6e38bff2796",
-                "reference": "1ae34c4fff6e37a882b4acbda049d6e38bff2796",
+                "url": "https://api.github.com/repos/andydefer/domain-structures/zipball/89522fac82be0efdac15549da56e0d53eee006e4",
+                "reference": "89522fac82be0efdac15549da56e0d53eee006e4",
                 "shasum": ""
             },
             "require": {
@@ -53,9 +53,9 @@
             "description": "A complete domain structures package for PHP: Records, Value Objects, Data DTOs, and TypedCollections. Brings type safety and clean architecture to your application.",
             "support": {
                 "issues": "https://github.com/andydefer/domain-structures/issues",
-                "source": "https://github.com/andydefer/domain-structures/tree/1.11.0"
+                "source": "https://github.com/andydefer/domain-structures/tree/1.12.0"
             },
-            "time": "2026-06-01T14:15:10+00:00"
+            "time": "2026-06-01T15:29:41+00:00"
         },
         {
             "name": "brick/math",
