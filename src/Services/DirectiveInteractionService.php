@@ -18,7 +18,13 @@ use AndyDefer\Directive\Tasks\RenderTask;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
- * Service for directive user interaction (messages, questions, tables).
+ * Service for directive user interaction.
+ *
+ * Provides methods for displaying messages (line, info, error, warn),
+ * user input (ask, confirm, askUserChoice), and table rendering.
+ * Delegates rendering to RenderTask and user input to InputTask.
+ *
+ * @author Andy Defer
  */
 class DirectiveInteractionService
 {
@@ -29,26 +35,52 @@ class DirectiveInteractionService
 
     // ==================== Display Methods ====================
 
+    /**
+     * Outputs a plain text line.
+     *
+     * @param string $message The message to display
+     */
     public function line(string $message): void
     {
         $this->renderMessage($message, MessageType::LINE);
     }
 
+    /**
+     * Outputs an informational message (typically green).
+     *
+     * @param string $message The message to display
+     */
     public function info(string $message): void
     {
         $this->renderMessage($message, MessageType::INFO);
     }
 
+    /**
+     * Outputs an error message (typically red).
+     *
+     * @param string $message The message to display
+     */
     public function error(string $message): void
     {
         $this->renderMessage($message, MessageType::ERROR);
     }
 
+    /**
+     * Outputs a warning message (typically yellow).
+     *
+     * @param string $message The message to display
+     */
     public function warn(string $message): void
     {
         $this->renderMessage($message, MessageType::WARNING);
     }
 
+    /**
+     * Renders a message with the specified type.
+     *
+     * @param string      $message The message content
+     * @param MessageType $type    The message type (LINE, INFO, ERROR, WARNING)
+     */
     private function renderMessage(string $message, MessageType $type): void
     {
         $messageRecord = new DisplayMessageRecord($message, $type);
@@ -56,31 +88,56 @@ class DirectiveInteractionService
         echo $this->renderTask->execute($renderRecord, RenderType::DISPLAY_MESSAGE);
     }
 
-    // ==================== User Interaction ====================
+    // ==================== User Interaction Methods ====================
 
+    /**
+     * Asks a question and returns the user's answer.
+     *
+     * @param string $question The question to ask
+     *
+     * @return string The user's answer (trimmed)
+     */
     public function ask(string $question): string
     {
         $record = new QuestionRecord($question);
-
         return $this->inputTask->execute($record, InputType::SIMPLE_QUESTION);
     }
 
+    /**
+     * Asks for confirmation and returns the user's choice.
+     *
+     * @param string $question The confirmation question
+     *
+     * @return bool True if the user confirms (y/yes), false otherwise (n/no)
+     */
     public function confirm(string $question): bool
     {
         $record = new QuestionRecord($question);
-
         return $this->inputTask->execute($record, InputType::CONFIRMATION);
     }
 
+    /**
+     * Asks the user to choose from a numbered list.
+     *
+     * @param string $name The name of the choice (for display)
+     * @param int    $max  The maximum choice number (1 to max)
+     *
+     * @return int The chosen number (1 to max), or 0 if invalid
+     */
     public function askUserChoice(string $name, int $max): int
     {
         $record = new UserChoiceRecord(choice: 0, max: $max);
-
         return $this->inputTask->execute($record, InputType::USER_CHOICE);
     }
 
-    // ==================== Table Display ====================
+    // ==================== Table Display Methods ====================
 
+    /**
+     * Displays a formatted table with headers and rows.
+     *
+     * @param StringTypedCollection $headers The table headers
+     * @param RowCollection         $rows    The table rows
+     */
     public function table(StringTypedCollection $headers, RowCollection $rows): void
     {
         $tableRecord = new DisplayTableRecord($headers, $rows);

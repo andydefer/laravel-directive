@@ -7,6 +7,9 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tests\UnitTestCase;
 
+/**
+ * @covers \AndyDefer\Directive\Services\SignatureValidationService
+ */
 final class SignatureValidationServiceTest extends UnitTestCase
 {
     private SignatureValidationService $service;
@@ -14,142 +17,242 @@ final class SignatureValidationServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new SignatureValidationService;
+        $this->service = new SignatureValidationService();
     }
 
-    // ==================== Valid directive names ====================
+    // ==================== Valid Directive Names ====================
 
-    public function test_validates_simple_name(): void
+    public function testValidatesSimpleName(): void
     {
+        // Act: Validate a simple hyphenated name
         $result = $this->service->validate('user-create');
+
+        // Assert: Should be valid with no error
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    public function test_validates_single_word(): void
+    public function testValidatesSingleWord(): void
     {
+        // Act: Validate a single-word directive
         $result = $this->service->validate('list');
+
+        // Assert: Should be valid
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    public function test_validates_with_multiple_hyphens(): void
+    public function testValidatesWithMultipleHyphens(): void
     {
+        // Act: Validate a name with multiple hyphens
         $result = $this->service->validate('db-migrate-fresh');
+
+        // Assert: Should be valid
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    public function test_validates_with_numbers(): void
+    public function testValidatesWithNumbers(): void
     {
+        // Act: Validate a name containing numbers
         $result = $this->service->validate('api-v2');
+
+        // Assert: Should be valid
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    public function test_validates_with_numbers_at_end(): void
+    public function testValidatesWithNumbersAtEnd(): void
     {
+        // Act: Validate a name ending with numbers
         $result = $this->service->validate('user-create2');
+
+        // Assert: Should be valid
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    public function test_validates_long_options(): void
+    public function testValidatesLongOptions(): void
     {
+        // Act: Validate a long option
         $result = $this->service->validate('--help');
+
+        // Assert: Should be valid (long options are accepted)
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    public function test_validates_short_options(): void
+    public function testValidatesShortOptions(): void
     {
+        // Act: Validate a single short option
         $result = $this->service->validate('-h');
+
+        // Assert: Should be valid
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    public function test_validates_short_option_multiple(): void
+    public function testValidatesShortOptionMultiple(): void
     {
+        // Act: Validate multiple grouped short options
         $result = $this->service->validate('-vl');
+
+        // Assert: Should be valid
         $this->assertTrue($result->isValid);
         $this->assertNull($result->error);
     }
 
-    // ==================== Invalid directive names ====================
+    // ==================== Invalid Directive Names ====================
 
-    public function test_rejects_empty_name(): void
+    public function testRejectsEmptyName(): void
     {
+        // Act: Validate an empty string
         $result = $this->service->validate('');
+
+        // Assert: Should be invalid with appropriate error
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('cannot be empty', $result->error);
     }
 
-    public function test_rejects_space(): void
+    public function testRejectsSpace(): void
     {
+        // Act: Validate a name containing a space
         $result = $this->service->validate('user create');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function test_rejects_at_symbol(): void
+    public function testRejectsAtSymbol(): void
     {
+        // Act: Validate a name containing @ symbol
         $result = $this->service->validate('user@create');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function test_rejects_colon(): void
+    public function testRejectsColon(): void
     {
+        // Act: Validate a name containing colon
         $result = $this->service->validate('user:create');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function test_rejects_underscore(): void
+    public function testRejectsUnderscore(): void
     {
+        // Act: Validate a name containing underscore
         $result = $this->service->validate('user_create');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function test_rejects_starts_with_number(): void
+    public function testRejectsStartsWithNumber(): void
     {
+        // Act: Validate a name starting with a number
         $result = $this->service->validate('123-user');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function test_rejects_starts_with_hyphen(): void
+    public function testRejectsStartsWithHyphen(): void
     {
+        // Act: Validate a name starting with a hyphen
         $result = $this->service->validate('-user');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function test_rejects_consecutive_hyphens(): void
+    public function testRejectsConsecutiveHyphens(): void
     {
+        // Act: Validate a name with consecutive hyphens
         $result = $this->service->validate('user--create');
+
+        // Assert: Should be invalid with specific error
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('consecutive hyphens', $result->error);
     }
 
-    public function test_rejects_ending_with_hyphen(): void
+    public function testRejectsEndingWithHyphen(): void
     {
+        // Act: Validate a name ending with a hyphen
         $result = $this->service->validate('user-create-');
+
+        // Assert: Should be invalid with specific error
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('end with a hyphen', $result->error);
     }
 
-    public function test_rejects_numbers_only(): void
+    public function testRejectsNumbersOnly(): void
     {
+        // Act: Validate a name that is only numbers
         $result = $this->service->validate('123');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function test_rejects_special_characters(): void
+    public function testRejectsSpecialCharacters(): void
     {
+        // Act: Validate a name with special characters
         $result = $this->service->validate('user$create');
+
+        // Assert: Should be invalid
+        $this->assertFalse($result->isValid);
+        $this->assertStringContainsString('Invalid directive name', $result->error);
+    }
+
+    // ==================== Edge Cases ====================
+
+    public function testValidatesDirectiveWithSingleCharacter(): void
+    {
+        // Act: Validate a single character directive
+        $result = $this->service->validate('a');
+
+        // Assert: Should be valid
+        $this->assertTrue($result->isValid);
+        $this->assertNull($result->error);
+    }
+
+    public function testValidatesDirectiveWithMaxLengthName(): void
+    {
+        // Act: Validate a very long but valid name
+        $longName = 'a' . str_repeat('-b', 100);
+        $result = $this->service->validate($longName);
+
+        // Assert: Should be valid (no length limit enforced)
+        $this->assertTrue($result->isValid);
+        $this->assertNull($result->error);
+    }
+
+    public function testValidatesUppercaseLetters(): void
+    {
+        // Act: Validate a name with uppercase letters
+        $result = $this->service->validate('UserCreate');
+
+        // Assert: Should be valid (uppercase allowed)
+        $this->assertTrue($result->isValid);
+        $this->assertNull($result->error);
+    }
+
+    public function testRejectsLeadingHyphenShortOptionLike(): void
+    {
+        // Act: Validate a single hyphen (invalid short option)
+        $result = $this->service->validate('-');
+
+        // Assert: Should be invalid
         $this->assertFalse($result->isValid);
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }

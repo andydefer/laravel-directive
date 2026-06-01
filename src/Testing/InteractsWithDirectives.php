@@ -10,6 +10,7 @@ use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
+use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -310,9 +311,9 @@ PHP;
      * @param string         $className FQCN of the directive (e.g., App\Directives\MyDirective::class)
      * @param array<string>  $arguments The arguments to pass to the directive
      *
-     * @return DirectiveResponse The response containing exit code and output
+     * @return DirectiveResponseRecord The response containing exit code and output
      */
-    protected function runDirective(string $className, array $arguments = []): DirectiveResponse
+    protected function runDirective(string $className, array $arguments = []): DirectiveResponseRecord
     {
         $this->initDirectiveTesting($this->bootLaravelEnabled);
 
@@ -329,10 +330,9 @@ PHP;
         $exitCode = $this->directiveKernel->run($argv);
         $output = ob_get_clean();
 
-        return new DirectiveResponse(
+        return new DirectiveResponseRecord(
             exitCode: $exitCode,
             output: $output,
-            arguments: $arguments,
         );
     }
 
@@ -342,9 +342,9 @@ PHP;
      * @param AbstractDirective $directive The directive instance
      * @param array<string>     $arguments The arguments to pass
      *
-     * @return DirectiveResponse The response containing exit code and output
+     * @return DirectiveResponseRecord The response containing exit code and output
      */
-    private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponse
+    private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
     {
         $fullSignature = $directive->getSignature();
         $parser = new DirectiveParserService();
@@ -376,28 +376,25 @@ PHP;
             $exitCode = $directive->execute();
             $output = ob_get_clean();
 
-            return new DirectiveResponse(
+            return new DirectiveResponseRecord(
                 exitCode: $exitCode,
                 output: $output,
-                arguments: $arguments,
             );
         } catch (InvalidArgumentException $e) {
             if ($bufferStarted) {
                 ob_end_clean();
             }
-            return new DirectiveResponse(
+            return new DirectiveResponseRecord(
                 exitCode: ExitCode::INVALID_ARGUMENT,
                 output: $e->getMessage(),
-                arguments: $arguments,
             );
         } catch (\Throwable $e) {
             if ($bufferStarted) {
                 ob_end_clean();
             }
-            return new DirectiveResponse(
+            return new DirectiveResponseRecord(
                 exitCode: ExitCode::FAILURE,
                 output: $e->getMessage(),
-                arguments: $arguments,
             );
         }
     }
@@ -414,19 +411,6 @@ PHP;
         return ob_get_level();
     }
 
-    /**
-     * Runs a directive and asserts that it executed successfully.
-     *
-     * @param string         $className FQCN of the directive
-     * @param array<string>  $arguments The arguments to pass
-     *
-     * @return DirectiveResponse The response for further assertions
-     */
-    protected function runAndAssert(string $className, array $arguments = []): DirectiveResponse
-    {
-        $response = $this->runDirective($className, $arguments);
-        return $response->assertSuccess();
-    }
 
     /**
      * Destroys the testing environment and cleans up temporary files.

@@ -30,17 +30,11 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveExecutionServiceTest extends UnitTestCase
 {
     private DirectiveDiscoveryService&MockObject $discovery;
-
     private DirectiveParserService&MockObject $parser;
-
     private DirectiveHydratorService&MockObject $hydrator;
-
     private DirectiveRendererService&MockObject $renderer;
-
     private DirectiveExecutionService $service;
-
     protected LaravelBootstrapper $laravelBootstrapper;
-
     private string|false $originalDebug;
 
     protected function setUp(): void
@@ -51,7 +45,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->parser = $this->createMock(DirectiveParserService::class);
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->renderer = $this->createMock(DirectiveRendererService::class);
-        $this->laravelBootstrapper = new LaravelBootstrapper;
+        $this->laravelBootstrapper = new LaravelBootstrapper();
 
         $this->service = new DirectiveExecutionService(
             discovery: $this->discovery,
@@ -76,21 +70,11 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         parent::tearDown();
     }
 
-    private function createArguments(array $items): StringTypedCollection
-    {
-        $collection = new StringTypedCollection;
-        foreach ($items as $item) {
-            $collection->add($item);
-        }
-
-        return $collection;
-    }
-
     private function createDirectivesCollection(): DirectiveMetadataCollection
     {
-        $collection = new DirectiveMetadataCollection;
+        $collection = new DirectiveMetadataCollection();
 
-        $aliases1 = new StringTypedCollection;
+        $aliases1 = new StringTypedCollection();
         $directive1 = new DirectiveMetadataRecord(
             signature: 'test-concrete',
             class: TestConcreteDirective::class,
@@ -99,7 +83,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive1);
 
-        $aliases2 = new StringTypedCollection;
+        $aliases2 = new StringTypedCollection();
         $aliases2->add('tpkg');
         $directive2 = new DirectiveMetadataRecord(
             signature: 'test-package',
@@ -109,7 +93,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive2);
 
-        $aliases3 = new StringTypedCollection;
+        $aliases3 = new StringTypedCollection();
         $directive3 = new DirectiveMetadataRecord(
             signature: 'test-laravel',
             class: TestLaravelDirective::class,
@@ -121,11 +105,12 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         return $collection;
     }
 
-    // ==================== Tests avec signature non trouvée ====================
+    // ==================== Not Found Tests ====================
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
     {
-        $directives = new DirectiveMetadataCollection;
+        // Arrange: Empty directives collection
+        $directives = new DirectiveMetadataCollection();
 
         $this->discovery->expects($this->once())
             ->method('discover')
@@ -135,18 +120,23 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderNotFound')
             ->with('unknown-cmd');
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'unknown-cmd', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'unknown-cmd',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::NOT_FOUND, $result);
     }
 
-    // ==================== Tests avec une seule directive ====================
+    // ==================== Success/Failure Tests ====================
 
     public function test_execute_returns_success_when_directive_exists(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -154,12 +144,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection,
-            options: new ScalarTypedCollection,
+            arguments: new ScalarTypedCollection(),
+            options: new ScalarTypedCollection(),
         );
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-concrete', $this->createArguments(['John']))
+            ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
             ->willReturn($parsedRecord);
 
         $directive = $this->createMock(DirectiveInterface::class);
@@ -176,16 +167,21 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderSuccess')
             ->with('Directive executed successfully');
 
-        $arguments = $this->createArguments(['John']);
-        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-concrete',
+            'arguments' => ['John'],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_returns_failure_when_directive_fails(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -193,12 +189,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection,
-            options: new ScalarTypedCollection,
+            arguments: new ScalarTypedCollection(),
+            options: new ScalarTypedCollection(),
         );
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-concrete', $this->createArguments([]))
+            ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
             ->willReturn($parsedRecord);
 
         $directive = $this->createMock(DirectiveInterface::class);
@@ -215,16 +212,21 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderError')
             ->with('Directive execution failed');
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-concrete',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::FAILURE, $result);
     }
 
     public function test_execute_handles_directive_by_alias(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -232,12 +234,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection,
-            options: new ScalarTypedCollection,
+            arguments: new ScalarTypedCollection(),
+            options: new ScalarTypedCollection(),
         );
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-package', $this->createArguments([]))
+            ->with('test-package', $this->isInstanceOf(StringTypedCollection::class))
             ->willReturn($parsedRecord);
 
         $directive = $this->createMock(DirectiveInterface::class);
@@ -254,44 +257,59 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderSuccess')
             ->with('Directive executed successfully');
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'tpkg', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'tpkg',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    // ==================== Tests des commandes intégrées ====================
+    // ==================== Built-in Commands Tests ====================
 
     public function test_execute_handles_help_command(): void
     {
+        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderHelp');
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: '--help', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => '--help',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_short_help_command(): void
     {
+        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderHelp');
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: '-h', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => '-h',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_list_command(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -302,16 +320,21 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderList')
             ->with($directives);
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: '--list', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => '--list',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_short_list_command(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -322,58 +345,71 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderList')
             ->with($directives);
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: '-l', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => '-l',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_version_command(): void
     {
+        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderVersion');
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: '--version', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => '--version',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_short_version_command(): void
     {
+        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderVersion');
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: '-v', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => '-v',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    // ==================== Tests avec arguments et options ====================
+    // ==================== Argument Passing Tests ====================
 
     public function test_execute_passes_arguments_and_options_to_parser(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
             ->method('discover')
             ->willReturn($directives);
 
-        $arguments = $this->createArguments(['John', '--role=admin', '--verbose']);
-
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-concrete', $arguments)
+            ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
             ->willReturn(new ParsedDirectiveRecord(
-                arguments: new ScalarTypedCollection,
-                options: new ScalarTypedCollection,
+                arguments: new ScalarTypedCollection(),
+                options: new ScalarTypedCollection(),
             ));
 
         $directive = $this->createMock(DirectiveInterface::class);
@@ -389,15 +425,20 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
 
-        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-concrete',
+            'arguments' => ['John', '--role=admin', '--verbose'],
+        ]);
 
+        // Act
         $this->service->execute($record);
     }
 
-    // ==================== Tests avec Laravel Bootstrap ====================
+    // ==================== Laravel Bootstrap Tests ====================
 
     public function test_execute_boots_laravel_when_directive_requests_it(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -405,12 +446,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection,
-            options: new ScalarTypedCollection,
+            arguments: new ScalarTypedCollection(),
+            options: new ScalarTypedCollection(),
         );
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-laravel', $this->createArguments([]))
+            ->with('test-laravel', $this->isInstanceOf(StringTypedCollection::class))
             ->willReturn($parsedRecord);
 
         $directive = $this->createMock(DirectiveInterface::class);
@@ -426,25 +468,29 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
 
-        // Mock le bootstrapper pour qu'il n'y ait pas de warning
         $mockBootstrapper = $this->createMock(LaravelBootstrapper::class);
         $mockBootstrapper->expects($this->once())
             ->method('bootstrap');
 
         $this->service->setLaravelBootstrapper($mockBootstrapper);
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'test-laravel', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-laravel',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    // ==================== Tests de capture des erreurs du parser ====================
+    // ==================== Parser Exception Tests ====================
 
     public function test_execute_captures_parser_invalid_argument_exception_and_returns_invalid_argument(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -452,25 +498,31 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $errorMessage = 'Not enough arguments (missing: "message")';
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-concrete', $this->createArguments([]))
+            ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
             ->willThrowException(new InvalidArgumentException($errorMessage));
 
         $this->renderer->expects($this->once())
             ->method('renderError')
             ->with($errorMessage);
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-concrete',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 
     public function test_execute_captures_parser_too_many_arguments_exception(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -478,25 +530,31 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $errorMessage = 'Too many arguments provided';
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-concrete', $this->createArguments(['arg1', 'arg2', 'arg3']))
+            ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
             ->willThrowException(new InvalidArgumentException($errorMessage));
 
         $this->renderer->expects($this->once())
             ->method('renderError')
             ->with($errorMessage);
 
-        $arguments = $this->createArguments(['arg1', 'arg2', 'arg3']);
-        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-concrete',
+            'arguments' => ['arg1', 'arg2', 'arg3'],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 
     public function test_execute_captures_parser_invalid_signature_format_exception(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -504,25 +562,31 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $errorMessage = 'Invalid signature format: Required arguments must come before arguments with default values';
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-concrete', $this->createArguments([]))
+            ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
             ->willThrowException(new InvalidArgumentException($errorMessage));
 
         $this->renderer->expects($this->once())
             ->method('renderError')
             ->with($errorMessage);
 
-        $arguments = $this->createArguments([]);
-        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-concrete',
+            'arguments' => [],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 
     public function test_execute_captures_generic_exception_and_returns_failure(): void
     {
+        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -530,20 +594,25 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->willReturn($directives);
 
         $errorMessage = 'Unexpected database error';
+
         $this->parser->expects($this->once())
             ->method('parse')
-            ->with('test-concrete', $this->createArguments(['John']))
+            ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
             ->willThrowException(new \RuntimeException($errorMessage));
 
         $this->renderer->expects($this->once())
             ->method('renderError')
             ->with($errorMessage);
 
-        $arguments = $this->createArguments(['John']);
-        $record = new DirectiveExecutionRecord(signature: 'test-concrete', arguments: $arguments);
+        $record = DirectiveExecutionRecord::from([
+            'signature' => 'test-concrete',
+            'arguments' => ['John'],
+        ]);
 
+        // Act
         $result = $this->service->execute($record);
 
+        // Assert
         $this->assertSame(ExitCode::FAILURE, $result);
     }
 }

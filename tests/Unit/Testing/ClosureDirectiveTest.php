@@ -16,227 +16,225 @@ use PHPUnit\Framework\MockObject\MockObject;
 #[AllowMockObjectsWithoutExpectations]
 final class ClosureDirectiveTest extends UnitTestCase
 {
-    private ClosureDirective $directive;
-
     private DirectiveInteractionService&MockObject $interaction;
 
     protected function setUp(): void
     {
         parent::setUp();
-
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
     }
 
-    public function test_closure_directive_returns_custom_signature(): void
+    private function createDirective(string $signature, callable $execute): ClosureDirective
     {
+        return new ClosureDirective(
+            signature: $signature,
+            execute: $execute(...),
+            interaction: $this->interaction,
+        );
+    }
+
+    public function test_returns_custom_signature(): void
+    {
+        // Arrange
         $signature = 'test-custom-signature';
 
-        $this->directive = new ClosureDirective(
-            signature: $signature,
-            execute: fn ($d) => ExitCode::SUCCESS,
-            interaction: $this->interaction,
-        );
+        // Act
+        $directive = $this->createDirective($signature, fn($d) => ExitCode::SUCCESS);
 
-        $this->assertSame($signature, $this->directive->getSignature());
+        // Assert
+        $this->assertSame($signature, $directive->getSignature());
     }
 
-    public function test_closure_directive_returns_test_description(): void
+    public function test_returns_test_description(): void
     {
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: fn ($d) => ExitCode::SUCCESS,
-            interaction: $this->interaction,
-        );
+        // Act
+        $directive = $this->createDirective('test', fn($d) => ExitCode::SUCCESS);
 
-        $this->assertSame('Test directive created from closure', $this->directive->getDescription());
+        // Assert
+        $this->assertSame('Test directive created from closure', $directive->getDescription());
     }
 
-    public function test_closure_directive_executes_closure_and_returns_exit_code(): void
+    public function test_executes_closure_and_returns_exit_code(): void
     {
+        // Arrange
         $executed = false;
 
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: function ($d) use (&$executed) {
-                $executed = true;
+        $directive = $this->createDirective('test', function ($d) use (&$executed) {
+            $executed = true;
+            return ExitCode::SUCCESS;
+        });
 
-                return ExitCode::SUCCESS;
-            },
-            interaction: $this->interaction,
-        );
+        // Act
+        $result = $directive->execute();
 
-        $result = $this->directive->execute();
-
+        // Assert
         $this->assertTrue($executed);
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_closure_directive_passes_directive_instance_to_closure(): void
+    public function test_passes_directive_instance_to_closure(): void
     {
+        // Arrange
         $receivedDirective = null;
 
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: function ($d) use (&$receivedDirective) {
-                $receivedDirective = $d;
+        $directive = $this->createDirective('test', function ($d) use (&$receivedDirective) {
+            $receivedDirective = $d;
+            return ExitCode::SUCCESS;
+        });
 
-                return ExitCode::SUCCESS;
-            },
-            interaction: $this->interaction,
-        );
+        // Act
+        $directive->execute();
 
-        $this->directive->execute();
-
-        $this->assertSame($this->directive, $receivedDirective);
+        // Assert
+        $this->assertSame($directive, $receivedDirective);
     }
 
-    public function test_closure_directive_can_return_failure(): void
+    public function test_can_return_failure(): void
     {
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: fn ($d) => ExitCode::FAILURE,
-            interaction: $this->interaction,
-        );
+        // Arrange
+        $directive = $this->createDirective('test', fn($d) => ExitCode::FAILURE);
 
-        $result = $this->directive->execute();
+        // Act
+        $result = $directive->execute();
 
+        // Assert
         $this->assertSame(ExitCode::FAILURE, $result);
     }
 
-    public function test_closure_directive_can_return_invalid_argument(): void
+    public function test_can_return_invalid_argument(): void
     {
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: fn ($d) => ExitCode::INVALID_ARGUMENT,
-            interaction: $this->interaction,
-        );
+        // Arrange
+        $directive = $this->createDirective('test', fn($d) => ExitCode::INVALID_ARGUMENT);
 
-        $result = $this->directive->execute();
+        // Act
+        $result = $directive->execute();
 
+        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 
-    public function test_closure_directive_can_access_arguments(): void
+    public function test_can_access_arguments(): void
     {
-        $this->directive = new ClosureDirective(
-            signature: 'test {name}',
-            execute: function ($d) {
-                $name = $d->argument('name');
+        // Arrange
+        $directive = $this->createDirective('test {name}', function ($d) {
+            $name = $d->argument('name');
+            return $name === 'John' ? ExitCode::SUCCESS : ExitCode::FAILURE;
+        });
 
-                return $name === 'John' ? ExitCode::SUCCESS : ExitCode::FAILURE;
-            },
-            interaction: $this->interaction,
-        );
+        $this->setArguments($directive, ['name' => 'John']);
 
-        // Set arguments via reflection for testing
-        $reflection = new \ReflectionClass($this->directive);
-        $property = $reflection->getProperty('arguments');
+        // Act
+        $result = $directive->execute();
 
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'name', value: 'John'));
-        $property->setValue($this->directive, $arguments);
-
-        $result = $this->directive->execute();
-
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_closure_directive_can_access_options(): void
+    public function test_can_access_options(): void
     {
-        $this->directive = new ClosureDirective(
-            signature: 'test {--verbose}',
-            execute: function ($d) {
-                $hasVerbose = $d->hasOption('verbose');
+        // Arrange
+        $directive = $this->createDirective('test {--verbose}', function ($d) {
+            return $d->hasOption('verbose') ? ExitCode::SUCCESS : ExitCode::FAILURE;
+        });
 
-                return $hasVerbose ? ExitCode::SUCCESS : ExitCode::FAILURE;
-            },
-            interaction: $this->interaction,
-        );
+        $this->setOptions($directive, ['verbose' => true]);
 
-        $reflection = new \ReflectionClass($this->directive);
-        $optionsProperty = $reflection->getProperty('options');
+        // Act
+        $result = $directive->execute();
 
-        $options = new ParameterCollection;
-        $options->add(new ParameterRecord(name: 'verbose', value: true));
-        $optionsProperty->setValue($this->directive, $options);
-
-        $result = $this->directive->execute();
-
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_closure_directive_can_output_messages(): void
+    public function test_can_output_line_messages(): void
     {
+        // Assert
         $this->interaction->expects($this->once())
             ->method('line')
             ->with('Hello World');
 
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: function ($d) {
-                $d->line('Hello World');
+        // Arrange
+        $directive = $this->createDirective('test', function ($d) {
+            $d->line('Hello World');
+            return ExitCode::SUCCESS;
+        });
 
-                return ExitCode::SUCCESS;
-            },
-            interaction: $this->interaction,
-        );
-
-        $this->directive->execute();
+        // Act
+        $directive->execute();
     }
 
-    public function test_closure_directive_can_output_info_messages(): void
+    public function test_can_output_info_messages(): void
     {
+        // Assert
         $this->interaction->expects($this->once())
             ->method('info')
             ->with('Information message');
 
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: function ($d) {
-                $d->info('Information message');
+        // Arrange
+        $directive = $this->createDirective('test', function ($d) {
+            $d->info('Information message');
+            return ExitCode::SUCCESS;
+        });
 
-                return ExitCode::SUCCESS;
-            },
-            interaction: $this->interaction,
-        );
-
-        $this->directive->execute();
+        // Act
+        $directive->execute();
     }
 
-    public function test_closure_directive_can_output_error_messages(): void
+    public function test_can_output_error_messages(): void
     {
+        // Assert
         $this->interaction->expects($this->once())
             ->method('error')
             ->with('Error message');
 
-        $this->directive = new ClosureDirective(
-            signature: 'test',
-            execute: function ($d) {
-                $d->error('Error message');
+        // Arrange
+        $directive = $this->createDirective('test', function ($d) {
+            $d->error('Error message');
+            return ExitCode::SUCCESS;
+        });
 
-                return ExitCode::SUCCESS;
-            },
-            interaction: $this->interaction,
-        );
-
-        $this->directive->execute();
+        // Act
+        $directive->execute();
     }
 
-    public function test_multiple_closure_directives_can_be_created(): void
+    public function test_multiple_directives_can_be_created(): void
     {
-        $directive1 = new ClosureDirective(
-            signature: 'first',
-            execute: fn ($d) => ExitCode::SUCCESS,
-            interaction: $this->interaction,
-        );
+        // Act
+        $firstDirective = $this->createDirective('first', fn($d) => ExitCode::SUCCESS);
+        $secondDirective = $this->createDirective('second', fn($d) => ExitCode::SUCCESS);
 
-        $directive2 = new ClosureDirective(
-            signature: 'second',
-            execute: fn ($d) => ExitCode::SUCCESS,
-            interaction: $this->interaction,
-        );
+        // Assert
+        $this->assertSame('first', $firstDirective->getSignature());
+        $this->assertSame('second', $secondDirective->getSignature());
+    }
 
-        $this->assertSame('first', $directive1->getSignature());
-        $this->assertSame('second', $directive2->getSignature());
+    /**
+     * Set arguments on a directive via reflection for testing.
+     */
+    private function setArguments(ClosureDirective $directive, array $arguments): void
+    {
+        $collection = new ParameterCollection();
+        foreach ($arguments as $name => $value) {
+            $collection->add(new ParameterRecord(name: $name, value: $value));
+        }
+
+        $reflection = new \ReflectionClass($directive);
+        $property = $reflection->getProperty('arguments');
+        $property->setValue($directive, $collection);
+    }
+
+    /**
+     * Set options on a directive via reflection for testing.
+     */
+    private function setOptions(ClosureDirective $directive, array $options): void
+    {
+        $collection = new ParameterCollection();
+        foreach ($options as $name => $value) {
+            $collection->add(new ParameterRecord(name: $name, value: $value));
+        }
+
+        $reflection = new \ReflectionClass($directive);
+        $property = $reflection->getProperty('options');
+        $property->setValue($directive, $collection);
     }
 }

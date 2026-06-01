@@ -17,10 +17,12 @@ use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\MockObject\MockObject;
 
+/**
+ * @covers \AndyDefer\Directive\Services\DirectiveRendererService
+ */
 final class DirectiveRendererServiceTest extends UnitTestCase
 {
     private RenderTask&MockObject $renderTask;
-
     private DirectiveRendererService $renderer;
 
     protected function setUp(): void
@@ -30,194 +32,340 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->renderer = new DirectiveRendererService($this->renderTask);
     }
 
-    public function test_render_help_calls_render_task(): void
+    protected function tearDown(): void
     {
+        parent::tearDown();
+        putenv('DIRECTIVE_DEBUG');
+        putenv('APP_DEBUG');
+    }
+
+    public function testRenderHelpCallsRenderTask(): void
+    {
+        // Arrange: Set up render task expectation
+        $expectedOutput = 'help output';
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('help output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering help
         ob_start();
         $this->renderer->renderHelp();
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('help output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_list_calls_render_task(): void
+    public function testRenderListCallsRenderTask(): void
     {
-        $directives = new DirectiveMetadataCollection;
+        // Arrange: Create empty directives collection
+        $directives = new DirectiveMetadataCollection();
+        $expectedOutput = 'list output';
 
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('list output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering list
         ob_start();
         $this->renderer->renderList($directives);
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('list output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_not_found_calls_render_task(): void
+    public function testRenderNotFoundCallsRenderTask(): void
     {
+        // Arrange: Set up render task expectation
+        $signature = 'test-cmd';
+        $expectedOutput = 'not found output';
+
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('not found output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering not found
         ob_start();
-        $this->renderer->renderNotFound('test-cmd');
-        $output = ob_get_clean();
+        $this->renderer->renderNotFound($signature);
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('not found output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_success_calls_render_task(): void
+    public function testRenderSuccessCallsRenderTask(): void
     {
+        // Arrange: Set up render task expectation
+        $message = 'Success message';
+        $expectedOutput = 'success output';
+
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('success output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering success
         ob_start();
-        $this->renderer->renderSuccess('Success message');
-        $output = ob_get_clean();
+        $this->renderer->renderSuccess($message);
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('success output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_error_calls_render_task(): void
+    public function testRenderErrorCallsRenderTask(): void
     {
+        // Arrange: Set up render task expectation
+        $message = 'Error message';
+        $expectedOutput = 'error output';
+
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('error output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering error
         ob_start();
-        $this->renderer->renderError('Error message');
-        $output = ob_get_clean();
+        $this->renderer->renderError($message);
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('error output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_warning_calls_render_task(): void
+    public function testRenderWarningCallsRenderTask(): void
     {
+        // Arrange: Set up render task expectation
+        $message = 'Warning message';
+        $expectedOutput = 'warning output';
+
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('warning output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering warning
         ob_start();
-        $this->renderer->renderWarning('Warning message');
-        $output = ob_get_clean();
+        $this->renderer->renderWarning($message);
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('warning output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_debug_does_nothing_when_debug_disabled(): void
+    public function testRenderDebugDoesNothingWhenDebugDisabled(): void
     {
-        // Ensure debug is disabled
+        // Arrange: Disable debug mode
         putenv('DIRECTIVE_DEBUG=false');
+        putenv('APP_DEBUG=false');
 
         $this->renderTask->expects($this->never())
             ->method('execute');
 
+        // Act: Capture output while rendering debug
         ob_start();
         $this->renderer->renderDebug('Debug message');
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEmpty($output);
+        // Assert: Verify no output was generated
+        $this->assertEmpty($actualOutput);
     }
 
-    public function test_render_debug_calls_render_task_when_debug_enabled(): void
+    public function testRenderDebugCallsRenderTaskWhenDirectiveDebugEnabled(): void
     {
+        // Arrange: Enable DIRECTIVE_DEBUG
         putenv('DIRECTIVE_DEBUG=true');
+        putenv('APP_DEBUG=false');
 
+        $expectedOutput = 'debug output';
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('debug output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering debug
         ob_start();
         $this->renderer->renderDebug('Debug message');
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('debug output', $output);
-
-        putenv('DIRECTIVE_DEBUG=false');
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_version_calls_render_task(): void
+    public function testRenderDebugCallsRenderTaskWhenAppDebugEnabled(): void
     {
+        // Arrange: Enable APP_DEBUG
+        putenv('DIRECTIVE_DEBUG=false');
+        putenv('APP_DEBUG=true');
+
+        $expectedOutput = 'debug output';
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('version output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering debug
+        ob_start();
+        $this->renderer->renderDebug('Debug message');
+        $actualOutput = ob_get_clean();
+
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testRenderVersionCallsRenderTask(): void
+    {
+        // Arrange: Set up render task expectation
+        $expectedOutput = 'version output';
+
+        $this->renderTask->expects($this->once())
+            ->method('execute')
+            ->willReturn($expectedOutput);
+
+        // Act: Capture output while rendering version
         ob_start();
         $this->renderer->renderVersion();
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('version output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_conflict_calls_render_task(): void
+    public function testRenderConflictCallsRenderTask(): void
     {
-        $record = new ConflictDisplayRecord(
-            name: 'test',
-            classNames: new StringTypedCollection,
-            signatures: new StringTypedCollection,
-            descriptions: new StringTypedCollection,
-        );
+        // Arrange: Create conflict display record
+        $record = $this->createConflictDisplayRecord();
+        $expectedOutput = 'conflict output';
 
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('conflict output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering conflict
         ob_start();
         $this->renderer->renderConflict($record);
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('conflict output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_table_calls_render_task(): void
+    public function testRenderTableCallsRenderTask(): void
     {
-        $rows = new RowCollection;
-
-        $row = new RowCollection;
-        $row->add('John Doe', 'john@example.com', 'Admin');
-        $rows->add($row);
-
-        $row2 = new RowCollection;
-        $row2->add('Jane Smith', 'jane@example.com', 'User');
-        $rows->add($row2);
-
-        $record = new DisplayTableRecord(
-            headers: new StringTypedCollection,
-            rows: $rows,
-        );
+        // Arrange: Create table display record
+        $record = $this->createDisplayTableRecord();
+        $expectedOutput = 'table output';
 
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('table output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering table
         ob_start();
         $this->renderer->renderTable($record);
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('table output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function test_render_validation_error_calls_render_task(): void
+    public function testRenderValidationErrorCallsRenderTask(): void
     {
+        // Arrange: Create validation error record
         $record = new ValidationResultRecord(
             isValid: false,
             error: 'Invalid signature',
         );
+        $expectedOutput = 'validation error output';
 
         $this->renderTask->expects($this->once())
             ->method('execute')
-            ->willReturn('validation error output');
+            ->willReturn($expectedOutput);
 
+        // Act: Capture output while rendering validation error
         ob_start();
         $this->renderer->renderValidationError($record);
-        $output = ob_get_clean();
+        $actualOutput = ob_get_clean();
 
-        $this->assertEquals('validation error output', $output);
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testRenderDebugWithBothDebugVariablesEnabled(): void
+    {
+        // Arrange: Enable both debug flags
+        putenv('DIRECTIVE_DEBUG=true');
+        putenv('APP_DEBUG=true');
+
+        $expectedOutput = 'debug output';
+        $this->renderTask->expects($this->once())
+            ->method('execute')
+            ->willReturn($expectedOutput);
+
+        // Act: Capture output while rendering debug
+        ob_start();
+        $this->renderer->renderDebug('Debug message');
+        $actualOutput = ob_get_clean();
+
+        // Assert: Verify output matches expected
+        $this->assertSame($expectedOutput, $actualOutput);
+    }
+
+    public function testRenderDebugWithInvalidDebugValues(): void
+    {
+        // Arrange: Set invalid debug values
+        putenv('DIRECTIVE_DEBUG=1');
+        putenv('APP_DEBUG=1');
+
+        $this->renderTask->expects($this->never())
+            ->method('execute');
+
+        // Act: Capture output while rendering debug
+        ob_start();
+        $this->renderer->renderDebug('Debug message');
+        $actualOutput = ob_get_clean();
+
+        // Assert: Verify no output was generated
+        $this->assertEmpty($actualOutput);
+    }
+
+    /**
+     * Create a conflict display record for testing.
+     */
+    private function createConflictDisplayRecord(): ConflictDisplayRecord
+    {
+        return new ConflictDisplayRecord(
+            name: 'test',
+            classNames: new StringTypedCollection(),
+            signatures: new StringTypedCollection(),
+            descriptions: new StringTypedCollection(),
+        );
+    }
+
+    /**
+     * Create a display table record for testing.
+     */
+    private function createDisplayTableRecord(): DisplayTableRecord
+    {
+        $rows = $this->createTestRows();
+
+        return new DisplayTableRecord(
+            headers: new StringTypedCollection(),
+            rows: $rows,
+        );
+    }
+
+    /**
+     * Create test rows for table display.
+     */
+    private function createTestRows(): RowCollection
+    {
+        $firstRow = new RowCollection();
+        $firstRow->add('John Doe', 'john@example.com', 'Admin');
+
+        $secondRow = new RowCollection();
+        $secondRow->add('Jane Smith', 'jane@example.com', 'User');
+
+        $rows = new RowCollection();
+        $rows->add($firstRow);
+        $rows->add($secondRow);
+
+        return $rows;
     }
 }

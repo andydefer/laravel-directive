@@ -25,18 +25,18 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveInteractionServiceTest extends UnitTestCase
 {
     private RenderTask&MockObject $renderTask;
-
     private InputTask&MockObject $inputTask;
-
     private DirectiveInteractionService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        // Arrange: Create mocked tasks
         $this->renderTask = $this->createMock(RenderTask::class);
         $this->inputTask = $this->createMock(InputTask::class);
 
+        // Arrange: Create service instance with mocks
         $this->service = new DirectiveInteractionService(
             $this->renderTask,
             $this->inputTask,
@@ -47,6 +47,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
 
     public function test_line_renders_message_with_line_type(): void
     {
+        // Arrange
         $message = 'Test line message';
 
         $this->renderTask->expects($this->once())
@@ -62,11 +63,13 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn('');
 
+        // Act
         $this->service->line($message);
     }
 
     public function test_info_renders_message_with_info_type(): void
     {
+        // Arrange
         $message = 'Test info message';
 
         $this->renderTask->expects($this->once())
@@ -82,11 +85,13 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn('');
 
+        // Act
         $this->service->info($message);
     }
 
     public function test_error_renders_message_with_error_type(): void
     {
+        // Arrange
         $message = 'Test error message';
 
         $this->renderTask->expects($this->once())
@@ -102,11 +107,13 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn('');
 
+        // Act
         $this->service->error($message);
     }
 
     public function test_warn_renders_message_with_warning_type(): void
     {
+        // Arrange
         $message = 'Test warning message';
 
         $this->renderTask->expects($this->once())
@@ -122,6 +129,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn('');
 
+        // Act
         $this->service->warn($message);
     }
 
@@ -129,6 +137,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
 
     public function test_ask_delegates_to_input_task_with_simple_question(): void
     {
+        // Arrange
         $question = 'What is your name?';
         $expectedAnswer = 'John Doe';
 
@@ -142,13 +151,16 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn($expectedAnswer);
 
+        // Act
         $result = $this->service->ask($question);
 
+        // Assert
         $this->assertSame($expectedAnswer, $result);
     }
 
     public function test_confirm_delegates_to_input_task_with_confirmation(): void
     {
+        // Arrange
         $question = 'Continue?';
         $expectedAnswer = true;
 
@@ -162,13 +174,16 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn($expectedAnswer);
 
+        // Act
         $result = $this->service->confirm($question);
 
+        // Assert
         $this->assertTrue($result);
     }
 
     public function test_ask_user_choice_delegates_to_input_task_with_user_choice(): void
     {
+        // Arrange
         $name = 'test-alias';
         $max = 5;
         $expectedChoice = 3;
@@ -183,8 +198,10 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn($expectedChoice);
 
+        // Act
         $result = $this->service->askUserChoice($name, $max);
 
+        // Assert
         $this->assertSame($expectedChoice, $result);
     }
 
@@ -192,11 +209,12 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
 
     public function test_table_renders_table(): void
     {
-        $headers = new StringTypedCollection;
+        // Arrange
+        $headers = new StringTypedCollection();
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection;
-        $row = new RowCollection;
+        $rows = new RowCollection();
+        $row = new RowCollection();
         $row->add('John Doe', 'john@example.com');
         $rows->add($row);
 
@@ -213,15 +231,17 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn('');
 
+        // Act
         $this->service->table($headers, $rows);
     }
 
     public function test_table_handles_empty_rows(): void
     {
-        $headers = new StringTypedCollection;
+        // Arrange
+        $headers = new StringTypedCollection();
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection;
+        $rows = new RowCollection();
 
         $this->renderTask->expects($this->once())
             ->method('execute')
@@ -234,14 +254,16 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn('');
 
+        // Act
         $this->service->table($headers, $rows);
     }
 
     public function test_table_handles_empty_headers(): void
     {
-        $headers = new StringTypedCollection;
-        $rows = new RowCollection;
-        $row = new RowCollection;
+        // Arrange
+        $headers = new StringTypedCollection();
+        $rows = new RowCollection();
+        $row = new RowCollection();
         $row->add('John Doe');
         $rows->add($row);
 
@@ -256,6 +278,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
             )
             ->willReturn('');
 
+        // Act
         $this->service->table($headers, $rows);
     }
 }

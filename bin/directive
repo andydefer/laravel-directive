@@ -1,22 +1,39 @@
 #!/usr/bin/env php
 <?php
 
-// bin/directive
 declare(strict_types=1);
 
-// Load environment variables from .env if available (optional)
+/**
+ * Laravel Directive CLI Entry Point
+ *
+ * This script is the main entry point for the Laravel Directive CLI tool.
+ * It bootstraps the application, initializes the container, resolves dependencies,
+ * and executes the requested directive.
+ *
+ * @author Andy Defer
+ */
+
+// ==================== Environment Loading ====================
+
+/**
+ * Load environment variables from .env file if present.
+ */
 $envFile = getcwd() . '/.env';
 if (file_exists($envFile)) {
     $lines = file($envFile);
     foreach ($lines as $line) {
         $line = trim($line);
-        if ($line && !str_starts_with($line, '#')) {
+        if ($line !== '' && !str_starts_with($line, '#')) {
             putenv($line);
         }
     }
 }
 
-// 🔥 CHARGER L'AUTOLOADER DU PROJET D'ABORD
+// ==================== Autoloader Loading ====================
+
+/**
+ * Load the project's autoloader (required).
+ */
 $projectAutoload = getcwd() . '/vendor/autoload.php';
 if (!file_exists($projectAutoload)) {
     fwrite(STDERR, "ERROR: Autoloader not found at {$projectAutoload}. Run 'composer install' first.\n");
@@ -24,38 +41,47 @@ if (!file_exists($projectAutoload)) {
 }
 require_once $projectAutoload;
 
-// 🔥 PUIS CHARGER L'AUTOLOADER DU PACKAGE (si différent)
+/**
+ * Load the package's autoloader if different from the project's.
+ */
 $packageAutoload = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($packageAutoload) && $packageAutoload !== $projectAutoload) {
     require_once $packageAutoload;
 }
 
+// ==================== Imports ====================
+
+use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveKernel;
-use AndyDefer\Directive\Services\DirectiveExecutionService;
+use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
-use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Tasks\InputTask;
 use AndyDefer\Directive\Tasks\RenderTask;
 use Illuminate\Container\Container;
 
+// ==================== Container Initialization ====================
+
 $container = new Container();
 
-// Enregistrer les Tasks
+// ==================== Task Registration ====================
+
 $container->singleton(RenderTask::class, function () {
     return new RenderTask();
 });
+
 $container->singleton(InputTask::class, function () {
     return new InputTask();
 });
 
-// Enregistrer les Services
+// ==================== Service Registration ====================
+
 $container->singleton(DirectiveInteractionService::class, function ($c) {
     return new DirectiveInteractionService(
         $c->make(RenderTask::class),
@@ -71,38 +97,27 @@ $container->singleton(LaravelBootstrapper::class, function () {
     return new LaravelBootstrapper();
 });
 
-$projectRoot = getcwd();
-$directivesPath = $projectRoot . '/app/Directives';
+// ==================== Configuration Resolution ====================
 
-// Lire la configuration si elle existe
-$configFile = $projectRoot . '/config/directive.php';
-if (file_exists($configFile)) {
-    $config = require $configFile;
-    if (isset($config['path']) && is_string($config['path'])) {
-        $path = $config['path'];
-        if (str_starts_with($path, 'app_path()')) {
-            $path = str_replace('app_path()', $projectRoot . '/app', $path);
-        }
-        $directivesPath = $path;
-    }
-}
+$projectRoot = getcwd();
+$directivesPath = $this->resolveDirectivesPath($projectRoot);
 
 $directiveConfig = DirectiveConfig::default()->withDirectivesPath($directivesPath);
+
+// ==================== Service Instantiation ====================
+
 $factory = new ContainerDirectiveFactory($container);
 $parser = new DirectiveParserService();
 $hydrator = new DirectiveHydratorService($factory);
 $laravelBootstrapper = $container->make(LaravelBootstrapper::class);
 
-// Injecter le bootstrapper dans l'hydrator
 $hydrator->setLaravelBootstrapper($laravelBootstrapper);
-
-// 🔥 PLUS BESOIN DU REGISTRAR - La directive MakeDirective est automatiquement découverte
-// via le dossier vendor/andydefer/laravel-directive/src/Directives/
 
 $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator);
 $renderer = new DirectiveRendererService($container->make(RenderTask::class));
-$interaction = $container->make(DirectiveInteractionService::class);
 $signatureValidator = $container->make(SignatureValidationService::class);
+
+// ==================== Execution Service Setup ====================
 
 $executionService = new DirectiveExecutionService(
     discovery: $discovery,
@@ -111,6 +126,8 @@ $executionService = new DirectiveExecutionService(
     renderer: $renderer,
 );
 $executionService->setLaravelBootstrapper($laravelBootstrapper);
+
+// ==================== Kernel Execution ====================
 
 $kernel = new DirectiveKernel(
     $executionService,

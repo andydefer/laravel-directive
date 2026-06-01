@@ -86,39 +86,19 @@ final class DirectiveKernel
     /**
      * Executes a directive with the given signature and arguments.
      *
-     * @param string         $signature The directive signature (e.g., 'user:create')
+     * @param string $signature The directive signature (e.g., 'user:create')
      * @param array<int, string> $arguments The list of arguments to pass to the directive
      *
      * @return ExitCode The exit code from the directive execution
      */
     private function executeDirective(string $signature, array $arguments): ExitCode
     {
-        $argumentCollection = $this->createArgumentCollection($arguments);
-
-        $record = new DirectiveExecutionRecord(
-            signature: $signature,
-            arguments: $argumentCollection,
-        );
+        $record = DirectiveExecutionRecord::from([
+            'signature' => $signature,
+            'arguments' => $arguments,
+        ]);
 
         return $this->service->execute($record);
-    }
-
-    /**
-     * Creates a typed collection from an array of arguments.
-     *
-     * @param array<int, string> $arguments The raw arguments
-     *
-     * @return StringTypedCollection The typed argument collection
-     */
-    private function createArgumentCollection(array $arguments): StringTypedCollection
-    {
-        $collection = new StringTypedCollection();
-
-        foreach ($arguments as $argument) {
-            $collection->add($argument);
-        }
-
-        return $collection;
     }
 
     /**

@@ -86,11 +86,6 @@ Pour chaque classe ou composant, produire un fichier Markdown structuré comme s
 // Code complet démontrant l'utilisation
 ```
 
-## Voir aussi
-- `AutreClasse` - Description
-- `AutreConcept` - Lien
-```
-
 ---
 
 ## 🔥 RÈGLES DE RÉDACTION
