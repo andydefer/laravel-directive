@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "andydefer/domain-structures",
-            "version": "1.13.0",
+            "version": "1.13.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/domain-structures.git",
-                "reference": "43a40c124f54e24d568c7657213f747b3d48ddcc"
+                "reference": "c7707ff0388546b5561953b9406f50d917a6640e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/domain-structures/zipball/43a40c124f54e24d568c7657213f747b3d48ddcc",
-                "reference": "43a40c124f54e24d568c7657213f747b3d48ddcc",
+                "url": "https://api.github.com/repos/andydefer/domain-structures/zipball/c7707ff0388546b5561953b9406f50d917a6640e",
+                "reference": "c7707ff0388546b5561953b9406f50d917a6640e",
                 "shasum": ""
             },
             "require": {
@@ -53,9 +53,9 @@
             "description": "A complete domain structures package for PHP: Records, Value Objects, Data DTOs, and TypedCollections. Brings type safety and clean architecture to your application.",
             "support": {
                 "issues": "https://github.com/andydefer/domain-structures/issues",
-                "source": "https://github.com/andydefer/domain-structures/tree/1.13.0"
+                "source": "https://github.com/andydefer/domain-structures/tree/1.13.1"
             },
-            "time": "2026-06-01T15:53:47+00:00"
+            "time": "2026-06-01T16:02:11+00:00"
         },
         {
             "name": "brick/math",
