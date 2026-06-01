@@ -241,7 +241,7 @@ PHP;
      *
      * @return Application The Laravel application instance
      */
-    private function createApplication(): Application
+    public function createApplication(): Application
     {
         $app = require $this->directiveTempDir . '/bootstrap/app.php';
 
