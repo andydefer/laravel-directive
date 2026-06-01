@@ -1,4 +1,3 @@
-```markdown
 # SignatureValidationService - Référence Technique
 
 ## Description

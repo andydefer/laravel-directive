@@ -1,4 +1,3 @@
-```markdown
 # DirectiveNamingService - Référence Technique
 
 ## Description
