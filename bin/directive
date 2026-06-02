@@ -97,10 +97,35 @@ $container->singleton(LaravelBootstrapper::class, function () {
     return new LaravelBootstrapper();
 });
 
+// ==================== Helper Function ====================
+
+/**
+ * Resolve the directives path by scanning common locations.
+ *
+ * @param string $projectRoot Root directory of the project
+ * @return string Path to the directives directory
+ */
+function resolveDirectivesPath(string $projectRoot): string
+{
+    $candidates = [
+        $projectRoot . '/app/Directives',
+        $projectRoot . '/directives',
+        $projectRoot . '/src/Directives',
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (is_dir($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return $candidates[0];
+}
+
 // ==================== Configuration Resolution ====================
 
 $projectRoot = getcwd();
-$directivesPath = $this->resolveDirectivesPath($projectRoot);
+$directivesPath = resolveDirectivesPath($projectRoot);
 
 $directiveConfig = DirectiveConfig::default()->withDirectivesPath($directivesPath);
 
