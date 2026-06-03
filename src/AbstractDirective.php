@@ -7,6 +7,7 @@ namespace AndyDefer\Directive;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
+use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
@@ -51,10 +52,11 @@ abstract class AbstractDirective implements DirectiveInterface
 {
     protected ParameterCollection $arguments;
     protected ParameterCollection $options;
+    protected ?LaravelBootstrapper $laravelBootstrapper = null;
+
 
     public function __construct(
         protected readonly DirectiveInteractionService $interaction,
-        protected ?LaravelBootstrapper $laravelBootstrapper = null,
     ) {
         $this->arguments = new ParameterCollection();
         $this->options = new ParameterCollection();
@@ -68,7 +70,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return DirectiveBlueprintRecord The blueprint record
      */
-    public function getBlueprint(): DirectiveBlueprintRecord
+    final public function getBlueprint(): DirectiveBlueprintRecord
     {
         return new DirectiveBlueprintRecord(
             class: static::class,
@@ -108,7 +110,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return bool True if Laravel is available
      */
-    public function hasLaravel(): bool
+    final public function hasLaravel(): bool
     {
         return $this->laravelBootstrapper !== null && $this->laravelBootstrapper->isBootstrapped();
     }
@@ -118,7 +120,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return object|null The Laravel application instance, or null if not available
      */
-    public function getLaravel(): ?object
+    final public function getLaravel(): ?object
     {
         return $this->laravelBootstrapper?->getApplication();
     }
@@ -130,9 +132,23 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return self Returns the current instance for method chaining
      */
-    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self
+    final public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self
     {
         $this->laravelBootstrapper = $bootstrapper;
+
+        return $this;
+    }
+
+    /**
+     * Sets the interaction service instance.
+     *
+     * @param DirectiveInteractionService $interaction The interaction service instance
+     *
+     * @return self Returns the current instance for method chaining
+     */
+    final public function setInteraction(DirectiveInteractionService $interaction): self
+    {
+        $this->interaction = $interaction;
 
         return $this;
     }
@@ -146,7 +162,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return self Returns the current instance for method chaining
      */
-    public function setArguments(ParameterCollection $arguments): self
+    final public function setArguments(ParameterCollection $arguments): self
     {
         $this->arguments = $arguments;
 
@@ -162,7 +178,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return string|null The argument value, or null if not available
      */
-    public function argument(string $key): ?string
+    final public function argument(string $key): ?string
     {
         $value = $this->arguments->get($key);
 
@@ -182,7 +198,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return bool True if the argument exists and has a non-empty value
      */
-    public function hasArgument(string $key): bool
+    final public function hasArgument(string $key): bool
     {
         $value = $this->arguments->get($key);
 
@@ -198,7 +214,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return self Returns the current instance for method chaining
      */
-    public function setOptions(ParameterCollection $options): self
+    final public function setOptions(ParameterCollection $options): self
     {
         $this->options = $options;
 
@@ -215,7 +231,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return bool|string|null The option value, or null if not available
      */
-    public function option(string $key): bool|string|null
+    final public function option(string $key): bool|string|null
     {
         $value = $this->options->get($key);
 
@@ -233,7 +249,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return bool True if the option exists and has a non-empty value
      */
-    public function hasOption(string $key): bool
+    final public function hasOption(string $key): bool
     {
         $value = $this->options->get($key);
 
@@ -255,7 +271,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @param string $message The message to display
      */
-    public function line(string $message): void
+    final public function line(string $message): void
     {
         $this->interaction->line($message);
     }
@@ -265,7 +281,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @param string $message The message to display
      */
-    public function info(string $message): void
+    final public function info(string $message): void
     {
         $this->interaction->info($message);
     }
@@ -275,7 +291,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @param string $message The message to display
      */
-    public function error(string $message): void
+    final public function error(string $message): void
     {
         $this->interaction->error($message);
     }
@@ -285,7 +301,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @param string $message The message to display
      */
-    public function warn(string $message): void
+    final public function warn(string $message): void
     {
         $this->interaction->warn($message);
     }
@@ -299,7 +315,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return string The user's answer
      */
-    public function ask(string $question): string
+    final public function ask(string $question): string
     {
         return $this->interaction->ask($question);
     }
@@ -311,7 +327,7 @@ abstract class AbstractDirective implements DirectiveInterface
      *
      * @return bool True if the user confirms (y/yes), false otherwise
      */
-    public function confirm(string $question): bool
+    final public function confirm(string $question): bool
     {
         return $this->interaction->confirm($question);
     }
@@ -324,8 +340,34 @@ abstract class AbstractDirective implements DirectiveInterface
      * @param StringTypedCollection $headers The table headers
      * @param RowCollection         $rows    The table rows
      */
-    public function table(StringTypedCollection $headers, RowCollection $rows): void
+    final public function table(StringTypedCollection $headers, RowCollection $rows): void
     {
         $this->interaction->table($headers, $rows);
     }
+
+    /**
+     * Outputs a blank line (empty line).
+     */
+    final public function newLine(): void
+    {
+        $this->interaction->newLine();
+    }
+
+    /**
+     * Outputs a separator line.
+     * 
+     * @param string $character The character to use for the separator (default: '-')
+     * @param int $length The length of the separator line (default: 80)
+     */
+    final public function separator(string $character = '-', int $length = 80): void
+    {
+        $this->interaction->separator($character, $length);
+    }
+
+    /**
+     * Execute the directive's main logic.
+     *
+     * @return ExitCode The exit code indicating success or failure
+     */
+    abstract public function execute(): ExitCode;
 }

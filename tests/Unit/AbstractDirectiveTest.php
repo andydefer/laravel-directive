@@ -406,4 +406,86 @@ final class AbstractDirectiveTest extends UnitTestCase
         $this->assertNull($optionResult);
         $this->assertFalse($hasOptionResult);
     }
+
+    // ==================== New Line and Separator Tests ====================
+
+    public function test_new_line_delegates_to_interaction(): void
+    {
+        // Act: Expect interaction newLine method to be called
+        $this->interaction->expects($this->once())
+            ->method('newLine');
+
+        // Act: Call directive newLine method
+        $this->directive->newLine();
+    }
+
+    public function test_separator_delegates_to_interaction_with_default_parameters(): void
+    {
+        // Act: Expect interaction separator method to be called with default parameters
+        $this->interaction->expects($this->once())
+            ->method('separator')
+            ->with('-', 80);
+
+        // Act: Call directive separator method with no parameters
+        $this->directive->separator();
+    }
+
+    public function test_separator_delegates_to_interaction_with_custom_character(): void
+    {
+        // Arrange: Custom separator character
+        $character = '=';
+
+        // Act: Expect interaction separator method to be called with custom character
+        $this->interaction->expects($this->once())
+            ->method('separator')
+            ->with('=', 80);
+
+        // Act: Call directive separator method with custom character
+        $this->directive->separator($character);
+    }
+
+    public function test_separator_delegates_to_interaction_with_custom_length(): void
+    {
+        // Arrange: Custom separator length
+        $length = 50;
+
+        // Act: Expect interaction separator method to be called with custom length
+        $this->interaction->expects($this->once())
+            ->method('separator')
+            ->with('-', 50);
+
+        // Act: Call directive separator method with custom length
+        $this->directive->separator(length: $length);
+    }
+
+    public function test_separator_delegates_to_interaction_with_custom_character_and_length(): void
+    {
+        // Arrange: Custom separator character and length
+        $character = '*';
+        $length = 100;
+
+        // Act: Expect interaction separator method to be called with custom parameters
+        $this->interaction->expects($this->once())
+            ->method('separator')
+            ->with('*', 100);
+
+        // Act: Call directive separator method with custom parameters
+        $this->directive->separator($character, $length);
+    }
+
+    public function test_multiple_new_lines_and_separators_work_together(): void
+    {
+        // Arrange: Set up expectations in sequence
+        $this->interaction->expects($this->exactly(2))
+            ->method('newLine');
+
+        $this->interaction->expects($this->once())
+            ->method('separator')
+            ->with('-', 80);
+
+        // Act: Chain multiple display methods
+        $this->directive->newLine();
+        $this->directive->separator();
+        $this->directive->newLine();
+    }
 }

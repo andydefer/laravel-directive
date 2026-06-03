@@ -1,18 +1,19 @@
 # Pint Formatting Test Report
-*Generated: mer. 03 juin 2026 08:34:47 WAT*
+*Generated: mer. 03 juin 2026 09:49:21 WAT*
 
 
-  ⨯.............⨯.⨯.....⨯.⨯⨯⨯...⨯⨯⨯⨯⨯⨯..........⨯...⨯.....⨯⨯⨯⨯⨯⨯⨯⨯⨯.......⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯...........................
+  ⨯.............⨯.⨯.....⨯.⨯⨯⨯...⨯⨯⨯⨯⨯⨯..........⨯...⨯.⨯...⨯⨯⨯⨯⨯⨯⨯⨯⨯.......⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯......⨯........⨯...........
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................ 139 files, 45 style issues  
-  ⨯ src/AbstractDirective.php                                                                       class_attributes_separation, new_with_parentheses, phpdoc_separation, phpdoc_align  
+    FAIL   ................................................................................................................................................ 139 files, 48 style issues  
+  ⨯ src/AbstractDirective.php                                    class_attributes_separation, new_with_parentheses, no_trailing_whitespace_in_comment, phpdoc_separation, phpdoc_align  
   ⨯ src/Collections/AbstractItemCollection.php                                                                                          phpdoc_separation, blank_line_before_statement  
   ⨯ src/Collections/AbstractKeyValueCollection.php                                                                                                                   phpdoc_separation  
   ⨯ src/Collections/ReplacementCollection.php                                                                                    no_superfluous_phpdoc_tags, phpdoc_trim, phpdoc_align  
   ⨯ src/Collections/RowCollection.php                                                                                                    no_unused_imports, blank_line_after_namespace  
+  ⨯ src/Contracts/DirectiveInterface.php                                                                                                                                  phpdoc_align  
   ⨯ src/DirectiveKernel.php braces_position, phpdoc_separation, no_unused_imports, not_operator_with_successor_space, single_line_empty_body, blank_line_before_statement, phpdoc_ali…  
-  ⨯ src/DirectiveServiceProvider.php                                                                                                  concat_space, no_unused_imports, ordered_imports  
+  ⨯ src/DirectiveServiceProvider.php                                                                                                                     concat_space, ordered_imports  
   ⨯ src/Dispatchers/InputDispatcher.php                                                                                                                phpdoc_separation, phpdoc_align  
   ⨯ src/Dispatchers/RenderDispatcher.php                                                      new_with_parentheses, phpdoc_separation, not_operator_with_successor_space, phpdoc_align  
   ⨯ src/Records/ParsedDirectiveRecord.php                                                                                   braces_position, no_unused_imports, single_line_empty_body  
@@ -20,7 +21,7 @@
   ⨯ src/Services/DirectiveDiscoveryService.php     class_attributes_separation, new_with_parentheses, concat_space, phpdoc_separation, not_operator_with_successor_space, phpdoc_align  
   ⨯ src/Services/DirectiveExecutionService.php braces_position, phpdoc_separation, no_unused_imports, not_operator_with_successor_space, single_line_empty_body, blank_line_before_st…  
   ⨯ src/Services/DirectiveHydratorService.php                                    braces_position, phpdoc_separation, single_line_empty_body, blank_line_before_statement, phpdoc_align  
-  ⨯ src/Services/DirectiveInteractionService.php                braces_position, phpdoc_separation, single_line_empty_body, blank_line_before_statement, ordered_imports, phpdoc_align  
+  ⨯ src/Services/DirectiveInteractionService.php no_trailing_whitespace_in_comment, braces_position, phpdoc_separation, single_line_empty_body, blank_line_before_statement, ordered_…  
   ⨯ src/Services/DirectiveNamingService.php class_attributes_separation, concat_space, phpdoc_separation, not_operator_with_successor_space, blank_line_before_statement, phpdoc_alig…  
   ⨯ src/Services/DirectiveParserService.php new_with_parentheses, function_declaration, no_superfluous_phpdoc_tags, concat_space, braces_position, phpdoc_separation, not_operator_wi…  
   ⨯ src/Services/DirectiveRendererService.php                                braces_position, not_operator_with_successor_space, single_line_empty_body, ordered_imports, phpdoc_align  
@@ -32,6 +33,7 @@
   ⨯ src/Testing/TestDirectiveDiscoveryService.php    new_with_parentheses, no_superfluous_phpdoc_tags, phpdoc_separation, phpdoc_trim, not_operator_with_successor_space, phpdoc_align  
   ⨯ src/Testing/TestDirectiveRegistry.php                                                                                 phpdoc_separation, blank_line_before_statement, phpdoc_align  
   ⨯ tests/Feature/DirectiveIntegrationTest.php                                                                         class_attributes_separation, concat_space, no_extra_blank_lines  
+  ⨯ tests/Fixtures/Directives/FileCreatorTestDirective.php                                                                                                        new_with_parentheses  
   ⨯ tests/Unit/AbstractDirectiveTest.php                                                                                             class_attributes_separation, new_with_parentheses  
   ⨯ tests/Unit/Collections/AbstractKeyValueCollectionTest.php                                                                                php_unit_method_casing, no_unused_imports  
   ⨯ tests/Unit/DirectiveServiceProviderTest.php                                                                  class_definition, braces_position, no_unused_imports, ordered_imports  
@@ -51,4 +53,5 @@
   ⨯ tests/Unit/Testing/InteractsWithDirectivesTest.php                                                                                       concat_space, blank_line_before_statement  
   ⨯ tests/Unit/Testing/TestDirectiveDiscoveryServiceTest.php                                                                         class_attributes_separation, new_with_parentheses  
   ⨯ tests/Unit/Testing/TestDirectiveRegistryTest.php                                                                                                                 no_unused_imports  
+  ⨯ tests/Unit/Traits/FileCreatorTest.php       class_attributes_separation, concat_space, trailing_comma_in_multiline, not_operator_with_successor_space, blank_line_before_statement  
 

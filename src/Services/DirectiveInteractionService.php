@@ -144,4 +144,23 @@ class DirectiveInteractionService
         $renderRecord = new RenderRecord(type: RenderType::TABLE, tableRecord: $tableRecord);
         echo $this->renderDispatcher->execute($renderRecord, RenderType::TABLE);
     }
+
+    /**
+     * Outputs a blank line (empty line).
+     */
+    public function newLine(): void
+    {
+        $this->line('');
+    }
+
+    /**
+     * Outputs a separator line.
+     * 
+     * @param string $character The character to use for the separator (default: '-')
+     * @param int $length The length of the separator line (default: 80)
+     */
+    public function separator(string $character = '-', int $length = 80): void
+    {
+        $this->line(str_repeat($character, $length));
+    }
 }
