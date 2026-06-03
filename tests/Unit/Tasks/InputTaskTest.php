@@ -7,12 +7,12 @@ namespace AndyDefer\Directive\Tests\Unit\Tasks;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
-use AndyDefer\Directive\Tasks\InputTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 
 final class InputTaskTest extends UnitTestCase
 {
-    private InputTask $task;
+    private InputDispatcher $task;
     private $inputStream;
 
     protected function setUp(): void
@@ -21,7 +21,7 @@ final class InputTaskTest extends UnitTestCase
 
         // Arrange: Create an in-memory stream for testing
         $this->inputStream = fopen('php://memory', 'r+');
-        $this->task = new InputTask($this->inputStream);
+        $this->task = new InputDispatcher($this->inputStream);
     }
 
     protected function tearDown(): void

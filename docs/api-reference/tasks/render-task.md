@@ -1,4 +1,4 @@
-# RenderTask - Référence Technique
+# RenderDispatcher - Référence Technique
 
 ## Description
 
@@ -7,7 +7,7 @@ Task responsable du rendu des différents types de sorties (aide, liste, message
 ## Hiérarchie
 
 ```
-RenderTask (final)
+RenderDispatcher (final)
     └── Utilise : RenderStrategyInterface (via les stratégies concrètes)
 ```
 
@@ -36,7 +36,7 @@ Exécute le processus de rendu pour l'enregistrement et le type donnés.
 
 **Exemple :**
 ```php
-$task = new RenderTask();
+$task = new RenderDispatcher();
 $record = new RenderRecord(type: RenderType::HELP);
 $output = $task->execute($record, RenderType::HELP);
 echo $output;
@@ -48,7 +48,7 @@ echo $output;
 
 ```php
 $record = new RenderRecord(type: RenderType::HELP);
-$output = $this->renderTask->execute($record, RenderType::HELP);
+$output = $this->renderDispatcher->execute($record, RenderType::HELP);
 // Affiche l'aide complète du système de directives
 ```
 
@@ -59,7 +59,7 @@ $directives = new DirectiveMetadataCollection();
 $directives->add(new DirectiveMetadataRecord(...));
 
 $record = new RenderRecord(type: RenderType::LIST, directives: $directives);
-$output = $this->renderTask->execute($record, RenderType::LIST);
+$output = $this->renderDispatcher->execute($record, RenderType::LIST);
 // Affiche la liste formatée des directives disponibles
 ```
 
@@ -67,7 +67,7 @@ $output = $this->renderTask->execute($record, RenderType::LIST);
 
 ```php
 $record = new RenderRecord(type: RenderType::SUCCESS, message: 'Operation completed');
-$output = $this->renderTask->execute($record, RenderType::SUCCESS);
+$output = $this->renderDispatcher->execute($record, RenderType::SUCCESS);
 // Affiche "Operation completed" en vert avec icône ✓
 ```
 
@@ -80,7 +80,7 @@ $record = new ConflictDisplayRecord(
     signatures: new StringTypedCollection(['user-create', 'admin-user-create']),
     descriptions: new StringTypedCollection(['Create user', 'Create admin user']),
 );
-$output = $this->renderTask->execute($record, RenderType::CONFLICT);
+$output = $this->renderDispatcher->execute($record, RenderType::CONFLICT);
 // Affiche les directives en conflit avec choix interactif
 ```
 
@@ -99,7 +99,7 @@ $output = $this->renderTask->execute($record, RenderType::CONFLICT);
 
 ## Intégration
 
-`RenderTask` s'intègre avec :
+`RenderDispatcher` s'intègre avec :
 
 - **`DirectiveRendererService`** : Utilise la task pour générer les sorties
 - **`RenderStrategyInterface`** : Interface que toutes les stratégies implémentent
@@ -148,14 +148,14 @@ declare(strict_types=1);
 
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 
-// 1. Créer une instance du RenderTask
-$renderTask = new RenderTask();
+// 1. Créer une instance du RenderDispatcher
+$renderDispatcher = new RenderDispatcher();
 
 // 2. Rendre l'aide
 $helpRecord = new RenderRecord(type: RenderType::HELP);
-echo $renderTask->execute($helpRecord, RenderType::HELP);
+echo $renderDispatcher->execute($helpRecord, RenderType::HELP);
 
 // 3. Rendre une liste de directives
 $directives = new DirectiveMetadataCollection();
@@ -167,14 +167,14 @@ $directives->add(new DirectiveMetadataRecord(
 ));
 
 $listRecord = new RenderRecord(type: RenderType::LIST, directives: $directives);
-echo $renderTask->execute($listRecord, RenderType::LIST);
+echo $renderDispatcher->execute($listRecord, RenderType::LIST);
 
 // 4. Rendre un message de succès
 $successRecord = new RenderRecord(type: RenderType::SUCCESS, message: 'User created successfully');
-echo $renderTask->execute($successRecord, RenderType::SUCCESS);
+echo $renderDispatcher->execute($successRecord, RenderType::SUCCESS);
 
 // 5. Rendre une erreur
 $errorRecord = new RenderRecord(type: RenderType::ERROR, message: 'Failed to create user');
-echo $renderTask->execute($errorRecord, RenderType::ERROR);
+echo $renderDispatcher->execute($errorRecord, RenderType::ERROR);
 ```
 ---

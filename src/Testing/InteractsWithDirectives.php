@@ -20,8 +20,8 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
@@ -97,17 +97,17 @@ trait InteractsWithDirectives
 
         $this->directiveContainer = new Container();
 
-        $this->directiveContainer->singleton(RenderTask::class, function () {
-            return new RenderTask();
+        $this->directiveContainer->singleton(RenderDispatcher::class, function () {
+            return new RenderDispatcher();
         });
-        $this->directiveContainer->singleton(InputTask::class, function () {
-            return new InputTask();
+        $this->directiveContainer->singleton(InputDispatcher::class, function () {
+            return new InputDispatcher();
         });
 
         $this->directiveContainer->singleton(DirectiveInteractionService::class, function ($c) {
             return new DirectiveInteractionService(
-                $c->make(RenderTask::class),
-                $c->make(InputTask::class),
+                $c->make(RenderDispatcher::class),
+                $c->make(InputDispatcher::class),
             );
         });
 
@@ -148,7 +148,7 @@ trait InteractsWithDirectives
         $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $this->directiveRegistry);
         $discovery->setLaravelBootstrapper($laravelBootstrapper);
 
-        $renderer = new DirectiveRendererService($this->directiveContainer->make(RenderTask::class));
+        $renderer = new DirectiveRendererService($this->directiveContainer->make(RenderDispatcher::class));
         $signatureValidatorService = $this->directiveContainer->make(SignatureValidationService::class);
 
         $executionService = new DirectiveExecutionService(

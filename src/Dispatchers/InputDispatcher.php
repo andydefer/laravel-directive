@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tasks;
+namespace AndyDefer\Directive\Dispatchers;
 
 use AndyDefer\Directive\Contracts\InputStrategyInterface;
 use AndyDefer\Directive\Enums\InputType;
@@ -18,13 +18,13 @@ use AndyDefer\Directive\Strategies\Input\UserChoiceStrategy;
  * strategies. It manages the input stream and orchestrates the execution.
  *
  * @example
- * $task = new InputTask();
+ * $task = new InputDispatcher();
  * $record = new QuestionRecord('What is your name?');
  * $name = $task->execute($record, InputType::SIMPLE_QUESTION);
  *
  * @author Andy Defer
  */
-class InputTask
+class InputDispatcher
 {
     /**
      * @var array<InputStrategyInterface>

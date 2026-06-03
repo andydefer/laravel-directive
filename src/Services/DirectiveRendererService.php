@@ -10,19 +10,19 @@ use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 
 /**
  * Service for rendering various directive outputs.
  *
- * Acts as a facade over the RenderTask, providing dedicated methods for each
+ * Acts as a facade over the RenderDispatcher, providing dedicated methods for each
  * render type. Handles conditional rendering (e.g., debug output only when
- * debugging is enabled) and delegates the actual rendering to the RenderTask.
+ * debugging is enabled) and delegates the actual rendering to the RenderDispatcher.
  */
 class DirectiveRendererService
 {
     public function __construct(
-        private readonly RenderTask $renderTask,
+        private readonly RenderDispatcher $renderDispatcher,
     ) {}
 
     /**
@@ -33,7 +33,7 @@ class DirectiveRendererService
     public function renderHelp(): void
     {
         $record = new RenderRecord(type: RenderType::HELP);
-        echo $this->renderTask->execute($record, RenderType::HELP);
+        echo $this->renderDispatcher->execute($record, RenderType::HELP);
     }
 
     /**
@@ -44,7 +44,7 @@ class DirectiveRendererService
     public function renderList(DirectiveMetadataCollection $directives): void
     {
         $record = new RenderRecord(type: RenderType::LIST, directives: $directives);
-        echo $this->renderTask->execute($record, RenderType::LIST);
+        echo $this->renderDispatcher->execute($record, RenderType::LIST);
     }
 
     /**
@@ -55,7 +55,7 @@ class DirectiveRendererService
     public function renderNotFound(string $signature): void
     {
         $record = new RenderRecord(type: RenderType::NOT_FOUND, signature: $signature);
-        echo $this->renderTask->execute($record, RenderType::NOT_FOUND);
+        echo $this->renderDispatcher->execute($record, RenderType::NOT_FOUND);
     }
 
     /**
@@ -66,7 +66,7 @@ class DirectiveRendererService
     public function renderSuccess(string $message): void
     {
         $record = new RenderRecord(type: RenderType::SUCCESS, message: $message);
-        echo $this->renderTask->execute($record, RenderType::SUCCESS);
+        echo $this->renderDispatcher->execute($record, RenderType::SUCCESS);
     }
 
     /**
@@ -77,7 +77,7 @@ class DirectiveRendererService
     public function renderError(string $message): void
     {
         $record = new RenderRecord(type: RenderType::ERROR, message: $message);
-        echo $this->renderTask->execute($record, RenderType::ERROR);
+        echo $this->renderDispatcher->execute($record, RenderType::ERROR);
     }
 
     /**
@@ -88,7 +88,7 @@ class DirectiveRendererService
     public function renderWarning(string $message): void
     {
         $record = new RenderRecord(type: RenderType::WARNING, message: $message);
-        echo $this->renderTask->execute($record, RenderType::WARNING);
+        echo $this->renderDispatcher->execute($record, RenderType::WARNING);
     }
 
     /**
@@ -106,7 +106,7 @@ class DirectiveRendererService
         }
 
         $record = new RenderRecord(type: RenderType::DEBUG, message: $message);
-        echo $this->renderTask->execute($record, RenderType::DEBUG);
+        echo $this->renderDispatcher->execute($record, RenderType::DEBUG);
     }
 
     /**
@@ -115,7 +115,7 @@ class DirectiveRendererService
     public function renderVersion(): void
     {
         $record = new RenderRecord(type: RenderType::VERSION);
-        echo $this->renderTask->execute($record, RenderType::VERSION);
+        echo $this->renderDispatcher->execute($record, RenderType::VERSION);
     }
 
     /**
@@ -125,7 +125,7 @@ class DirectiveRendererService
      */
     public function renderConflict(ConflictDisplayRecord $record): void
     {
-        echo $this->renderTask->execute($record, RenderType::CONFLICT);
+        echo $this->renderDispatcher->execute($record, RenderType::CONFLICT);
     }
 
     /**
@@ -135,7 +135,7 @@ class DirectiveRendererService
      */
     public function renderTable(DisplayTableRecord $record): void
     {
-        echo $this->renderTask->execute($record, RenderType::TABLE);
+        echo $this->renderDispatcher->execute($record, RenderType::TABLE);
     }
 
     /**
@@ -145,7 +145,7 @@ class DirectiveRendererService
      */
     public function renderValidationError(ValidationResultRecord $record): void
     {
-        echo $this->renderTask->execute($record, RenderType::VALIDATION_ERROR);
+        echo $this->renderDispatcher->execute($record, RenderType::VALIDATION_ERROR);
     }
 
     /**

@@ -17,9 +17,9 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
-use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\CreateDirectiveFileTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use Illuminate\Container\Container;
 
@@ -114,13 +114,13 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_render_task_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(RenderTask::class));
+        $this->assertTrue($this->container->bound(RenderDispatcher::class));
     }
 
     public function test_input_task_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(InputTask::class));
+        $this->assertTrue($this->container->bound(InputDispatcher::class));
     }
 
     public function test_interaction_service_is_registered_as_singleton(): void
@@ -145,15 +145,15 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_render_task_can_be_resolved(): void
     {
         $this->provider->register();
-        $task = $this->container->make(RenderTask::class);
-        $this->assertInstanceOf(RenderTask::class, $task);
+        $task = $this->container->make(RenderDispatcher::class);
+        $this->assertInstanceOf(RenderDispatcher::class, $task);
     }
 
     public function test_input_task_can_be_resolved(): void
     {
         $this->provider->register();
-        $task = $this->container->make(InputTask::class);
-        $this->assertInstanceOf(InputTask::class, $task);
+        $task = $this->container->make(InputDispatcher::class);
+        $this->assertInstanceOf(InputDispatcher::class, $task);
     }
 
     public function test_config_can_be_resolved(): void

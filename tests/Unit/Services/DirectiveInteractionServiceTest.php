@@ -14,8 +14,8 @@ use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -24,8 +24,8 @@ use PHPUnit\Framework\MockObject\MockObject;
 #[AllowMockObjectsWithoutExpectations]
 final class DirectiveInteractionServiceTest extends UnitTestCase
 {
-    private RenderTask&MockObject $renderTask;
-    private InputTask&MockObject $inputTask;
+    private RenderDispatcher&MockObject $renderDispatcher;
+    private InputDispatcher&MockObject $inputDispatcher;
     private DirectiveInteractionService $service;
 
     protected function setUp(): void
@@ -33,13 +33,13 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         parent::setUp();
 
         // Arrange: Create mocked tasks
-        $this->renderTask = $this->createMock(RenderTask::class);
-        $this->inputTask = $this->createMock(InputTask::class);
+        $this->renderDispatcher = $this->createMock(RenderDispatcher::class);
+        $this->inputDispatcher = $this->createMock(InputDispatcher::class);
 
         // Arrange: Create service instance with mocks
         $this->service = new DirectiveInteractionService(
-            $this->renderTask,
-            $this->inputTask,
+            $this->renderDispatcher,
+            $this->inputDispatcher,
         );
     }
 
@@ -50,7 +50,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         // Arrange
         $message = 'Test line message';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function (RenderRecord $record) use ($message) {
@@ -72,7 +72,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         // Arrange
         $message = 'Test info message';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function (RenderRecord $record) use ($message) {
@@ -94,7 +94,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         // Arrange
         $message = 'Test error message';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function (RenderRecord $record) use ($message) {
@@ -116,7 +116,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         // Arrange
         $message = 'Test warning message';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function (RenderRecord $record) use ($message) {
@@ -141,7 +141,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         $question = 'What is your name?';
         $expectedAnswer = 'John Doe';
 
-        $this->inputTask->expects($this->once())
+        $this->inputDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function ($record) use ($question) {
@@ -164,7 +164,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         $question = 'Continue?';
         $expectedAnswer = true;
 
-        $this->inputTask->expects($this->once())
+        $this->inputDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function ($record) use ($question) {
@@ -188,7 +188,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         $max = 5;
         $expectedChoice = 3;
 
-        $this->inputTask->expects($this->once())
+        $this->inputDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function ($record) use ($max) {
@@ -218,7 +218,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         $row->add('John Doe', 'john@example.com');
         $rows->add($row);
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function (RenderRecord $record) use ($headers, $rows) {
@@ -243,7 +243,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
 
         $rows = new RowCollection();
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function (RenderRecord $record) {
@@ -267,7 +267,7 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
         $row->add('John Doe');
         $rows->add($row);
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->with(
                 $this->callback(function (RenderRecord $record) {

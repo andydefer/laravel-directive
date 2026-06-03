@@ -1,4 +1,4 @@
-# InputTask - Référence Technique
+# InputDispatcher - Référence Technique
 
 ## Description
 
@@ -7,7 +7,7 @@ Task responsable de la gestion des interactions utilisateur en ligne de commande
 ## Hiérarchie
 
 ```
-InputTask (final)
+InputDispatcher (final)
     └── Utilise : InputStrategyInterface
             ├── SimpleQuestionStrategy
             ├── ConfirmationStrategy
@@ -39,7 +39,7 @@ Exécute la stratégie d'entrée pour l'enregistrement et le type donnés.
 
 **Exemple :**
 ```php
-$task = new InputTask();
+$task = new InputDispatcher();
 $record = new QuestionRecord('What is your name?');
 $name = $task->execute($record, InputType::SIMPLE_QUESTION);
 ```
@@ -49,7 +49,7 @@ $name = $task->execute($record, InputType::SIMPLE_QUESTION);
 ### Cas 1 : Question simple
 
 ```php
-$task = new InputTask();
+$task = new InputDispatcher();
 $record = new QuestionRecord('What is your name?');
 $name = $task->execute($record, InputType::SIMPLE_QUESTION);
 // Affiche: "What is your name? " 
@@ -59,7 +59,7 @@ $name = $task->execute($record, InputType::SIMPLE_QUESTION);
 ### Cas 2 : Confirmation (Oui/Non)
 
 ```php
-$task = new InputTask();
+$task = new InputDispatcher();
 $record = new QuestionRecord('Do you want to continue?');
 $confirmed = $task->execute($record, InputType::CONFIRMATION);
 // Affiche: "Do you want to continue? (y/n) "
@@ -69,7 +69,7 @@ $confirmed = $task->execute($record, InputType::CONFIRMATION);
 ### Cas 3 : Choix utilisateur
 
 ```php
-$task = new InputTask();
+$task = new InputDispatcher();
 $record = new UserChoiceRecord(choice: 0, max: 5);
 $choice = $task->execute($record, InputType::USER_CHOICE);
 // Affiche: "Which one do you want to use? [1-5]: "
@@ -89,7 +89,7 @@ $choice = $task->execute($record, InputType::USER_CHOICE);
 
 ## Intégration
 
-`InputTask` s'intègre avec :
+`InputDispatcher` s'intègre avec :
 
 - **`DirectiveInteractionService`** : Utilise la task pour les interactions utilisateur
 - **`InputStrategyInterface`** : Interface que toutes les stratégies implémentent
@@ -156,19 +156,19 @@ declare(strict_types=1);
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
-use AndyDefer\Directive\Tasks\InputTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
 
-// 1. Créer une instance du InputTask
-$inputTask = new InputTask();
+// 1. Créer une instance du InputDispatcher
+$inputDispatcher = new InputDispatcher();
 
 // 2. Question simple
 $nameRecord = new QuestionRecord('What is your name?');
-$name = $inputTask->execute($nameRecord, InputType::SIMPLE_QUESTION);
+$name = $inputDispatcher->execute($nameRecord, InputType::SIMPLE_QUESTION);
 echo "Hello, {$name}!\n";
 
 // 3. Confirmation
 $confirmRecord = new QuestionRecord('Do you want to save?');
-if ($inputTask->execute($confirmRecord, InputType::CONFIRMATION)) {
+if ($inputDispatcher->execute($confirmRecord, InputType::CONFIRMATION)) {
     echo "Saving...\n";
 } else {
     echo "Cancelled.\n";
@@ -176,7 +176,7 @@ if ($inputTask->execute($confirmRecord, InputType::CONFIRMATION)) {
 
 // 4. Choix utilisateur
 $choiceRecord = new UserChoiceRecord(choice: 0, max: 3);
-$choice = $inputTask->execute($choiceRecord, InputType::USER_CHOICE);
+$choice = $inputDispatcher->execute($choiceRecord, InputType::USER_CHOICE);
 
 if ($choice !== null) {
     echo "You selected option {$choice}\n";

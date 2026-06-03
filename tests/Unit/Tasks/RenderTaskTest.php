@@ -9,7 +9,7 @@ use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -17,14 +17,14 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 #[AllowMockObjectsWithoutExpectations]
 final class RenderTaskTest extends UnitTestCase
 {
-    private RenderTask $task;
+    private RenderDispatcher $task;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Arrange: Create a fresh RenderTask instance for each test
-        $this->task = new RenderTask();
+        // Arrange: Create a fresh RenderDispatcher instance for each test
+        $this->task = new RenderDispatcher();
     }
 
     public function test_render_help(): void

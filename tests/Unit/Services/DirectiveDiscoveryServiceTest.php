@@ -13,8 +13,8 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
@@ -40,17 +40,17 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
 
         $this->container = new Container();
 
-        $this->container->singleton(RenderTask::class, function () {
-            return new RenderTask();
+        $this->container->singleton(RenderDispatcher::class, function () {
+            return new RenderDispatcher();
         });
-        $this->container->singleton(InputTask::class, function () {
-            return new InputTask();
+        $this->container->singleton(InputDispatcher::class, function () {
+            return new InputDispatcher();
         });
 
         $this->container->singleton(DirectiveInteractionService::class, function ($c) {
             return new DirectiveInteractionService(
-                $c->make(RenderTask::class),
-                $c->make(InputTask::class),
+                $c->make(RenderDispatcher::class),
+                $c->make(InputDispatcher::class),
             );
         });
 

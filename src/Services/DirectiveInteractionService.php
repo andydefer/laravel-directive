@@ -13,8 +13,8 @@ use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
-use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
@@ -22,15 +22,15 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
  *
  * Provides methods for displaying messages (line, info, error, warn),
  * user input (ask, confirm, askUserChoice), and table rendering.
- * Delegates rendering to RenderTask and user input to InputTask.
+ * Delegates rendering to RenderDispatcher and user input to InputDispatcher.
  *
  * @author Andy Defer
  */
 class DirectiveInteractionService
 {
     public function __construct(
-        private readonly RenderTask $renderTask,
-        private readonly InputTask $inputTask,
+        private readonly RenderDispatcher $renderDispatcher,
+        private readonly InputDispatcher $inputDispatcher,
     ) {}
 
     // ==================== Display Methods ====================
@@ -85,7 +85,7 @@ class DirectiveInteractionService
     {
         $messageRecord = new DisplayMessageRecord($message, $type);
         $renderRecord = new RenderRecord(type: RenderType::DISPLAY_MESSAGE, messageRecord: $messageRecord);
-        echo $this->renderTask->execute($renderRecord, RenderType::DISPLAY_MESSAGE);
+        echo $this->renderDispatcher->execute($renderRecord, RenderType::DISPLAY_MESSAGE);
     }
 
     // ==================== User Interaction Methods ====================
@@ -100,7 +100,7 @@ class DirectiveInteractionService
     public function ask(string $question): string
     {
         $record = new QuestionRecord($question);
-        return $this->inputTask->execute($record, InputType::SIMPLE_QUESTION);
+        return $this->inputDispatcher->execute($record, InputType::SIMPLE_QUESTION);
     }
 
     /**
@@ -113,7 +113,7 @@ class DirectiveInteractionService
     public function confirm(string $question): bool
     {
         $record = new QuestionRecord($question);
-        return $this->inputTask->execute($record, InputType::CONFIRMATION);
+        return $this->inputDispatcher->execute($record, InputType::CONFIRMATION);
     }
 
     /**
@@ -127,7 +127,7 @@ class DirectiveInteractionService
     public function askUserChoice(string $name, int $max): int
     {
         $record = new UserChoiceRecord(choice: 0, max: $max);
-        return $this->inputTask->execute($record, InputType::USER_CHOICE);
+        return $this->inputDispatcher->execute($record, InputType::USER_CHOICE);
     }
 
     // ==================== Table Display Methods ====================
@@ -142,6 +142,6 @@ class DirectiveInteractionService
     {
         $tableRecord = new DisplayTableRecord($headers, $rows);
         $renderRecord = new RenderRecord(type: RenderType::TABLE, tableRecord: $tableRecord);
-        echo $this->renderTask->execute($renderRecord, RenderType::TABLE);
+        echo $this->renderDispatcher->execute($renderRecord, RenderType::TABLE);
     }
 }

@@ -12,7 +12,7 @@ Aucune hiérarchie - Classe finale sans extension ni implémentation
 
 ## Rôle principal
 
-Agit comme une façade (facade pattern) devant `RenderTask`. Fournit des méthodes dédiées et nommées pour chaque type de rendu, gère le rendu conditionnel (ex: messages de debug uniquement en mode développement) et délègue le travail d'affichage réel à `RenderTask`.
+Agit comme une façade (facade pattern) devant `RenderDispatcher`. Fournit des méthodes dédiées et nommées pour chaque type de rendu, gère le rendu conditionnel (ex: messages de debug uniquement en mode développement) et délègue le travail d'affichage réel à `RenderDispatcher`.
 
 ## Installation
 
@@ -20,11 +20,11 @@ Agit comme une façade (facade pattern) devant `RenderTask`. Fournit des méthod
 composer require andydefer/php-records
 ```
 
-Le service nécessite une instance de `RenderTask` injectée dans le constructeur.
+Le service nécessite une instance de `RenderDispatcher` injectée dans le constructeur.
 
 ```php
-$renderTask = new RenderTask($rendererStrategy);
-$service = new DirectiveRendererService($renderTask);
+$renderDispatcher = new RenderDispatcher($rendererStrategy);
+$service = new DirectiveRendererService($renderDispatcher);
 ```
 
 ## API / Méthodes publiques
@@ -351,25 +351,25 @@ class SignatureValidator
 
 ## Gestion des erreurs
 
-Aucune exception n'est levée directement par ce service. Les erreurs sont gérées en interne par `RenderTask` et ses stratégies.
+Aucune exception n'est levée directement par ce service. Les erreurs sont gérées en interne par `RenderDispatcher` et ses stratégies.
 
 | Situation | Comportement |
 |-----------|--------------|
-| `RenderTask::execute()` échoue | L'exception remonte jusqu'à l'appelant |
+| `RenderDispatcher::execute()` échoue | L'exception remonte jusqu'à l'appelant |
 | Debug désactivé | `renderDebug()` ne fait rien (retour silencieux) |
 | Collection vide pour `renderList()` | Affiche "No directives available" ou message similaire |
 | Tableau sans données | Affiche "No data to display" |
 
 ## Intégration
 
-### Avec RenderTask
+### Avec RenderDispatcher
 
 ```php
-// RenderTask attend une stratégie de rendu
+// RenderDispatcher attend une stratégie de rendu
 $renderStrategy = new ConsoleRenderStrategy(); // Implémente RenderStrategyInterface
-$renderTask = new RenderTask($renderStrategy);
+$renderDispatcher = new RenderDispatcher($renderStrategy);
 
-$renderer = new DirectiveRendererService($renderTask);
+$renderer = new DirectiveRendererService($renderDispatcher);
 ```
 
 ### Avec d'autres services
@@ -422,9 +422,9 @@ class DirectiveRendererService
 {
     private bool $debugEnabled;
     
-    public function __construct(RenderTask $renderTask)
+    public function __construct(RenderDispatcher $renderDispatcher)
     {
-        $this->renderTask = $renderTask;
+        $this->renderDispatcher = $renderDispatcher;
         $this->debugEnabled = getenv('DIRECTIVE_DEBUG') === 'true' 
                            || getenv('APP_DEBUG') === 'true';
     }
@@ -453,12 +453,12 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 // Configuration
-$renderTask = new RenderTask($consoleStrategy);
-$renderer = new DirectiveRendererService($renderTask);
+$renderDispatcher = new RenderDispatcher($consoleStrategy);
+$renderer = new DirectiveRendererService($renderDispatcher);
 
 // Activer le debug pour cet exemple
 putenv('DIRECTIVE_DEBUG=true');

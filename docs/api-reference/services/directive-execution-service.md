@@ -176,7 +176,7 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 $discovery = new DirectiveDiscoveryService($config, $hydrator);
 $parser = new DirectiveParserService();
 $hydrator = new DirectiveHydratorService($factory);
-$renderer = new DirectiveRendererService($renderTask);
+$renderer = new DirectiveRendererService($renderDispatcher);
 $bootstrapper = new LaravelBootstrapper();
 
 // 2. Créer le service

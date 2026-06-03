@@ -8,8 +8,8 @@ Service central pour toutes les interactions utilisateur dans les directives CLI
 
 ```
 DirectiveInteractionService (final)
-    ├── Dépend de : RenderTask
-    └── Dépend de : InputTask
+    ├── Dépend de : RenderDispatcher
+    └── Dépend de : InputDispatcher
 ```
 
 ## Rôle principal
@@ -245,8 +245,8 @@ public function execute(): ExitCode
 
 `DirectiveInteractionService` s'intègre avec :
 
-- **`RenderTask`** : Tâche de rendu pour l'affichage
-- **`InputTask`** : Tâche d'entrée pour la capture utilisateur
+- **`RenderDispatcher`** : Tâche de rendu pour l'affichage
+- **`InputDispatcher`** : Tâche d'entrée pour la capture utilisateur
 - **`MessageType`** : Enum des types de messages (LINE, INFO, ERROR, WARNING)
 - **`InputType`** : Enum des types d'entrée (SIMPLE_QUESTION, CONFIRMATION, USER_CHOICE)
 - **`RenderType`** : Enum des types de rendu (DISPLAY_MESSAGE, TABLE)
@@ -255,8 +255,8 @@ public function execute(): ExitCode
 
 | Aspect | Caractéristique |
 |--------|----------------|
-| Affichage | Délégation à RenderTask (pas de surcharge) |
-| Entrée | Délégation à InputTask (temps réel utilisateur) |
+| Affichage | Délégation à RenderDispatcher (pas de surcharge) |
+| Entrée | Délégation à InputDispatcher (temps réel utilisateur) |
 | Tableau | O(n × m) avec n = lignes, m = colonnes |
 
 ## Compatibilité
@@ -275,15 +275,15 @@ public function execute(): ExitCode
 declare(strict_types=1);
 
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 
 // 1. Créer les dépendances
-$renderTask = new RenderTask();
-$inputTask = new InputTask();
+$renderDispatcher = new RenderDispatcher();
+$inputDispatcher = new InputDispatcher();
 
 // 2. Créer le service d'interaction
-$interaction = new DirectiveInteractionService($renderTask, $inputTask);
+$interaction = new DirectiveInteractionService($renderDispatcher, $inputDispatcher);
 
 // 3. Afficher un message de bienvenue
 $interaction->info('Welcome to the application!');
@@ -317,8 +317,8 @@ $interaction->info('Goodbye!');
 
 ## Voir aussi
 
-- [`RenderTask`](../tasks/render-task.md) - Tâche de rendu
-- [`InputTask`](../tasks/input-task.md) - Tâche d'entrée utilisateur
+- [`RenderDispatcher`](../tasks/render-task.md) - Tâche de rendu
+- [`InputDispatcher`](../tasks/input-task.md) - Tâche d'entrée utilisateur
 - [`MessageType`](../enums/message-type.md) - Types de messages
 - [`InputType`](../enums/input-type.md) - Types d'entrée
 - [`RowCollection`](../collections/row-collection.md) - Collection pour lignes de tableau

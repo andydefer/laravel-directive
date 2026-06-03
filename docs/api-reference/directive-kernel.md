@@ -162,7 +162,7 @@ use AndyDefer\Directive\Services\SignatureValidationService;
 // 1. Instancier les dépendances
 $executionService = new DirectiveExecutionService($discovery, $parser, $hydrator, $renderer);
 $signatureValidator = new SignatureValidationService();
-$renderer = new DirectiveRendererService($renderTask);
+$renderer = new DirectiveRendererService($renderDispatcher);
 
 // 2. Créer le kernel
 $kernel = new DirectiveKernel($executionService, $signatureValidator, $renderer);

@@ -16,9 +16,9 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Tasks\CreateDirectiveFileTask;
-use AndyDefer\Directive\Tasks\InputTask;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\CreateDirectiveFileTask;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -127,7 +127,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveRendererService::class, function ($app) {
             return new DirectiveRendererService(
-                renderTask: $app->make(RenderTask::class),
+                renderDispatcher: $app->make(RenderDispatcher::class),
             );
         });
     }
@@ -149,8 +149,8 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerTasks(): void
     {
         $tasks = [
-            RenderTask::class,
-            InputTask::class,
+            RenderDispatcher::class,
+            InputDispatcher::class,
         ];
 
         foreach ($tasks as $task) {
@@ -162,8 +162,8 @@ final class DirectiveServiceProvider extends ServiceProvider
 
     private function registerInputTask(): void
     {
-        $this->app->singleton(InputTask::class, function ($app) {
-            return new InputTask;
+        $this->app->singleton(InputDispatcher::class, function ($app) {
+            return new InputDispatcher;
         });
     }
 
@@ -171,8 +171,8 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveInteractionService::class, function ($app) {
             return new DirectiveInteractionService(
-                renderTask: $app->make(RenderTask::class),
-                inputTask: $app->make(InputTask::class),
+                renderDispatcher: $app->make(RenderDispatcher::class),
+                inputDispatcher: $app->make(InputDispatcher::class),
             );
         });
     }

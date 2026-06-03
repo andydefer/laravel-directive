@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tasks;
+namespace AndyDefer\Directive\Dispatchers;
 
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Enums\RenderType;
@@ -30,7 +30,7 @@ use AndyDefer\Directive\Strategies\WarningRenderStrategy;
  *
  * @author Andy Defer
  */
-class RenderTask
+class RenderDispatcher
 {
     /**
      * @var array<int, RenderStrategyInterface>

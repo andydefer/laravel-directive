@@ -147,5 +147,5 @@ Description:
 - [`DirectiveExecutionService`](directive-execution-service.md) - Service d'exécution
 - [`DirectiveConfig`](directive-config.md) - Configuration des chemins
 - [`LaravelBootstrapper`](laravel-bootstrapper.md) - Bootstrap de Laravel
-- [`RenderTask`](./tasks/render-task.md) - Tâche de rendu
-- [`InputTask`](./tasks/input-task.md) - Tâche d'entrée utilisateur
+- [`RenderDispatcher`](./tasks/render-task.md) - Tâche de rendu
+- [`InputDispatcher`](./tasks/input-task.md) - Tâche d'entrée utilisateur

@@ -11,7 +11,7 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Tasks\RenderTask;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
@@ -22,14 +22,14 @@ use PHPUnit\Framework\MockObject\MockObject;
  */
 final class DirectiveRendererServiceTest extends UnitTestCase
 {
-    private RenderTask&MockObject $renderTask;
+    private RenderDispatcher&MockObject $renderDispatcher;
     private DirectiveRendererService $renderer;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->renderTask = $this->createMock(RenderTask::class);
-        $this->renderer = new DirectiveRendererService($this->renderTask);
+        $this->renderDispatcher = $this->createMock(RenderDispatcher::class);
+        $this->renderer = new DirectiveRendererService($this->renderDispatcher);
     }
 
     protected function tearDown(): void
@@ -43,7 +43,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
     {
         // Arrange: Set up render task expectation
         $expectedOutput = 'help output';
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -62,7 +62,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $directives = new DirectiveMetadataCollection();
         $expectedOutput = 'list output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -81,7 +81,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $signature = 'test-cmd';
         $expectedOutput = 'not found output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -100,7 +100,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $message = 'Success message';
         $expectedOutput = 'success output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -119,7 +119,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $message = 'Error message';
         $expectedOutput = 'error output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -138,7 +138,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $message = 'Warning message';
         $expectedOutput = 'warning output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -157,7 +157,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         putenv('DIRECTIVE_DEBUG=false');
         putenv('APP_DEBUG=false');
 
-        $this->renderTask->expects($this->never())
+        $this->renderDispatcher->expects($this->never())
             ->method('execute');
 
         // Act: Capture output while rendering debug
@@ -176,7 +176,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         putenv('APP_DEBUG=false');
 
         $expectedOutput = 'debug output';
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -196,7 +196,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         putenv('APP_DEBUG=true');
 
         $expectedOutput = 'debug output';
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -214,7 +214,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         // Arrange: Set up render task expectation
         $expectedOutput = 'version output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -233,7 +233,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $record = $this->createConflictDisplayRecord();
         $expectedOutput = 'conflict output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -252,7 +252,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $record = $this->createDisplayTableRecord();
         $expectedOutput = 'table output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -274,7 +274,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         );
         $expectedOutput = 'validation error output';
 
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -294,7 +294,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         putenv('APP_DEBUG=true');
 
         $expectedOutput = 'debug output';
-        $this->renderTask->expects($this->once())
+        $this->renderDispatcher->expects($this->once())
             ->method('execute')
             ->willReturn($expectedOutput);
 
@@ -313,7 +313,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         putenv('DIRECTIVE_DEBUG=1');
         putenv('APP_DEBUG=1');
 
-        $this->renderTask->expects($this->never())
+        $this->renderDispatcher->expects($this->never())
             ->method('execute');
 
         // Act: Capture output while rendering debug
