@@ -1,11 +1,11 @@
 # Pint Formatting Test Report
-*Generated: mer. 03 juin 2026 09:49:21 WAT*
+*Generated: lun. 08 juin 2026 15:06:11 WAT*
 
 
-  ⨯.............⨯.⨯.....⨯.⨯⨯⨯...⨯⨯⨯⨯⨯⨯..........⨯...⨯.⨯...⨯⨯⨯⨯⨯⨯⨯⨯⨯.......⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯......⨯........⨯...........
+  ⨯.............⨯.⨯.....⨯.⨯⨯⨯...⨯⨯⨯⨯⨯⨯..........⨯...⨯.⨯...⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.......⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯......⨯........⨯...........
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................ 139 files, 48 style issues  
+    FAIL   ................................................................................................................................................ 141 files, 50 style issues  
   ⨯ src/AbstractDirective.php                                    class_attributes_separation, new_with_parentheses, no_trailing_whitespace_in_comment, phpdoc_separation, phpdoc_align  
   ⨯ src/Collections/AbstractItemCollection.php                                                                                          phpdoc_separation, blank_line_before_statement  
   ⨯ src/Collections/AbstractKeyValueCollection.php                                                                                                                   phpdoc_separation  
@@ -25,6 +25,7 @@
   ⨯ src/Services/DirectiveNamingService.php class_attributes_separation, concat_space, phpdoc_separation, not_operator_with_successor_space, blank_line_before_statement, phpdoc_alig…  
   ⨯ src/Services/DirectiveParserService.php new_with_parentheses, function_declaration, no_superfluous_phpdoc_tags, concat_space, braces_position, phpdoc_separation, not_operator_wi…  
   ⨯ src/Services/DirectiveRendererService.php                                braces_position, not_operator_with_successor_space, single_line_empty_body, ordered_imports, phpdoc_align  
+  ⨯ src/Services/DirectiveTestingService.php class_attributes_separation, new_with_parentheses, no_superfluous_phpdoc_tags, concat_space, no_trailing_whitespace_in_comment, braces_p…  
   ⨯ src/Services/LaravelBootstrapper.php    class_attributes_separation, concat_space, phpdoc_separation, not_operator_with_successor_space, blank_line_before_statement, phpdoc_align  
   ⨯ src/Services/SignatureValidationService.php                                        class_attributes_separation, phpdoc_separation, not_operator_with_successor_space, phpdoc_align  
   ⨯ src/Strategies/ListRenderStrategy.php                                                    concat_space, unary_operator_spaces, no_unused_imports, not_operator_with_successor_space  
@@ -44,6 +45,7 @@
   ⨯ tests/Unit/Services/DirectiveNamingServiceTest.php                                                                                                            new_with_parentheses  
   ⨯ tests/Unit/Services/DirectiveParserServiceTest.php                                                                                                            new_with_parentheses  
   ⨯ tests/Unit/Services/DirectiveRendererServiceTest.php                 class_attributes_separation, new_with_parentheses, php_unit_method_casing, no_unused_imports, ordered_imports  
+  ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php          class_attributes_separation, fully_qualified_strict_types, concat_space, blank_line_before_statement, ordered_imports  
   ⨯ tests/Unit/Services/LaravelBootstrapperTest.php                                                                            new_with_parentheses, not_operator_with_successor_space  
   ⨯ tests/Unit/Services/SignatureValidationServiceTest.php                                                                  new_with_parentheses, concat_space, php_unit_method_casing  
   ⨯ tests/Unit/Strategies/ListRenderStrategyTest.php                                                                                                                 no_unused_imports  
