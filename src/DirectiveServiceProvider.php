@@ -18,6 +18,11 @@ use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
+use AndyDefer\Directive\Services\FileCreatorService;
+use AndyDefer\Directive\Configs\FileCreatorConfig;
+use AndyDefer\Directive\Services\FileSystemService;
+use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
+use AndyDefer\DomainStructures\Services\EnumService;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -40,6 +45,7 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerInputTask();
         $this->registerInteractionService();
         $this->registerExecution();
+        $this->registerFileCreator();
         $this->registerKernel();
     }
 
@@ -111,7 +117,7 @@ final class DirectiveServiceProvider extends ServiceProvider
             $discovery = new DirectiveDiscoveryService(
                 config: $app->make(DirectiveConfig::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
-                loader: null, // Le loader par défaut sera le service lui-même (chargement depuis filesystem)
+                loader: null,
             );
 
             if ($app->bound(LaravelBootstrapper::class)) {
@@ -191,6 +197,30 @@ final class DirectiveServiceProvider extends ServiceProvider
             }
 
             return $executionService;
+        });
+    }
+
+    /**
+     * Register the file creator service and its dependencies.
+     */
+    private function registerFileCreator(): void
+    {
+        // Register FileSystemInterface with native implementation
+        $this->app->bind(FileSystemInterface::class, function ($app) {
+            return new FileSystemService();
+        });
+
+        // Register FileCreatorConfig
+        $this->app->singleton(FileCreatorConfig::class, function ($app) {
+            return new FileCreatorConfig(new EnumService);
+        });
+
+        // Register FileCreatorService
+        $this->app->singleton(FileCreatorService::class, function ($app) {
+            return new FileCreatorService(
+                config: $app->make(FileCreatorConfig::class),
+                filesystem: $app->make(FileSystemInterface::class),
+            );
         });
     }
 
