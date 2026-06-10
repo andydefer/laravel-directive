@@ -1,13 +1,14 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 10:39:58 WAT*
+*Generated: mer. 10 juin 2026 11:22:38 WAT*
 
 
-  ⨯...............................................⨯.⨯...⨯......⨯.⨯⨯...⨯...⨯.......................⨯..........⨯...⨯.⨯⨯...⨯....⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯........................⨯....
-  ⨯⨯.⨯..⨯⨯............⨯.......⨯......
+  ⨯...............................................⨯.⨯...⨯......⨯.⨯⨯...⨯...⨯...⨯....................⨯..........⨯...⨯.⨯⨯...⨯....⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯........⨯................⨯..
+  ..⨯⨯.⨯..⨯⨯............⨯.......⨯......
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................ 215 files, 31 style issues  
+    FAIL   ................................................................................................................................................ 217 files, 33 style issues  
   ⨯ src/AbstractDirective.php                                                                                                 class_attributes_separation, blank_line_before_statement  
+  ⨯ src/Cli/CliRunner.php                           class_attributes_separation, new_with_parentheses, function_declaration, no_multiline_whitespace_around_double_arrow, concat_space  
   ⨯ src/Configs/EnvDirectiveConfig.php                                                                                                                                    concat_space  
   ⨯ src/Contexts/DirectiveDiscoveryContext.php                                                                                               class_attributes_separation, concat_space  
   ⨯ src/Contexts/DirectiveTestingContext.php                                                                                                 class_attributes_separation, concat_space  
@@ -31,6 +32,7 @@
   ⨯ tests/Feature/LaravelDatabaseIntegrationTest.php                                                                                                                      concat_space  
   ⨯ tests/Fixtures/Directives/TestLaravelDatabaseDirective.php                                                  concat_space, unary_operator_spaces, not_operator_with_successor_space  
   ⨯ tests/IntegrationTestCase.php                                                                               concat_space, unary_operator_spaces, not_operator_with_successor_space  
+  ⨯ tests/Unit/Cli/CliRunnerTest.php                                  class_attributes_separation, new_with_parentheses, concat_space, not_operator_with_successor_space, phpdoc_align  
   ⨯ tests/Unit/DirectiveServiceProviderTest.php                                                                                   class_definition, braces_position, no_unused_imports  
   ⨯ tests/Unit/Services/DirectiveDiscoveryServiceTest.php                                                                              concat_space, not_operator_with_successor_space  
   ⨯ tests/Unit/Services/DirectiveExecutionServiceTest.php                                                                                                                 concat_space  
