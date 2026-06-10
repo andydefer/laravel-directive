@@ -22,15 +22,6 @@ use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 
-/**
- * Service for testing directives in isolation.
- *
- * This service uses the Chain of Responsibility pattern to initialize the
- * testing environment step by step. All state is managed by the
- * DirectiveTestingContext.
- *
- * @author Andy Defer
- */
 final class DirectiveTestingService
 {
     /**
@@ -47,9 +38,6 @@ final class DirectiveTestingService
         $this->executeChain();
     }
 
-    /**
-     * Initialize the chain of responsibility steps.
-     */
     private function initializeSteps(): void
     {
         $this->steps = [
@@ -61,9 +49,6 @@ final class DirectiveTestingService
         ];
     }
 
-    /**
-     * Execute the chain of responsibility.
-     */
     private function executeChain(): void
     {
         if ($this->context->isInitialized()) {
@@ -75,12 +60,6 @@ final class DirectiveTestingService
         $this->context->setInitialized(true);
     }
 
-    /**
-     * Build the execution chain from steps.
-     *
-     * @param array<DirectiveTestingStepInterface> $steps
-     * @return callable
-     */
     private function buildChain(array $steps): callable
     {
         $next = function (DirectiveTestingContext $context) {
@@ -149,7 +128,8 @@ final class DirectiveTestingService
             interaction: $interaction,
         );
 
-        $this->registerDirective($directive);
+        // ✅ Enregistrer dans le registre des closures, pas dans le registre principal
+        $this->context->getClosureRegistry()->register($directive);
 
         return $directive;
     }
@@ -164,20 +144,27 @@ final class DirectiveTestingService
      */
     public function runDirective(string $className, array $arguments = []): DirectiveResponseRecord
     {
+        // 1. Chercher d'abord dans le registre des closures
+        $directive = $this->context->getClosureRegistry()->get($className);
+
+        if ($directive !== null) {
+            return $this->executeDirectly($directive, $arguments);
+        }
+
+        // 2. Chercher dans le registre normal (par FQCN)
         $directive = $this->context->getRegistry()->getDirective($className);
 
         if ($directive !== null) {
             return $this->executeDirectly($directive, $arguments);
         }
 
-        // Fallback: try via the kernel
+        // 3. Fallback: try via the kernel with the signature
         $argv = array_merge(['directive', $className], $arguments);
 
         ob_start();
         $exitCode = $this->context->getKernel()->run($argv);
         $output = ob_get_clean();
 
-        // Track executed directive in context - store the class name
         $this->context->addExecutedDirective($className);
 
         return new DirectiveResponseRecord(
@@ -221,12 +208,15 @@ final class DirectiveTestingService
                 );
             }
 
+            if (method_exists($directive, 'setVariadicArguments')) {
+                $directive->setVariadicArguments($parsed->variadic_arguments);
+            }
+
             ob_start();
             $bufferStarted = true;
             $exitCode = $directive->execute();
             $output = ob_get_clean();
 
-            // Extract directive name (first word of signature) for tracking
             $directiveName = explode(' ', $fullSignature)[0];
             $this->context->addExecutedDirective($directiveName);
 
@@ -279,6 +269,7 @@ final class DirectiveTestingService
     public function destroy(): void
     {
         $this->clearRegisteredDirectives();
+        $this->context->getClosureRegistry()->clear();
 
         $tempDir = $this->context->getTempDir();
         if ($tempDir !== null && is_dir($tempDir) && $this->context->getConfig()->cleanupAfterTest()) {

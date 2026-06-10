@@ -1,12 +1,12 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 02:23:52 WAT*
+*Generated: mer. 10 juin 2026 02:41:11 WAT*
 
 
-  ⨯...⨯.⨯⨯..⨯⨯..⨯....⨯⨯⨯.⨯⨯⨯⨯.⨯..⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯..⨯⨯⨯⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯...⨯⨯......⨯.⨯⨯⨯⨯...⨯.⨯.⨯⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯.⨯.⨯⨯..⨯⨯⨯⨯⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯....
-  ⨯.⨯...⨯...........
+  ⨯...⨯.⨯⨯..⨯⨯..⨯....⨯⨯⨯.⨯⨯⨯⨯.⨯..⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯..⨯⨯⨯⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯...⨯⨯......⨯.⨯⨯⨯⨯...⨯.⨯.⨯⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯.⨯.⨯⨯..⨯⨯⨯⨯⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯...
+  .⨯.⨯...⨯...........
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ............................................................................................................................................... 198 files, 117 style issues  
+    FAIL   ............................................................................................................................................... 199 files, 118 style issues  
   ⨯ src/AbstractDirective.php                                          class_attributes_separation, new_with_parentheses, phpdoc_separation, blank_line_before_statement, phpdoc_align  
   ⨯ src/Collections/AbstractItemCollection.php                                                                                          phpdoc_separation, blank_line_before_statement  
   ⨯ src/Collections/AbstractKeyValueCollection.php                                                                                                                   phpdoc_separation  
@@ -88,9 +88,10 @@
   ⨯ src/Strategies/RequiredArgumentStrategy.php                                                       blank_line_after_opening_tag, not_operator_with_successor_space, ordered_imports  
   ⨯ src/Strategies/VariadicArgumentStrategy.php                                                       blank_line_after_opening_tag, not_operator_with_successor_space, ordered_imports  
   ⨯ src/Testing/ClosureDirective.php                                                                                                                                      phpdoc_align  
+  ⨯ src/Testing/ClosureDirectiveRegistry.php                                                                                                blank_line_after_opening_tag, phpdoc_align  
   ⨯ src/Testing/InteractsWithDirectives.php class_attributes_separation, new_with_parentheses, concat_space, phpdoc_separation, not_operator_with_successor_space, blank_line_before_…  
   ⨯ src/Testing/TestDirectiveDiscoveryService.php    new_with_parentheses, no_superfluous_phpdoc_tags, phpdoc_separation, phpdoc_trim, not_operator_with_successor_space, phpdoc_align  
-  ⨯ src/Testing/TestDirectiveRegistry.php                        class_attributes_separation, single_quote, concat_space, phpdoc_separation, blank_line_before_statement, phpdoc_align  
+  ⨯ src/Testing/TestDirectiveRegistry.php                              class_attributes_separation, phpdoc_separation, no_extra_blank_lines, blank_line_before_statement, phpdoc_align  
   ⨯ src/Traits/FileCreator.php             concat_space, unary_operator_spaces, phpdoc_separation, no_unused_imports, not_operator_with_successor_space, ordered_imports, phpdoc_align  
   ⨯ stubs/laravel/bootstrap/app.php                                                                                            fully_qualified_strict_types, single_line_after_imports  
   ⨯ stubs/laravel/config/app.php                                                                                                                                          concat_space  
@@ -109,7 +110,7 @@
   ⨯ tests/Unit/Services/DirectiveNamingServiceTest.php                                                                                                            new_with_parentheses  
   ⨯ tests/Unit/Services/DirectiveParserServiceTest.php                                                                              new_with_parentheses, blank_line_after_opening_tag  
   ⨯ tests/Unit/Services/DirectiveRendererServiceTest.php                 class_attributes_separation, new_with_parentheses, php_unit_method_casing, no_unused_imports, ordered_imports  
-  ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php class_attributes_separation, new_with_parentheses, fully_qualified_strict_types, blank_line_after_opening_tag, blank_line_bef…  
+  ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php class_attributes_separation, new_with_parentheses, fully_qualified_strict_types, blank_line_after_opening_tag, no_extra_blank…  
   ⨯ tests/Unit/Services/FileCreatorServiceTest.php               class_attributes_separation, new_with_parentheses, concat_space, no_unused_imports, not_operator_with_successor_space  
   ⨯ tests/Unit/Services/LaravelBootstrapperTest.php                                                                            new_with_parentheses, not_operator_with_successor_space  
   ⨯ tests/Unit/Services/OptionParserServiceTest.php                                                                                 new_with_parentheses, blank_line_after_opening_tag  

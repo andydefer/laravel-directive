@@ -15,6 +15,7 @@ use AndyDefer\Directive\Records\CreatedPathRecord;
 use AndyDefer\Directive\Records\ExecutionResultRecord;
 use AndyDefer\Directive\Records\StepResultRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Testing\ClosureDirectiveRegistry;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
@@ -39,6 +40,7 @@ final class DirectiveTestingContext
 
     // Registry state
     private TestDirectiveRegistry $registry;
+    private ClosureDirectiveRegistry $closure_registry;
 
     // Configuration
     private DirectiveTestingConfigInterface $config;
@@ -60,6 +62,7 @@ final class DirectiveTestingContext
     {
         $this->boot_laravel = $boot_laravel;
         $this->registry = new TestDirectiveRegistry();
+        $this->closure_registry = new ClosureDirectiveRegistry();
         $this->executed_directives = new StringTypedCollection();
         $this->execution_results = new ExecutionResultCollection();
         $this->created_paths = new CreatedPathCollection();
@@ -113,6 +116,11 @@ final class DirectiveTestingContext
     public function getRegistry(): TestDirectiveRegistry
     {
         return $this->registry;
+    }
+
+    public function getClosureRegistry(): ClosureDirectiveRegistry
+    {
+        return $this->closure_registry;
     }
 
     public function getConfig(): DirectiveTestingConfigInterface
@@ -342,6 +350,7 @@ final class DirectiveTestingContext
         $this->kernel = null;
         $this->interaction = null;
         $this->registry->clear();
+        $this->closure_registry->clear();
         $this->executed_directives = new StringTypedCollection();
         $this->execution_results = new ExecutionResultCollection();
         $this->created_paths = new CreatedPathCollection();
@@ -355,5 +364,6 @@ final class DirectiveTestingContext
     {
         $this->reset();
         $this->registry = new TestDirectiveRegistry();
+        $this->closure_registry = new ClosureDirectiveRegistry();
     }
 }

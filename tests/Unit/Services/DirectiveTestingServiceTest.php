@@ -408,9 +408,8 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
     public function test_run_directive_with_special_characters_in_arguments(): void
     {
-        // Arrange - signature avec un paramètre variadique
+        // Arrange - signature avec paramètre variadique
         $this->service->createTestDirective('test-special {args*}', function ($d) {
-            // Récupérer tous les arguments via getVariadicArguments()
             $args = $d->getVariadicArguments()->toArray();
             $argsString = implode(', ', $args);
             $d->line("Received: {$argsString}");
@@ -445,7 +444,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         // Assert
         $response1 = $this->service->runDirective('test-1');
         $response2 = $this->service->runDirective('test-2');
-        echo "{$response2->output}";
 
         $this->assertSame(ExitCode::SUCCESS, $response1->exitCode);
         $this->assertSame(ExitCode::SUCCESS, $response2->exitCode);
@@ -454,6 +452,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertContains('test-1', $executed);
         $this->assertContains('test-2', $executed);
     }
+
 
     // ==================== Response Content Tests ====================
 
