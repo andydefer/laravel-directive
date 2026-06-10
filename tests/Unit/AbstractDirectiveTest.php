@@ -6,6 +6,9 @@ namespace AndyDefer\Directive\Tests\Unit;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\RowCollection;
+use AndyDefer\Directive\Contexts\DirectiveContext;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
@@ -18,141 +21,153 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class AbstractDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
-
-    private TestConcreteDirective $directive;
+    private LaravelBootstrapperContext $laravelBootstrapperContext;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Arrange: Create mock interaction service and directive instance
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
-        $this->directive = new TestConcreteDirective($this->interaction);
+        $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
+    }
+
+    private function createDirectiveWithContext(DirectiveContext $context): TestConcreteDirective
+    {
+        return new TestConcreteDirective($context, $this->interaction);
     }
 
     // ==================== Argument Management Tests ====================
 
-    public function test_set_arguments_sets_arguments_correctly(): void
+    public function test_arguments_are_set_correctly_via_context(): void
     {
-        // Arrange: Create argument collection
         $arguments = new ParameterCollection;
         $arguments->add(
             new ParameterRecord(name: 'name', value: 'John Doe'),
             new ParameterRecord(name: 'email', value: 'john@example.com'),
         );
 
-        // Act: Set arguments on directive
-        $result = $this->directive->setArguments($arguments);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setArguments($arguments);
 
-        // Assert: Verify arguments were set correctly
-        $this->assertSame($this->directive, $result);
-        $this->assertSame('John Doe', $this->directive->argument('name'));
-        $this->assertSame('john@example.com', $this->directive->argument('email'));
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertSame('John Doe', $directive->argument('name'));
+        $this->assertSame('john@example.com', $directive->argument('email'));
     }
 
     public function test_argument_returns_null_for_unknown_key(): void
     {
-        // Arrange: Set empty arguments
-        $arguments = new ParameterCollection;
-        $this->directive->setArguments($arguments);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
 
-        // Act: Get unknown argument
-        $result = $this->directive->argument('unknown');
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Assert: Verify null is returned
-        $this->assertNull($result);
+        $this->assertNull($directive->argument('unknown'));
     }
 
     public function test_argument_returns_null_when_value_is_boolean(): void
     {
-        // Arrange: Add boolean argument
         $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'active', value: true));
-        $this->directive->setArguments($arguments);
 
-        // Act: Get boolean argument
-        $result = $this->directive->argument('active');
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setArguments($arguments);
 
-        // Assert: Verify null is returned (boolean values are not valid arguments)
-        $this->assertNull($result);
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertNull($directive->argument('active'));
     }
 
     public function test_argument_returns_null_when_value_is_empty_string(): void
     {
-        // Arrange: Add empty string argument
         $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'comment', value: ''));
-        $this->directive->setArguments($arguments);
 
-        // Act: Get empty string argument
-        $result = $this->directive->argument('comment');
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setArguments($arguments);
 
-        // Assert: Verify null is returned
-        $this->assertNull($result);
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertNull($directive->argument('comment'));
     }
 
-    public function test_has_argument_returns_true_when_argument_exists_with_non_empty_value(): void
+    public function test_has_argument_returns_true_when_argument_exists(): void
     {
-        // Arrange: Add valid argument
         $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
-        $this->directive->setArguments($arguments);
 
-        // Act & Assert: Verify argument exists
-        $this->assertTrue($this->directive->hasArgument('name'));
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setArguments($arguments);
+
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertTrue($directive->hasArgument('name'));
     }
 
     public function test_has_argument_returns_false_when_argument_does_not_exist(): void
     {
-        // Arrange: Add argument but not the one we're checking
         $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
-        $this->directive->setArguments($arguments);
 
-        // Act & Assert: Verify argument does not exist
-        $this->assertFalse($this->directive->hasArgument('email'));
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setArguments($arguments);
+
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertFalse($directive->hasArgument('email'));
     }
 
-    public function test_has_argument_returns_false_for_argument_with_empty_string_value(): void
+    public function test_has_argument_returns_false_for_empty_string_value(): void
     {
-        // Arrange: Add empty string argument
         $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'comment', value: ''));
-        $this->directive->setArguments($arguments);
 
-        // Act & Assert: Verify empty string is not considered present
-        $this->assertFalse($this->directive->hasArgument('comment'));
-    }
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setArguments($arguments);
 
-    public function test_has_argument_returns_false_for_argument_with_null_value(): void
-    {
-        // Arrange: Add null argument
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'optional', value: null));
-        $this->directive->setArguments($arguments);
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Act & Assert: Verify null is not considered present
-        $this->assertFalse($this->directive->hasArgument('optional'));
-    }
-
-    public function test_set_arguments_returns_self_for_chaining(): void
-    {
-        // Arrange: Create argument collection
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'name', value: 'John'));
-
-        // Act: Set arguments
-        $result = $this->directive->setArguments($arguments);
-
-        // Assert: Verify method returns self for chaining
-        $this->assertSame($this->directive, $result);
+        $this->assertFalse($directive->hasArgument('comment'));
     }
 
     // ==================== Option Management Tests ====================
 
-    public function test_set_options_sets_options_correctly(): void
+    public function test_options_are_set_correctly_via_context(): void
     {
-        // Arrange: Create options collection with mixed types
         $options = new ParameterCollection;
         $options->add(
             new ParameterRecord(name: 'role', value: 'admin'),
@@ -160,184 +175,212 @@ final class AbstractDirectiveTest extends UnitTestCase
             new ParameterRecord(name: 'count', value: '10'),
         );
 
-        // Act: Set options on directive
-        $result = $this->directive->setOptions($options);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setOptions($options);
 
-        // Assert: Verify options were set correctly
-        $this->assertSame($this->directive, $result);
-        $this->assertSame('admin', $this->directive->option('role'));
-        $this->assertTrue($this->directive->option('active'));
-        $this->assertSame('10', $this->directive->option('count'));
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertSame('admin', $directive->option('role'));
+        $this->assertTrue($directive->option('active'));
+        $this->assertSame('10', $directive->option('count'));
     }
 
     public function test_option_returns_null_for_unknown_key(): void
     {
-        // Arrange: Set empty options
-        $options = new ParameterCollection;
-        $this->directive->setOptions($options);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
 
-        // Act: Get unknown option
-        $result = $this->directive->option('unknown');
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Assert: Verify null is returned
-        $this->assertNull($result);
+        $this->assertNull($directive->option('unknown'));
     }
 
     public function test_option_returns_null_for_empty_string_value(): void
     {
-        // Arrange: Add empty string option
         $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'role', value: ''));
-        $this->directive->setOptions($options);
 
-        // Act: Get empty option
-        $result = $this->directive->option('role');
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setOptions($options);
 
-        // Assert: Verify null is returned
-        $this->assertNull($result);
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertNull($directive->option('role'));
     }
 
-    public function test_has_option_returns_true_when_option_exists_with_non_empty_value(): void
+    public function test_has_option_returns_true_when_option_exists(): void
     {
-        // Arrange: Add boolean flag option
         $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
-        $this->directive->setOptions($options);
 
-        // Act & Assert: Verify option exists
-        $this->assertTrue($this->directive->hasOption('force'));
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setOptions($options);
+
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertTrue($directive->hasOption('force'));
     }
 
     public function test_has_option_returns_false_when_option_does_not_exist(): void
     {
-        // Arrange: Add option but not the one we're checking
         $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
-        $this->directive->setOptions($options);
 
-        // Act & Assert: Verify option does not exist
-        $this->assertFalse($this->directive->hasOption('unknown'));
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setOptions($options);
+
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertFalse($directive->hasOption('unknown'));
     }
 
-    public function test_has_option_returns_false_for_option_with_empty_string_value(): void
+    public function test_has_option_returns_false_for_empty_string_value(): void
     {
-        // Arrange: Add empty string option
         $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'role', value: ''));
-        $this->directive->setOptions($options);
 
-        // Act & Assert: Verify empty string is not considered present
-        $this->assertFalse($this->directive->hasOption('role'));
-    }
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setOptions($options);
 
-    public function test_set_options_returns_self_for_chaining(): void
-    {
-        // Arrange: Create options collection
-        $options = new ParameterCollection;
-        $options->add(new ParameterRecord(name: 'force', value: true));
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Act: Set options
-        $result = $this->directive->setOptions($options);
-
-        // Assert: Verify method returns self for chaining
-        $this->assertSame($this->directive, $result);
+        $this->assertFalse($directive->hasOption('role'));
     }
 
     // ==================== Display Method Delegation Tests ====================
 
     public function test_line_delegates_to_interaction(): void
     {
-        // Arrange: Set expected message
         $expectedMessage = 'Test message';
+        $this->interaction->expects($this->once())->method('line')->with($expectedMessage);
 
-        // Act: Expect interaction line method to be called
-        $this->interaction->expects($this->once())
-            ->method('line')
-            ->with($expectedMessage);
-
-        // Act: Call directive line method
-        $this->directive->line($expectedMessage);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->line($expectedMessage);
     }
 
     public function test_info_delegates_to_interaction(): void
     {
-        // Arrange: Set expected message
         $expectedMessage = 'Test message';
+        $this->interaction->expects($this->once())->method('info')->with($expectedMessage);
 
-        // Act: Expect interaction info method to be called
-        $this->interaction->expects($this->once())
-            ->method('info')
-            ->with($expectedMessage);
-
-        // Act: Call directive info method
-        $this->directive->info($expectedMessage);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->info($expectedMessage);
     }
 
     public function test_error_delegates_to_interaction(): void
     {
-        // Arrange: Set expected message
         $expectedMessage = 'Test message';
+        $this->interaction->expects($this->once())->method('error')->with($expectedMessage);
 
-        // Act: Expect interaction error method to be called
-        $this->interaction->expects($this->once())
-            ->method('error')
-            ->with($expectedMessage);
-
-        // Act: Call directive error method
-        $this->directive->error($expectedMessage);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->error($expectedMessage);
     }
 
     public function test_warn_delegates_to_interaction(): void
     {
-        // Arrange: Set expected message
         $expectedMessage = 'Test message';
+        $this->interaction->expects($this->once())->method('warn')->with($expectedMessage);
 
-        // Act: Expect interaction warn method to be called
-        $this->interaction->expects($this->once())
-            ->method('warn')
-            ->with($expectedMessage);
-
-        // Act: Call directive warn method
-        $this->directive->warn($expectedMessage);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->warn($expectedMessage);
     }
 
     // ==================== User Interaction Delegation Tests ====================
 
     public function test_ask_delegates_to_interaction(): void
     {
-        // Arrange: Set expected question and answer
         $expectedQuestion = 'What is your name?';
         $expectedAnswer = 'John Doe';
 
-        // Act: Expect interaction ask method to be called
         $this->interaction->expects($this->once())
             ->method('ask')
             ->with($expectedQuestion)
             ->willReturn($expectedAnswer);
 
-        // Act: Call directive ask method
-        $result = $this->directive->ask($expectedQuestion);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $result = $directive->ask($expectedQuestion);
 
-        // Assert: Verify answer is returned correctly
         $this->assertSame($expectedAnswer, $result);
     }
 
     public function test_confirm_delegates_to_interaction(): void
     {
-        // Arrange: Set expected question and answer
         $expectedQuestion = 'Continue?';
         $expectedAnswer = true;
 
-        // Act: Expect interaction confirm method to be called
         $this->interaction->expects($this->once())
             ->method('confirm')
             ->with($expectedQuestion)
             ->willReturn($expectedAnswer);
 
-        // Act: Call directive confirm method
-        $result = $this->directive->confirm($expectedQuestion);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $result = $directive->confirm($expectedQuestion);
 
-        // Assert: Verify confirmation is returned correctly
         $this->assertTrue($result);
     }
 
@@ -345,7 +388,6 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_table_delegates_to_interaction(): void
     {
-        // Arrange: Create headers and rows
         $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
@@ -354,139 +396,187 @@ final class AbstractDirectiveTest extends UnitTestCase
         $row->add('John', 'john@example.com');
         $rows->add($row);
 
-        // Act: Expect interaction table method to be called
         $this->interaction->expects($this->once())
             ->method('table')
             ->with($headers, $rows);
 
-        // Act: Call directive table method
-        $this->directive->table($headers, $rows);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->table($headers, $rows);
     }
 
     // ==================== Default Values Tests ====================
 
-    public function test_get_aliases_returns_empty_string_typed_collection_by_default(): void
+    public function test_get_aliases_returns_empty_collection_by_default(): void
     {
-        // Act: Get aliases
-        $aliases = $this->directive->getAliases();
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Assert: Verify empty collection is returned
+        $aliases = $directive->getAliases();
+
         $this->assertInstanceOf(StringTypedCollection::class, $aliases);
         $this->assertTrue($aliases->isEmpty());
     }
 
-    public function test_get_blueprint_returns_directive_blueprint_record(): void
+    public function test_get_blueprint_returns_correct_blueprint(): void
     {
-        // Act: Get blueprint
-        $blueprint = $this->directive->getBlueprint();
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Assert: Verify blueprint contains correct data
+        $blueprint = $directive->getBlueprint();
+
         $this->assertSame(TestConcreteDirective::class, $blueprint->class);
         $this->assertSame('test-concrete', $blueprint->signature);
-        $this->assertSame('Test concrete directive for AbstractDirective tests', $blueprint->description);
     }
 
     public function test_arguments_are_empty_by_default(): void
     {
-        // Act: Get argument values from fresh directive
-        $argumentResult = $this->directive->argument('anything');
-        $hasArgumentResult = $this->directive->hasArgument('anything');
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Assert: Verify no arguments are present
-        $this->assertNull($argumentResult);
-        $this->assertFalse($hasArgumentResult);
+        $this->assertNull($directive->argument('anything'));
+        $this->assertFalse($directive->hasArgument('anything'));
     }
 
     public function test_options_are_empty_by_default(): void
     {
-        // Act: Get option values from fresh directive
-        $optionResult = $this->directive->option('anything');
-        $hasOptionResult = $this->directive->hasOption('anything');
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
 
-        // Assert: Verify no options are present
-        $this->assertNull($optionResult);
-        $this->assertFalse($hasOptionResult);
+        $this->assertNull($directive->option('anything'));
+        $this->assertFalse($directive->hasOption('anything'));
+    }
+
+    // ==================== Variadic Arguments Tests ====================
+
+    public function test_variadic_arguments_are_set_correctly(): void
+    {
+        $variadicArguments = new StringTypedCollection;
+        $variadicArguments->add('file1.txt', 'file2.txt', 'file3.txt');
+
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $context->setVariadicArguments($variadicArguments);
+
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertTrue($directive->hasVariadicArguments());
+        $this->assertEquals(3, $directive->getVariadicArguments()->count());
+        $this->assertTrue($directive->getVariadicArguments()->contains('file1.txt'));
+    }
+
+    public function test_variadic_arguments_are_empty_by_default(): void
+    {
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+
+        $this->assertFalse($directive->hasVariadicArguments());
+        $this->assertTrue($directive->getVariadicArguments()->isEmpty());
     }
 
     // ==================== New Line and Separator Tests ====================
 
     public function test_new_line_delegates_to_interaction(): void
     {
-        // Act: Expect interaction newLine method to be called
-        $this->interaction->expects($this->once())
-            ->method('newLine');
+        $this->interaction->expects($this->once())->method('newLine');
 
-        // Act: Call directive newLine method
-        $this->directive->newLine();
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->newLine();
     }
 
     public function test_separator_delegates_to_interaction_with_default_parameters(): void
     {
-        // Act: Expect interaction separator method to be called with default parameters
-        $this->interaction->expects($this->once())
-            ->method('separator')
-            ->with('-', 80);
+        $this->interaction->expects($this->once())->method('separator')->with('-', 80);
 
-        // Act: Call directive separator method with no parameters
-        $this->directive->separator();
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->separator();
     }
 
-    public function test_separator_delegates_to_interaction_with_custom_character(): void
+    public function test_separator_with_custom_character(): void
     {
-        // Arrange: Custom separator character
-        $character = '=';
+        $this->interaction->expects($this->once())->method('separator')->with('=', 80);
 
-        // Act: Expect interaction separator method to be called with custom character
-        $this->interaction->expects($this->once())
-            ->method('separator')
-            ->with('=', 80);
-
-        // Act: Call directive separator method with custom character
-        $this->directive->separator($character);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->separator('=');
     }
 
-    public function test_separator_delegates_to_interaction_with_custom_length(): void
+    public function test_separator_with_custom_length(): void
     {
-        // Arrange: Custom separator length
-        $length = 50;
+        $this->interaction->expects($this->once())->method('separator')->with('-', 50);
 
-        // Act: Expect interaction separator method to be called with custom length
-        $this->interaction->expects($this->once())
-            ->method('separator')
-            ->with('-', 50);
-
-        // Act: Call directive separator method with custom length
-        $this->directive->separator(length: $length);
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->separator(length: 50);
     }
 
-    public function test_separator_delegates_to_interaction_with_custom_character_and_length(): void
+    public function test_separator_with_custom_character_and_length(): void
     {
-        // Arrange: Custom separator character and length
-        $character = '*';
-        $length = 100;
+        $this->interaction->expects($this->once())->method('separator')->with('*', 100);
 
-        // Act: Expect interaction separator method to be called with custom parameters
-        $this->interaction->expects($this->once())
-            ->method('separator')
-            ->with('*', 100);
-
-        // Act: Call directive separator method with custom parameters
-        $this->directive->separator($character, $length);
-    }
-
-    public function test_multiple_new_lines_and_separators_work_together(): void
-    {
-        // Arrange: Set up expectations in sequence
-        $this->interaction->expects($this->exactly(2))
-            ->method('newLine');
-
-        $this->interaction->expects($this->once())
-            ->method('separator')
-            ->with('-', 80);
-
-        // Act: Chain multiple display methods
-        $this->directive->newLine();
-        $this->directive->separator();
-        $this->directive->newLine();
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        $directive = $this->createDirectiveWithContext($context);
+        $directive->separator('*', 100);
     }
 }

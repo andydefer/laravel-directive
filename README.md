@@ -8,6 +8,25 @@
 
 ---
 
+## Table des matières
+
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Premiers pas](#premiers-pas)
+- [Format des signatures](#format-des-signatures-de-directives)
+- [Arguments variadiques](#arguments-variadiques)
+- [Méthodes de base](#les-methodes-de-base)
+- [Arguments et options](#arguments-et-options)
+- [Interaction utilisateur](#interaction-utilisateur)
+- [Charger Laravel optionnellement](#charger-laravel-optionnellement)
+- [Commandes intégrées](#commandes-integrees)
+- [Codes de sortie](#codes-de-sortie)
+- [Tester vos directives](#tester-vos-directives)
+- [Exemples complets](#exemples-complets)
+- [Pourquoi ce package](#pourquoi-ce-package)
+
+---
+
 ## Installation
 
 ```bash
@@ -18,7 +37,6 @@ composer require andydefer/laravel-directive
 
 - PHP 8.2 ou supérieur
 - Laravel 10.x, 11.x ou 12.x
-- Dépend automatiquement de `andydefer/php-records`
 
 ### Publication de la configuration (optionnel)
 
@@ -30,8 +48,6 @@ php artisan vendor:publish --tag=directive-config --force
 
 ## Configuration
 
-### Fichier de configuration
-
 ```php
 // config/directive.php
 return [
@@ -39,11 +55,16 @@ return [
 ];
 ```
 
+| Variable d'environnement | Description | Défaut |
+|--------------------------|-------------|--------|
+| `DIRECTIVE_PATH` | Chemin personnalisé des directives | `./app/Directives` |
+| `DIRECTIVE_DEBUG` | Mode debug | `false` |
+
 ---
 
 ## Premiers pas
 
-### Lister les directives disponibles
+### Lister les directives
 
 ```bash
 ./vendor/bin/directive --list
@@ -55,20 +76,11 @@ return [
 ./vendor/bin/directive --help
 ```
 
-### Afficher la version
-
-```bash
-./vendor/bin/directive --version
-```
-
 ### Créer votre première directive
-
-Créez manuellement le fichier `app/Directives/HelloDirective.php` :
 
 ```php
 <?php
-
-declare(strict_types=1);
+// app/Directives/HelloDirective.php
 
 namespace App\Directives;
 
@@ -97,20 +109,16 @@ final class HelloDirective extends AbstractDirective
 }
 ```
 
-### Exécuter votre directive
+### Exécuter
 
 ```bash
 ./vendor/bin/directive hello "John Doe"
-```
-
-Sortie :
-```
-Hello, John Doe!
+# Sortie: Hello, John Doe!
 ```
 
 ---
 
-## Format des signatures de directives
+## Format des signatures
 
 ### Règles fondamentales
 
@@ -124,58 +132,50 @@ Hello, John Doe!
 
 ### ✅ Exemples valides
 
-| Signature | Nom de classe généré |
-|-----------|---------------------|
+| Signature | Classe générée |
+|-----------|----------------|
 | `user-list` | `UserListDirective` |
 | `cache-clear` | `CacheClearDirective` |
 | `api-user-profile` | `ApiUserProfileDirective` |
-| `api-v2` | `ApiV2Directive` |
 
 ### ❌ Exemples invalides
 
 | Signature | Raison |
 |-----------|--------|
 | `user:list` | Caractère `:` interdit |
-| `user@list` | Caractère `@` interdit |
 | `create_user` | Underscore `_` interdit |
 | `user-` | Tiret final interdit |
 | `user--list` | Tirets consécutifs |
 
-### Ordre des paramètres
-
-Le parser impose un ordre strict :
+### Ordre des paramètres (strict)
 
 | Ordre | Type | Syntaxe | Exemple |
 |-------|------|---------|---------|
 | 1 | Arguments requis | `{name}` | `{name} {email}` |
 | 2 | Arguments avec valeur par défaut | `{role=user}` | `{role=admin}` |
 | 3 | Arguments optionnels | `{count?}` | `{limit?}` |
-| 4 | Arguments variadiques | `{files*}` | `{files*} {tags*}` |
+| 4 | Arguments variadiques | `{files*}` | `{files*}` |
 | 5 | Options | `{--force}` ou `{-v}` | `{--verbose} {-f}` |
 
 ```php
 // ✅ Ordre correct
 public function getSignature(): string
 {
-    return 'user:create {name} {email} {role=user} {count?} {files*} {--force} {-v}';
+    return 'user-create {name} {email} {role=user} {count?} {files*} {--force} {-v}';
 }
 
 // ❌ Ordre incorrect
 public function getSignature(): string
 {
-    return 'user:create {name?} {email}'; // Requis après optionnel
+    return 'user-create {name?} {email}'; // Requis après optionnel
 }
 ```
 
 ---
 
-## Arguments variadiques (Nouveauté !)
+## Arguments variadiques
 
-> **⚠️ Nouveauté depuis la version 3.8.0** - Support des arguments variadiques avec syntaxe `{files*}`.
-
-### Syntaxe
-
-Les arguments variadiques capturent **tous les arguments restants** sous forme de tableau.
+Capture tous les arguments restants sous forme de tableau.
 
 ```php
 public function getSignature(): string
@@ -184,30 +184,15 @@ public function getSignature(): string
 }
 ```
 
-### Syntaxe recommandée avec crochets
-
-Pour une meilleure lisibilité, utilisez la syntaxe avec crochets :
+### Syntaxe avec crochets (recommandée)
 
 ```bash
-# Sans crochets (mais moins lisible)
-./directive process John file1.txt file2.txt file3.txt
-
-# Avec crochets (recommandé)
-./directive process John [file1.txt, file2.txt, file3.txt]
+./directive process John [file1.txt, file2.txt, file3.txt] --verbose
 ```
 
-### Exemple complet
+### Exemple
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Directives;
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-
 final class ProcessFilesDirective extends AbstractDirective
 {
     public function getSignature(): string
@@ -215,23 +200,15 @@ final class ProcessFilesDirective extends AbstractDirective
         return 'process {name} {files*} {--verbose}';
     }
 
-    public function getDescription(): string
-    {
-        return 'Process multiple files';
-    }
-
     public function execute(): ExitCode
     {
         $name = $this->argument('name');
-        $files = $this->getVariadicArguments(); // StringTypedCollection
+        $files = $this->getVariadicArguments();
 
         $this->info("Processing files for {$name}");
 
         foreach ($files as $file) {
             $this->line("  - {$file}");
-            if ($this->option('verbose')) {
-                $this->info("    Done");
-            }
         }
 
         return ExitCode::SUCCESS;
@@ -239,18 +216,16 @@ final class ProcessFilesDirective extends AbstractDirective
 }
 ```
 
-### Méthodes pour les arguments variadiques
-
 | Méthode | Description |
 |---------|-------------|
 | `getVariadicArguments(): StringTypedCollection` | Retourne tous les arguments variadiques |
-| `hasVariadicArguments(): bool` | Vérifie si des arguments variadiques sont présents |
+| `hasVariadicArguments(): bool` | Vérifie leur présence |
 
 ---
 
 ## Les méthodes de base
 
-### `getSignature()` - La signature
+### `getSignature()`
 
 ```php
 public function getSignature(): string
@@ -263,12 +238,12 @@ public function getSignature(): string
 |---------|---------|-------------|
 | Argument requis | `{name}` | Paramètre positionnel obligatoire |
 | Argument optionnel | `{name?}` | Paramètre positionnel optionnel |
-| Argument avec valeur par défaut | `{count=10}` | Valeur par défaut |
-| Argument variadique | `{files*}` | Capture tous les arguments restants (Nouveau !) |
-| Option avec valeur | `{--role=}` | Option avec valeur |
-| Option flag | `{--force}` | Option sans valeur (true/false) |
+| Argument avec défaut | `{count=10}` | Valeur par défaut |
+| Argument variadique | `{files*}` | Capture tous les restants |
+| Option avec valeur | `{--role=}` | Option attend une valeur |
+| Option flag | `{--force}` | true/false |
 
-### `getDescription()` - La description
+### `getDescription()`
 
 ```php
 public function getDescription(): string
@@ -277,17 +252,17 @@ public function getDescription(): string
 }
 ```
 
-### `execute()` - La logique métier
+### `execute()`
 
 ```php
 public function execute(): ExitCode
 {
-    $this->info('User created successfully!');
+    $this->info('User created!');
     return ExitCode::SUCCESS;
 }
 ```
 
-### `getAliases()` - Les alias
+### `getAliases()`
 
 ```php
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
@@ -311,7 +286,7 @@ public function getAliases(): StringTypedCollection
 public function execute(): ExitCode
 {
     $name = $this->argument('name');   // string ou null
-    $email = $this->argument('email'); // null si absent
+    $email = $this->argument('email');
     
     if ($name === null) {
         $this->error('Name is required');
@@ -328,7 +303,7 @@ public function execute(): ExitCode
 ```php
 public function execute(): ExitCode
 {
-    $files = $this->getVariadicArguments(); // StringTypedCollection
+    $files = $this->getVariadicArguments();
     
     if ($this->hasVariadicArguments()) {
         foreach ($files as $file) {
@@ -340,12 +315,15 @@ public function execute(): ExitCode
 }
 ```
 
-### Vérifier l'existence d'un argument
+### Vérifier l'existence
 
 ```php
 if ($this->hasArgument('count')) {
     $count = $this->argument('count');
-    $this->info("Count: {$count}");
+}
+
+if ($this->hasOption('verbose')) {
+    $this->info('Verbose mode');
 }
 ```
 
@@ -354,26 +332,14 @@ if ($this->hasArgument('count')) {
 ```php
 public function execute(): ExitCode
 {
-    $force = $this->option('force'); // bool (true si présent)
-    $role = $this->option('role');   // string ou null
+    $force = $this->option('force');   // bool
+    $role = $this->option('role');     // string ou null
     
     if ($force) {
         $this->warn('Force mode enabled');
     }
     
-    if ($role !== null) {
-        $this->info("Role: {$role}");
-    }
-    
     return ExitCode::SUCCESS;
-}
-```
-
-### Vérifier l'existence d'une option
-
-```php
-if ($this->hasOption('verbose')) {
-    $this->info('Verbose mode enabled');
 }
 ```
 
@@ -381,13 +347,15 @@ if ($this->hasOption('verbose')) {
 
 ## Interaction utilisateur
 
-### Afficher un message
+### Afficher des messages
 
 ```php
-$this->line('Simple text');           // texte brut
-$this->info('Success message');       // vert
-$this->error('Error message');        // rouge
-$this->warn('Warning message');       // jaune
+$this->line('Simple text');     // texte brut
+$this->info('Success!');        // vert
+$this->error('Error!');         // rouge
+$this->warn('Warning!');        // jaune
+$this->newLine();               // ligne vide
+$this->separator();             // ligne de séparation (---)
 ```
 
 ### Poser une question
@@ -399,10 +367,8 @@ $name = $this->ask('What is your name?');
 ### Demander une confirmation
 
 ```php
-if ($this->confirm('Do you want to continue?')) {
+if ($this->confirm('Continue?')) {
     $this->info('Continuing...');
-} else {
-    $this->info('Aborted');
 }
 ```
 
@@ -416,41 +382,39 @@ $headers = new StringTypedCollection();
 $headers->add('ID', 'Name', 'Email');
 
 $rows = new RowCollection();
-
-$row1 = new RowCollection();
-$row1->add(1, 'John Doe', 'john@example.com');
-$rows->add($row1);
+$row = new RowCollection();
+$row->add(1, 'John Doe', 'john@example.com');
+$rows->add($row);
 
 $this->table($headers, $rows);
 ```
 
 Sortie :
 ```
-| ID | Name        | Email             |
-|----|-------------|-------------------|
-| 1  | John Doe    | john@example.com  |
+| ID | Name     | Email             |
+|----|----------|-------------------|
+| 1  | John Doe | john@example.com  |
 ```
 
 ---
 
 ## Charger Laravel optionnellement
 
-### Pourquoi ?
+Par défaut, les directives s'exécutent **sans Laravel** pour des performances optimales.
 
-Par défaut, les directives s'exécutent **sans charger Laravel** pour des performances optimales. Pour accéder à Eloquent, à la base de données ou au cache, activez Laravel :
+### Activer Laravel
 
 ```php
 final class UserListDirective extends AbstractDirective
 {
     public function shouldBootLaravel(): bool
     {
-        return true; // Active Laravel pour cette directive
+        return true;
     }
     
     public function execute(): ExitCode
     {
-        // Eloquent fonctionne !
-        $users = User::all();
+        $users = User::all(); // Eloquent fonctionne !
         
         foreach ($users as $user) {
             $this->line("{$user->id}: {$user->name}");
@@ -461,13 +425,13 @@ final class UserListDirective extends AbstractDirective
 }
 ```
 
-### Vérifier si Laravel est disponible
+### Vérifier la disponibilité
 
 ```php
 public function execute(): ExitCode
 {
     if (!$this->hasLaravel()) {
-        $this->error('Laravel is not available!');
+        $this->error('Laravel not available!');
         return ExitCode::FAILURE;
     }
     
@@ -479,24 +443,11 @@ public function execute(): ExitCode
 ### Accéder à l'instance Laravel
 
 ```php
-public function execute(): ExitCode
-{
-    $app = $this->getLaravel();
-    
-    if ($app !== null) {
-        $version = $app->version();
-        $this->info("Laravel version: {$version}");
-    }
-    
-    return ExitCode::SUCCESS;
-}
+$app = $this->getLaravel();
+$version = $app->version();
 ```
 
-### Performance
-
-Seules les directives qui demandent explicitement Laravel via `shouldBootLaravel()` déclenchent le bootstrap. Les autres directives restent ultra-rapides !
-
-Le bootstrap de Laravel se fait **une seule fois** par exécution, même si plusieurs directives le demandent.
+> Le bootstrap de Laravel se fait **une seule fois** par exécution.
 
 ---
 
@@ -514,7 +465,7 @@ Le bootstrap de Laravel se fait **une seule fois** par exécution, même si plus
 
 | Code | Constante | Description |
 |------|-----------|-------------|
-| 0 | `ExitCode::SUCCESS` | Exécution réussie |
+| 0 | `ExitCode::SUCCESS` | Succès |
 | 1 | `ExitCode::FAILURE` | Erreur générale |
 | 3 | `ExitCode::NOT_FOUND` | Directive non trouvée |
 | 4 | `ExitCode::INVALID_ARGUMENT` | Argument invalide |
@@ -528,7 +479,7 @@ public function execute(): ExitCode
     }
     
     try {
-        // Logique métier
+        // Logique...
         return ExitCode::SUCCESS;
     } catch (\Exception $e) {
         $this->error($e->getMessage());
@@ -541,27 +492,24 @@ public function execute(): ExitCode
 
 ## Tester vos directives
 
-Le package fournit un service `DirectiveTestingService` pour tester vos directives dans un environnement isolé.
+Le package fournit `DirectiveTestingService` pour tester vos directives dans un environnement isolé.
 
-### Installation des dépendances de test
-
-```bash
-composer require --dev orchestra/testbench phpunit/phpunit
-```
-
-### Configuration du test
+### Test basique
 
 ```php
 <?php
-
 namespace Tests\Unit\Directives;
 
+use AndyDefer\Directive\Contexts\DirectiveContext;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveTestingService;
-use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use PHPUnit\Framework\TestCase;
 use App\Directives\HelloDirective;
 
-final class HelloDirectiveTest extends UnitTestCase
+final class HelloDirectiveTest extends TestCase
 {
     private DirectiveTestingService $service;
 
@@ -579,21 +527,46 @@ final class HelloDirectiveTest extends UnitTestCase
 
     public function test_directive_returns_success(): void
     {
-        // Arrange
-        $directive = new HelloDirective($this->service->getInteraction());
+        // Créer le contexte pour la directive
+        $context = new DirectiveContext(
+            laravelBootstrapper: new LaravelBootstrapperContext(),
+            blueprint: new DirectiveBlueprintRecord(HelloDirective::class, 'hello', 'Say hello'),
+            aliases: new StringTypedCollection(),
+            shouldBootLaravel: false
+        );
+        
+        $directive = new HelloDirective($context, $this->service->getInteraction());
         $this->service->registerDirective($directive);
         
-        // Act
         $response = $this->service->runDirective('hello', ['John']);
         
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('Hello, John!', $response->output);
     }
 }
 ```
 
-### Tester avec environnement Laravel
+### Directive temporaire avec closure
+
+```php
+public function test_temporary_directive(): void
+{
+    $executed = false;
+    
+    $this->service->createTestDirective('test-closure', function ($d) use (&$executed) {
+        $executed = true;
+        $d->line('Executed!');
+        return ExitCode::SUCCESS;
+    });
+    
+    $response = $this->service->runDirective('test-closure');
+    
+    $this->assertTrue($executed);
+    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+}
+```
+
+### Test avec Laravel
 
 ```php
 protected function setUp(): void
@@ -606,67 +579,26 @@ protected function setUp(): void
 }
 ```
 
-### Méthodes du service `DirectiveTestingService`
+### Méthodes du service
 
 | Méthode | Description |
 |---------|-------------|
 | `registerDirective(AbstractDirective $directive)` | Enregistre une directive |
 | `registerDirectives(array $directives)` | Enregistre plusieurs directives |
 | `clearRegisteredDirectives()` | Supprime toutes les directives |
-| `createTestDirective(string $signature, callable $execute)` | Crée une directive temporaire |
+| `createTestDirective(string $signature, callable $execute)` | Crée une directive temporaire (gère le contexte automatiquement) |
 | `runDirective(string $signature, array $arguments = [])` | Exécute une directive |
 
-### Exemple : Créer une directive temporaire avec closure
-
-```php
-public function test_temporary_directive(): void
-{
-    $executed = false;
-    
-    $directive = $this->service->createTestDirective('test-closure', function ($d) use (&$executed) {
-        $executed = true;
-        $d->line('Closure executed');
-        return ExitCode::SUCCESS;
-    });
-    
-    $response = $this->service->runDirective('test-closure');
-    
-    $this->assertTrue($executed);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-    $this->assertStringContainsString('Closure executed', $response->output);
-}
-```
-
-### Exemple : Tester une directive avec arguments variadiques
-
-```php
-public function test_directive_with_variadic_arguments(): void
-{
-    $this->service->createTestDirective('process {files*}', function ($d) {
-        $files = $d->getVariadicArguments()->toArray();
-        $count = count($files);
-        $d->line("Processing {$count} files");
-        return ExitCode::SUCCESS;
-    });
-    
-    $response = $this->service->runDirective('process', ['[', 'file1.txt,', 'file2.txt', ']']);
-    
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-    $this->assertStringContainsString('Processing 2 files', $response->output);
-}
-```
+> `createTestDirective()` crée automatiquement le `DirectiveContext` nécessaire, vous n'avez pas à le gérer manuellement.
 
 ---
 
 ## Exemples complets
 
-### Directive avec arguments variadiques
+### Directive de backup avec arguments variadiques
 
 ```php
 <?php
-
-declare(strict_types=1);
-
 namespace App\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
@@ -708,17 +640,13 @@ final class BackupDirective extends AbstractDirective
     }
 }
 
-// Utilisation: ./directive backup /var/www /backup node_modules .git cache --compress --format=tar
-// Avec crochets: ./directive backup /var/www /backup [node_modules, .git, cache] --compress --format=tar
+// Usage: ./directive backup /var/www /backup [node_modules, .git, cache] --compress
 ```
 
 ### Directive avec base de données (Laravel)
 
 ```php
 <?php
-
-declare(strict_types=1);
-
 namespace App\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
@@ -736,7 +664,7 @@ final class UserStatsDirective extends AbstractDirective
 
     public function getDescription(): string
     {
-        return 'Display user statistics from database';
+        return 'Display user statistics';
     }
 
     public function shouldBootLaravel(): bool
@@ -747,25 +675,22 @@ final class UserStatsDirective extends AbstractDirective
     public function execute(): ExitCode
     {
         if (!$this->hasLaravel()) {
-            $this->error('Database not available!');
             return ExitCode::FAILURE;
         }
 
-        $totalUsers = User::count();
-        $this->info("Total users: {$totalUsers}");
+        $total = User::count();
+        $this->info("Total users: {$total}");
         
         $query = User::query();
         if ($this->option('active')) {
             $query->where('is_active', true);
         }
         
-        $users = $query->get();
-        
         $headers = new StringTypedCollection();
         $headers->add('ID', 'Name', 'Email');
         
         $rows = new RowCollection();
-        foreach ($users as $user) {
+        foreach ($query->get() as $user) {
             $row = new RowCollection();
             $row->add($user->id, $user->name, $user->email);
             $rows->add($row);
@@ -782,9 +707,6 @@ final class UserStatsDirective extends AbstractDirective
 
 ```php
 <?php
-
-declare(strict_types=1);
-
 namespace App\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
@@ -799,7 +721,7 @@ final class SetupDirective extends AbstractDirective
 
     public function getDescription(): string
     {
-        return 'Interactive application setup';
+        return 'Interactive setup wizard';
     }
 
     public function execute(): ExitCode
@@ -807,15 +729,14 @@ final class SetupDirective extends AbstractDirective
         $this->info('Welcome to the setup wizard!');
         
         $appName = $this->ask('Application name');
-        $environment = $this->ask('Environment (local/production)');
+        $env = $this->ask('Environment (local/production)');
         
-        if (!$this->confirm("Create configuration for {$appName} in {$environment}?")) {
-            $this->warn('Setup cancelled');
+        if (!$this->confirm("Create config for {$appName} in {$env}?")) {
+            $this->warn('Cancelled');
             return ExitCode::SUCCESS;
         }
         
-        $this->info("Configuration created for {$appName} in {$environment}");
-        
+        $this->info("Configuration created!");
         return ExitCode::SUCCESS;
     }
 }
@@ -825,33 +746,32 @@ final class SetupDirective extends AbstractDirective
 
 ## Pourquoi ce package ?
 
-### Les faiblesses d'Artisan (Laravel natif)
+### Limitations d'Artisan
 
 | Problème | Solution avec Directives |
 |----------|--------------------------|
-| Héritage unique obligatoire | Pas de contrainte d'héritage |
-| Signature, description et logique mélangées | Séparation claire via `getSignature()`, `getDescription()`, `execute()` |
-| Couplage fort entre logique et affichage | Injection de `DirectiveInteractionService` |
-| Tests difficiles (`ask()` et `confirm()` impossible à mocker) | Services mockables |
-| Pas d'extensibilité pour les packages | Découverte automatique dans `vendor/*/src/Directives/` |
-| Arguments non typés | Accès typé via `argument()` et `option()` |
-| **Pas d'arguments variadiques** | **Support des arguments variadiques avec `{files*}`** |
-| Pas de séparation des responsabilités | Architecture propre et testable |
+| Héritage unique obligatoire | Pas de contrainte |
+| Logique et présentation mélangées | Séparation claire |
+| Tests difficiles (`ask()` impossible à mocker) | Services mockables |
+| Pas d'extensibilité pour les packages | Découverte automatique |
+| Arguments non typés | Accès typé |
+| **Pas d'arguments variadiques** | **Support des variadiques** |
+| Couplage fort | Architecture propre |
 
-### La solution : Directives
+### Avantages
 
-- ✅ **Séparation des responsabilités** : Logique métier et présentation découplées
-- ✅ **Testabilité exceptionnelle** : Chaque directive est facile à mocker
-- ✅ **Extensibilité** : Les packages peuvent enregistrer leurs directives automatiquement
-- ✅ **Laravel à la demande** : Bootstrap optionnel uniquement quand nécessaire
-- ✅ **Validation stricte** : Format et ordre des signatures validés
+- ✅ **Séparation des responsabilités** : Logique métier découplée
+- ✅ **Testabilité exceptionnelle** : Chaque directive est mockable
+- ✅ **Extensibilité** : Découverte automatique dans `vendor/*/src/Directives/`
+- ✅ **Laravel à la demande** : Bootstrap optionnel
+- ✅ **Validation stricte** : Format et ordre des signatures
 - ✅ **Typage fort** : Arguments et options typés
-- ✅ **Arguments variadiques** : Capturez tous les arguments restants avec `{files*}`
-- ✅ **Découverte automatique** : Aucune configuration requise pour les packages
+- ✅ **Arguments variadiques** : Capture avec `{files*}`
+- ✅ **Découverte automatique** : Aucune configuration requise
 
 ---
 
 ## Licence
 
 MIT © [Andy Defer](https://github.com/andydefer)
-```
+---

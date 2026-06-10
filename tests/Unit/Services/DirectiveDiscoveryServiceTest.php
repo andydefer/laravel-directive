@@ -11,7 +11,6 @@ use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -28,21 +27,17 @@ use ReflectionClass;
 final class DirectiveDiscoveryServiceTest extends UnitTestCase
 {
     private string $fixturesPath;
-
     private DirectiveDiscoveryService $service;
-
     private Container $container;
-
     private DirectiveDiscoveryContext $context;
-
     private LaravelBootstrapperContext $laravelBootstrapperContext;
+    private DirectiveInteractionService $interaction;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->fixturesPath = realpath(__DIR__ . '/../../Fixtures/Directives');
-
         $config = new TestDirectiveConfig($this->fixturesPath);
 
         $this->container = new Container;
@@ -61,15 +56,17 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
             );
         });
 
-        $factory = new ContainerDirectiveFactory($this->container);
         $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
+        $this->interaction = $this->container->make(DirectiveInteractionService::class);
 
-        // Hydrator avec injection du bootstrapper context
-        $hydrator = new DirectiveHydratorService($factory, $this->laravelBootstrapperContext);
+        // Hydrator sans factory
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $this->laravelBootstrapperContext,
+            interaction: $this->interaction,
+        );
 
         $this->context = new DirectiveDiscoveryContext;
 
-        // Discovery service avec tous les arguments requis
         $this->service = new DirectiveDiscoveryService(
             config: $config,
             hydrator: $hydrator,
@@ -145,9 +142,15 @@ PHP;
         file_put_contents($invalidClassPath, $invalidClassContent);
 
         $config = new TestDirectiveConfig($tempDir);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -235,9 +238,15 @@ PHP;
         $invalidPath = '/invalid/path/that/does/not/exist';
         $config = new TestDirectiveConfig($invalidPath);
 
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -253,9 +262,15 @@ PHP;
         mkdir($emptyDir, 0777, true);
 
         $config = new TestDirectiveConfig($emptyDir);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -285,9 +300,15 @@ PHP;
     public function test_discover_from_vendor_packages_does_not_throw_exception(): void
     {
         $config = new TestDirectiveConfig($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -296,20 +317,23 @@ PHP;
 
         $results = new DirectiveMetadataCollection;
 
-        try {
-            $method->invoke($service, $results);
-            $this->assertTrue(true);
-        } catch (\Exception $e) {
-            $this->fail('Method discoverFromVendorPackages threw an exception: ' . $e->getMessage());
-        }
+        $method->invoke($service, $results);
+
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $results);
     }
 
     public function test_scan_package_at_depth_1(): void
     {
         $config = new TestDirectiveConfig($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -326,9 +350,15 @@ PHP;
     public function test_scan_package_ignores_php_internal_packages(): void
     {
         $config = new TestDirectiveConfig($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -350,9 +380,15 @@ PHP;
     public function test_scan_package_limits_depth_to_2(): void
     {
         $config = new TestDirectiveConfig($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -367,9 +403,15 @@ PHP;
     public function test_scan_package_does_not_scan_same_package_twice(): void
     {
         $config = new TestDirectiveConfig($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -392,9 +434,15 @@ PHP;
     public function test_scan_package_directories_scans_multiple_paths(): void
     {
         $config = new TestDirectiveConfig($this->fixturesPath);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -435,9 +483,15 @@ PHP;
         file_put_contents($malformedPath, '<?php this is not valid php code {');
 
         $config = new TestDirectiveConfig($tempDir);
-        $factory = new ContainerDirectiveFactory($this->container);
         $tempLaravelBootstrapperContext = new LaravelBootstrapperContext;
-        $hydrator = new DirectiveHydratorService($factory, $tempLaravelBootstrapperContext);
+        $tempInteraction = new DirectiveInteractionService(
+            new RenderDispatcher,
+            new InputDispatcher,
+        );
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $tempLaravelBootstrapperContext,
+            interaction: $tempInteraction,
+        );
         $tempContext = new DirectiveDiscoveryContext;
         $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, $tempLaravelBootstrapperContext, null);
 
@@ -448,23 +502,5 @@ PHP;
 
         unlink($malformedPath);
         rmdir($tempDir);
-    }
-
-    private function removeDirectory(string $dir): void
-    {
-        if (!is_dir($dir)) {
-            return;
-        }
-
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            if (is_dir($path)) {
-                $this->removeDirectory($path);
-            } else {
-                unlink($path);
-            }
-        }
-        rmdir($dir);
     }
 }

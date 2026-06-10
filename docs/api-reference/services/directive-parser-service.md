@@ -22,6 +22,109 @@ Ce service analyse une signature de directive et une liste d'arguments bruts pou
 
 ---
 
+## Installation
+
+```bash
+composer require andydefer/laravel-directive
+```
+
+---
+
+## API / Méthodes publiques
+
+### `parse(string $signature, StringTypedCollection $argv): ParsedDirectiveRecord`
+
+Analyse une signature et ses arguments.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature de la directive |
+| `$argv` | `StringTypedCollection` | Collection des arguments bruts |
+
+**Retourne :** `ParsedDirectiveRecord` - Structure contenant arguments, options et arguments variadiques
+
+**Exceptions :** `InvalidArgumentException` - Signature invalide ou nombre d'arguments incorrect
+
+**Exemple :**
+```php
+$service = new DirectiveParserService();
+$argv = new StringTypedCollection();
+$argv->add('John', '--role=admin');
+
+$result = $service->parse('user:create {name} {--role=}', $argv);
+$parsed = $service->toResult($result);
+
+echo $parsed->arguments->get('name');   // 'John'
+echo $parsed->options->get('role');     // 'admin'
+```
+
+### `extractHelp(string $signature): ParsedParameterCollection`
+
+Extrait les informations d'aide d'une signature.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature de la directive |
+
+**Retourne :** `ParsedParameterCollection` - Collection des paramètres avec métadonnées (nom, type, requis, défaut)
+
+**Exemple :**
+```php
+$help = $service->extractHelp('user:create {name} {email} {--role=admin}');
+foreach ($help as $param) {
+    echo $param->name;           // 'name', 'email', 'role'
+    echo $param->type->value;    // 'argument', 'argument', 'option'
+    echo $param->required;       // true, true, false
+    echo $param->default;        // null, null, 'admin'
+}
+```
+
+### `toResult(ParsedDirectiveRecord $parsed): ParsedResultRecord`
+
+Convertit un enregistrement parsé en résultat utilisable avec collections typées.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$parsed` | `ParsedDirectiveRecord` | Enregistrement parsé |
+
+**Retourne :** `ParsedResultRecord` - Résultat avec `ParsedArgumentCollection`, `ParsedOptionCollection` et `StringTypedCollection` pour variadiques
+
+**Exemple :**
+```php
+$parsed = $service->parse($signature, $argv);
+$result = $service->toResult($parsed);
+
+// Accès aux arguments
+$name = $result->arguments->get('name');
+
+// Accès aux options
+$role = $result->options->get('role');
+$isVerbose = $result->options->isTrue('verbose');
+
+// Accès aux arguments variadiques
+foreach ($result->variadic_arguments as $file) {
+    echo $file;
+}
+```
+
+### `toJson(ParsedDirectiveRecord $parsed): string`
+
+Convertit un enregistrement parsé en JSON.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$parsed` | `ParsedDirectiveRecord` | Enregistrement parsé |
+
+**Retourne :** `string` - Représentation JSON
+
+**Exemple :**
+```php
+$json = $service->toJson($parsed);
+// {"arguments":{"name":"John"},"options":{"role":"admin"},"variadic_arguments":[]}
+```
+
+---
+
 ## Syntaxe des signatures
 
 ### Ordre obligatoire des paramètres
@@ -96,7 +199,7 @@ public function getSignature(): string
 
 ### 3. Argument optionnel `{count?}`
 
-Arguments positionnels qui ne consomment JAMAIS de valeur.
+Arguments positionnels optionnels. Ne consomment PAS de valeur.
 
 ```php
 // Signature
@@ -160,7 +263,7 @@ public function getSignature(): string
 ./directive cache:clear --force
 
 // Résultat
-$force = true;  // true si présent, false/null sinon
+$force = true;  // true si présent
 ```
 
 ### 6. Option avec valeur `{--role=}`
@@ -263,126 +366,24 @@ public function getSignature(): string
 
 ---
 
-## API / Méthodes publiques
-
-### `parse(string $signature, StringTypedCollection $argv): ParsedDirectiveRecord`
-
-Analyse une signature et ses arguments.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$signature` | `string` | Signature de la directive |
-| `$argv` | `StringTypedCollection` | Collection des arguments bruts |
-
-**Retourne :** `ParsedDirectiveRecord` - Structure contenant arguments, options et arguments variadiques
-
-**Exceptions :** `InvalidArgumentException` - Signature invalide ou nombre d'arguments incorrect
-
-**Exemple :**
-```php
-$service = new DirectiveParserService();
-$argv = new StringTypedCollection();
-$argv->add('John', 'admin', '[', 'file1.txt,', 'file2.txt', ']', '--force');
-
-$result = $service->parse('user:process {name} {role=user} {files*} {--force}', $argv);
-$parsed = $service->toResult($result);
-
-echo $parsed->arguments->get('name');   // 'John'
-echo $parsed->arguments->get('role');  // 'admin'
-echo $parsed->options->isTrue('force'); // true
-```
-
-### `extractHelp(string $signature): ParsedParameterCollection`
-
-Extrait les informations d'aide d'une signature.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$signature` | `string` | Signature de la directive |
-
-**Retourne :** `ParsedParameterCollection` - Collection des paramètres avec métadonnées
-
-**Exemple :**
-```php
-$help = $service->extractHelp('user:create {name} {email} {--role=admin}');
-foreach ($help as $param) {
-    echo $param->name;           // 'name', 'email', 'role'
-    echo $param->type->value;    // 'argument', 'argument', 'option'
-    echo $param->required;       // true, true, false
-    echo $param->default;        // null, null, 'admin'
-}
-```
-
-### `toResult(ParsedDirectiveRecord $parsed): ParsedResultRecord`
-
-Convertit un enregistrement parsé en résultat utilisable.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$parsed` | `ParsedDirectiveRecord` | Enregistrement parsé |
-
-**Retourne :** `ParsedResultRecord` - Résultat avec collections typées
-
-### `toJson(ParsedDirectiveRecord $parsed): string`
-
-Convertit un enregistrement parsé en JSON.
-
----
-
 ## Cas d'utilisation
 
 ### Cas 1 : Directive de création d'utilisateur
 
 ```php
-<?php
-
-namespace App\Directives;
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveParserService;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-
 final class UserCreateDirective extends AbstractDirective
 {
-    private DirectiveParserService $parser;
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->parser = new DirectiveParserService();
-    }
-
     public function getSignature(): string
     {
         return 'user:create {first_name} {last_name} {--role=user} {--notify}';
     }
 
-    public function getDescription(): string
-    {
-        return 'Create a new user account';
-    }
-
     public function execute(): ExitCode
     {
-        $argv = new StringTypedCollection();
-        $argv->add($this->argument('first_name'));
-        $argv->add($this->argument('last_name'));
-        
-        if ($this->hasOption('role')) {
-            $argv->add("--role={$this->option('role')}");
-        }
-        if ($this->hasOption('notify')) {
-            $argv->add('--notify');
-        }
-
-        $result = $this->parser->parse($this->getSignature(), $argv);
-        $parsed = $this->parser->toResult($result);
-
-        $firstName = $parsed->arguments->get('first_name');
-        $lastName = $parsed->arguments->get('last_name');
-        $role = $parsed->options->get('role') ?? 'user';
-        $notify = $parsed->options->isTrue('notify');
+        $firstName = $this->argument('first_name');
+        $lastName = $this->argument('last_name');
+        $role = $this->option('role') ?? 'user';
+        $notify = $this->option('notify') ?? false;
 
         $this->info("User {$firstName} {$lastName} created with role {$role}");
         
@@ -402,60 +403,18 @@ final class UserCreateDirective extends AbstractDirective
 ### Cas 2 : Directive avec arguments variadiques
 
 ```php
-<?php
-
-namespace App\Directives;
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveParserService;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-
 final class ProcessFilesDirective extends AbstractDirective
 {
-    private DirectiveParserService $parser;
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->parser = new DirectiveParserService();
-    }
-
     public function getSignature(): string
     {
         return 'process {name} {files*} {--verbose}';
     }
 
-    public function getDescription(): string
-    {
-        return 'Process multiple files';
-    }
-
     public function execute(): ExitCode
     {
-        $argv = new StringTypedCollection();
-        $argv->add($this->argument('name'));
-        
-        // Syntaxe avec crochets pour les variadiques
-        $files = explode(',', $this->argument('files') ?? '');
-        if (!empty($files)) {
-            $argv->add('[');
-            foreach ($files as $file) {
-                $argv->add(trim($file) . ',');
-            }
-            $argv->add(']');
-        }
-        
-        if ($this->hasOption('verbose')) {
-            $argv->add('--verbose');
-        }
-
-        $result = $this->parser->parse($this->getSignature(), $argv);
-        $parsed = $this->parser->toResult($result);
-
-        $name = $parsed->arguments->get('name');
-        $files = $parsed->variadic_arguments->toArray();
-        $isVerbose = $parsed->options->isTrue('verbose');
+        $name = $this->argument('name');
+        $files = $this->getVariadicArguments();
+        $isVerbose = $this->option('verbose') ?? false;
 
         $this->info("Processing files for {$name}");
         
@@ -471,14 +430,22 @@ final class ProcessFilesDirective extends AbstractDirective
 }
 
 // Commande: ./directive process John [file1.txt, file2.txt, file3.txt] --verbose
-// Sortie:
-// Processing files for John
-//   - file1.txt
-//     Done
-//   - file2.txt
-//     Done
-//   - file3.txt
-//     Done
+```
+
+### Cas 3 : Utilisation directe du service
+
+```php
+// Pour tester ou manipuler manuellement
+$service = new DirectiveParserService();
+$argv = new StringTypedCollection();
+$argv->add('John', '--role=admin');
+
+$result = $service->parse('user:create {name} {--role=}', $argv);
+$parsed = $service->toResult($parsed);
+
+$name = $parsed->arguments->get('name');      // 'John'
+$role = $parsed->options->get('role');        // 'admin'
+$isActive = $parsed->options->isTrue('active'); // false
 ```
 
 ---
@@ -546,7 +513,76 @@ parse(signature, argv)
 
 | Version PHP | Support |
 |-------------|---------|
+| PHP 8.1+ | ✅ Complet |
 | PHP 8.2+ | ✅ Complet |
-| PHP 8.1 | ✅ Complet |
+| PHP 8.3+ | ✅ Complet |
+
+---
+
+## Exemple complet
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use AndyDefer\Directive\Services\DirectiveParserService;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+
+// 1. Créer le service
+$parser = new DirectiveParserService();
+
+// 2. Définir la signature
+$signature = 'backup {source} {destination} {compress?} {excludes*} {--format=zip} {--verbose}';
+
+// 3. Simuler des arguments de ligne de commande
+$argv = new StringTypedCollection();
+$argv->add('/home/user/data');
+$argv->add('/backup/');
+$argv->add('--format=tar');
+$argv->add('[', 'temp,', 'cache,', 'logs', ']');
+$argv->add('--verbose');
+
+// 4. Parser
+$result = $parser->parse($signature, $argv);
+$parsed = $parser->toResult($result);
+
+// 5. Utiliser les résultats
+echo "Source: " . $parsed->arguments->get('source') . "\n";        // /home/user/data
+echo "Destination: " . $parsed->arguments->get('destination') . "\n";  // /backup/
+echo "Format: " . $parsed->options->get('format') . "\n";           // tar (surclasse zip)
+echo "Verbose: " . ($parsed->options->isTrue('verbose') ? 'yes' : 'no') . "\n";  // yes
+
+echo "Excludes:\n";
+foreach ($parsed->variadic_arguments as $exclude) {
+    echo "  - {$exclude}\n";  // temp, cache, logs
+}
+
+// 6. Exporter en JSON
+$json = $parser->toJson($result);
+echo $json;
+// {"arguments":{"source":"\/home\/user\/data","destination":"\/backup\/"},"options":{"format":"tar","verbose":true},"variadic_arguments":["temp","cache","logs"]}
+
+// 7. Extraire l'aide
+$help = $parser->extractHelp($signature);
+foreach ($help as $param) {
+    echo "{$param->name} ({$param->type->value})";
+    if ($param->required) echo " [required]";
+    if ($param->default !== null) echo " [default: {$param->default}]";
+    echo "\n";
+}
+// source (argument) [required]
+// destination (argument) [required]
+// compress (argument) [default: null]
+// excludes (variadic_argument)
+// format (option) [default: zip]
+// verbose (option)
 ```
+
+## Voir aussi
+
+- [`AbstractDirective`](abstract-directive.md) - Classe de base des directives
+- [`DirectiveInteractionService`](directive-interaction-service.md) - Service d'interaction utilisateur
+- [`ParameterCollection`](../collections/parameter-collection.md) - Collection typée pour paramètres
+- [`ParsedResultRecord`](../records/parsed-result-record.md) - Record de résultat parsé
 ---

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Testing;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
@@ -16,8 +17,8 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 final class TestDirectiveRegistryTest extends UnitTestCase
 {
     private TestDirectiveRegistry $registry;
-
     private DirectiveInteractionService $interaction;
+    private DirectiveContext $context;
 
     protected function setUp(): void
     {
@@ -25,11 +26,17 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
         $this->registry = new TestDirectiveRegistry;
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
+        $this->context = $this->createMock(DirectiveContext::class);
+    }
+
+    private function createTestDirective(): TestCalculatorDirective
+    {
+        return new TestCalculatorDirective($this->context, $this->interaction);
     }
 
     public function test_register_directive(): void
     {
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createTestDirective();
         $this->registry->register($directive);
 
         $retrieved = $this->registry->getDirective(TestCalculatorDirective::class);
@@ -38,8 +45,8 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_register_directive_prevents_duplicates(): void
     {
-        $directive1 = new TestCalculatorDirective($this->interaction);
-        $directive2 = new TestCalculatorDirective($this->interaction);
+        $directive1 = $this->createTestDirective();
+        $directive2 = $this->createTestDirective();
 
         $this->registry->register($directive1);
         $this->registry->register($directive2);
@@ -51,7 +58,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_load_returns_typed_collection_of_metadata(): void
     {
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createTestDirective();
         $this->registry->register($directive);
 
         $collection = $this->registry->load();
@@ -62,7 +69,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_load_returns_correct_metadata(): void
     {
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createTestDirective();
         $this->registry->register($directive);
 
         $collection = $this->registry->load();
@@ -76,7 +83,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_get_directive_by_class_name(): void
     {
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createTestDirective();
         $this->registry->register($directive);
 
         $retrieved = $this->registry->getDirective(TestCalculatorDirective::class);
@@ -91,7 +98,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_has_directive_returns_true_when_exists(): void
     {
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createTestDirective();
         $this->registry->register($directive);
 
         $this->assertTrue($this->registry->hasDirective(TestCalculatorDirective::class));
@@ -104,7 +111,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_clear_removes_all_directives(): void
     {
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createTestDirective();
         $this->registry->register($directive);
 
         $this->assertNotNull($this->registry->getDirective(TestCalculatorDirective::class));
@@ -117,7 +124,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_register_multiple_directives(): void
     {
-        $directive1 = new TestCalculatorDirective($this->interaction);
+        $directive1 = $this->createTestDirective();
 
         // Créer une classe différente pour la deuxième directive
         $directive2 = $this->createMock(TestCalculatorDirective::class);
@@ -136,7 +143,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_get_all_directives_returns_all_registered_directives(): void
     {
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createTestDirective();
         $this->registry->register($directive);
 
         $allDirectives = $this->registry->getAllDirectives();
@@ -148,7 +155,7 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
     public function test_register_directives_batch(): void
     {
-        $directive1 = new TestCalculatorDirective($this->interaction);
+        $directive1 = $this->createTestDirective();
 
         $directive2 = $this->createMock(TestCalculatorDirective::class);
         $directive2->method('getSignature')->willReturn('other-cmd');

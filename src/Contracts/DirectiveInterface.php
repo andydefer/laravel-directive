@@ -6,11 +6,9 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contracts;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
@@ -29,7 +27,7 @@ interface DirectiveInterface
     public function execute(): ExitCode;
 
     /**
-     * Get the directive signature (e.g., "user:list {--active} {name}").
+     * Get the directive signature (e.g., "user-list {--active} {name}").
      *
      * @return string The signature string
      */
@@ -59,14 +57,6 @@ interface DirectiveInterface
     public function getBlueprint(): DirectiveBlueprintRecord;
 
     /**
-     * Set the arguments for this directive.
-     *
-     * @param  ParameterCollection  $arguments  Collection of typed argument parameters
-     * @return self Returns the directive instance for method chaining
-     */
-    public function setArguments(ParameterCollection $arguments): self;
-
-    /**
      * Get an argument value by its key.
      *
      * @param  string  $key  The argument name
@@ -83,14 +73,6 @@ interface DirectiveInterface
     public function hasArgument(string $key): bool;
 
     /**
-     * Set the options for this directive.
-     *
-     * @param  ParameterCollection  $options  Collection of typed option parameters
-     * @return self Returns the directive instance for method chaining
-     */
-    public function setOptions(ParameterCollection $options): self;
-
-    /**
      * Get an option value by its key.
      *
      * @param  string  $key  The option name
@@ -105,14 +87,6 @@ interface DirectiveInterface
      * @return bool True if the option exists, false otherwise
      */
     public function hasOption(string $key): bool;
-
-    /**
-     * Set the variadic arguments for this directive.
-     *
-     * @param  StringTypedCollection  $variadicArguments  Collection of variadic argument values
-     * @return self Returns the directive instance for method chaining
-     */
-    public function setVariadicArguments(StringTypedCollection $variadicArguments): self;
 
     /**
      * Get all variadic arguments as a typed collection.
@@ -158,31 +132,9 @@ interface DirectiveInterface
     /**
      * Get the Laravel application instance if available.
      *
-     * @return object|null The Laravel application instance or null if not available
+     * @return object The Laravel application instance
      */
-    public function getLaravel(): ?object;
-
-    /**
-     * Set the Laravel bootstrapper instance for this directive.
-     *
-     * This method is used by the framework to inject the bootstrapper
-     * when Laravel support is needed. You don't need to call it manually.
-     *
-     * @param  LaravelBootstrapperInterface|null  $bootstrapper  The Laravel bootstrapper instance
-     * @return self Returns the directive instance for method chaining
-     */
-    public function setLaravelBootstrapper(?LaravelBootstrapperInterface $bootstrapper): self;
-
-    /**
-     * Set the interaction service instance for this directive.
-     *
-     * This method is used by the framework to inject the interaction service
-     * when needed. You don't need to call it manually.
-     *
-     * @param  DirectiveInteractionService  $interaction  The interaction service instance
-     * @return self Returns the directive instance for method chaining
-     */
-    public function setInteraction(DirectiveInteractionService $interaction): self;
+    public function getLaravel(): object;
 
     // ==================== Display Methods ====================
 

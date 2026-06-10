@@ -11,11 +11,6 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 class TestCalculatorDirective extends AbstractDirective
 {
-    public function __construct(
-        DirectiveInteractionService $interaction,
-    ) {
-        parent::__construct($interaction);
-    }
 
     public function getSignature(): string
     {

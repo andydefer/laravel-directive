@@ -2,19 +2,19 @@
 
 ## Description
 
-Service responsable de l'hydratation des instances de directives avec les données parsées (arguments, options) et l'injection des dépendances (bootstrapper Laravel).
+Service responsable de l'hydratation des instances de directives avec les données parsées (arguments, options) et l'injection des dépendances (bootstrapper Laravel, interaction service).
 
 ## Hiérarchie
 
 ```
-DirectiveHydratorService (final)
-    └── Dépend de : DirectiveFactoryInterface
-    └── Utilise : ParameterCollection, ParsedDirectiveRecord
+DirectiveHydratorService
+    ├── Dépend de : LaravelBootstrapperContext
+    └── Dépend de : DirectiveInteractionService (optionnel)
 ```
 
 ## Rôle principal
 
-Transformer un enregistrement parsé (`ParsedDirectiveRecord`) en une instance de directive entièrement configurée. Gère l'injection du bootstrapper Laravel, la conversion des arguments plats en collections typées, et la création d'instances sans constructeur pour l'extraction des métadonnées.
+Transformer un enregistrement parsé (`ParsedDirectiveRecord`) en une instance de directive entièrement configurée. Gère l'injection du bootstrapper Laravel, la conversion des options (boolean normalisation), et la création d'instances pour l'extraction des métadonnées.
 
 ## Installation
 
@@ -23,6 +23,15 @@ composer require andydefer/laravel-directive
 ```
 
 ## API / Méthodes publiques
+
+### `__construct(LaravelBootstrapperContext $laravelBootstrapperContext, ?DirectiveInteractionService $interaction = null): void`
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$laravelBootstrapperContext` | `LaravelBootstrapperContext` | Contexte du bootstrapper Laravel |
+| `$interaction` | `DirectiveInteractionService|null` | Service d'interaction (créé automatiquement si null) |
+
+Constructeur du service d'hydratation.
 
 ### `hydrate(string $class, ParsedDirectiveRecord $parsed): DirectiveInterface`
 
@@ -37,7 +46,7 @@ Hydrate complètement une directive avec les arguments et options parsés.
 
 **Exemple :**
 ```php
-$parsed = new ParsedDirectiveRecord($arguments, $options);
+$parsed = new ParsedDirectiveRecord($arguments, $options, $variadic);
 $directive = $hydrator->hydrate(UserListDirective::class, $parsed);
 $directive->execute();
 ```
@@ -50,23 +59,24 @@ Extrait le blueprint d'une directive sans exécuter son constructeur.
 |-----------|------|-------------|
 | `$class` | `string` | FQCN de la directive |
 
-**Retourne :** `DirectiveBlueprintRecord` - Blueprint contenant signature et description
+**Retourne :** `DirectiveBlueprintRecord` - Blueprint contenant classe, signature et description
 
 **Exemple :**
 ```php
 $blueprint = $hydrator->hydrateBlueprint(UserListDirective::class);
 echo $blueprint->signature; // 'user-list'
+echo $blueprint->description; // 'List all users'
 ```
 
 ### `hydrateForAliases(string $class): DirectiveInterface`
 
-Extrait une instance de directive pour la résolution d'alias (sans exécuter le constructeur).
+Extrait une instance de directive pour la résolution d'alias (constructeur exécuté avec contexte minimal).
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$class` | `string` | FQCN de la directive |
 
-**Retourne :** `DirectiveInterface` - Instance de directive (constructeur non exécuté)
+**Retourne :** `DirectiveInterface` - Instance de directive avec contexte minimal
 
 **Exemple :**
 ```php
@@ -74,13 +84,9 @@ $directive = $hydrator->hydrateForAliases(UserListDirective::class);
 $aliases = $directive->getAliases(); // ['users', 'list-users']
 ```
 
-### `setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void`
+### `normalizeOptions(ParsedOptionCollection $options): ParameterCollection` (privée)
 
-Définit le bootstrapper Laravel pour les directives qui en ont besoin.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$bootstrapper` | `LaravelBootstrapper|null` | Instance du bootstrapper |
+Normalise les options parsées en convertissant les chaînes `'true'` et `'false'` en booléens.
 
 ## Cas d'utilisation
 
@@ -89,10 +95,13 @@ Définit le bootstrapper Laravel pour les directives qui en ont besoin.
 ```php
 // Parser les arguments de la ligne de commande
 $parser = new DirectiveParserService();
-$parsed = $parser->parse('user-create {name} {email}', $argv);
+$argv = new StringTypedCollection();
+$argv->add('John', '--role=admin');
+
+$parsed = $parser->parse('user:create {name} {--role=}', $argv);
 
 // Hydrater la directive
-$hydrator = new DirectiveHydratorService($factory);
+$hydrator = new DirectiveHydratorService($laravelBootstrapperContext);
 $directive = $hydrator->hydrate(UserCreateDirective::class, $parsed);
 
 // Exécuter
@@ -103,64 +112,91 @@ $exitCode = $directive->execute();
 
 ```php
 $blueprint = $hydrator->hydrateBlueprint(UserListDirective::class);
-echo $blueprint->signature;     // 'user-list'
-echo $blueprint->description;   // 'List all users'
+echo "Signature: " . $blueprint->signature . "\n";
+echo "Description: " . $blueprint->description . "\n";
 ```
 
 ### Cas 3 : Extraction des alias pour la résolution
 
 ```php
 $directive = $hydrator->hydrateForAliases(UserListDirective::class);
-$aliases = $directive->getAliases(); // StringTypedCollection
+$aliases = $directive->getAliases();
 
 foreach ($aliases as $alias) {
-    echo "Alias: {$alias}\n";
+    $this->directiveRegistry->registerAlias($alias, $directive);
 }
 ```
 
-### Cas 4 : Avec bootstrap Laravel
+### Cas 4 : Normalisation des options booléennes
 
 ```php
-$bootstrapper = new LaravelBootstrapper();
-$bootstrapper->bootstrap();
+// Les options avec valeur 'true' ou 'false' sont automatiquement converties
+$options = new ParsedOptionCollection;
+$options->addOption('active', 'true', true);  // 'true' → true
+$options->addOption('debug', 'false', true);  // 'false' → false
 
-$hydrator = new DirectiveHydratorService($factory);
-$hydrator->setLaravelBootstrapper($bootstrapper);
+$parsed = new ParsedDirectiveRecord($arguments, $options, $variadic);
+$directive = $hydrator->hydrate(TestDirective::class, $parsed);
 
-$directive = $hydrator->hydrate(DatabaseDirective::class, $parsed);
-// La directive peut maintenant utiliser Eloquent
+$directive->option('active'); // true (bool)
+$directive->option('debug');  // false (bool)
 ```
 
 ## Flux d'exécution
-<img src="../graphics/directive_hydrator_flow.png" width="800" alt="Directive Hydrator Flow" />
+
+```
+hydrate(class, parsed)
+    │
+    ├── 1. Création d'une instance temporaire
+    │       └── ReflectionClass::newInstance(tempContext, interaction)
+    │
+    ├── 2. Extraction des métadonnées
+    │       ├── getBlueprint()
+    │       ├── getAliases()
+    │       └── shouldBootLaravel()
+    │
+    ├── 3. Création du vrai contexte
+    │       └── new DirectiveContext(blueprint, aliases, shouldBootLaravel)
+    │
+    ├── 4. Injection des données parsées
+    │       ├── setArguments()
+    │       ├── setOptions() (avec normalisation booléenne)
+    │       └── setVariadicArguments()
+    │
+    └── 5. Création de l'instance finale
+            └── ReflectionClass::newInstance(context, interaction)
+```
+
 ## Gestion des erreurs
 
 | Situation | Comportement |
 |-----------|--------------|
-| Classe non trouvée | Exception propagée par `ReflectionClass` |
-| Factory ne peut pas créer l'instance | Exception propagée |
-| Directive sans méthode `setArguments` | Arguments ignorés (pas d'erreur) |
-| Directive sans méthode `setOptions` | Options ignorées (pas d'erreur) |
-| Directive sans méthode `setLaravelBootstrapper` | Bootstrapper ignoré (pas d'erreur) |
+| Classe non trouvée | Exception `ReflectionException` propagée |
+| Constructeur sans paramètres attendus | Exception `ReflectionException` propagée |
+| Options avec `'true'` | Converties en `true` (bool) |
+| Options avec `'false'` | Converties en `false` (bool) |
+| Autres valeurs d'options | Conservées comme `string` |
 
 ## Intégration
 
 `DirectiveHydratorService` s'intègre avec :
 
-- **`DirectiveFactoryInterface`** : Création des instances de directives
-- **`ParameterCollection`** : Conversion des arguments/options plats en collections typées
-- **`ParsedDirectiveRecord`** : Données parsées à hydrater
-- **`LaravelBootstrapper`** : Injection optionnelle pour les directives Laravel
-- **`DirectiveBlueprintRecord`** : Métadonnées extraites
+- **`LaravelBootstrapperContext`** : Contexte du bootstrapper Laravel injecté dans toutes les directives
+- **`DirectiveInteractionService`** : Service d'interaction pour les sorties utilisateur
+- **`ParsedDirectiveRecord`** : Données parsées (arguments, options, variadic)
+- **`ParameterCollection`** : Conversion des arguments en collection typée
+- **`ParsedOptionCollection`** : Conversion des options avec normalisation booléenne
+- **`StringTypedCollection`** : Arguments variadiques
 
 ## Performance
 
 | Aspect | Caractéristique |
 |--------|----------------|
 | Hydratation complète | O(n) avec n = nombre d'arguments + options |
-| Extraction blueprint | O(1) + réflexion |
-| Extraction alias | O(1) + réflexion |
-| Réflexion | Utilisée uniquement pour `createWithoutConstructor` |
+| Extraction blueprint | O(1) + réflexion (création d'instance temporaire) |
+| Extraction alias | O(1) + réflexion (création d'instance temporaire) |
+| Normalisation options | O(m) avec m = nombre d'options |
+| Réflexion | Utilisée pour la création d'instances temporaires et finales |
 
 ## Compatibilité
 
@@ -177,48 +213,77 @@ $directive = $hydrator->hydrate(DatabaseDirective::class, $parsed);
 
 declare(strict_types=1);
 
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
+use AndyDefer\Directive\Collections\ParsedArgumentCollection;
+use AndyDefer\Directive\Collections\ParsedOptionCollection;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
-use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
-use Illuminate\Container\Container;
+use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-// 1. Créer le conteneur et la factory
-$container = new Container();
-$factory = new ContainerDirectiveFactory($container);
+// 1. Créer les dépendances
+$laravelBootstrapperContext = new LaravelBootstrapperContext();
+$interaction = new DirectiveInteractionService(
+    new RenderDispatcher(),
+    new InputDispatcher()
+);
 
 // 2. Créer l'hydrateur
-$hydrator = new DirectiveHydratorService($factory);
+$hydrator = new DirectiveHydratorService(
+    laravelBootstrapperContext: $laravelBootstrapperContext,
+    interaction: $interaction
+);
 
-// 3. (Optionnel) Ajouter le bootstrapper Laravel
-$bootstrapper = new LaravelBootstrapper();
-$hydrator->setLaravelBootstrapper($bootstrapper);
+// 3. Créer un record parsé avec arguments
+$arguments = new ParsedArgumentCollection();
+$arguments->addArgument('John Doe', 'name');
+$arguments->addArgument('john@example.com', 'email');
 
-// 4. Créer un record parsé
-$arguments = new ScalarTypedCollection();
-$arguments->add('John Doe', 'name', 'john@example.com', 'email');
+// 4. Ajouter des options
+$options = new ParsedOptionCollection();
+$options->addOption('role', 'admin', false);
+$options->addOption('active', 'true', true);
+$options->addOption('verbose', 'false', true);
 
-$options = new ScalarTypedCollection();
-$options->add('role', 'admin', 'notify', true);
+// 5. Ajouter des arguments variadiques
+$variadic = new StringTypedCollection();
+$variadic->add('file1.txt');
+$variadic->add('file2.txt');
+$variadic->add('file3.txt');
 
-$parsed = new ParsedDirectiveRecord($arguments, $options);
+$parsed = new ParsedDirectiveRecord($arguments, $options, $variadic);
 
-// 5. Hydrater la directive
+// 6. Hydrater la directive
 $directive = $hydrator->hydrate(UserCreateDirective::class, $parsed);
 
-// 6. Exécuter
-$exitCode = $directive->execute();
+// 7. Accéder aux valeurs
+echo $directive->argument('name');   // 'John Doe'
+echo $directive->argument('email');  // 'john@example.com'
+echo $directive->option('role');     // 'admin'
+echo $directive->option('active');   // true (bool)
+echo $directive->option('verbose');  // false (bool)
 
-// 7. Extraire le blueprint
+foreach ($directive->getVariadicArguments() as $file) {
+    echo "Processing: {$file}\n";
+}
+
+// 8. Extraire le blueprint
 $blueprint = $hydrator->hydrateBlueprint(UserListDirective::class);
 echo "Signature: " . $blueprint->signature . "\n";
 echo "Description: " . $blueprint->description . "\n";
 
-// 8. Extraire les alias
+// 9. Extraire les alias
 $aliasDirective = $hydrator->hydrateForAliases(UserListDirective::class);
 foreach ($aliasDirective->getAliases() as $alias) {
     echo "Alias: {$alias}\n";
 }
 ```
+
+## Voir aussi
+
+- [`DirectiveParserService`](directive-parser-service.md) - Service de parsing des signatures
+- [`DirectiveContext`](../contexts/directive-context.md) - Contexte de la directive
+- [`LaravelBootstrapperContext`](../contexts/laravel-bootstrapper-context.md) - Contexte du bootstrapper Laravel
+- [`DirectiveInteractionService`](directive-interaction-service.md) - Service d'interaction utilisateur
+- [`ParsedDirectiveRecord`](../records/parsed-directive-record.md) - Record des données parsées
 ---

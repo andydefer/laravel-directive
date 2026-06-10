@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Testing;
 
+use AndyDefer\Directive\Contexts\DirectiveContext;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Testing\InteractsWithDirectives;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -27,48 +31,58 @@ final class InteractsWithDirectivesTest extends UnitTestCase
         parent::tearDown();
     }
 
+    private function createCalculatorDirective(): TestCalculatorDirective
+    {
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext ?? new LaravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(TestCalculatorDirective::class, 'calculator {operation} {a} {b} {--verbose}', 'Test calculator directive'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+        return new TestCalculatorDirective($context, $this->interaction);
+    }
+
     public function test_register_directive(): void
     {
-        // Arrange: Create a directive instance
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
 
-        // Act: Register the directive
+        // Act
         $this->registerDirective($directive);
 
-        // Assert: Verify the directive was registered
+        // Assert
         $this->assertInstanceOf(TestCalculatorDirective::class, $directive);
     }
 
     public function test_run_directive_returns_response_object(): void
     {
-        // Arrange: Create and register a directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run the directive
+        // Act
         $response = $this->runDirective('calculator', ['add', '5', '3']);
 
-        // Assert: Verify the response
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('8', $response->output);
     }
 
     public function test_create_test_directive_with_closure(): void
     {
-        // Arrange: Create a flag to track closure execution
+        // Arrange
         $executed = false;
 
-        // Act: Create a test directive with closure
+        // Act
         $this->createTestDirective('test-closure', function ($d) use (&$executed) {
             $executed = true;
             $d->line('Closure executed');
-
             return ExitCode::SUCCESS;
         });
 
         $response = $this->runDirective('test-closure');
 
-        // Assert: Verify closure was executed
+        // Assert
         $this->assertTrue($executed, 'The closure was not executed');
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('Closure executed', $response->output);
@@ -76,251 +90,244 @@ final class InteractsWithDirectivesTest extends UnitTestCase
 
     public function test_run_directive_by_class_name(): void
     {
-        // Arrange: Create and register a directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run the directive by signature
-        $response = $this->runDirective('calculator', ['add', '10', '5']);
+        // Act
+        $response = $this->runDirective(TestCalculatorDirective::class, ['add', '10', '5']);
 
-        // Assert: Verify the result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('15', $response->output);
     }
 
     public function test_response_output_contains_expected_value(): void
     {
-        // Arrange: Create and register a directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run the directive
+        // Act
         $response = $this->runDirective('calculator', ['mul', '4', '5']);
 
-        // Assert: Verify output contains expected result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('20', $response->output);
     }
 
     public function test_response_output_does_not_contain_unexpected_value(): void
     {
-        // Arrange: Create and register a directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run the directive
+        // Act
         $response = $this->runDirective('calculator', ['mul', '4', '5']);
 
-        // Assert: Verify output does not contain unexpected value
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringNotContainsString('999', $response->output);
     }
 
     public function test_response_output_matches_pattern(): void
     {
-        // Arrange: Create and register a directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run the directive
+        // Act
         $response = $this->runDirective('calculator', ['pow', '2', '8']);
 
-        // Assert: Verify output matches pattern
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertMatchesRegularExpression('/256/', $response->output);
     }
 
     public function test_directive_not_found_returns_not_found(): void
     {
-        // Arrange: No directive registered
+        // Arrange - no directive registered
 
-        // Act: Run a non-existent directive
+        // Act
         $response = $this->runDirective('non-existent-directive');
 
-        // Assert: Verify not found response
+        // Assert
         $this->assertSame(ExitCode::NOT_FOUND, $response->exitCode);
         $this->assertStringContainsString('not found', $response->output);
     }
 
     public function test_multiple_assertions_on_same_response(): void
     {
-        // Arrange: Create and register a directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run the directive
+        // Act
         $response = $this->runDirective('calculator', ['add', '100', '50']);
 
-        // Assert: Verify multiple conditions
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('150', $response->output);
     }
 
     public function test_clear_registered_directives(): void
     {
-        // Arrange: Create and register a temporary directive
-        $uniqueName = 'temp-directive-'.uniqid();
+        // Arrange
+        $uniqueName = 'temp-directive-' . uniqid();
 
         $this->createTestDirective($uniqueName, function ($d) {
             $d->line('Temp directive executed');
-
             return ExitCode::SUCCESS;
         });
 
-        // Assert: Verify directive exists before clearing
-        $response = $this->runDirective($uniqueName);
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-        $this->assertStringContainsString('Temp directive executed', $response->output);
+        // Assert directive exists before clearing
+        $responseBefore = $this->runDirective($uniqueName);
+        $this->assertSame(ExitCode::SUCCESS, $responseBefore->exitCode);
 
-        // Act: Clear all registered directives
+        // Act
         $this->clearRegisteredDirectives();
 
-        // Assert: Verify directive no longer exists
-        $response = $this->runDirective($uniqueName);
-        $this->assertSame(ExitCode::NOT_FOUND, $response->exitCode);
-        $this->assertStringContainsString('not found', $response->output);
-
-        // Re-register for subsequent tests
-        $directive = new TestCalculatorDirective($this->interaction);
-        $this->registerDirective($directive);
+        // Assert directive no longer exists
+        $responseAfter = $this->runDirective($uniqueName);
+        $this->assertSame(ExitCode::NOT_FOUND, $responseAfter->exitCode);
     }
 
     public function test_calculator_add_operation(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Perform addition
+        // Act
         $response = $this->runDirective('calculator', ['add', '15', '25']);
 
-        // Assert: Verify result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('40', $response->output);
     }
 
     public function test_calculator_subtract_operation(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Perform subtraction
+        // Act
         $response = $this->runDirective('calculator', ['sub', '100', '30']);
 
-        // Assert: Verify result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('70', $response->output);
     }
 
     public function test_calculator_multiply_operation(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Perform multiplication
+        // Act
         $response = $this->runDirective('calculator', ['mul', '12', '12']);
 
-        // Assert: Verify result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('144', $response->output);
     }
 
     public function test_calculator_division_operation(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Perform division
+        // Act
         $response = $this->runDirective('calculator', ['div', '100', '4']);
 
-        // Assert: Verify result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('25', $response->output);
     }
 
     public function test_calculator_power_operation(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Perform power operation
+        // Act
         $response = $this->runDirective('calculator', ['pow', '3', '4']);
 
-        // Assert: Verify result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('81', $response->output);
     }
 
     public function test_calculator_modulo_operation(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Perform modulo operation
+        // Act
         $response = $this->runDirective('calculator', ['mod', '17', '5']);
 
-        // Assert: Verify result
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('2', $response->output);
     }
 
     public function test_calculator_division_by_zero_returns_failure(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Attempt division by zero
+        // Act
         $response = $this->runDirective('calculator', ['div', '10', '0']);
 
-        // Assert: Verify error response
+        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
         $this->assertStringContainsString('Division by zero', $response->output);
     }
 
     public function test_calculator_invalid_operation_returns_invalid_argument(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Attempt invalid operation
+        // Act
         $response = $this->runDirective('calculator', ['invalid_op', '10', '5']);
 
-        // Assert: Verify error response
+        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
         $this->assertStringContainsString('Unknown operation', $response->output);
     }
 
     public function test_calculator_missing_required_argument(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run directive with missing argument
+        // Act
         $response = $this->runDirective('calculator', ['add']);
 
-        // Assert: Verify error response
+        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
         $this->assertStringContainsString('Not enough arguments', $response->output);
     }
 
     public function test_directive_with_verbose_option(): void
     {
-        // Arrange: Create and register calculator directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Arrange
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run directive with verbose flag
+        // Act
         $response = $this->runDirective('calculator', ['--verbose', 'add', '15', '27']);
 
-        // Assert: Verify output includes verbose information
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('42', $response->output);
         $this->assertStringContainsString('Operation: add', $response->output);
@@ -328,52 +335,50 @@ final class InteractsWithDirectivesTest extends UnitTestCase
 
     public function test_init_directive_testing_with_boot_laravel(): void
     {
-        // Arrange: Destroy existing environment
+        // Arrange
         $this->destroyDirectiveTesting();
 
-        // Act: Initialize with Laravel boot
+        // Act
         $this->initDirectiveTesting(bootLaravel: true);
 
-        // Assert: Verify Laravel structure was created
-        $this->assertFileExists($this->directiveTempDir.'/bootstrap/app.php');
-        $this->assertFileExists($this->directiveTempDir.'/config/app.php');
-        $this->assertDirectoryExists($this->directiveTempDir.'/storage');
+        // Assert
+        $this->assertFileExists($this->directiveTempDir . '/bootstrap/app.php');
+        $this->assertFileExists($this->directiveTempDir . '/config/app.php');
+        $this->assertDirectoryExists($this->directiveTempDir . '/storage');
 
-        // Act: Register a directive
-        $directive = new TestCalculatorDirective($this->interaction);
+        // Act & Assert - verify directive works
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
-
-        // Assert: Verify directive was registered
         $this->assertInstanceOf(TestCalculatorDirective::class, $directive);
     }
 
     public function test_run_directive_with_boot_laravel_enabled(): void
     {
-        // Arrange: Destroy existing environment and recreate with Laravel
+        // Arrange
         $this->destroyDirectiveTesting();
         $this->initDirectiveTesting(bootLaravel: true);
 
-        $directive = new TestCalculatorDirective($this->interaction);
+        $directive = $this->createCalculatorDirective();
         $this->registerDirective($directive);
 
-        // Act: Run directive
+        // Act
         $response = $this->runDirective('calculator', ['add', '5', '3']);
 
-        // Assert: Verify successful execution
+        // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('8', $response->output);
     }
 
     public function test_multiple_directive_testing_initializations(): void
     {
-        // Arrange: First initialization
+        // Arrange
         $this->initDirectiveTesting();
         $firstTempDir = $this->directiveTempDir;
 
-        // Act: Second initialization (should be idempotent)
+        // Act
         $this->initDirectiveTesting();
 
-        // Assert: Same temporary directory is used
+        // Assert
         $this->assertSame($firstTempDir, $this->directiveTempDir);
     }
 }

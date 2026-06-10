@@ -25,33 +25,45 @@ Cette classe est destinée uniquement à l'environnement de test.
 
 ```php
 use AndyDefer\Directive\Testing\ClosureDirective;
+use AndyDefer\Directive\Contexts\DirectiveContext;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
+
+$context = new DirectiveContext(
+    laravelBootstrapper: $laravelBootstrapperContext,
+    blueprint: new DirectiveBlueprintRecord(ClosureDirective::class, 'test {name}', 'Test directive'),
+    aliases: new StringTypedCollection,
+    shouldBootLaravel: false,
+);
 
 $directive = new ClosureDirective(
+    context: $context,
+    interaction: $interaction,
     signature: 'test {name}',
-    execute: fn($d) => $d->line('Hello ' . $d->argument('name')),
-    interaction: $interaction
+    execute: fn($d) => $d->line('Hello ' . $d->argument('name'))
 );
 ```
 
 ## API / Méthodes publiques
 
-### `__construct(string $signature, callable $execute, DirectiveInteractionService $interaction): void`
+### `__construct(DirectiveContext $context, DirectiveInteractionService $interaction, string $signature, \Closure $execute): void`
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$signature` | `string` | Signature de la directive |
-| `$execute` | `callable(ClosureDirective): ExitCode` | Logique d'exécution sous forme de closure |
+| `$context` | `DirectiveContext` | Contexte de la directive contenant blueprint, aliases, configuration |
 | `$interaction` | `DirectiveInteractionService` | Service d'interaction pour les sorties |
+| `$signature` | `string` | Signature de la directive |
+| `$execute` | `\Closure(ClosureDirective): ExitCode` | Logique d'exécution sous forme de closure |
 
 **Exemple :**
 ```php
 $directive = new ClosureDirective(
+    context: $context,
+    interaction: $interaction,
     signature: 'greet {name}',
     execute: function ($d) {
         $d->line('Hello ' . $d->argument('name'));
         return ExitCode::SUCCESS;
-    },
-    interaction: $interaction
+    }
 );
 ```
 
@@ -91,14 +103,22 @@ $exitCode = $directive->execute(); // ExitCode::SUCCESS
 ```php
 public function test_greeting_directive(): void
 {
+    $context = new DirectiveContext(
+        laravelBootstrapper: $this->laravelBootstrapperContext,
+        blueprint: new DirectiveBlueprintRecord(ClosureDirective::class, 'greet {name}', 'Greeting directive'),
+        aliases: new StringTypedCollection,
+        shouldBootLaravel: false,
+    );
+    
     $directive = new ClosureDirective(
+        context: $context,
+        interaction: $this->interaction,
         signature: 'greet {name}',
         execute: function ($d) {
             $name = $d->argument('name');
             $d->line("Hello, {$name}!");
             return ExitCode::SUCCESS;
-        },
-        interaction: $this->interaction
+        }
     );
     
     $this->registerDirective($directive);
@@ -113,15 +133,23 @@ public function test_greeting_directive(): void
 ```php
 public function test_verbose_directive(): void
 {
+    $context = new DirectiveContext(
+        laravelBootstrapper: $this->laravelBootstrapperContext,
+        blueprint: new DirectiveBlueprintRecord(ClosureDirective::class, 'process {--verbose}', 'Process directive'),
+        aliases: new StringTypedCollection,
+        shouldBootLaravel: false,
+    );
+    
     $directive = new ClosureDirective(
+        context: $context,
+        interaction: $this->interaction,
         signature: 'process {--verbose}',
         execute: function ($d) {
             if ($d->hasOption('verbose')) {
                 $d->info('Processing in verbose mode');
             }
             return ExitCode::SUCCESS;
-        },
-        interaction: $this->interaction
+        }
     );
     
     $response = $this->runDirective('process', ['--verbose']);
@@ -135,7 +163,16 @@ public function test_verbose_directive(): void
 ```php
 public function test_validation_directive(): void
 {
+    $context = new DirectiveContext(
+        laravelBootstrapper: $this->laravelBootstrapperContext,
+        blueprint: new DirectiveBlueprintRecord(ClosureDirective::class, 'validate {age}', 'Validation directive'),
+        aliases: new StringTypedCollection,
+        shouldBootLaravel: false,
+    );
+    
     $directive = new ClosureDirective(
+        context: $context,
+        interaction: $this->interaction,
         signature: 'validate {age}',
         execute: function ($d) {
             $age = (int) $d->argument('age');
@@ -147,8 +184,7 @@ public function test_validation_directive(): void
             
             $d->line('Valid age');
             return ExitCode::SUCCESS;
-        },
-        interaction: $this->interaction
+        }
     );
     
     $response = $this->runDirective('validate', ['16']);
@@ -158,29 +194,23 @@ public function test_validation_directive(): void
 }
 ```
 
-### Cas 4 : Test de différents codes de sortie
+### Cas 4 : Test avec environment isolé
 
 ```php
-public function test_error_handling(): void
+public function test_isolated_environment(): void
 {
-    $directive = new ClosureDirective(
-        signature: 'risky',
-        execute: function ($d) {
-            try {
-                // Operation risquée
-                throw new \Exception('Something went wrong');
-            } catch (\Exception $e) {
-                $d->error($e->getMessage());
-                return ExitCode::FAILURE;
-            }
-        },
-        interaction: $this->interaction
-    );
+    // Utilisation avec DirectiveTestingService
+    $service = new DirectiveTestingService(null, $this->context);
     
-    $response = $this->runDirective('risky');
+    $directive = $service->createTestDirective('isolated-test', function ($d) {
+        $d->line('Running in isolated environment');
+        return ExitCode::SUCCESS;
+    });
     
-    $this->assertSame(ExitCode::FAILURE, $response->exitCode);
-    $this->assertStringContainsString('went wrong', $response->output);
+    $response = $service->runDirective('isolated-test');
+    
+    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertStringContainsString('isolated environment', $response->output);
 }
 ```
 
@@ -189,6 +219,8 @@ public function test_error_handling(): void
 ```php
 public function test_multiple_scenarios(): void
 {
+    $service = new DirectiveTestingService(null, $this->context);
+    
     $scenarios = [
         'addition' => fn($d) => $d->line('1 + 1 = 2'),
         'subtraction' => fn($d) => $d->line('5 - 3 = 2'),
@@ -196,14 +228,8 @@ public function test_multiple_scenarios(): void
     ];
     
     foreach ($scenarios as $name => $logic) {
-        $directive = new ClosureDirective(
-            signature: $name,
-            execute: $logic,
-            interaction: $this->interaction
-        );
-        
-        $this->registerDirective($directive);
-        $response = $this->runDirective($name);
+        $service->createTestDirective($name, $logic);
+        $response = $service->runDirective($name);
         
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
     }
@@ -212,7 +238,30 @@ public function test_multiple_scenarios(): void
 
 ## Flux d'exécution
 
-<img src="../graphics/closure-directive.png" alt="Closure Directive Flow" width="800">
+```
+1. Création du DirectiveContext
+   ├── LaravelBootstrapperContext
+   ├── DirectiveBlueprintRecord
+   ├── Aliases (StringTypedCollection)
+   └── shouldBootLaravel (bool)
+
+2. Instanciation de ClosureDirective
+   ├── context → stocké
+   ├── interaction → stocké
+   ├── signature → stocké
+   └── execute → stocké (closure)
+
+3. Exécution (execute())
+   └── Appel de la closure avec $this
+
+4. Accès aux méthodes dans la closure
+   ├── argument() / hasArgument()
+   ├── option() / hasOption()
+   ├── getVariadicArguments()
+   ├── line() / info() / error() / warn()
+   ├── table()
+   └── ask() / confirm()
+```
 
 ## Gestion des erreurs
 
@@ -225,50 +274,45 @@ public function test_multiple_scenarios(): void
 
 ## Intégration
 
-### Avec InteractsWithDirectives
+### Avec DirectiveTestingService (recommandé)
 
 ```php
-use AndyDefer\Directive\Testing\InteractsWithDirectives;
+use AndyDefer\Directive\Services\DirectiveTestingService;
 
 final class MyTest extends TestCase
 {
-    use InteractsWithDirectives;
+    private DirectiveTestingService $service;
     
     public function test_closure_directive(): void
     {
-        $this->createTestDirective('ping', function ($d) {
+        $this->service->createTestDirective('ping', function ($d) {
             $d->line('Pong!');
             return ExitCode::SUCCESS;
         });
         
-        $response = $this->runDirective('ping');
+        $response = $this->service->runDirective('ping');
         
         $this->assertStringContainsString('Pong!', $response->output);
     }
 }
 ```
 
-### Avec createTestDirective() helper
+### Avec createTestDirective() helper (déprécié)
 
-Le trait `InteractsWithDirectives` fournit `createTestDirective()` qui encapsule la création :
+> ⚠️ `InteractsWithDirectives` est déprécié. Utilisez `DirectiveTestingService` à la place.
 
 ```php
-// Équivalent à :
+// ❌ Déprécié
 $this->createTestDirective('test', function ($d) {
     $d->line('Hello');
     return ExitCode::SUCCESS;
 });
 
-// Manuellement :
-$directive = new ClosureDirective(
-    signature: 'test',
-    execute: function ($d) {
-        $d->line('Hello');
-        return ExitCode::SUCCESS;
-    },
-    interaction: $this->interaction
-);
-$this->registerDirective($directive);
+// ✅ Recommandé
+$service->createTestDirective('test', function ($d) {
+    $d->line('Hello');
+    return ExitCode::SUCCESS;
+});
 ```
 
 ## Performance
@@ -293,78 +337,95 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
+use AndyDefer\Directive\Configs\DirectiveTestingConfig;
+use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Testing\ClosureDirective;
-use AndyDefer\Directive\Testing\InteractsWithDirectives;
+use AndyDefer\Directive\Services\DirectiveTestingService;
 use PHPUnit\Framework\TestCase;
 
-final class CalculatorTest extends TestCase
+final class ClosureDirectiveTest extends TestCase
 {
-    use InteractsWithDirectives;
+    private DirectiveTestingService $service;
+    private DirectiveTestingContext $context;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->initDirectiveTesting();
+
+        $config = new DirectiveTestingConfig;
+        $this->context = new DirectiveTestingContext(false);
+        $this->context->setConfig($config);
+        $this->service = new DirectiveTestingService($this->context);
     }
 
     protected function tearDown(): void
     {
-        $this->destroyDirectiveTesting();
+        $this->service->destroy();
         parent::tearDown();
     }
 
     public function test_closure_directive_calculator(): void
     {
         // Création d'une directive calculatrice avec closure
-        $calculator = new ClosureDirective(
-            signature: 'calc {a} {b} {--operation=add}',
-            execute: function ($d) {
-                $a = (int) $d->argument('a');
-                $b = (int) $d->argument('b');
-                $operation = $d->option('operation', 'add');
-                
-                $result = match($operation) {
-                    'add' => $a + $b,
-                    'sub' => $a - $b,
-                    'mul' => $a * $b,
-                    'div' => $b !== 0 ? $a / $b : throw new \Exception('Division by zero'),
-                    default => throw new \Exception("Unknown operation: {$operation}"),
-                };
-                
-                $d->line("Result: {$result}");
-                return ExitCode::SUCCESS;
-            },
-            interaction: $this->interaction
-        );
-        
-        $this->registerDirective($calculator);
-        
-        // Test addition
-        $response = $this->runDirective('calc', ['10', '5', '--operation=add']);
-        $this->assertStringContainsString('Result: 15', $response->output);
-        
-        // Test multiplication
-        $response = $this->runDirective('calc', ['6', '7', '--operation=mul']);
-        $this->assertStringContainsString('Result: 42', $response->output);
-        
-        // Test division par zéro
-        $response = $this->runDirective('calc', ['10', '0', '--operation=div']);
-        $this->assertStringContainsString('Division by zero', $response->output);
-    }
-    
-    public function test_create_test_directive_helper(): void
-    {
-        // Version plus concise avec createTestDirective()
-        $this->createTestDirective('hello', function ($d) {
-            $d->line('Hello World!');
+        $this->service->createTestDirective('calc {a} {b} {--operation=add}', function ($d) {
+            $a = (int) $d->argument('a');
+            $b = (int) $d->argument('b');
+            $operation = $d->option('operation') ?? 'add';
+            
+            $result = match($operation) {
+                'add' => $a + $b,
+                'sub' => $a - $b,
+                'mul' => $a * $b,
+                'div' => $b !== 0 ? $a / $b : throw new \Exception('Division by zero'),
+                default => throw new \Exception("Unknown operation: {$operation}"),
+            };
+            
+            $d->line("Result: {$result}");
             return ExitCode::SUCCESS;
         });
         
-        $response = $this->runDirective('hello');
+        // Test addition
+        $response = $this->service->runDirective('calc', ['10', '5', '--operation=add']);
+        $this->assertStringContainsString('Result: 15', $response->output);
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-        $this->assertStringContainsString('Hello World!', $response->output);
+        // Test multiplication
+        $response = $this->service->runDirective('calc', ['6', '7', '--operation=mul']);
+        $this->assertStringContainsString('Result: 42', $response->output);
+        
+        // Test division par zéro
+        $response = $this->service->runDirective('calc', ['10', '0', '--operation=div']);
+        $this->assertStringContainsString('Division by zero', $response->output);
+    }
+    
+    public function test_multiple_scenarios(): void
+    {
+        $scenarios = [
+            'addition' => fn($d) => $d->line('1 + 1 = 2'),
+            'subtraction' => fn($d) => $d->line('5 - 3 = 2'),
+            'multiplication' => fn($d) => $d->line('4 * 4 = 16'),
+        ];
+        
+        foreach ($scenarios as $name => $logic) {
+            $this->service->createTestDirective($name, $logic);
+            $response = $this->service->runDirective($name);
+            
+            $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        }
+    }
+    
+    public function test_context_tracking(): void
+    {
+        $this->service->createTestDirective('track-me', function ($d) {
+            $d->line('Executed');
+            return ExitCode::SUCCESS;
+        });
+        
+        $response = $this->service->runDirective('track-me');
+        
+        // ✅ Traçabilité : on peut inspecter le contexte
+        $this->assertTrue($this->context->hasBeenExecuted('track-me'));
+        $this->assertEquals(1, $this->context->getExecutedDirectivesCount());
+        $this->assertGreaterThan(0, $this->context->getStepsExecutedCount());
     }
 }
 ```

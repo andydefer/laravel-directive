@@ -10,12 +10,6 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 
 final class TestConcreteDirective extends AbstractDirective
 {
-    public function __construct(
-        DirectiveInteractionService $interaction,
-    ) {
-        parent::__construct($interaction);
-    }
-
     public function getSignature(): string
     {
         return 'test-concrete';

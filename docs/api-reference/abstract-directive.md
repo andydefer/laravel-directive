@@ -24,6 +24,28 @@ composer require andydefer/laravel-directive
 
 ## API / Méthodes publiques
 
+### `__construct(DirectiveContext $context, DirectiveInteractionService $interaction): void`
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$context` | `DirectiveContext` | Contexte de la directive contenant blueprint, aliases, arguments, options |
+| `$interaction` | `DirectiveInteractionService` | Service d'interaction pour les sorties utilisateur |
+
+Constructeur de la directive. Reçoit le contexte et le service d'interaction.
+
+**Exemple :**
+```php
+class MyDirective extends AbstractDirective
+{
+    public function __construct(
+        DirectiveContext $context,
+        DirectiveInteractionService $interaction
+    ) {
+        parent::__construct($context, $interaction);
+    }
+}
+```
+
 ### `getBlueprint(): DirectiveBlueprintRecord`
 
 Retourne l'enregistrement blueprint contenant les métadonnées de la directive.
@@ -65,7 +87,7 @@ Détermine si Laravel doit être bootstrapé avant l'exécution.
 ```php
 public function shouldBootLaravel(): bool
 {
-    return true; // Besoin d'Eloquent ou de la base de données
+    return $this->context->shouldBootLaravel();
 }
 ```
 
@@ -75,31 +97,25 @@ Vérifie si Laravel a été bootstrapé et est disponible.
 
 **Retourne :** `bool` - `true` si Laravel est disponible
 
-### `getLaravel(): ?object`
+**Exemple :**
+```php
+if (!$this->hasLaravel()) {
+    $this->error('Laravel is not available!');
+    return ExitCode::FAILURE;
+}
+```
 
-Retourne l'instance de l'application Laravel si disponible.
+### `getLaravel(): object`
 
-**Retourne :** `object|null` - L'application Laravel ou `null`
+Retourne l'instance de l'application Laravel.
 
-### `setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self`
+**Retourne :** `object` - L'application Laravel
 
-Définit l'instance du bootstrapper Laravel.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$bootstrapper` | `LaravelBootstrapper|null` | L'instance du bootstrapper |
-
-**Retourne :** `self` - L'instance courante pour le chaînage
-
-### `setArguments(ParameterCollection $arguments): self`
-
-Définit les arguments de la directive.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$arguments` | `ParameterCollection` | Collection des arguments |
-
-**Retourne :** `self` - L'instance courante pour le chaînage
+**Exemple :**
+```php
+$app = $this->getLaravel();
+$version = $app->version();
+```
 
 ### `argument(string $key): ?string`
 
@@ -126,16 +142,6 @@ Vérifie si un argument existe et a une valeur non vide.
 
 **Retourne :** `bool` - `true` si l'argument existe et a une valeur non vide
 
-### `setOptions(ParameterCollection $options): self`
-
-Définit les options de la directive.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$options` | `ParameterCollection` | Collection des options |
-
-**Retourne :** `self` - L'instance courante pour le chaînage
-
 ### `option(string $key): bool|string|null`
 
 Retourne la valeur d'une option par sa clé. Retourne `bool` pour les flags (`--force`), `string` pour les options avec valeur (`--role=admin`), `null` si non fournie.
@@ -161,6 +167,25 @@ Vérifie si une option existe et a une valeur non vide.
 | `$key` | `string` | Nom de l'option |
 
 **Retourne :** `bool` - `true` si l'option existe et a une valeur non vide
+
+### `getVariadicArguments(): StringTypedCollection`
+
+Retourne la collection des arguments variadiques.
+
+**Retourne :** `StringTypedCollection` - Arguments variadiques
+
+**Exemple :**
+```php
+foreach ($this->getVariadicArguments() as $file) {
+    $this->line("Processing: {$file}");
+}
+```
+
+### `hasVariadicArguments(): bool`
+
+Vérifie si des arguments variadiques sont présents.
+
+**Retourne :** `bool` - `true` s'il y a des arguments variadiques
 
 ### `line(string $message): void`
 
@@ -196,6 +221,33 @@ Affiche un message d'avertissement (généralement en jaune).
 **Exemple :**
 ```php
 $this->warn('This operation may take a while.');
+```
+
+### `newLine(): void`
+
+Affiche une ligne vide.
+
+**Exemple :**
+```php
+$this->line('First line');
+$this->newLine();
+$this->line('After a blank line');
+```
+
+### `separator(string $character = '-', int $length = 80): void`
+
+Affiche une ligne de séparation.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$character` | `string` | Caractère de séparation (défaut: '-') |
+| `$length` | `int` | Longueur de la ligne (défaut: 80) |
+
+**Exemple :**
+```php
+$this->separator('=', 100);
+$this->line('Section Title');
+$this->separator();
 ```
 
 ### `ask(string $question): string`
@@ -331,7 +383,40 @@ final class SetupDirective extends AbstractDirective
 }
 ```
 
-### Cas 3 : Directive avec Laravel (base de données)
+### Cas 3 : Directive avec arguments variadiques
+
+```php
+final class ProcessFilesDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'process {files*} {--verbose}';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Process multiple files';
+    }
+
+    public function execute(): ExitCode
+    {
+        $files = $this->getVariadicArguments();
+        
+        if (!$this->hasVariadicArguments()) {
+            $this->error('No files provided');
+            return ExitCode::INVALID_ARGUMENT;
+        }
+
+        foreach ($files as $file) {
+            $this->line("Processing: {$file}");
+        }
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### Cas 4 : Directive avec Laravel (base de données)
 
 ```php
 final class UserStatsDirective extends AbstractDirective
@@ -368,8 +453,26 @@ final class UserStatsDirective extends AbstractDirective
 
 ## Flux d'exécution
 
-<img src="./graphics/directive_flow_chart.png" alt="Kernel Run Flow Chart" width="800"/>
+```
+1. Instanciation de la directive
+   └── __construct(DirectiveContext $context, DirectiveInteractionService $interaction)
 
+2. Injection des valeurs par le conteneur
+   ├── setArguments(ParameterCollection $arguments)
+   ├── setOptions(ParameterCollection $options)
+   └── setVariadicArguments(StringTypedCollection $variadic)
+
+3. Bootstrap Laravel (si shouldBootLaravel() === true)
+   └── LaravelBootstrapperInterface::bootstrap()
+
+4. Exécution
+   └── execute(): ExitCode
+
+5. Sortie utilisateur
+   ├── line() / info() / error() / warn()
+   ├── table()
+   └── ask() / confirm()
+```
 
 ## Gestion des erreurs
 
@@ -377,24 +480,25 @@ final class UserStatsDirective extends AbstractDirective
 |-----------|--------------|
 | Argument inexistant | `argument()` retourne `null`, `hasArgument()` retourne `false` |
 | Option inexistante | `option()` retourne `null`, `hasOption()` retourne `false` |
-| Laravel non bootstrapé | `hasLaravel()` retourne `false`, `getLaravel()` retourne `null` |
+| Laravel non bootstrapé | `hasLaravel()` retourne `false` |
 | Exception dans `execute()` | Capturée par `DirectiveExecutionService`, retourne `ExitCode::FAILURE` |
 
 ## Intégration
 
 `AbstractDirective` s'intègre avec :
 
+- **`DirectiveContext`** : Stockage centralisé de l'état (blueprint, aliases, arguments, options)
 - **`DirectiveInteractionService`** : Gère l'affichage et les interactions utilisateur
-- **`LaravelBootstrapper`** : Bootstrap optionnel de Laravel
+- **`LaravelBootstrapperInterface`** : Bootstrap optionnel de Laravel (via `TestLaravelBootstrapper` ou `LaravelBootstrapper`)
 - **`ParameterCollection`** : Stockage typé des arguments et options
 - **`RowCollection`** : Collection pour les lignes de tableau
-- **`StringTypedCollection`** : Collection pour les chaînes (en-têtes, alias)
+- **`StringTypedCollection`** : Collection pour les chaînes (en-têtes, alias, variadic)
 
 ## Performance
 
 | Aspect | Caractéristique |
 |--------|----------------|
-| Arguments/Options | Accès O(n) avec n = nombre d'éléments |
+| Arguments/Options | Accès O(1) via `ParameterCollection` |
 | Affichage | Délégation à `DirectiveInteractionService` |
 | Bootstrap Laravel | Une seule fois par exécution (si nécessaire) |
 | Mémoire | Une instance par exécution de directive |
@@ -403,7 +507,7 @@ final class UserStatsDirective extends AbstractDirective
 
 | Version | Support |
 |---------|---------|
-| PHP 8.1+ | ✅ Requis (readonly properties, union types) |
+| PHP 8.1+ | ✅ Requis (types unions, readonly) |
 | PHP 8.2+ | ✅ Complet |
 | PHP 8.3+ | ✅ Complet |
 | Laravel 10+ | ✅ Complet (bootstrap optionnel) |
@@ -445,7 +549,7 @@ final class UserListDirective extends AbstractDirective
     {
         $role = $this->option('role');
         $active = $this->option('active');
-        $limit = (int) $this->option('limit') ?: 10;
+        $limit = (int) ($this->option('limit') ?? 10);
 
         $this->info("Listing users (limit: {$limit})");
 
@@ -464,6 +568,7 @@ final class UserListDirective extends AbstractDirective
         // Récupérer les utilisateurs (simulé)
         $users = [
             ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com', 'role' => 'admin', 'active' => true],
+            ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com', 'role' => 'user', 'active' => true],
         ];
 
         foreach ($users as $user) {

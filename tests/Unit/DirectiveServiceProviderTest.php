@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit;
 
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
-use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
+use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
@@ -19,6 +20,7 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\Directive\Services\FileCreatorService;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use Illuminate\Container\Container;
@@ -26,7 +28,6 @@ use Illuminate\Container\Container;
 final class DirectiveServiceProviderTest extends UnitTestCase
 {
     private Container $container;
-
     private DirectiveServiceProvider $provider;
 
     protected function setUp(): void
@@ -69,10 +70,10 @@ final class DirectiveServiceProviderTest extends UnitTestCase
         $this->assertTrue($this->container->bound(LaravelBootstrapperContext::class));
     }
 
-    public function test_factory_is_registered_as_singleton(): void
+    public function test_directive_discovery_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveFactoryInterface::class));
+        $this->assertTrue($this->container->bound(DirectiveDiscoveryContext::class));
     }
 
     public function test_parser_is_registered_as_singleton(): void
@@ -135,6 +136,18 @@ final class DirectiveServiceProviderTest extends UnitTestCase
         $this->assertTrue($this->container->bound(DirectiveExecutionService::class));
     }
 
+    public function test_file_system_interface_is_bound(): void
+    {
+        $this->provider->register();
+        $this->assertTrue($this->container->bound(FileSystemInterface::class));
+    }
+
+    public function test_file_creator_service_is_registered_as_singleton(): void
+    {
+        $this->provider->register();
+        $this->assertTrue($this->container->bound(FileCreatorService::class));
+    }
+
     public function test_kernel_can_be_resolved(): void
     {
         $this->provider->register();
@@ -168,5 +181,12 @@ final class DirectiveServiceProviderTest extends UnitTestCase
         $this->provider->register();
         $bootstrapperContext = $this->container->make(LaravelBootstrapperContext::class);
         $this->assertInstanceOf(LaravelBootstrapperContext::class, $bootstrapperContext);
+    }
+
+    public function test_directive_discovery_context_can_be_resolved(): void
+    {
+        $this->provider->register();
+        $discoveryContext = $this->container->make(DirectiveDiscoveryContext::class);
+        $this->assertInstanceOf(DirectiveDiscoveryContext::class, $discoveryContext);
     }
 }

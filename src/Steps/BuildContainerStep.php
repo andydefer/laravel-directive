@@ -92,15 +92,15 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $directiveConfig = new EnvDirectiveConfig;
             $container->instance(DirectiveConfigInterface::class, $directiveConfig);
 
-            // Register factory
-            $factory = new ContainerDirectiveFactory($container);
-
             // Get contexts
             $laravelBootstrapperContext = $container->make(LaravelBootstrapperContext::class);
             $discoveryContext = $container->make(DirectiveDiscoveryContext::class);
 
-            // Register hydrator with dependencies injected via constructor
-            $hydrator = new DirectiveHydratorService($factory, $laravelBootstrapperContext);
+            // Register hydrator with dependencies injected via constructor (sans factory)
+            $hydrator = new DirectiveHydratorService(
+                laravelBootstrapperContext: $laravelBootstrapperContext,
+                interaction: $interaction,
+            );
 
             // Register registry
             $registry = new TestDirectiveRegistry;

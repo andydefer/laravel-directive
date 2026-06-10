@@ -11,7 +11,6 @@ use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -71,15 +70,13 @@ final class CliRunner
         // Validation
         $this->container->singleton(
             SignatureValidationService::class,
-            fn() =>
-            new SignatureValidationService(new EnvSignatureValidationConfig)
+            fn() => new SignatureValidationService(new EnvSignatureValidationConfig)
         );
 
         // Interaction
         $this->container->singleton(
             DirectiveInteractionService::class,
-            fn($c) =>
-            new DirectiveInteractionService(
+            fn($c) => new DirectiveInteractionService(
                 $c->make(RenderDispatcher::class),
                 $c->make(InputDispatcher::class),
             )
@@ -89,31 +86,35 @@ final class CliRunner
     private function buildKernel(): DirectiveKernel
     {
         $config = new EnvDirectiveConfig();
-        $factory = new ContainerDirectiveFactory($this->container);
         $parser = new DirectiveParserService();
 
         $laravelContext = $this->container->make(LaravelBootstrapperContext::class);
         $discoveryContext = $this->container->make(DirectiveDiscoveryContext::class);
+        $interaction = $this->container->make(DirectiveInteractionService::class);
 
-        $hydrator = new DirectiveHydratorService($factory, $laravelContext);
+        // Hydrator sans factory
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $laravelContext,
+            interaction: $interaction,
+        );
 
         $discovery = new DirectiveDiscoveryService(
-            $config,
-            $hydrator,
-            $discoveryContext,
-            $laravelContext,
-            null
+            config: $config,
+            hydrator: $hydrator,
+            context: $discoveryContext,
+            laravelBootstrapperContext: $laravelContext,
+            loader: null,
         );
 
         $renderer = new DirectiveRendererService($this->container->make(RenderDispatcher::class));
         $validator = $this->container->make(SignatureValidationService::class);
 
         $execution = new DirectiveExecutionService(
-            $discovery,
-            $parser,
-            $hydrator,
-            $renderer,
-            $laravelContext
+            discovery: $discovery,
+            parser: $parser,
+            hydrator: $hydrator,
+            renderer: $renderer,
+            laravelBootstrapperContext: $laravelContext,
         );
 
         return new DirectiveKernel($execution, $validator, $renderer);

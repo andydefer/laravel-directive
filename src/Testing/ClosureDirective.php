@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Testing;
 
 use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 
@@ -17,28 +18,32 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
  * arguments, and options.
  *
  * @example
+ * $context = new DirectiveContext($bootstrapper, $blueprint, $aliases, false);
  * $directive = new ClosureDirective(
+ *     context: $context,
+ *     interaction: $interaction,
  *     signature: 'test {name} {--verbose}',
  *     execute: function ($d) {
  *         $d->line("Hello " . $d->argument('name'));
  *         return ExitCode::SUCCESS;
- *     },
- *     interaction: $interaction
+ *     }
  * );
  */
 final class ClosureDirective extends AbstractDirective
 {
     /**
-     * @param  string  $signature  The directive signature
-     * @param  callable(ClosureDirective): ExitCode  $execute  Execution logic as a closure
+     * @param  DirectiveContext  $context  The directive context
      * @param  DirectiveInteractionService  $interaction  Interaction service for output
+     * @param  string  $signature  The directive signature
+     * @param  \Closure(ClosureDirective): ExitCode  $execute  Execution logic as a closure
      */
     public function __construct(
+        DirectiveContext $context,
+        DirectiveInteractionService $interaction,
         private readonly string $signature,
         private readonly \Closure $execute,
-        DirectiveInteractionService $interaction,
     ) {
-        parent::__construct($interaction);
+        parent::__construct($context, $interaction);
     }
 
     public function getSignature(): string

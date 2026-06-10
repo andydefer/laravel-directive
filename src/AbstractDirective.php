@@ -6,148 +6,74 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\RowCollection;
+use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
-use AndyDefer\Directive\Contracts\LaravelBootstrapperInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-/**
- * Abstract base class for all CLI directives.
- */
 abstract class AbstractDirective implements DirectiveInterface
 {
-    protected ParameterCollection $arguments;
-    protected ParameterCollection $options;
-    protected StringTypedCollection $variadicArguments;
-    protected ?LaravelBootstrapperInterface $laravelBootstrapper = null;
-
     public function __construct(
-        protected readonly DirectiveInteractionService $interaction,
-    ) {
-        $this->arguments = new ParameterCollection;
-        $this->options = new ParameterCollection;
-        $this->variadicArguments = new StringTypedCollection;
-    }
+        protected DirectiveContext $context,
+        protected DirectiveInteractionService $interaction
+    ) {}
 
     final public function getBlueprint(): DirectiveBlueprintRecord
     {
-        return new DirectiveBlueprintRecord(
-            class: static::class,
-            signature: $this->getSignature(),
-            description: $this->getDescription(),
-        );
+        return $this->context->getBlueprint();
     }
 
     public function getAliases(): StringTypedCollection
     {
-        return new StringTypedCollection;
+        return $this->context->getAliases();
     }
 
     public function shouldBootLaravel(): bool
     {
-        return false;
+        return $this->context->shouldBootLaravel();
     }
 
     final public function hasLaravel(): bool
     {
-        return $this->laravelBootstrapper !== null && $this->laravelBootstrapper->isBootstrapped();
+        return $this->context->hasLaravel();
     }
 
-    final public function getLaravel(): ?object
+    final public function getLaravel(): object
     {
-        return $this->laravelBootstrapper?->getApplication();
-    }
-
-    final public function setLaravelBootstrapper(?LaravelBootstrapperInterface $bootstrapper): self
-    {
-        $this->laravelBootstrapper = $bootstrapper;
-        return $this;
-    }
-
-    final public function setInteraction(DirectiveInteractionService $interaction): self
-    {
-        $this->interaction = $interaction;
-        return $this;
-    }
-
-    // ==================== Argument Management ====================
-
-    final public function setArguments(ParameterCollection $arguments): self
-    {
-        $this->arguments = $arguments;
-        return $this;
+        return $this->context->getLaravel();
     }
 
     final public function argument(string $key): ?string
     {
-        $value = $this->arguments->get($key);
-
-        if ($value === null || $value === true || $value === false || $value === '') {
-            return null;
-        }
-
-        return $value;
+        return $this->context->getArgument($key);
     }
 
     final public function hasArgument(string $key): bool
     {
-        $value = $this->arguments->get($key);
-        return $value !== null && $value !== '' && $value !== true && $value !== false;
-    }
-
-    // ==================== Option Management ====================
-
-    final public function setOptions(ParameterCollection $options): self
-    {
-        $this->options = $options;
-        return $this;
+        return $this->context->hasArgument($key);
     }
 
     final public function option(string $key): bool|string|null
     {
-        $value = $this->options->get($key);
-
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return $value;
+        return $this->context->getOption($key);
     }
 
     final public function hasOption(string $key): bool
     {
-        $value = $this->options->get($key);
-
-        if ($value === null || $value === '') {
-            return false;
-        }
-
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        return $value !== '';
-    }
-
-    final public function setVariadicArguments(StringTypedCollection $variadicArguments): self
-    {
-        $this->variadicArguments = $variadicArguments;
-        return $this;
+        return $this->context->hasOption($key);
     }
 
     final public function getVariadicArguments(): StringTypedCollection
     {
-        return $this->variadicArguments;
+        return $this->context->getVariadicArguments();
     }
 
     final public function hasVariadicArguments(): bool
     {
-        return $this->variadicArguments->isNotEmpty();
+        return $this->context->hasVariadicArguments();
     }
-
-    // ==================== Display Methods ====================
 
     final public function line(string $message): void
     {
@@ -179,8 +105,6 @@ abstract class AbstractDirective implements DirectiveInterface
         $this->interaction->separator($character, $length);
     }
 
-    // ==================== User Interaction Methods ====================
-
     final public function ask(string $question): string
     {
         return $this->interaction->ask($question);
@@ -190,8 +114,6 @@ abstract class AbstractDirective implements DirectiveInterface
     {
         return $this->interaction->confirm($question);
     }
-
-    // ==================== Table Display Methods ====================
 
     final public function table(StringTypedCollection $headers, RowCollection $rows): void
     {

@@ -11,12 +11,6 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TestEchoDirective extends AbstractDirective
 {
-    public function __construct(
-        DirectiveInteractionService $interaction,
-    ) {
-        parent::__construct($interaction);
-    }
-
     public function getSignature(): string
     {
         return 'test-echo {message?} {extra?}';

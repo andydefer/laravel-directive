@@ -1,4 +1,3 @@
-```markdown
 # InteractsWithDirectives - Référence Technique
 
 > ⚠️ **DÉPRÉCIÉ depuis la version 3.8.0** - Ce trait est déprécié et sera supprimé dans la version 4.0.0.
@@ -43,6 +42,12 @@ class MyDirectiveTest extends TestCase
         $this->initDirectiveTesting();
     }
     
+    protected function tearDown(): void
+    {
+        $this->destroyDirectiveTesting();
+        parent::tearDown();
+    }
+    
     public function test_directive(): void
     {
         $directive = new MyDirective();
@@ -83,6 +88,7 @@ class MyDirectiveTest extends TestCase
     
     public function test_directive(): void
     {
+        // Création et enregistrement
         $directive = new MyDirective($this->service->getInteraction());
         $this->service->registerDirective($directive);
         
@@ -90,13 +96,14 @@ class MyDirectiveTest extends TestCase
         $response = $this->service->runDirective('my-cmd');
         
         // ✅ Traçabilité : on peut inspecter le contexte
-        $this->assertTrue($this->context->hasStepResult('create_temp_directory'));
+        $this->assertTrue($this->context->hasStepResult(TestingStep::CREATE_TEMP_DIRECTORY));
         $this->assertTrue($this->context->hasCreatedPaths());
-        $this->assertEquals(1, $this->context->getCreatedFilesCount());
+        $this->assertEquals(1, $this->context->getCreatedPathsCount());
         
         // ✅ Chaque étape est enregistrée
-        $stepResult = $this->context->getStepResult('create_temp_directory');
+        $stepResult = $this->context->getStepResult(TestingStep::CREATE_TEMP_DIRECTORY);
         $this->assertNotNull($stepResult);
+        $this->assertEquals(StepResultStatus::SUCCESS, $stepResult->status);
     }
 }
 ```
@@ -131,10 +138,6 @@ La **composition** (injection de service) résout tous ces problèmes :
 Trait PHPUnit fournissant des utilitaires de test pour les directives, permettant un environnement isolé sans dépendance au système de fichiers.
 
 > ⚠️ **Ce trait est déprécié depuis la version 3.8.0.** Utilisez `DirectiveTestingService` pour les nouveaux développements.
-
-## Description
-
-Trait PHPUnit fournissant des utilitaires de test pour les directives, permettant un environnement isolé sans dépendance au système de fichiers.
 
 ## Hiérarchie
 
@@ -268,7 +271,7 @@ $this->createTestDirective('test:cmd', function ($d) {
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$className` | `string` | Nom de la directive (signature ou FQCN) |
-| `$arguments` | `array<string>`` | Arguments à passer |
+| `$arguments` | `array<string>` | Arguments à passer |
 
 **Retourne :** `DirectiveResponseRecord` - Réponse contenant le code de sortie et la sortie
 
@@ -383,7 +386,26 @@ public function test_directive_using_laravel_cache(): void
 ```
 
 ## Flux d'exécution
-<img src="../graphics/interacts-with-directives.png" />
+
+```
+1. setUp() / initDirectiveTesting()
+   ├── Création répertoire temporaire
+   ├── Changement de répertoire courant
+   ├── (Optionnel) Création structure Laravel
+   ├── Initialisation Container
+   ├── Enregistrement des services
+   └── Initialisation du Kernel
+
+2. test_*()
+   ├── registerDirective() / createTestDirective()
+   ├── runDirective()
+   └── Assertions
+
+3. tearDown() / destroyDirectiveTesting()
+   ├── clearRegisteredDirectives()
+   ├── Suppression répertoire temporaire
+   └── Restauration répertoire courant
+```
 
 ## Gestion des erreurs
 

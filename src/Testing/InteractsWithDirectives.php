@@ -9,6 +9,7 @@ use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
 use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
+use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
@@ -16,7 +17,7 @@ use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
@@ -31,64 +32,19 @@ use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
-/**
- * Trait providing testing utilities for directives.
- *
- * This trait allows you to test directives in an isolated environment without
- * needing to create real files or depend on the filesystem. It provides methods
- * to register directives, run them, and make assertions on their output.
- *
- * @example
- * class MyDirectiveTest extends TestCase
- * {
- *     use InteractsWithDirectives;
- *
- *     protected function setUp(): void
- *     {
- *         parent::setUp();
- *         $this->initDirectiveTesting();
- *     }
- *
- *     public function test_directive_executes_successfully(): void
- *     {
- *         $directive = new MyDirective($this->interaction);
- *         $this->registerDirective($directive);
- *
- *         $response = $this->runDirective(MyDirective::class, ['arg1', '--option']);
- *         $response->assertSuccess();
- *     }
- * }
- *
- * @author Andy Defer
- */
 trait InteractsWithDirectives
 {
     private Container $directiveContainer;
-
     private DirectiveKernel $directiveKernel;
-
     private TestDirectiveRegistry $directiveRegistry;
-
     private DirectiveInteractionService $interaction;
-
     private bool $directiveTestingInitialized = false;
-
     private string $directiveTempDir;
-
     private string $originalCwd;
-
     private ?Application $laravelApp = null;
-
     private bool $bootLaravelEnabled = false;
+    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
 
-    /**
-     * Initializes the testing environment for directives.
-     *
-     * Creates a temporary directory, sets up the service container, and optionally
-     * bootstraps a minimal Laravel application.
-     *
-     * @param  bool  $bootLaravel  Whether to bootstrap Laravel for tests that need it
-     */
     protected function initDirectiveTesting(bool $bootLaravel = false): void
     {
         if ($this->directiveTestingInitialized) {
@@ -142,7 +98,6 @@ trait InteractsWithDirectives
             return $bootstrapperContext;
         });
 
-        // Register directive discovery context
         $this->directiveContainer->singleton(DirectiveDiscoveryContext::class, function () {
             return new DirectiveDiscoveryContext;
         });
@@ -150,41 +105,37 @@ trait InteractsWithDirectives
         $directiveConfig = new EnvDirectiveConfig;
         $this->directiveContainer->instance(DirectiveConfigInterface::class, $directiveConfig);
 
-        $factory = new ContainerDirectiveFactory($this->directiveContainer);
         $parser = new DirectiveParserService;
 
-        $laravelBootstrapperContext = $this->directiveContainer->make(LaravelBootstrapperContext::class);
-
-        // Hydrator with dependencies injected via constructor
-        $hydrator = new DirectiveHydratorService($factory, $laravelBootstrapperContext);
-
+        $this->laravelBootstrapperContext = $this->directiveContainer->make(LaravelBootstrapperContext::class);
         $this->interaction = $this->directiveContainer->make(DirectiveInteractionService::class);
-        $signatureValidator = $this->directiveContainer->make(SignatureValidationService::class);
-        $namingService = $this->directiveContainer->make(DirectiveNamingService::class);
+
+        $hydrator = new DirectiveHydratorService(
+            laravelBootstrapperContext: $this->laravelBootstrapperContext,
+            interaction: $this->interaction,
+        );
 
         $this->directiveRegistry = new TestDirectiveRegistry;
 
         $discoveryContext = $this->directiveContainer->make(DirectiveDiscoveryContext::class);
 
-        // Discovery service with all dependencies injected via constructor
         $discovery = new DirectiveDiscoveryService(
             config: $directiveConfig,
             hydrator: $hydrator,
             context: $discoveryContext,
-            laravelBootstrapperContext: $laravelBootstrapperContext,
+            laravelBootstrapperContext: $this->laravelBootstrapperContext,
             loader: null,
         );
 
         $renderer = new DirectiveRendererService($this->directiveContainer->make(RenderDispatcher::class));
         $signatureValidatorService = $this->directiveContainer->make(SignatureValidationService::class);
 
-        // Execution service with all dependencies injected via constructor
         $executionService = new DirectiveExecutionService(
             discovery: $discovery,
             parser: $parser,
             hydrator: $hydrator,
             renderer: $renderer,
-            laravelBootstrapperContext: $laravelBootstrapperContext,
+            laravelBootstrapperContext: $this->laravelBootstrapperContext,
         );
 
         $this->directiveKernel = new DirectiveKernel(
@@ -196,9 +147,6 @@ trait InteractsWithDirectives
         $this->directiveTestingInitialized = true;
     }
 
-    /**
-     * Creates a minimal Laravel application structure for testing.
-     */
     private function createLaravelStructure(): void
     {
         $bootstrapDir = $this->directiveTempDir . '/bootstrap';
@@ -296,11 +244,6 @@ PHP;
         mkdir($this->directiveTempDir . '/app/Models', 0777, true);
     }
 
-    /**
-     * Creates a Laravel application instance from the temporary structure.
-     *
-     * @return Application The Laravel application instance
-     */
     public function createApplication(): Application
     {
         $app = require $this->directiveTempDir . '/bootstrap/app.php';
@@ -311,31 +254,18 @@ PHP;
         return $app;
     }
 
-    /**
-     * Registers a directive instance for testing.
-     *
-     * @param  AbstractDirective  $directive  The directive instance to register
-     */
     protected function registerDirective(AbstractDirective $directive): void
     {
         $this->initDirectiveTesting($this->bootLaravelEnabled);
         $this->directiveRegistry->register($directive);
     }
 
-    /**
-     * Registers multiple directive instances for testing.
-     *
-     * @param  array<AbstractDirective>  $directives  The directive instances to register
-     */
     protected function registerDirectives(array $directives): void
     {
         $this->initDirectiveTesting($this->bootLaravelEnabled);
         $this->directiveRegistry->registerAll($directives);
     }
 
-    /**
-     * Clears all registered directives from the registry.
-     */
     protected function clearRegisteredDirectives(): void
     {
         if ($this->directiveTestingInitialized) {
@@ -343,21 +273,22 @@ PHP;
         }
     }
 
-    /**
-     * Creates a temporary test directive with a closure as execution logic.
-     *
-     * @param  string  $signature  The directive signature
-     * @param  callable  $execute  The execution logic
-     * @return ClosureDirective The created directive instance
-     */
     protected function createTestDirective(string $signature, callable $execute): ClosureDirective
     {
         $this->initDirectiveTesting($this->bootLaravelEnabled);
 
+        $context = new DirectiveContext(
+            laravelBootstrapper: $this->laravelBootstrapperContext ?? new LaravelBootstrapperContext,
+            blueprint: new DirectiveBlueprintRecord(ClosureDirective::class, $signature, 'Test directive created from closure'),
+            aliases: new StringTypedCollection,
+            shouldBootLaravel: false,
+        );
+
         $directive = new ClosureDirective(
+            context: $context,
+            interaction: $this->interaction,
             signature: $signature,
             execute: $execute,
-            interaction: $this->interaction,
         );
 
         $this->registerDirective($directive);
@@ -365,13 +296,6 @@ PHP;
         return $directive;
     }
 
-    /**
-     * Runs a directive by its FQCN (fully qualified class name).
-     *
-     * @param  string  $className  FQCN of the directive (e.g., App\Directives\MyDirective::class)
-     * @param  array<string>  $arguments  The arguments to pass to the directive
-     * @return DirectiveResponseRecord The response containing exit code and output
-     */
     protected function runDirective(string $className, array $arguments = []): DirectiveResponseRecord
     {
         $this->initDirectiveTesting($this->bootLaravelEnabled);
@@ -382,7 +306,6 @@ PHP;
             return $this->executeDirectly($directive, $arguments);
         }
 
-        // Fallback: try via the kernel with the signature
         $argv = array_merge(['directive', $className], $arguments);
 
         ob_start();
@@ -395,13 +318,6 @@ PHP;
         );
     }
 
-    /**
-     * Executes a directive directly without going through the kernel.
-     *
-     * @param  AbstractDirective  $directive  The directive instance
-     * @param  array<string>  $arguments  The arguments to pass
-     * @return DirectiveResponseRecord The response containing exit code and output
-     */
     private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
     {
         $fullSignature = $directive->getSignature();
@@ -417,21 +333,84 @@ PHP;
         try {
             $parsed = $parser->parse($fullSignature, $argumentCollection);
 
-            if (method_exists($directive, 'setArguments')) {
-                $directive->setArguments(
-                    ParameterCollection::fromFlatArguments($parsed->arguments)
-                );
+            $context = new DirectiveContext(
+                laravelBootstrapper: $this->laravelBootstrapperContext ?? new LaravelBootstrapperContext,
+                blueprint: $directive->getBlueprint(),
+                aliases: $directive->getAliases(),
+                shouldBootLaravel: $directive->shouldBootLaravel(),
+            );
+
+            $context->setArguments(ParameterCollection::fromFlatArguments($parsed->arguments));
+            $context->setOptions(ParameterCollection::fromFlatOptions($parsed->options));
+            $context->setVariadicArguments($parsed->variadic_arguments);
+
+            $reflection = new \ReflectionClass($directive);
+            $constructor = $reflection->getConstructor();
+
+            if ($constructor === null) {
+                ob_start();
+                $bufferStarted = true;
+                $exitCode = $directive->execute();
+                $output = ob_get_clean();
+                return new DirectiveResponseRecord(exitCode: $exitCode, output: $output);
             }
 
-            if (method_exists($directive, 'setOptions')) {
-                $directive->setOptions(
-                    ParameterCollection::fromFlatOptions($parsed->options)
-                );
+            $parameters = $constructor->getParameters();
+            $args = [];
+
+            foreach ($parameters as $param) {
+                $paramType = $param->getType();
+
+                if ($paramType === null) {
+                    // Paramètre sans type, essayer de récupérer la valeur par réflexion
+                    if ($param->isDefaultValueAvailable()) {
+                        $args[] = $param->getDefaultValue();
+                    } else {
+                        $args[] = null;
+                    }
+                    continue;
+                }
+
+                $paramName = $paramType->getName();
+
+                if ($paramName === DirectiveContext::class) {
+                    $args[] = $context;
+                } elseif ($paramName === DirectiveInteractionService::class) {
+                    $args[] = $this->interaction;
+                } elseif ($paramName === 'string') {
+                    // Pour le paramètre signature de ClosureDirective
+                    if ($param->getName() === 'signature') {
+                        $args[] = $fullSignature;
+                    } else {
+                        $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
+                    }
+                } elseif ($paramName === 'Closure' || $paramName === 'callable' || $paramName === '\\Closure') {
+                    // Pour le paramètre execute de ClosureDirective
+                    // Récupérer la valeur de la propriété execute via réflexion
+                    try {
+                        $executeProperty = $reflection->getProperty('execute');
+                        $args[] = $executeProperty->getValue($directive);
+                    } catch (\ReflectionException $e) {
+                        $args[] = null;
+                    }
+                } elseif ($paramType->isBuiltin()) {
+                    // Types scalaires (int, bool, float, etc.)
+                    if ($param->isDefaultValueAvailable()) {
+                        $args[] = $param->getDefaultValue();
+                    } else {
+                        $args[] = null;
+                    }
+                } else {
+                    // Autres types d'objets
+                    $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
+                }
             }
+
+            $hydratedDirective = $reflection->newInstanceArgs($args);
 
             ob_start();
             $bufferStarted = true;
-            $exitCode = $directive->execute();
+            $exitCode = $hydratedDirective->execute();
             $output = ob_get_clean();
 
             return new DirectiveResponseRecord(
@@ -459,21 +438,11 @@ PHP;
         }
     }
 
-    /**
-     * Returns the current output buffer level.
-     *
-     * Useful for debugging buffer-related issues in tests.
-     *
-     * @return int The current output buffer level
-     */
     protected function getBufferLevel(): int
     {
         return ob_get_level();
     }
 
-    /**
-     * Destroys the testing environment and cleans up temporary files.
-     */
     protected function destroyDirectiveTesting(): void
     {
         if (! $this->directiveTestingInitialized) {
@@ -491,18 +460,14 @@ PHP;
         }
 
         $this->laravelApp = null;
+        $this->laravelBootstrapperContext = null;
         $this->bootLaravelEnabled = false;
         $this->directiveTestingInitialized = false;
     }
 
-    /**
-     * Recursively removes a directory and all its contents.
-     *
-     * @param  string  $dir  The directory path to remove
-     */
     private function removeDirectory(string $dir): void
     {
-        if (! is_dir($dir)) {
+        if (!is_dir($dir)) {
             return;
         }
 

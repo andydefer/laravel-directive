@@ -11,11 +11,9 @@ use AndyDefer\Directive\Configs\FileCreatorConfig;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
-use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -29,9 +27,6 @@ use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\DomainStructures\Services\EnumService;
 use Illuminate\Support\ServiceProvider;
 
-/**
- * Laravel service provider for the Directive package.
- */
 final class DirectiveServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -39,7 +34,6 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerLaravelBootstrapperContext();
         $this->registerDirectiveDiscoveryContext();
-        $this->registerFactory();
         $this->registerParser();
         $this->registerHydrator();
         $this->registerDiscovery();
@@ -82,15 +76,6 @@ final class DirectiveServiceProvider extends ServiceProvider
         });
     }
 
-    private function registerFactory(): void
-    {
-        $this->app->singleton(DirectiveFactoryInterface::class, function ($app) {
-            return new ContainerDirectiveFactory(
-                container: $app,
-            );
-        });
-    }
-
     private function registerParser(): void
     {
         $this->app->singleton(DirectiveParserService::class, function ($app) {
@@ -102,8 +87,8 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
             return new DirectiveHydratorService(
-                factory: $app->make(DirectiveFactoryInterface::class),
                 laravelBootstrapperContext: $app->make(LaravelBootstrapperContext::class),
+                interaction: $app->make(DirectiveInteractionService::class),
             );
         });
     }
@@ -188,22 +173,16 @@ final class DirectiveServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Register the file creator service and its dependencies.
-     */
     private function registerFileCreator(): void
     {
-        // Register FileSystemInterface with native implementation
         $this->app->bind(FileSystemInterface::class, function ($app) {
             return new FileSystemService;
         });
 
-        // Register FileCreatorConfig
         $this->app->singleton(FileCreatorConfig::class, function ($app) {
             return new FileCreatorConfig(new EnumService);
         });
 
-        // Register FileCreatorService
         $this->app->singleton(FileCreatorService::class, function ($app) {
             return new FileCreatorService(
                 config: $app->make(FileCreatorConfig::class),
