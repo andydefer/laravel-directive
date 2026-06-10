@@ -7,6 +7,7 @@ namespace AndyDefer\Directive\Services;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
@@ -22,7 +23,7 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
  */
 class DirectiveDiscoveryService implements DirectiveLoaderInterface
 {
-    private ?LaravelBootstrapper $laravelBootstrapper = null;
+    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
 
     private static bool $bootstrapped = false;
 
@@ -45,7 +46,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         ?DirectiveLoaderInterface $loader = null,
     ) {
         $this->projectRoot = getcwd();
-        $this->vendorDir = $this->projectRoot.'/vendor';
+        $this->vendorDir = $this->projectRoot . '/vendor';
         $this->loader = $loader ?? $this;
     }
 
@@ -54,9 +55,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         $this->loader = $loader;
     }
 
-    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
+    public function setLaravelBootstrapper(?LaravelBootstrapperContext $bootstrapperContext): void
     {
-        $this->laravelBootstrapper = $bootstrapper;
+        $this->laravelBootstrapperContext = $bootstrapperContext;
     }
 
     /**
@@ -121,7 +122,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
      */
     protected function discoverFromVendorPackagesRecursive(DirectiveMetadataCollection $results): DirectiveMetadataCollection
     {
-        $composerFile = $this->projectRoot.'/composer.json';
+        $composerFile = $this->projectRoot . '/composer.json';
 
         if (! file_exists($composerFile)) {
             return $results;
@@ -163,7 +164,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
             return;
         }
 
-        $packagePath = $this->vendorDir.'/'.$packageName;
+        $packagePath = $this->vendorDir . '/' . $packageName;
 
         if (! is_dir($packagePath)) {
             return;
@@ -187,7 +188,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
      */
     private function scanPackageDependencies(DirectiveMetadataCollection $results, string $packagePath, int $currentDepth): void
     {
-        $composerFile = $packagePath.'/composer.json';
+        $composerFile = $packagePath . '/composer.json';
 
         if (! file_exists($composerFile)) {
             return;
@@ -217,10 +218,10 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
     private function scanPackageDirectories(DirectiveMetadataCollection $results, string $packagePath): void
     {
         $possiblePaths = [
-            $packagePath.'/src/Directives',
-            $packagePath.'/Directives',
-            $packagePath.'/src/Directive',
-            $packagePath.'/Directive',
+            $packagePath . '/src/Directives',
+            $packagePath . '/Directives',
+            $packagePath . '/src/Directive',
+            $packagePath . '/Directive',
         ];
 
         foreach ($possiblePaths as $directivesPath) {
@@ -239,7 +240,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
      */
     private function scanDirectoryForDirectives(DirectiveMetadataCollection $results, string $directory): DirectiveMetadataCollection
     {
-        $files = glob($directory.'/*.php');
+        $files = glob($directory . '/*.php');
 
         if ($files === false) {
             return $results;
@@ -317,8 +318,8 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
         $needsLaravel = $this->checkIfNeedsLaravel($class);
 
-        if ($needsLaravel && $this->laravelBootstrapper !== null && ! self::$bootstrapped) {
-            $this->laravelBootstrapper->bootstrap();
+        if ($needsLaravel && $this->laravelBootstrapperContext !== null && ! self::$bootstrapped) {
+            $this->laravelBootstrapperContext->bootstrap();
             self::$bootstrapped = true;
         }
 
@@ -382,7 +383,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
             return $class;
         }
 
-        return $namespace.'\\'.$class;
+        return $namespace . '\\' . $class;
     }
 
     /**

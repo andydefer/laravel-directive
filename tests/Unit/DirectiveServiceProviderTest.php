@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
@@ -17,7 +18,6 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use Illuminate\Container\Container;
@@ -62,10 +62,10 @@ final class DirectiveServiceProviderTest extends UnitTestCase
         $this->assertTrue($this->container->bound(DirectiveConfig::class));
     }
 
-    public function test_laravel_bootstrapper_is_registered_as_singleton(): void
+    public function test_laravel_bootstrapper_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(LaravelBootstrapper::class));
+        $this->assertTrue($this->container->bound(LaravelBootstrapperContext::class));
     }
 
     public function test_factory_is_registered_as_singleton(): void
@@ -162,10 +162,10 @@ final class DirectiveServiceProviderTest extends UnitTestCase
         $this->assertInstanceOf(DirectiveConfig::class, $config);
     }
 
-    public function test_laravel_bootstrapper_can_be_resolved(): void
+    public function test_laravel_bootstrapper_context_can_be_resolved(): void
     {
         $this->provider->register();
-        $bootstrapper = $this->container->make(LaravelBootstrapper::class);
-        $this->assertInstanceOf(LaravelBootstrapper::class, $bootstrapper);
+        $bootstrapperContext = $this->container->make(LaravelBootstrapperContext::class);
+        $this->assertInstanceOf(LaravelBootstrapperContext::class, $bootstrapperContext);
     }
 }

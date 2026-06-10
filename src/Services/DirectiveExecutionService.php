@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
@@ -24,7 +25,7 @@ use InvalidArgumentException;
  */
 class DirectiveExecutionService
 {
-    private ?LaravelBootstrapper $laravelBootstrapper = null;
+    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
 
     public function __construct(
         private readonly DirectiveDiscoveryService $discovery,
@@ -34,13 +35,13 @@ class DirectiveExecutionService
     ) {}
 
     /**
-     * Sets the Laravel bootstrapper for directives that need it.
+     * Sets the Laravel bootstrapper context for directives that need it.
      *
-     * @param  LaravelBootstrapper|null  $bootstrapper  The bootstrapper instance
+     * @param  LaravelBootstrapperContext|null  $bootstrapperContext  The Laravel bootstrapper context instance
      */
-    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
+    public function setLaravelBootstrapper(?LaravelBootstrapperContext $bootstrapperContext): void
     {
-        $this->laravelBootstrapper = $bootstrapper;
+        $this->laravelBootstrapperContext = $bootstrapperContext;
     }
 
     /**
@@ -233,11 +234,11 @@ class DirectiveExecutionService
      */
     private function bootLaravel(): void
     {
-        if ($this->laravelBootstrapper === null) {
+        if ($this->laravelBootstrapperContext === null) {
             $this->renderer->renderWarning('Laravel bootstrap file not found');
 
             return;
         }
-        $this->laravelBootstrapper->bootstrap();
+        $this->laravelBootstrapperContext->bootstrap();
     }
 }

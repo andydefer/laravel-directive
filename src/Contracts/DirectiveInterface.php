@@ -11,7 +11,6 @@ use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
@@ -169,10 +168,10 @@ interface DirectiveInterface
      * This method is used by the framework to inject the bootstrapper
      * when Laravel support is needed. You don't need to call it manually.
      *
-     * @param  LaravelBootstrapper|null  $bootstrapper  The Laravel bootstrapper instance
+     * @param  LaravelBootstrapperInterface|null  $bootstrapper  The Laravel bootstrapper instance
      * @return self Returns the directive instance for method chaining
      */
-    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self;
+    public function setLaravelBootstrapper(?LaravelBootstrapperInterface $bootstrapper): self;
 
     /**
      * Set the interaction service instance for this directive.

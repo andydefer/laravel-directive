@@ -8,6 +8,7 @@ namespace AndyDefer\Directive\Steps;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
@@ -21,7 +22,6 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
 use Illuminate\Container\Container;
@@ -68,15 +68,15 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService);
             $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService);
 
-            // Register Laravel bootstrapper
-            $container->singleton(LaravelBootstrapper::class, function () use ($bootLaravel, $tempDir) {
-                $bootstrapper = new LaravelBootstrapper;
+            // Register Laravel bootstrapper context
+            $container->singleton(LaravelBootstrapperContext::class, function () use ($bootLaravel, $tempDir) {
+                $bootstrapperContext = new LaravelBootstrapperContext;
 
                 if ($bootLaravel && $tempDir !== null) {
-                    $bootstrapper->setCustomBootstrapPath($tempDir . '/bootstrap/app.php');
+                    $bootstrapperContext->setCustomBootstrapPath($tempDir . '/bootstrap/app.php');
                 }
 
-                return $bootstrapper;
+                return $bootstrapperContext;
             });
 
             // Register config
@@ -86,8 +86,8 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             // Register factory and hydrator
             $factory = new ContainerDirectiveFactory($container);
             $hydrator = new DirectiveHydratorService($factory);
-            $laravelBootstrapper = $container->make(LaravelBootstrapper::class);
-            $hydrator->setLaravelBootstrapper($laravelBootstrapper);
+            $laravelBootstrapperContext = $container->make(LaravelBootstrapperContext::class);
+            $hydrator->setLaravelBootstrapper($laravelBootstrapperContext);
 
             // Register registry
             $registry = new TestDirectiveRegistry;
@@ -95,7 +95,7 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
 
             // Register discovery service
             $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $registry);
-            $discovery->setLaravelBootstrapper($laravelBootstrapper);
+            $discovery->setLaravelBootstrapper($laravelBootstrapperContext);
 
             // Register renderer
             $renderer = new DirectiveRendererService($container->make(RenderDispatcher::class));
@@ -107,7 +107,7 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
                 hydrator: $hydrator,
                 renderer: $renderer,
             );
-            $executionService->setLaravelBootstrapper($laravelBootstrapper);
+            $executionService->setLaravelBootstrapper($laravelBootstrapperContext);
 
             // Register kernel
             $kernel = new DirectiveKernel(

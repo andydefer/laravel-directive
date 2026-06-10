@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Collections\ParameterCollection;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
@@ -15,20 +16,19 @@ use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 
 class DirectiveHydratorService
 {
-    private ?LaravelBootstrapper $laravelBootstrapper = null;
+    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
 
     public function __construct(
         private readonly DirectiveFactoryInterface $factory,
     ) {}
 
-    public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
+    public function setLaravelBootstrapper(?LaravelBootstrapperContext $bootstrapperContext): void
     {
-        $this->laravelBootstrapper = $bootstrapper;
+        $this->laravelBootstrapperContext = $bootstrapperContext;
     }
 
     public function hydrate(string $class, ParsedDirectiveRecord $parsed): DirectiveInterface
     {
-
         $directive = $this->factory->make($class);
 
         $this->injectLaravelBootstrapper($directive);
@@ -57,24 +57,21 @@ class DirectiveHydratorService
 
     private function injectLaravelBootstrapper(DirectiveInterface $directive): void
     {
-        if ($this->laravelBootstrapper !== null && method_exists($directive, 'setLaravelBootstrapper')) {
-            $directive->setLaravelBootstrapper($this->laravelBootstrapper);
+        if ($this->laravelBootstrapperContext !== null && method_exists($directive, 'setLaravelBootstrapper')) {
+            $directive->setLaravelBootstrapper($this->laravelBootstrapperContext);
         }
     }
 
     private function setArguments(DirectiveInterface $directive, ParsedDirectiveRecord $parsed): void
     {
-
         if (method_exists($directive, 'setArguments')) {
             $collection = ParameterCollection::fromFlatArguments($parsed->arguments);
             $directive->setArguments($collection);
-        } else {
         }
     }
 
     private function setOptions(DirectiveInterface $directive, ParsedDirectiveRecord $parsed): void
     {
-
         if (! method_exists($directive, 'setOptions')) {
             return;
         }
@@ -95,7 +92,6 @@ class DirectiveHydratorService
 
     private function setVariadicArguments(DirectiveInterface $directive, ParsedDirectiveRecord $parsed): void
     {
-
         if (! method_exists($directive, 'setVariadicArguments')) {
             return;
         }

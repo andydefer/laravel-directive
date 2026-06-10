@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Dispatchers;
 
 use AndyDefer\Directive\Collections\ReplacementCollection;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Strategies\ConflictRenderStrategy;
 use AndyDefer\Directive\Strategies\DebugRenderStrategy;
 use AndyDefer\Directive\Strategies\DisplayMessageRenderStrategy;
@@ -37,11 +37,11 @@ class RenderDispatcher
      */
     private array $strategies;
 
-    private ?LaravelBootstrapper $laravelBootstrapper = null;
+    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
 
-    public function __construct(?LaravelBootstrapper $laravelBootstrapper = null)
+    public function __construct(?LaravelBootstrapperContext $laravelBootstrapperContext = null)
     {
-        $this->laravelBootstrapper = $laravelBootstrapper;
+        $this->laravelBootstrapperContext = $laravelBootstrapperContext;
         $this->initializeStrategies();
     }
 

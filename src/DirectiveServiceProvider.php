@@ -6,6 +6,7 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Configs\FileCreatorConfig;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
@@ -20,7 +21,6 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\FileCreatorService;
 use AndyDefer\Directive\Services\FileSystemService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\DomainStructures\Services\EnumService;
 use Illuminate\Support\ServiceProvider;
@@ -33,7 +33,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerConfig();
-        $this->registerLaravelBootstrapper();
+        $this->registerLaravelBootstrapperContext();
         $this->registerFactory();
         $this->registerParser();
         $this->registerHydrator();
@@ -52,7 +52,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/config/directive.php' => config_path('directive.php'),
+            __DIR__ . '/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -73,10 +73,10 @@ final class DirectiveServiceProvider extends ServiceProvider
         });
     }
 
-    private function registerLaravelBootstrapper(): void
+    private function registerLaravelBootstrapperContext(): void
     {
-        $this->app->singleton(LaravelBootstrapper::class, function ($app) {
-            return new LaravelBootstrapper;
+        $this->app->singleton(LaravelBootstrapperContext::class, function ($app) {
+            return new LaravelBootstrapperContext;
         });
     }
 
@@ -103,8 +103,8 @@ final class DirectiveServiceProvider extends ServiceProvider
                 factory: $app->make(DirectiveFactoryInterface::class),
             );
 
-            if ($app->bound(LaravelBootstrapper::class)) {
-                $hydrator->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
+            if ($app->bound(LaravelBootstrapperContext::class)) {
+                $hydrator->setLaravelBootstrapper($app->make(LaravelBootstrapperContext::class));
             }
 
             return $hydrator;
@@ -120,8 +120,8 @@ final class DirectiveServiceProvider extends ServiceProvider
                 loader: null,
             );
 
-            if ($app->bound(LaravelBootstrapper::class)) {
-                $discovery->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
+            if ($app->bound(LaravelBootstrapperContext::class)) {
+                $discovery->setLaravelBootstrapper($app->make(LaravelBootstrapperContext::class));
             }
 
             return $discovery;
@@ -192,8 +192,8 @@ final class DirectiveServiceProvider extends ServiceProvider
                 renderer: $app->make(DirectiveRendererService::class),
             );
 
-            if ($app->bound(LaravelBootstrapper::class)) {
-                $executionService->setLaravelBootstrapper($app->make(LaravelBootstrapper::class));
+            if ($app->bound(LaravelBootstrapperContext::class)) {
+                $executionService->setLaravelBootstrapper($app->make(LaravelBootstrapperContext::class));
             }
 
             return $executionService;

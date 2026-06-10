@@ -7,6 +7,7 @@ namespace AndyDefer\Directive\Testing;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
@@ -20,7 +21,6 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
@@ -92,7 +92,7 @@ trait InteractsWithDirectives
         }
 
         $this->bootLaravelEnabled = $bootLaravel;
-        $this->directiveTempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
+        $this->directiveTempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
         mkdir($this->directiveTempDir, 0777, true);
 
         $this->originalCwd = getcwd();
@@ -127,25 +127,25 @@ trait InteractsWithDirectives
             return new DirectiveNamingService;
         });
 
-        $this->directiveContainer->singleton(LaravelBootstrapper::class, function () {
-            $bootstrapper = new LaravelBootstrapper;
+        $this->directiveContainer->singleton(LaravelBootstrapperContext::class, function () {
+            $bootstrapperContext = new LaravelBootstrapperContext;
 
             if ($this->laravelApp !== null) {
-                $bootstrapPath = $this->directiveTempDir.'/bootstrap/app.php';
-                $bootstrapper->setCustomBootstrapPath($bootstrapPath);
+                $bootstrapPath = $this->directiveTempDir . '/bootstrap/app.php';
+                $bootstrapperContext->setCustomBootstrapPath($bootstrapPath);
             }
 
-            return $bootstrapper;
+            return $bootstrapperContext;
         });
 
-        $directiveConfig = DirectiveConfig::default()->withDirectivesPath($this->directiveTempDir.'/app/Directives');
+        $directiveConfig = DirectiveConfig::default()->withDirectivesPath($this->directiveTempDir . '/app/Directives');
         $this->directiveContainer->instance(DirectiveConfig::class, $directiveConfig);
 
         $factory = new ContainerDirectiveFactory($this->directiveContainer);
         $parser = new DirectiveParserService;
         $hydrator = new DirectiveHydratorService($factory);
-        $laravelBootstrapper = $this->directiveContainer->make(LaravelBootstrapper::class);
-        $hydrator->setLaravelBootstrapper($laravelBootstrapper);
+        $laravelBootstrapperContext = $this->directiveContainer->make(LaravelBootstrapperContext::class);
+        $hydrator->setLaravelBootstrapper($laravelBootstrapperContext);
 
         $this->interaction = $this->directiveContainer->make(DirectiveInteractionService::class);
         $signatureValidator = $this->directiveContainer->make(SignatureValidationService::class);
@@ -154,7 +154,7 @@ trait InteractsWithDirectives
         $this->directiveRegistry = new TestDirectiveRegistry;
 
         $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $this->directiveRegistry);
-        $discovery->setLaravelBootstrapper($laravelBootstrapper);
+        $discovery->setLaravelBootstrapper($laravelBootstrapperContext);
 
         $renderer = new DirectiveRendererService($this->directiveContainer->make(RenderDispatcher::class));
         $signatureValidatorService = $this->directiveContainer->make(SignatureValidationService::class);
@@ -165,7 +165,7 @@ trait InteractsWithDirectives
             hydrator: $hydrator,
             renderer: $renderer,
         );
-        $executionService->setLaravelBootstrapper($laravelBootstrapper);
+        $executionService->setLaravelBootstrapper($laravelBootstrapperContext);
 
         $this->directiveKernel = new DirectiveKernel(
             $executionService,
@@ -181,18 +181,24 @@ trait InteractsWithDirectives
      */
     private function createLaravelStructure(): void
     {
-        $bootstrapDir = $this->directiveTempDir.'/bootstrap';
+        $bootstrapDir = $this->directiveTempDir . '/bootstrap';
         mkdir($bootstrapDir, 0777, true);
 
         $appPhp = <<<'PHP'
 <?php
 
-$app = new Illuminate\Foundation\Application(
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Support\Facades\Facade;
+
+$app = new Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
 $app->singleton(
-    Illuminate\Contracts\Http\Kernel::class,
+    Kernel::class,
     Illuminate\Foundation\Http\Kernel::class
 );
 
@@ -202,15 +208,17 @@ $app->singleton(
 );
 
 $app->singleton(
-    Illuminate\Contracts\Debug\ExceptionHandler::class,
-    Illuminate\Foundation\Exceptions\Handler::class
+    ExceptionHandler::class,
+    Handler::class
 );
+
+Facade::setFacadeApplication($app);
 
 return $app;
 PHP;
-        file_put_contents($bootstrapDir.'/app.php', $appPhp);
+        file_put_contents($bootstrapDir . '/app.php', $appPhp);
 
-        $configDir = $this->directiveTempDir.'/config';
+        $configDir = $this->directiveTempDir . '/config';
         mkdir($configDir, 0777, true);
 
         $configApp = <<<'PHP'
@@ -227,21 +235,45 @@ return [
     'faker_locale' => 'en_US',
     'key' => 'base64:' . base64_encode(random_bytes(32)),
     'cipher' => 'AES-256-CBC',
-    'providers' => [],
+    'providers' => [
+        Illuminate\Foundation\Providers\ArtisanServiceProvider::class,
+        Illuminate\Auth\AuthServiceProvider::class,
+        Illuminate\Broadcasting\BroadcastServiceProvider::class,
+        Illuminate\Bus\BusServiceProvider::class,
+        Illuminate\Cache\CacheServiceProvider::class,
+        Illuminate\Foundation\Providers\ConsoleSupportServiceProvider::class,
+        Illuminate\Cookie\CookieServiceProvider::class,
+        Illuminate\Database\DatabaseServiceProvider::class,
+        Illuminate\Encryption\EncryptionServiceProvider::class,
+        Illuminate\Filesystem\FilesystemServiceProvider::class,
+        Illuminate\Foundation\Providers\FoundationServiceProvider::class,
+        Illuminate\Hashing\HashServiceProvider::class,
+        Illuminate\Mail\MailServiceProvider::class,
+        Illuminate\Notifications\NotificationServiceProvider::class,
+        Illuminate\Pagination\PaginationServiceProvider::class,
+        Illuminate\Pipeline\PipelineServiceProvider::class,
+        Illuminate\Queue\QueueServiceProvider::class,
+        Illuminate\Redis\RedisServiceProvider::class,
+        Illuminate\Auth\Passwords\PasswordResetServiceProvider::class,
+        Illuminate\Session\SessionServiceProvider::class,
+        Illuminate\Translation\TranslationServiceProvider::class,
+        Illuminate\Validation\ValidationServiceProvider::class,
+        Illuminate\View\ViewServiceProvider::class,
+    ],
 ];
 PHP;
-        file_put_contents($configDir.'/app.php', $configApp);
+        file_put_contents($configDir . '/app.php', $configApp);
 
-        $storageDir = $this->directiveTempDir.'/storage';
+        $storageDir = $this->directiveTempDir . '/storage';
         mkdir($storageDir, 0777, true);
-        mkdir($storageDir.'/framework', 0777, true);
-        mkdir($storageDir.'/framework/views', 0777, true);
-        mkdir($storageDir.'/framework/cache', 0777, true);
-        mkdir($storageDir.'/logs', 0777, true);
+        mkdir($storageDir . '/framework', 0777, true);
+        mkdir($storageDir . '/framework/views', 0777, true);
+        mkdir($storageDir . '/framework/cache', 0777, true);
+        mkdir($storageDir . '/logs', 0777, true);
 
-        mkdir($this->directiveTempDir.'/app', 0777, true);
-        mkdir($this->directiveTempDir.'/app/Http', 0777, true);
-        mkdir($this->directiveTempDir.'/app/Models', 0777, true);
+        mkdir($this->directiveTempDir . '/app', 0777, true);
+        mkdir($this->directiveTempDir . '/app/Http', 0777, true);
+        mkdir($this->directiveTempDir . '/app/Models', 0777, true);
     }
 
     /**
@@ -251,10 +283,10 @@ PHP;
      */
     public function createApplication(): Application
     {
-        $app = require $this->directiveTempDir.'/bootstrap/app.php';
+        $app = require $this->directiveTempDir . '/bootstrap/app.php';
 
-        $app->useStoragePath($this->directiveTempDir.'/storage');
-        $app->instance('path.config', $this->directiveTempDir.'/config');
+        $app->useStoragePath($this->directiveTempDir . '/storage');
+        $app->instance('path.config', $this->directiveTempDir . '/config');
 
         return $app;
     }
@@ -456,7 +488,7 @@ PHP;
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir.'/'.$file;
+            $path = $dir . '/' . $file;
             if (is_dir($path)) {
                 $this->removeDirectory($path);
             } else {

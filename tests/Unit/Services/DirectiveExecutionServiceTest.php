@@ -9,6 +9,7 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Collections\ParsedArgumentCollection;
 use AndyDefer\Directive\Collections\ParsedOptionCollection;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
@@ -19,12 +20,12 @@ use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Services\HydrationService;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -42,7 +43,9 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     private DirectiveExecutionService $service;
 
-    protected LaravelBootstrapper $laravelBootstrapper;
+    protected LaravelBootstrapperContext $laravelBootstrapperContext;
+
+    private HydrationService $hydration;
 
     private string|false $originalDebug;
 
@@ -50,11 +53,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
     {
         parent::setUp();
 
+        $this->hydration = new HydrationService;
+
         $this->discovery = $this->createMock(DirectiveDiscoveryService::class);
         $this->parser = $this->createMock(DirectiveParserService::class);
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->renderer = $this->createMock(DirectiveRendererService::class);
-        $this->laravelBootstrapper = new LaravelBootstrapper;
+        $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
 
         $this->service = new DirectiveExecutionService(
             discovery: $this->discovery,
@@ -62,7 +67,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             hydrator: $this->hydrator,
             renderer: $this->renderer,
         );
-        $this->service->setLaravelBootstrapper($this->laravelBootstrapper);
+        $this->service->setLaravelBootstrapper($this->laravelBootstrapperContext);
 
         $this->originalDebug = getenv('DIRECTIVE_DEBUG');
     }
@@ -72,10 +77,10 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         if ($this->originalDebug === false) {
             putenv('DIRECTIVE_DEBUG');
         } else {
-            putenv('DIRECTIVE_DEBUG='.$this->originalDebug);
+            putenv('DIRECTIVE_DEBUG=' . $this->originalDebug);
         }
 
-        $this->laravelBootstrapper->reset();
+        $this->laravelBootstrapperContext->reset();
         parent::tearDown();
     }
 
@@ -123,6 +128,14 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
     }
 
+    private function createExecutionRecord(string $signature, array $arguments = []): DirectiveExecutionRecord
+    {
+        return $this->hydration->hydrate(DirectiveExecutionRecord::class, [
+            'signature' => $signature,
+            'arguments' => $arguments,
+        ]);
+    }
+
     // ==================== Not Found Tests ====================
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
@@ -137,10 +150,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderNotFound')
             ->with('unknown-cmd');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'unknown-cmd',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('unknown-cmd', []);
 
         $result = $this->service->execute($record);
 
@@ -178,10 +188,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderSuccess')
             ->with('Directive executed successfully');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-concrete',
-            'arguments' => ['John'],
-        ]);
+        $record = $this->createExecutionRecord('test-concrete', ['John']);
 
         $result = $this->service->execute($record);
 
@@ -217,10 +224,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderError')
             ->with('Directive execution failed');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-concrete',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('test-concrete', []);
 
         $result = $this->service->execute($record);
 
@@ -256,10 +260,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderSuccess')
             ->with('Directive executed successfully');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'tpkg',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('tpkg', []);
 
         $result = $this->service->execute($record);
 
@@ -273,10 +274,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderHelp');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => '--help',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('--help', []);
 
         $result = $this->service->execute($record);
 
@@ -288,10 +286,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderHelp');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => '-h',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('-h', []);
 
         $result = $this->service->execute($record);
 
@@ -310,10 +305,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderList')
             ->with($directives);
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => '--list',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('--list', []);
 
         $result = $this->service->execute($record);
 
@@ -332,10 +324,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderList')
             ->with($directives);
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => '-l',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('-l', []);
 
         $result = $this->service->execute($record);
 
@@ -347,10 +336,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderVersion');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => '--version',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('--version', []);
 
         $result = $this->service->execute($record);
 
@@ -362,10 +348,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderVersion');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => '-v',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('-v', []);
 
         $result = $this->service->execute($record);
 
@@ -400,10 +383,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-concrete',
-            'arguments' => ['John', '--role=admin', '--verbose'],
-        ]);
+        $record = $this->createExecutionRecord('test-concrete', ['John', '--role=admin', '--verbose']);
 
         $this->service->execute($record);
     }
@@ -438,16 +418,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
 
-        $mockBootstrapper = $this->createMock(LaravelBootstrapper::class);
-        $mockBootstrapper->expects($this->once())
+        $mockBootstrapperContext = $this->createMock(LaravelBootstrapperContext::class);
+        $mockBootstrapperContext->expects($this->once())
             ->method('bootstrap');
 
-        $this->service->setLaravelBootstrapper($mockBootstrapper);
+        $this->service->setLaravelBootstrapper($mockBootstrapperContext);
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-laravel',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('test-laravel', []);
 
         $result = $this->service->execute($record);
 
@@ -475,10 +452,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderError')
             ->with($errorMessage);
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-concrete',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('test-concrete', []);
 
         $result = $this->service->execute($record);
 
@@ -504,10 +478,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderError')
             ->with($errorMessage);
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-concrete',
-            'arguments' => ['arg1', 'arg2', 'arg3'],
-        ]);
+        $record = $this->createExecutionRecord('test-concrete', ['arg1', 'arg2', 'arg3']);
 
         $result = $this->service->execute($record);
 
@@ -533,10 +504,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderError')
             ->with($errorMessage);
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-concrete',
-            'arguments' => [],
-        ]);
+        $record = $this->createExecutionRecord('test-concrete', []);
 
         $result = $this->service->execute($record);
 
@@ -562,10 +530,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             ->method('renderError')
             ->with($errorMessage);
 
-        $record = DirectiveExecutionRecord::from([
-            'signature' => 'test-concrete',
-            'arguments' => ['John'],
-        ]);
+        $record = $this->createExecutionRecord('test-concrete', ['John']);
 
         $result = $this->service->execute($record);
 
