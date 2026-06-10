@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
+use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
 use AndyDefer\Directive\Configs\FileCreatorConfig;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
@@ -141,14 +143,14 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerSignatureValidation(): void
     {
         $this->app->singleton(SignatureValidationService::class, function ($app) {
-            return new SignatureValidationService;
+            return new SignatureValidationService(new EnvSignatureValidationConfig);
         });
     }
 
     private function registerNamingService(): void
     {
         $this->app->singleton(DirectiveNamingService::class, function ($app) {
-            return new DirectiveNamingService;
+            return new DirectiveNamingService(new EnvDirectiveNamingConfig);
         });
     }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
+use AndyDefer\Directive\Contracts\Configs\DirectiveNamingConfigInterface;
+
 /**
  * Service for generating directive class names and signatures.
  *
@@ -13,16 +15,14 @@ namespace AndyDefer\Directive\Services;
  */
 final class DirectiveNamingService
 {
-    private const CLASS_SUFFIX = 'Directive';
-
-    private const OPTION_PLACEHOLDER = '{--option}';
-
-    private const DEFAULT_DESCRIPTION = 'Generated directive for {{signature}}';
+    public function __construct(
+        private readonly DirectiveNamingConfigInterface $config,
+    ) {}
 
     /**
      * Generate class name from directive name.
      *
-     * Converts kebab-case to PascalCase and appends 'Directive'.
+     * Converts kebab-case to PascalCase and appends suffix.
      *
      * @param  string  $name  The directive name in kebab-case (e.g., 'user-create')
      * @return string Generated class name in PascalCase with suffix
@@ -42,7 +42,7 @@ final class DirectiveNamingService
             $className .= $this->capitalizeSegment($part);
         }
 
-        return $className.self::CLASS_SUFFIX;
+        return $className . $this->config->classSuffix();
     }
 
     /**
@@ -53,7 +53,7 @@ final class DirectiveNamingService
      */
     public function generateSignatureWithOption(string $name): string
     {
-        return $name.' '.self::OPTION_PLACEHOLDER;
+        return $name . ' ' . $this->config->optionPlaceholder();
     }
 
     /**
@@ -63,7 +63,7 @@ final class DirectiveNamingService
      * - {{class}}     : Directive class name
      * - {{signature}} : Directive signature with option placeholder
      * - {{description}}: Directive description
-     * - {{date}}      : Current date and time (Y-m-d H:i:s)
+     * - {{date}}      : Current date and time
      *
      * @param  string  $stub  The stub template content
      * @param  string  $className  The directive class name
@@ -84,7 +84,7 @@ final class DirectiveNamingService
     /**
      * Extract base name from class name.
      *
-     * Removes the 'Directive' suffix and converts PascalCase to kebab-case.
+     * Removes the suffix and converts PascalCase to kebab-case.
      *
      * @param  string  $className  The directive class name (e.g., 'UserCreateDirective')
      * @return string Base directive name in kebab-case
@@ -96,11 +96,13 @@ final class DirectiveNamingService
      */
     public function extractBaseName(string $className): string
     {
-        if (! str_ends_with($className, self::CLASS_SUFFIX)) {
+        $suffix = $this->config->classSuffix();
+
+        if (!str_ends_with($className, $suffix)) {
             return $this->convertToKebabCase($className);
         }
 
-        $withoutSuffix = substr($className, 0, -strlen(self::CLASS_SUFFIX));
+        $withoutSuffix = substr($className, 0, -strlen($suffix));
 
         return $this->convertToKebabCase($withoutSuffix);
     }
@@ -120,8 +122,6 @@ final class DirectiveNamingService
         string $signature,
         string $description = ''
     ): string {
-        $finalDescription = $description ?: $this->getDefaultDescription($signature);
-
         return $this->replaceStubVariables($template, $className, $signature);
     }
 
@@ -170,7 +170,8 @@ final class DirectiveNamingService
      */
     private function getDefaultDescription(string $signature): string
     {
-        return str_replace('{{signature}}', $signature, self::DEFAULT_DESCRIPTION);
+        $template = $this->config->defaultDescriptionTemplate();
+        return str_replace('{{signature}}', $signature, $template);
     }
 
     /**
@@ -178,6 +179,6 @@ final class DirectiveNamingService
      */
     private function getCurrentDateTime(): string
     {
-        return date('Y-m-d H:i:s');
+        return date($this->config->dateFormat());
     }
 }

@@ -30,7 +30,6 @@ use InvalidArgumentException;
 final class DirectiveTestingService
 {
     private DirectiveTestingContext $context;
-    private bool $isIntegratedMode = false;
 
     public function __construct(
         ?object $application = null,
@@ -46,7 +45,6 @@ final class DirectiveTestingService
 
         // Mode intégré : on a une application Laravel existante
         if ($application !== null) {
-            $this->isIntegratedMode = true;
             $this->context->setIntegratedMode(true);
             $this->context->setLaravelApp($application);
             $this->context->setBootLaravel(true);
@@ -161,7 +159,7 @@ final class DirectiveTestingService
         $directive = $this->context->getClosureRegistry()->get($className);
 
         if ($directive !== null) {
-            if ($directive->shouldBootLaravel() && !$this->isIntegratedMode && !$this->context->isInitialized()) {
+            if ($directive->shouldBootLaravel() && !$this->context->isIntegratedMode() && !$this->context->isInitialized()) {
                 $this->initializeIsolatedEnvironment();
             }
             return $this->executeDirectly($directive, $arguments);
@@ -171,7 +169,7 @@ final class DirectiveTestingService
         $directive = $this->context->getRegistry()->getDirective($className);
 
         if ($directive !== null) {
-            if ($directive->shouldBootLaravel() && !$this->isIntegratedMode && !$this->context->isInitialized()) {
+            if ($directive->shouldBootLaravel() && !$this->context->isIntegratedMode() && !$this->context->isInitialized()) {
                 $this->initializeIsolatedEnvironment();
             }
             return $this->executeDirectly($directive, $arguments);

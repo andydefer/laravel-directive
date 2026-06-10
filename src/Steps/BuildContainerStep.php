@@ -7,6 +7,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Steps;
 
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
+use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
@@ -67,8 +69,8 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $context->setInteraction($interaction);
 
             // Register validation and naming services
-            $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService);
-            $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService);
+            $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService(new EnvSignatureValidationConfig));
+            $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService(new EnvDirectiveNamingConfig));
 
             // Register Laravel bootstrapper context
             $container->singleton(LaravelBootstrapperContext::class, function () use ($bootLaravel, $tempDir) {

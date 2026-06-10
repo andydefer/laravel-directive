@@ -7,6 +7,8 @@ namespace AndyDefer\Directive\Testing;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
+use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
@@ -122,11 +124,11 @@ trait InteractsWithDirectives
         });
 
         $this->directiveContainer->singleton(SignatureValidationService::class, function () {
-            return new SignatureValidationService;
+            return new SignatureValidationService(new EnvSignatureValidationConfig);
         });
 
         $this->directiveContainer->singleton(DirectiveNamingService::class, function () {
-            return new DirectiveNamingService;
+            return new DirectiveNamingService(new EnvDirectiveNamingConfig);
         });
 
         $this->directiveContainer->singleton(LaravelBootstrapperContext::class, function () {

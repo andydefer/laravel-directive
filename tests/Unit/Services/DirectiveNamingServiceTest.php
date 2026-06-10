@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Tests\UnitTestCase;
 
@@ -17,7 +18,7 @@ final class DirectiveNamingServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveNamingService;
+        $this->service = new DirectiveNamingService(new EnvDirectiveNamingConfig);
     }
 
     // ==================== Generate Class Name Tests ====================

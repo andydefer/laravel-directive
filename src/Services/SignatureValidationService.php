@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
+use AndyDefer\Directive\Contracts\Configs\SignatureValidationConfigInterface;
 use AndyDefer\Directive\Enums\ShortOption;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 
@@ -20,15 +21,9 @@ use AndyDefer\Directive\Records\ValidationResultRecord;
  */
 class SignatureValidationService
 {
-    private const PATTERN_VALID_NAME = '/^[a-zA-Z][a-zA-Z0-9-]*$/';
-
-    private const ERROR_EMPTY = 'Directive name cannot be empty';
-
-    private const ERROR_INVALID_FORMAT = 'Invalid directive name: "%s". Use only letters, numbers, and hyphens. Must start with a letter. No spaces. Examples: user-create, clean-log, db-migrate-fresh';
-
-    private const ERROR_CONSECUTIVE_HYPHENS = 'Invalid directive name: "%s". Cannot have consecutive hyphens';
-
-    private const ERROR_TRAILING_HYPHEN = 'Invalid directive name: "%s". Cannot end with a hyphen';
+    public function __construct(
+        private readonly SignatureValidationConfigInterface $config,
+    ) {}
 
     /**
      * Validate a directive signature.
@@ -39,7 +34,7 @@ class SignatureValidationService
     public function validate(string $signature): ValidationResultRecord
     {
         if ($this->isEmptySignature($signature)) {
-            return $this->createInvalidResult(self::ERROR_EMPTY);
+            return $this->createInvalidResult($this->config->errorEmpty());
         }
 
         if ($this->isSpecialOption($signature)) {
@@ -47,15 +42,15 @@ class SignatureValidationService
         }
 
         if (! $this->matchesAllowedPattern($signature)) {
-            return $this->createInvalidResult(sprintf(self::ERROR_INVALID_FORMAT, $signature));
+            return $this->createInvalidResult(sprintf($this->config->errorInvalidFormat(), $signature));
         }
 
         if ($this->hasConsecutiveHyphens($signature)) {
-            return $this->createInvalidResult(sprintf(self::ERROR_CONSECUTIVE_HYPHENS, $signature));
+            return $this->createInvalidResult(sprintf($this->config->errorConsecutiveHyphens(), $signature));
         }
 
         if ($this->endsWithHyphen($signature)) {
-            return $this->createInvalidResult(sprintf(self::ERROR_TRAILING_HYPHEN, $signature));
+            return $this->createInvalidResult(sprintf($this->config->errorTrailingHyphen(), $signature));
         }
 
         return $this->createValidResult();
@@ -82,7 +77,7 @@ class SignatureValidationService
      */
     private function isLongOption(string $signature): bool
     {
-        return str_starts_with($signature, '--');
+        return preg_match($this->config->longOptionPattern(), $signature) === 1;
     }
 
     /**
@@ -90,7 +85,7 @@ class SignatureValidationService
      */
     private function matchesAllowedPattern(string $signature): bool
     {
-        return (bool) preg_match(self::PATTERN_VALID_NAME, $signature);
+        return (bool) preg_match($this->config->validNamePattern(), $signature);
     }
 
     /**
@@ -98,7 +93,7 @@ class SignatureValidationService
      */
     private function hasConsecutiveHyphens(string $signature): bool
     {
-        return str_contains($signature, '--');
+        return str_contains($signature, $this->config->longOptionPrefix());
     }
 
     /**
