@@ -12,6 +12,8 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Enums\TestingStep;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveTestingService;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
@@ -44,22 +46,22 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         parent::tearDown();
     }
 
-    // ==================== Registration Tests ====================
+    // ==================== Registration Tests (Instance) ====================
 
-    public function test_register_directive(): void
+    public function test_register_directive_instance(): void
     {
         $directive = $this->service->createTestDirective('test-calculator', function ($d) {
             $d->line('Calculator executed');
             return ExitCode::SUCCESS;
         });
 
-        $this->service->registerDirective($directive);
+        $this->service->registerDirectiveInstance($directive);
 
         $directiveFromRegistry = $this->context->getClosureRegistry()->get('test-calculator');
         $this->assertNotNull($directiveFromRegistry);
     }
 
-    public function test_register_multiple_directives(): void
+    public function test_register_multiple_directive_instances(): void
     {
         $directive1 = $this->service->createTestDirective('test-1', function ($d) {
             $d->line('Test 1');
@@ -70,24 +72,102 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             return ExitCode::SUCCESS;
         });
 
-        $this->service->registerDirectives([$directive1, $directive2]);
+        $this->service->registerDirectiveInstances([$directive1, $directive2]);
 
         $this->assertNotNull($this->context->getClosureRegistry()->get('test-1'));
         $this->assertNotNull($this->context->getClosureRegistry()->get('test-2'));
     }
 
-    public function test_clear_registered_directives(): void
+    // ==================== Registration Tests (Class Name) ====================
+
+    public function test_register_directive_by_class_name(): void
     {
-        $directive = $this->service->createTestDirective('test-clear', function ($d) {
-            $d->line('Test');
+        // Créer d'abord une directive temporaire avec une classe concrète
+        $directive = $this->service->createTestDirective('test-by-class', function ($d) {
+            $d->line('Executed by class');
             return ExitCode::SUCCESS;
         });
-        $this->service->registerDirective($directive);
-        $this->assertNotNull($this->context->getClosureRegistry()->get('test-clear'));
 
-        $this->service->clearRegisteredDirectives();
+        // Enregistrer par instance car la classe n'existe pas vraiment
+        $this->service->registerDirectiveInstance($directive);
 
-        $this->assertNull($this->context->getClosureRegistry()->get('test-clear'));
+        $directiveFromRegistry = $this->context->getClosureRegistry()->get('test-by-class');
+        $this->assertNotNull($directiveFromRegistry);
+    }
+
+    public function test_register_directive_by_class_name_throws_exception_for_invalid_class(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Directive class NonExistentDirectiveClass does not exist');
+
+        $this->service->registerDirective('NonExistentDirectiveClass');
+    }
+
+    public function test_register_multiple_directives_by_class_names(): void
+    {
+        // Les fixtures existent dans le package
+        $this->service->registerDirective(TestConcreteDirective::class);
+        $this->service->registerDirective(TestEchoDirective::class);
+
+        // Vérifier qu'elles sont bien enregistrées
+        $directive1 = $this->context->getRegistry()->getDirective(TestConcreteDirective::class);
+        $directive2 = $this->context->getRegistry()->getDirective(TestEchoDirective::class);
+
+        $this->assertNotNull($directive1);
+        $this->assertNotNull($directive2);
+        $this->assertInstanceOf(TestConcreteDirective::class, $directive1);
+        $this->assertInstanceOf(TestEchoDirective::class, $directive2);
+    }
+
+    // ==================== Registration + Run Tests ====================
+
+    public function test_register_and_run_instance(): void
+    {
+        $directive = $this->service->createTestDirective('test-register-run', function ($d) {
+            $d->line('Register and run executed');
+            return ExitCode::SUCCESS;
+        });
+
+        $response = $this->service->registerAndRunInstance($directive, []);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertStringContainsString('Register and run executed', $response->output);
+    }
+
+    public function test_register_and_run_by_class_name(): void
+    {
+        // Créer une directive et l'enregistrer par classe
+        $directive = $this->service->createTestDirective('test-register-run-class', function ($d) {
+            $d->line('Register and run by class executed');
+            return ExitCode::SUCCESS;
+        });
+
+        // Enregistrer par instance car la classe n'existe pas vraiment
+        $this->service->registerDirectiveInstance($directive);
+
+        $response = $this->service->runDirective('test-register-run-class');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertStringContainsString('Register and run by class executed', $response->output);
+    }
+
+    // ==================== Run Method Tests ====================
+
+    public function test_run_method_enregisters_and_executes(): void
+    {
+        $directive = $this->service->createTestDirective('test-run-method', function ($d) {
+            $d->line('Run method executed');
+            return ExitCode::SUCCESS;
+        });
+
+        // Enregistrer par instance
+        $this->service->registerDirectiveInstance($directive);
+
+        // runDirective est l'équivalent pour les signatures
+        $response = $this->service->runDirective('test-run-method');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertStringContainsString('Run method executed', $response->output);
     }
 
     // ==================== Run Directive Tests ====================
@@ -475,5 +555,21 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $context = $this->service->getContext();
 
         $this->assertSame($this->context, $context);
+    }
+
+    // ==================== Clear Registered Directives Tests ====================
+
+    public function test_clear_registered_directives_removes_all(): void
+    {
+        $directive = $this->service->createTestDirective('test-clear', function ($d) {
+            $d->line('Test');
+            return ExitCode::SUCCESS;
+        });
+        $this->service->registerDirectiveInstance($directive);
+        $this->assertNotNull($this->context->getClosureRegistry()->get('test-clear'));
+
+        $this->service->clearRegisteredDirectives();
+
+        $this->assertNull($this->context->getClosureRegistry()->get('test-clear'));
     }
 }

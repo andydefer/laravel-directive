@@ -1,12 +1,12 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 16:37:21 WAT*
+*Generated: mer. 10 juin 2026 17:22:06 WAT*
 
 
-  ⨯...............................................⨯.⨯...⨯⨯......⨯.⨯⨯...⨯...⨯...⨯....................⨯..........⨯...⨯.⨯⨯...⨯..⨯⨯⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯⨯....⨯⨯⨯⨯................⨯.
-  ...⨯⨯.⨯..⨯⨯.⨯...⨯⨯...⨯⨯.....⨯......
+  ⨯...............................................⨯.⨯...⨯⨯......⨯.⨯⨯...⨯...⨯...⨯....................⨯...⨯.......⨯...⨯.⨯⨯...⨯..⨯⨯⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯⨯....⨯⨯⨯⨯................⨯
+  ....⨯⨯.⨯..⨯⨯.⨯...⨯⨯...⨯⨯.....⨯......
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................ 215 files, 44 style issues  
+    FAIL   ................................................................................................................................................ 216 files, 45 style issues  
   ⨯ src/AbstractDirective.php                                                                                               braces_position, no_unused_imports, single_line_empty_body  
   ⨯ src/Cli/CliRunner.php                                                                        class_attributes_separation, new_with_parentheses, function_declaration, concat_space  
   ⨯ src/Configs/EnvDirectiveConfig.php                                                                                                                                    concat_space  
@@ -15,6 +15,7 @@
   ⨯ src/Contexts/DirectiveTestingContext.php                                                                                                 class_attributes_separation, concat_space  
   ⨯ src/Contexts/LaravelBootstrapperContext.php class_attributes_separation, concat_space, no_trailing_whitespace_in_comment, unary_operator_spaces, not_operator_with_successor_spac…  
   ⨯ src/Contracts/Configs/DirectiveConfigInterface.php                                                                                               no_trailing_whitespace_in_comment  
+  ⨯ src/Contracts/DirectiveTestingServiceInterface.php                                                        no_superfluous_phpdoc_tags, phpdoc_separation, phpdoc_trim, phpdoc_align  
   ⨯ src/DirectiveServiceProvider.php                                                                                       fully_qualified_strict_types, concat_space, ordered_imports  
   ⨯ src/Services/ArgumentSplitterService.php                                                                      braces_position, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Services/DirectiveDiscoveryService.php                                                            concat_space, not_operator_with_successor_space, blank_line_before_statement  
