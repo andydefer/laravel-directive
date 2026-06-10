@@ -4,16 +4,26 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive;
 
+use AndyDefer\Directive\Configs\DirectiveParserConfig;
+use AndyDefer\Directive\Configs\DirectiveTestingConfig;
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
 use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
 use AndyDefer\Directive\Configs\FileCreatorConfig;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
+use AndyDefer\Directive\Contracts\Configs\DirectiveNamingConfigInterface;
+use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
+use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
+use AndyDefer\Directive\Contracts\Configs\FileCreatorConfigInterface;
+use AndyDefer\Directive\Contracts\Configs\SignatureValidationConfigInterface;
 use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
+use AndyDefer\Directive\Services\ArgumentApplierService;
+use AndyDefer\Directive\Services\ArgumentSplitterService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -23,7 +33,16 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\FileCreatorService;
 use AndyDefer\Directive\Services\FileSystemService;
+use AndyDefer\Directive\Services\OptionParserService;
+use AndyDefer\Directive\Services\ParameterExtractorService;
+use AndyDefer\Directive\Services\ParameterOrderValidatorService;
 use AndyDefer\Directive\Services\SignatureValidationService;
+use AndyDefer\Directive\Steps\BootstrapLaravelStep;
+use AndyDefer\Directive\Steps\BuildContainerStep;
+use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
+use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
+use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
+use AndyDefer\Directive\Steps\StartDatabaseStep;
 use AndyDefer\DomainStructures\Services\EnumService;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,21 +50,23 @@ final class DirectiveServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->registerConfig();
-        $this->registerLaravelBootstrapperContext();
-        $this->registerDirectiveDiscoveryContext();
-        $this->registerParser();
-        $this->registerHydrator();
-        $this->registerDiscovery();
-        $this->registerRenderer();
-        $this->registerSignatureValidation();
-        $this->registerNamingService();
-        $this->registerTasks();
-        $this->registerInputTask();
-        $this->registerInteractionService();
-        $this->registerExecution();
-        $this->registerFileCreator();
-        $this->registerKernel();
+        // Configurations
+        $this->registerConfigs();
+
+        // Contexts
+        $this->registerContexts();
+
+        // Parser components
+        $this->registerParserComponents();
+
+        // Core services
+        $this->registerCoreServices();
+
+        // Dispatchers
+        $this->registerDispatchers();
+
+        // Steps for testing
+        $this->registerTestingSteps();
     }
 
     public function boot(): void
@@ -55,46 +76,155 @@ final class DirectiveServiceProvider extends ServiceProvider
         ], 'directive-config');
     }
 
-    private function registerConfig(): void
+    // ==================== Configurations ====================
+
+    private function registerConfigs(): void
     {
+        // Directive config
         $this->app->singleton(DirectiveConfigInterface::class, function ($app) {
             return new EnvDirectiveConfig;
         });
+
+        // Directive naming config
+        $this->app->singleton(DirectiveNamingConfigInterface::class, function ($app) {
+            return new EnvDirectiveNamingConfig;
+        });
+
+        // Signature validation config
+        $this->app->singleton(SignatureValidationConfigInterface::class, function ($app) {
+            return new EnvSignatureValidationConfig;
+        });
+
+        // Directive parser config
+        $this->app->singleton(DirectiveParserConfigInterface::class, function ($app) {
+            return new DirectiveParserConfig;
+        });
+
+        // File creator config
+        $this->app->singleton(FileCreatorConfigInterface::class, function ($app) {
+            return new FileCreatorConfig(new EnumService);
+        });
+
+        // Directive testing config (implements both interfaces)
+        $this->app->singleton(DirectiveTestingConfigInterface::class, function ($app) {
+            return new DirectiveTestingConfig;
+        });
+
+        // Database testing config (same instance as DirectiveTestingConfig)
+        $this->app->singleton(DatabaseTestingConfigInterface::class, function ($app) {
+            return $app->make(DirectiveTestingConfigInterface::class);
+        });
     }
 
-    private function registerLaravelBootstrapperContext(): void
+    // ==================== Contexts ====================
+
+    private function registerContexts(): void
     {
         $this->app->singleton(LaravelBootstrapperContext::class, function ($app) {
             return new LaravelBootstrapperContext;
         });
-    }
 
-    private function registerDirectiveDiscoveryContext(): void
-    {
         $this->app->singleton(DirectiveDiscoveryContext::class, function ($app) {
             return new DirectiveDiscoveryContext;
         });
     }
 
-    private function registerParser(): void
+    // ==================== Parser Components ====================
+
+    private function registerParserComponents(): void
     {
+        // ParameterParserContext avec ses stratégies (via buildParserContext)
+        $this->app->singleton(\AndyDefer\Directive\Contexts\ParameterParserContext::class, function ($app) {
+            $context = new \AndyDefer\Directive\Contexts\ParameterParserContext;
+
+            $context->addStrategy(new \AndyDefer\Directive\Strategies\RequiredArgumentStrategy);
+            $context->addStrategy(new \AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy);
+            $context->addStrategy(new \AndyDefer\Directive\Strategies\OptionalArgumentStrategy);
+            $context->addStrategy(new \AndyDefer\Directive\Strategies\VariadicArgumentStrategy);
+            $context->addStrategy(new \AndyDefer\Directive\Strategies\OptionStrategy);
+
+            return $context;
+        });
+
+        // ParameterOrderValidatorService
+        $this->app->singleton(ParameterOrderValidatorService::class, function ($app) {
+            return new ParameterOrderValidatorService(
+                $app->make(\AndyDefer\Directive\Contexts\ParameterParserContext::class)
+            );
+        });
+
+        // ParameterExtractorService
+        $this->app->singleton(ParameterExtractorService::class, function ($app) {
+            return new ParameterExtractorService(
+                $app->make(\AndyDefer\Directive\Contexts\ParameterParserContext::class)
+            );
+        });
+
+        // OptionParserService
+        $this->app->singleton(OptionParserService::class, function ($app) {
+            return new OptionParserService($app->make(DirectiveParserConfigInterface::class));
+        });
+
+        // ArgumentSplitterService
+        $this->app->singleton(ArgumentSplitterService::class, function ($app) {
+            return new ArgumentSplitterService($app->make(DirectiveParserConfigInterface::class));
+        });
+
+        // ArgumentApplierService
+        $this->app->singleton(ArgumentApplierService::class, function ($app) {
+            return new ArgumentApplierService;
+        });
+
+        // DirectiveParserService
         $this->app->singleton(DirectiveParserService::class, function ($app) {
-            return new DirectiveParserService;
+            return new DirectiveParserService($app->make(DirectiveParserConfigInterface::class));
         });
     }
 
-    private function registerHydrator(): void
+    // ==================== Core Services ====================
+
+    private function registerCoreServices(): void
     {
+        // FileSystemInterface
+        $this->app->bind(FileSystemInterface::class, function ($app) {
+            return new FileSystemService;
+        });
+
+        // FileCreatorService
+        $this->app->singleton(FileCreatorService::class, function ($app) {
+            return new FileCreatorService(
+                config: $app->make(FileCreatorConfigInterface::class),
+                filesystem: $app->make(FileSystemInterface::class),
+            );
+        });
+
+        // SignatureValidationService
+        $this->app->singleton(SignatureValidationService::class, function ($app) {
+            return new SignatureValidationService($app->make(SignatureValidationConfigInterface::class));
+        });
+
+        // DirectiveNamingService
+        $this->app->singleton(DirectiveNamingService::class, function ($app) {
+            return new DirectiveNamingService($app->make(DirectiveNamingConfigInterface::class));
+        });
+
+        // DirectiveInteractionService
+        $this->app->singleton(DirectiveInteractionService::class, function ($app) {
+            return new DirectiveInteractionService(
+                renderDispatcher: $app->make(RenderDispatcher::class),
+                inputDispatcher: $app->make(InputDispatcher::class),
+            );
+        });
+
+        // DirectiveHydratorService
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
             return new DirectiveHydratorService(
                 laravelBootstrapperContext: $app->make(LaravelBootstrapperContext::class),
                 interaction: $app->make(DirectiveInteractionService::class),
             );
         });
-    }
 
-    private function registerDiscovery(): void
-    {
+        // DirectiveDiscoveryService
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
             return new DirectiveDiscoveryService(
                 config: $app->make(DirectiveConfigInterface::class),
@@ -104,64 +234,15 @@ final class DirectiveServiceProvider extends ServiceProvider
                 loader: null,
             );
         });
-    }
 
-    private function registerRenderer(): void
-    {
+        // DirectiveRendererService
         $this->app->singleton(DirectiveRendererService::class, function ($app) {
             return new DirectiveRendererService(
                 renderDispatcher: $app->make(RenderDispatcher::class),
             );
         });
-    }
 
-    private function registerSignatureValidation(): void
-    {
-        $this->app->singleton(SignatureValidationService::class, function ($app) {
-            return new SignatureValidationService(new EnvSignatureValidationConfig);
-        });
-    }
-
-    private function registerNamingService(): void
-    {
-        $this->app->singleton(DirectiveNamingService::class, function ($app) {
-            return new DirectiveNamingService(new EnvDirectiveNamingConfig);
-        });
-    }
-
-    private function registerTasks(): void
-    {
-        $tasks = [
-            RenderDispatcher::class,
-            InputDispatcher::class,
-        ];
-
-        foreach ($tasks as $task) {
-            $this->app->singleton($task, function ($app) use ($task) {
-                return new $task;
-            });
-        }
-    }
-
-    private function registerInputTask(): void
-    {
-        $this->app->singleton(InputDispatcher::class, function ($app) {
-            return new InputDispatcher;
-        });
-    }
-
-    private function registerInteractionService(): void
-    {
-        $this->app->singleton(DirectiveInteractionService::class, function ($app) {
-            return new DirectiveInteractionService(
-                renderDispatcher: $app->make(RenderDispatcher::class),
-                inputDispatcher: $app->make(InputDispatcher::class),
-            );
-        });
-    }
-
-    private function registerExecution(): void
-    {
+        // DirectiveExecutionService
         $this->app->singleton(DirectiveExecutionService::class, function ($app) {
             return new DirectiveExecutionService(
                 discovery: $app->make(DirectiveDiscoveryService::class),
@@ -171,28 +252,8 @@ final class DirectiveServiceProvider extends ServiceProvider
                 laravelBootstrapperContext: $app->make(LaravelBootstrapperContext::class),
             );
         });
-    }
 
-    private function registerFileCreator(): void
-    {
-        $this->app->bind(FileSystemInterface::class, function ($app) {
-            return new FileSystemService;
-        });
-
-        $this->app->singleton(FileCreatorConfig::class, function ($app) {
-            return new FileCreatorConfig(new EnumService);
-        });
-
-        $this->app->singleton(FileCreatorService::class, function ($app) {
-            return new FileCreatorService(
-                config: $app->make(FileCreatorConfig::class),
-                filesystem: $app->make(FileSystemInterface::class),
-            );
-        });
-    }
-
-    private function registerKernel(): void
-    {
+        // DirectiveKernel
         $this->app->singleton(DirectiveKernel::class, function ($app) {
             return new DirectiveKernel(
                 service: $app->make(DirectiveExecutionService::class),
@@ -202,8 +263,45 @@ final class DirectiveServiceProvider extends ServiceProvider
         });
     }
 
-    private function isLaravelConfigAvailable(object $app): bool
+    // ==================== Dispatchers ====================
+
+    private function registerDispatchers(): void
     {
-        return $app->has('config') && $app['config']->has('directive');
+        $this->app->singleton(RenderDispatcher::class, function ($app) {
+            return new RenderDispatcher;
+        });
+
+        $this->app->singleton(InputDispatcher::class, function ($app) {
+            return new InputDispatcher;
+        });
+    }
+
+    // ==================== Testing Steps ====================
+
+    private function registerTestingSteps(): void
+    {
+        $this->app->singleton(CreateTempDirectoryStep::class, function ($app) {
+            return new CreateTempDirectoryStep;
+        });
+
+        $this->app->singleton(ChangeToTempDirectoryStep::class, function ($app) {
+            return new ChangeToTempDirectoryStep;
+        });
+
+        $this->app->singleton(CreateLaravelStructureStep::class, function ($app) {
+            return new CreateLaravelStructureStep;
+        });
+
+        $this->app->singleton(BootstrapLaravelStep::class, function ($app) {
+            return new BootstrapLaravelStep;
+        });
+
+        $this->app->singleton(BuildContainerStep::class, function ($app) {
+            return new BuildContainerStep;
+        });
+
+        $this->app->singleton(StartDatabaseStep::class, function ($app) {
+            return new StartDatabaseStep($app->make(DatabaseTestingConfigInterface::class));
+        });
     }
 }

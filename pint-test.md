@@ -1,5 +1,5 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 14:53:40 WAT*
+*Generated: mer. 10 juin 2026 15:10:10 WAT*
 
 
   ⨯...............................................⨯.⨯...⨯⨯......⨯.⨯⨯...⨯...⨯...⨯....................⨯..........⨯...⨯.⨯⨯...⨯..⨯⨯⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯⨯....⨯⨯⨯⨯................⨯.
@@ -15,7 +15,7 @@
   ⨯ src/Contexts/DirectiveTestingContext.php                                                                                                 class_attributes_separation, concat_space  
   ⨯ src/Contexts/LaravelBootstrapperContext.php class_attributes_separation, concat_space, no_trailing_whitespace_in_comment, unary_operator_spaces, not_operator_with_successor_spac…  
   ⨯ src/Contracts/Configs/DirectiveConfigInterface.php                                                                                               no_trailing_whitespace_in_comment  
-  ⨯ src/DirectiveServiceProvider.php                                                                                                                                      concat_space  
+  ⨯ src/DirectiveServiceProvider.php                                                                                       fully_qualified_strict_types, concat_space, ordered_imports  
   ⨯ src/Services/ArgumentSplitterService.php                                                                      braces_position, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Services/DirectiveDiscoveryService.php                                                            concat_space, not_operator_with_successor_space, blank_line_before_statement  
   ⨯ src/Services/DirectiveExecutionService.php                                                              braces_position, not_operator_with_successor_space, single_line_empty_body  
