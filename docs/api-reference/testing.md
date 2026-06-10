@@ -229,6 +229,24 @@ public function test_greet_directive(): void
 
 ## Tests en mode intégré (avec Laravel)
 
+## ⚠️ Prérequis important : Enregistrement des directives dans le conteneur
+
+Pour que `DirectiveTestingService` puisse instancier automatiquement vos directives via `registerDirective(string $class)` ou `run(string $class)`, vos directives doivent être **enregistrées dans le conteneur de services**. En mode intégré (avec Laravel), le service utilise `$application->make($class)` qui nécessite que la directive soit bindée dans le conteneur. La meilleure pratique est de créer un **Service Provider** dédié où vous enregistrez toutes vos directives en tant que singletons ou liaisons. Sans cet enregistrement, l'instanciation échouera car le conteneur ne saura pas comment résoudre les dépendances du constructeur de votre directive. Si vous utilisez le mode isolé (sans Laravel), cette contrainte ne s'applique pas car le service utilise la réflexion pour créer les instances.
+
+**Exemple d'enregistrement dans un Service Provider :**
+
+```php
+// App\Providers\DirectivesServiceProvider.php
+use App\Directives\UserListDirective;
+use App\Directives\CacheClearDirective;
+
+public function register(): void
+{
+    $this->app->singleton(UserListDirective::class);
+    $this->app->singleton(CacheClearDirective::class);
+}
+```
+
 ### Structure de base d'un test d'intégration
 
 ```php
