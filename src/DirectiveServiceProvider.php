@@ -10,8 +10,13 @@ use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
 use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
 use AndyDefer\Directive\Configs\FileCreatorConfig;
+use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
+use AndyDefer\Directive\Contexts\FileCreationContext;
+use AndyDefer\Directive\Contexts\FileSystemContext;
+use AndyDefer\Directive\Contexts\LaravelContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contexts\ParameterParserContext;
 use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveNamingConfigInterface;
@@ -43,6 +48,11 @@ use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
 use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
 use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
 use AndyDefer\Directive\Steps\StartDatabaseStep;
+use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;
+use AndyDefer\Directive\Strategies\OptionalArgumentStrategy;
+use AndyDefer\Directive\Strategies\OptionStrategy;
+use AndyDefer\Directive\Strategies\RequiredArgumentStrategy;
+use AndyDefer\Directive\Strategies\VariadicArgumentStrategy;
 use AndyDefer\DomainStructures\Services\EnumService;
 use Illuminate\Support\ServiceProvider;
 
@@ -64,6 +74,9 @@ final class DirectiveServiceProvider extends ServiceProvider
 
         // Dispatchers
         $this->registerDispatchers();
+
+        // Strategies
+        $this->registerStrategies();
 
         // Steps for testing
         $this->registerTestingSteps();
@@ -120,12 +133,39 @@ final class DirectiveServiceProvider extends ServiceProvider
 
     private function registerContexts(): void
     {
+        // LaravelBootstrapperContext - pour le bootstrap de Laravel
         $this->app->singleton(LaravelBootstrapperContext::class, function ($app) {
             return new LaravelBootstrapperContext;
         });
 
+        // DirectiveDiscoveryContext - pour la découverte des directives
         $this->app->singleton(DirectiveDiscoveryContext::class, function ($app) {
             return new DirectiveDiscoveryContext;
+        });
+
+        // DirectiveContext - pour le contexte d'exécution d'une directive
+        $this->app->singleton(DirectiveContext::class, function ($app) {
+            return new DirectiveContext(
+                laravelBootstrapper: $app->make(LaravelBootstrapperContext::class),
+                blueprint: new \AndyDefer\Directive\Records\DirectiveBlueprintRecord('', '', ''),
+                aliases: new \AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection,
+                shouldBootLaravel: false,
+            );
+        });
+
+        // LaravelContext - pour l'état de Laravel
+        $this->app->singleton(LaravelContext::class, function ($app) {
+            return new LaravelContext;
+        });
+
+        // FileSystemContext - pour les opérations système
+        $this->app->singleton(FileSystemContext::class, function ($app) {
+            return new FileSystemContext;
+        });
+
+        // FileCreationContext - pour la création de fichiers
+        $this->app->singleton(FileCreationContext::class, function ($app) {
+            return new FileCreationContext;
         });
     }
 
@@ -133,15 +173,15 @@ final class DirectiveServiceProvider extends ServiceProvider
 
     private function registerParserComponents(): void
     {
-        // ParameterParserContext avec ses stratégies (via buildParserContext)
-        $this->app->singleton(\AndyDefer\Directive\Contexts\ParameterParserContext::class, function ($app) {
-            $context = new \AndyDefer\Directive\Contexts\ParameterParserContext;
+        // ParameterParserContext avec ses stratégies
+        $this->app->singleton(ParameterParserContext::class, function ($app) {
+            $context = new ParameterParserContext;
 
-            $context->addStrategy(new \AndyDefer\Directive\Strategies\RequiredArgumentStrategy);
-            $context->addStrategy(new \AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy);
-            $context->addStrategy(new \AndyDefer\Directive\Strategies\OptionalArgumentStrategy);
-            $context->addStrategy(new \AndyDefer\Directive\Strategies\VariadicArgumentStrategy);
-            $context->addStrategy(new \AndyDefer\Directive\Strategies\OptionStrategy);
+            $context->addStrategy(new RequiredArgumentStrategy);
+            $context->addStrategy(new DefaultValueArgumentStrategy);
+            $context->addStrategy(new OptionalArgumentStrategy);
+            $context->addStrategy(new VariadicArgumentStrategy);
+            $context->addStrategy(new OptionStrategy);
 
             return $context;
         });
@@ -149,14 +189,14 @@ final class DirectiveServiceProvider extends ServiceProvider
         // ParameterOrderValidatorService
         $this->app->singleton(ParameterOrderValidatorService::class, function ($app) {
             return new ParameterOrderValidatorService(
-                $app->make(\AndyDefer\Directive\Contexts\ParameterParserContext::class)
+                $app->make(ParameterParserContext::class)
             );
         });
 
         // ParameterExtractorService
         $this->app->singleton(ParameterExtractorService::class, function ($app) {
             return new ParameterExtractorService(
-                $app->make(\AndyDefer\Directive\Contexts\ParameterParserContext::class)
+                $app->make(ParameterParserContext::class)
             );
         });
 
@@ -274,6 +314,14 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->singleton(InputDispatcher::class, function ($app) {
             return new InputDispatcher;
         });
+    }
+
+    // ==================== Strategies ====================
+
+    private function registerStrategies(): void
+    {
+        // Les stratégies sont enregistrées directement dans ParameterParserContext
+        // Pas besoin de les enregistrer séparément car elles sont instanciées dans le constructeur
     }
 
     // ==================== Testing Steps ====================
