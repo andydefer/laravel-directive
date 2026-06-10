@@ -43,7 +43,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     private DirectiveExecutionService $service;
 
-    protected LaravelBootstrapperContext $laravelBootstrapperContext;
+    private LaravelBootstrapperContext $laravelBootstrapperContext;
 
     private HydrationService $hydration;
 
@@ -61,13 +61,14 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer = $this->createMock(DirectiveRendererService::class);
         $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
 
+        // Injection du LaravelBootstrapperContext dans le constructeur
         $this->service = new DirectiveExecutionService(
             discovery: $this->discovery,
             parser: $this->parser,
             hydrator: $this->hydrator,
             renderer: $this->renderer,
+            laravelBootstrapperContext: $this->laravelBootstrapperContext,
         );
-        $this->service->setLaravelBootstrapper($this->laravelBootstrapperContext);
 
         $this->originalDebug = getenv('DIRECTIVE_DEBUG');
     }
@@ -418,11 +419,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
 
-        $mockBootstrapperContext = $this->createMock(LaravelBootstrapperContext::class);
-        $mockBootstrapperContext->expects($this->once())
-            ->method('bootstrap');
-
-        $this->service->setLaravelBootstrapper($mockBootstrapperContext);
+        // Le service utilise déjà le LaravelBootstrapperContext injecté dans le constructeur
+        // Pas besoin de setter supplémentaire
 
         $record = $this->createExecutionRecord('test-laravel', []);
 

@@ -51,7 +51,7 @@ if (file_exists($packageAutoload) && $packageAutoload !== $projectAutoload) {
 
 // ==================== Imports ====================
 
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -60,10 +60,12 @@ use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
+use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
 use Illuminate\Container\Container;
 
 // ==================== Container Initialization ====================
@@ -90,11 +92,15 @@ $container->singleton(DirectiveInteractionService::class, function ($c) {
 });
 
 $container->singleton(SignatureValidationService::class, function () {
-    return new SignatureValidationService();
+    return new SignatureValidationService(new EnvSignatureValidationConfig);
 });
 
-$container->singleton(LaravelBootstrapper::class, function () {
-    return new LaravelBootstrapper();
+$container->singleton(LaravelBootstrapperContext::class, function () {
+    return new LaravelBootstrapperContext();
+});
+
+$container->singleton(DirectiveDiscoveryContext::class, function () {
+    return new DirectiveDiscoveryContext();
 });
 
 // ==================== Helper Function ====================
@@ -127,30 +133,43 @@ function resolveDirectivesPath(string $projectRoot): string
 $projectRoot = getcwd();
 $directivesPath = resolveDirectivesPath($projectRoot);
 
-$directiveConfig = DirectiveConfig::default()->withDirectivesPath($directivesPath);
+// Utiliser EnvDirectiveConfig pour la configuration des directives
+// La variable d'environnement DIRECTIVE_PATH peut être utilisée pour surcharger
+putenv("DIRECTIVE_PATH={$directivesPath}");
+$directiveConfig = new EnvDirectiveConfig();
 
 // ==================== Service Instantiation ====================
 
 $factory = new ContainerDirectiveFactory($container);
 $parser = new DirectiveParserService();
-$hydrator = new DirectiveHydratorService($factory);
-$laravelBootstrapper = $container->make(LaravelBootstrapper::class);
+$laravelBootstrapperContext = $container->make(LaravelBootstrapperContext::class);
+$discoveryContext = $container->make(DirectiveDiscoveryContext::class);
 
-$hydrator->setLaravelBootstrapper($laravelBootstrapper);
+// Injection des dépendances via le constructeur (plus de setter)
+$hydrator = new DirectiveHydratorService($factory, $laravelBootstrapperContext);
 
-$discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator);
+// Discovery service avec toutes ses dépendances injectées
+$discovery = new DirectiveDiscoveryService(
+    $directiveConfig,
+    $hydrator,
+    $discoveryContext,
+    $laravelBootstrapperContext,
+    null
+);
+
 $renderer = new DirectiveRendererService($container->make(RenderDispatcher::class));
 $signatureValidator = $container->make(SignatureValidationService::class);
 
 // ==================== Execution Service Setup ====================
 
+// Execution service avec toutes ses dépendances injectées
 $executionService = new DirectiveExecutionService(
-    discovery: $discovery,
-    parser: $parser,
-    hydrator: $hydrator,
-    renderer: $renderer,
+    $discovery,
+    $parser,
+    $hydrator,
+    $renderer,
+    $laravelBootstrapperContext,
 );
-$executionService->setLaravelBootstrapper($laravelBootstrapper);
 
 // ==================== Kernel Execution ====================
 

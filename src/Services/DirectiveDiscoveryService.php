@@ -18,20 +18,14 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
  */
 class DirectiveDiscoveryService implements DirectiveLoaderInterface
 {
-    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
-
     public function __construct(
         private readonly DirectiveConfigInterface $config,
         private readonly DirectiveHydratorService $hydrator,
         private readonly DirectiveDiscoveryContext $context,
+        private readonly LaravelBootstrapperContext $laravelBootstrapperContext,
         ?DirectiveLoaderInterface $loader = null,
     ) {
         $this->context->setLoader($loader ?? $this);
-    }
-
-    public function setLaravelBootstrapper(?LaravelBootstrapperContext $bootstrapperContext): void
-    {
-        $this->laravelBootstrapperContext = $bootstrapperContext;
     }
 
     public function discover(): DirectiveMetadataCollection
@@ -183,7 +177,6 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
         if (
             $this->checkIfNeedsLaravel($class) &&
-            $this->laravelBootstrapperContext !== null &&
             !$this->context->isBootstrapped()
         ) {
             $this->laravelBootstrapperContext->bootstrap();

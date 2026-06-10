@@ -92,37 +92,40 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $directiveConfig = new EnvDirectiveConfig;
             $container->instance(DirectiveConfigInterface::class, $directiveConfig);
 
-            // Register factory and hydrator
+            // Register factory
             $factory = new ContainerDirectiveFactory($container);
-            $hydrator = new DirectiveHydratorService($factory);
+
+            // Get contexts
             $laravelBootstrapperContext = $container->make(LaravelBootstrapperContext::class);
-            $hydrator->setLaravelBootstrapper($laravelBootstrapperContext);
+            $discoveryContext = $container->make(DirectiveDiscoveryContext::class);
+
+            // Register hydrator with dependencies injected via constructor
+            $hydrator = new DirectiveHydratorService($factory, $laravelBootstrapperContext);
 
             // Register registry
             $registry = new TestDirectiveRegistry;
             $context->setRegistry($registry);
 
-            // Register discovery service
-            $discoveryContext = $container->make(DirectiveDiscoveryContext::class);
+            // Register discovery service with all dependencies injected via constructor
             $discovery = new DirectiveDiscoveryService(
                 config: $directiveConfig,
                 hydrator: $hydrator,
                 context: $discoveryContext,
+                laravelBootstrapperContext: $laravelBootstrapperContext,
                 loader: null,
             );
-            $discovery->setLaravelBootstrapper($laravelBootstrapperContext);
 
             // Register renderer
             $renderer = new DirectiveRendererService($container->make(RenderDispatcher::class));
 
-            // Register execution service
+            // Register execution service with all dependencies injected via constructor
             $executionService = new DirectiveExecutionService(
                 discovery: $discovery,
                 parser: new DirectiveParserService,
                 hydrator: $hydrator,
                 renderer: $renderer,
+                laravelBootstrapperContext: $laravelBootstrapperContext,
             );
-            $executionService->setLaravelBootstrapper($laravelBootstrapperContext);
 
             // Register kernel
             $kernel = new DirectiveKernel(

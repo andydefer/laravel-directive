@@ -101,33 +101,23 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerHydrator(): void
     {
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
-            $hydrator = new DirectiveHydratorService(
+            return new DirectiveHydratorService(
                 factory: $app->make(DirectiveFactoryInterface::class),
+                laravelBootstrapperContext: $app->make(LaravelBootstrapperContext::class),
             );
-
-            if ($app->bound(LaravelBootstrapperContext::class)) {
-                $hydrator->setLaravelBootstrapper($app->make(LaravelBootstrapperContext::class));
-            }
-
-            return $hydrator;
         });
     }
 
     private function registerDiscovery(): void
     {
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
-            $discovery = new DirectiveDiscoveryService(
+            return new DirectiveDiscoveryService(
                 config: $app->make(DirectiveConfigInterface::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
                 context: $app->make(DirectiveDiscoveryContext::class),
+                laravelBootstrapperContext: $app->make(LaravelBootstrapperContext::class),
                 loader: null,
             );
-
-            if ($app->bound(LaravelBootstrapperContext::class)) {
-                $discovery->setLaravelBootstrapper($app->make(LaravelBootstrapperContext::class));
-            }
-
-            return $discovery;
         });
     }
 
@@ -188,18 +178,13 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerExecution(): void
     {
         $this->app->singleton(DirectiveExecutionService::class, function ($app) {
-            $executionService = new DirectiveExecutionService(
+            return new DirectiveExecutionService(
                 discovery: $app->make(DirectiveDiscoveryService::class),
                 parser: $app->make(DirectiveParserService::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
                 renderer: $app->make(DirectiveRendererService::class),
+                laravelBootstrapperContext: $app->make(LaravelBootstrapperContext::class),
             );
-
-            if ($app->bound(LaravelBootstrapperContext::class)) {
-                $executionService->setLaravelBootstrapper($app->make(LaravelBootstrapperContext::class));
-            }
-
-            return $executionService;
         });
     }
 

@@ -8,6 +8,7 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Collections\ParsedArgumentCollection;
 use AndyDefer\Directive\Collections\ParsedOptionCollection;
+use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -28,13 +29,21 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
 
     private DirectiveHydratorService $service;
 
+    private LaravelBootstrapperContext $laravelBootstrapperContext;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->factory = $this->createMock(DirectiveFactoryInterface::class);
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
-        $this->service = new DirectiveHydratorService($this->factory);
+        $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
+
+        // Injection du LaravelBootstrapperContext dans le constructeur
+        $this->service = new DirectiveHydratorService(
+            factory: $this->factory,
+            laravelBootstrapperContext: $this->laravelBootstrapperContext,
+        );
     }
 
     private function createTestDirective(): TestDirective

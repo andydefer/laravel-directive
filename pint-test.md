@@ -1,12 +1,12 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 10:09:17 WAT*
+*Generated: mer. 10 juin 2026 10:39:58 WAT*
 
 
-  ⨯...............................................⨯.⨯...⨯......⨯.⨯⨯...⨯...⨯.......................⨯..........⨯...⨯.⨯....⨯....⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯........................⨯....
+  ⨯...............................................⨯.⨯...⨯......⨯.⨯⨯...⨯...⨯.......................⨯..........⨯...⨯.⨯⨯...⨯....⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯........................⨯....
   ⨯⨯.⨯..⨯⨯............⨯.......⨯......
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................ 215 files, 30 style issues  
+    FAIL   ................................................................................................................................................ 215 files, 31 style issues  
   ⨯ src/AbstractDirective.php                                                                                                 class_attributes_separation, blank_line_before_statement  
   ⨯ src/Configs/EnvDirectiveConfig.php                                                                                                                                    concat_space  
   ⨯ src/Contexts/DirectiveDiscoveryContext.php                                                                                               class_attributes_separation, concat_space  
@@ -16,6 +16,7 @@
   ⨯ src/DirectiveServiceProvider.php                                                                                                                                      concat_space  
   ⨯ src/Services/ArgumentSplitterService.php                                                                      braces_position, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Services/DirectiveDiscoveryService.php                                                            concat_space, not_operator_with_successor_space, blank_line_before_statement  
+  ⨯ src/Services/DirectiveExecutionService.php                                                              braces_position, not_operator_with_successor_space, single_line_empty_body  
   ⨯ src/Services/DirectiveNamingService.php                      concat_space, braces_position, not_operator_with_successor_space, single_line_empty_body, blank_line_before_statement  
   ⨯ src/Services/DirectiveParserService.php                                                                                                                          no_unused_imports  
   ⨯ src/Services/DirectiveTestingService.php                     function_declaration, concat_space, no_unused_imports, not_operator_with_successor_space, blank_line_before_statement  

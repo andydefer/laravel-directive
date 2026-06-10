@@ -152,9 +152,11 @@ trait InteractsWithDirectives
 
         $factory = new ContainerDirectiveFactory($this->directiveContainer);
         $parser = new DirectiveParserService;
-        $hydrator = new DirectiveHydratorService($factory);
+
         $laravelBootstrapperContext = $this->directiveContainer->make(LaravelBootstrapperContext::class);
-        $hydrator->setLaravelBootstrapper($laravelBootstrapperContext);
+
+        // Hydrator with dependencies injected via constructor
+        $hydrator = new DirectiveHydratorService($factory, $laravelBootstrapperContext);
 
         $this->interaction = $this->directiveContainer->make(DirectiveInteractionService::class);
         $signatureValidator = $this->directiveContainer->make(SignatureValidationService::class);
@@ -163,24 +165,27 @@ trait InteractsWithDirectives
         $this->directiveRegistry = new TestDirectiveRegistry;
 
         $discoveryContext = $this->directiveContainer->make(DirectiveDiscoveryContext::class);
+
+        // Discovery service with all dependencies injected via constructor
         $discovery = new DirectiveDiscoveryService(
             config: $directiveConfig,
             hydrator: $hydrator,
             context: $discoveryContext,
+            laravelBootstrapperContext: $laravelBootstrapperContext,
             loader: null,
         );
-        $discovery->setLaravelBootstrapper($laravelBootstrapperContext);
 
         $renderer = new DirectiveRendererService($this->directiveContainer->make(RenderDispatcher::class));
         $signatureValidatorService = $this->directiveContainer->make(SignatureValidationService::class);
 
+        // Execution service with all dependencies injected via constructor
         $executionService = new DirectiveExecutionService(
             discovery: $discovery,
             parser: $parser,
             hydrator: $hydrator,
             renderer: $renderer,
+            laravelBootstrapperContext: $laravelBootstrapperContext,
         );
-        $executionService->setLaravelBootstrapper($laravelBootstrapperContext);
 
         $this->directiveKernel = new DirectiveKernel(
             $executionService,

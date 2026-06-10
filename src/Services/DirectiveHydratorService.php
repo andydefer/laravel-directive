@@ -16,16 +16,10 @@ use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 
 class DirectiveHydratorService
 {
-    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
-
     public function __construct(
         private readonly DirectiveFactoryInterface $factory,
+        private readonly LaravelBootstrapperContext $laravelBootstrapperContext,
     ) {}
-
-    public function setLaravelBootstrapper(?LaravelBootstrapperContext $bootstrapperContext): void
-    {
-        $this->laravelBootstrapperContext = $bootstrapperContext;
-    }
 
     public function hydrate(string $class, ParsedDirectiveRecord $parsed): DirectiveInterface
     {
@@ -57,7 +51,7 @@ class DirectiveHydratorService
 
     private function injectLaravelBootstrapper(DirectiveInterface $directive): void
     {
-        if ($this->laravelBootstrapperContext !== null && method_exists($directive, 'setLaravelBootstrapper')) {
+        if (method_exists($directive, 'setLaravelBootstrapper')) {
             $directive->setLaravelBootstrapper($this->laravelBootstrapperContext);
         }
     }
