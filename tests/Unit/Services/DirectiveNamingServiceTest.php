@@ -17,7 +17,7 @@ final class DirectiveNamingServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveNamingService();
+        $this->service = new DirectiveNamingService;
     }
 
     // ==================== Generate Class Name Tests ====================

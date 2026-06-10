@@ -1,24 +1,28 @@
 <?php
+
 // src/Contexts/LaravelContext.php
 
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contexts;
 
-use AndyDefer\Directive\Records\LaravelServiceRecord;
 use AndyDefer\Directive\Collections\LaravelServiceCollection;
+use AndyDefer\Directive\Records\LaravelServiceRecord;
 use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
 
 final class LaravelContext
 {
     private bool $isBootstrapped = false;
+
     private ?string $appEnvironment = null;
+
     private bool $isDebug = false;
+
     private LaravelServiceCollection $registeredServices;
 
     public function __construct()
     {
-        $this->registeredServices = new LaravelServiceCollection();
+        $this->registeredServices = new LaravelServiceCollection;
     }
 
     public function isBootstrapped(): bool
@@ -71,6 +75,6 @@ final class LaravelContext
         $this->isBootstrapped = false;
         $this->appEnvironment = null;
         $this->isDebug = false;
-        $this->registeredServices = new LaravelServiceCollection();
+        $this->registeredServices = new LaravelServiceCollection;
     }
 }

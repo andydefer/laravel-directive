@@ -1,4 +1,5 @@
 <?php
+
 // src/Steps/BootstrapLaravelStep.php
 
 declare(strict_types=1);
@@ -14,7 +15,7 @@ final class BootstrapLaravelStep implements DirectiveTestingStepInterface
 {
     public function supports(DirectiveTestingContext $context): bool
     {
-        return $context->shouldBootLaravel() && !$context->hasLaravelApp();
+        return $context->shouldBootLaravel() && ! $context->hasLaravelApp();
     }
 
     public function execute(DirectiveTestingContext $context, callable $next): DirectiveTestingContext
@@ -25,26 +26,29 @@ final class BootstrapLaravelStep implements DirectiveTestingStepInterface
             $context->addStepResult(
                 step_name: TestingStep::BOOTSTRAP_LARAVEL,
                 status: StepResultStatus::FAILED,
-                message: "Cannot bootstrap Laravel: temporary directory is null"
+                message: 'Cannot bootstrap Laravel: temporary directory is null'
             );
+
             return $next($context);
         }
 
         $bootstrapPath = $tempDir . '/bootstrap/app.php';
 
-        if (!file_exists($bootstrapPath)) {
+
+        if (! file_exists($bootstrapPath)) {
             $context->addStepResult(
                 step_name: TestingStep::BOOTSTRAP_LARAVEL,
                 status: StepResultStatus::FAILED,
                 message: "Bootstrap file not found: {$bootstrapPath}"
             );
+
             return $next($context);
         }
 
         try {
             $app = require $bootstrapPath;
 
-            if (!$app instanceof Application) {
+            if (! $app instanceof Application) {
                 throw new \RuntimeException('Bootstrap file did not return an Application instance');
             }
 
@@ -55,7 +59,7 @@ final class BootstrapLaravelStep implements DirectiveTestingStepInterface
             $context->addStepResult(
                 step_name: TestingStep::BOOTSTRAP_LARAVEL,
                 status: StepResultStatus::SUCCESS,
-                message: "Laravel bootstrapped successfully"
+                message: 'Laravel bootstrapped successfully'
             );
         } catch (\Exception $e) {
             $context->addStepResult(

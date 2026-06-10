@@ -1,4 +1,5 @@
 <?php
+
 // src/Steps/BuildContainerStep.php
 
 declare(strict_types=1);
@@ -29,19 +30,28 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
 {
     public function supports(DirectiveTestingContext $context): bool
     {
-        return !$context->hasContainer();
+        return ! $context->hasContainer();
     }
 
     public function execute(DirectiveTestingContext $context, callable $next): DirectiveTestingContext
     {
         try {
-            $container = new Container();
+            $container = new Container;
+
+            // Enregistrer l'application Laravel dans le container si elle existe
+            $laravelApp = $context->getLaravelApp();
+            if ($laravelApp !== null) {
+                $container->instance('app', $laravelApp);
+                // Configurer les Facades pour utiliser ce container
+                \Illuminate\Support\Facades\Facade::setFacadeApplication($laravelApp);
+            }
+
             $tempDir = $context->getTempDir();
             $bootLaravel = $context->shouldBootLaravel();
 
             // Register dispatchers
-            $container->singleton(RenderDispatcher::class, fn() => new RenderDispatcher());
-            $container->singleton(InputDispatcher::class, fn() => new InputDispatcher());
+            $container->singleton(RenderDispatcher::class, fn() => new RenderDispatcher);
+            $container->singleton(InputDispatcher::class, fn() => new InputDispatcher);
 
             // Register interaction service
             $container->singleton(DirectiveInteractionService::class, function ($c) {
@@ -55,12 +65,12 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $context->setInteraction($interaction);
 
             // Register validation and naming services
-            $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService());
-            $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService());
+            $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService);
+            $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService);
 
             // Register Laravel bootstrapper
             $container->singleton(LaravelBootstrapper::class, function () use ($bootLaravel, $tempDir) {
-                $bootstrapper = new LaravelBootstrapper();
+                $bootstrapper = new LaravelBootstrapper;
 
                 if ($bootLaravel && $tempDir !== null) {
                     $bootstrapper->setCustomBootstrapPath($tempDir . '/bootstrap/app.php');
@@ -80,7 +90,7 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $hydrator->setLaravelBootstrapper($laravelBootstrapper);
 
             // Register registry
-            $registry = new TestDirectiveRegistry();
+            $registry = new TestDirectiveRegistry;
             $context->setRegistry($registry);
 
             // Register discovery service
@@ -93,7 +103,7 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             // Register execution service
             $executionService = new DirectiveExecutionService(
                 discovery: $discovery,
-                parser: new DirectiveParserService(),
+                parser: new DirectiveParserService,
                 hydrator: $hydrator,
                 renderer: $renderer,
             );

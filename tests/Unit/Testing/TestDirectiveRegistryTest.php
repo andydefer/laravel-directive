@@ -11,7 +11,6 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
-use PHPUnit\Framework\MockObject\MockObject;
 
 #[AllowMockObjectsWithoutExpectations]
 final class TestDirectiveRegistryTest extends UnitTestCase

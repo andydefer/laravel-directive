@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/ArgumentApplierService.php
 
 declare(strict_types=1);
@@ -31,6 +32,7 @@ final class ArgumentApplierService
                     $variadicArguments[] = $arg;
                 }
                 $providedIndex = $totalProvided;
+
                 continue;
             }
 
@@ -70,7 +72,7 @@ final class ArgumentApplierService
             }
         }
 
-        if (!$hasVariadic && $providedIndex < $totalProvided) {
+        if (! $hasVariadic && $providedIndex < $totalProvided) {
             throw new InvalidArgumentException('Too many arguments provided');
         }
     }

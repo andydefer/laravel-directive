@@ -1,4 +1,5 @@
 <?php
+
 // src/Strategies/OptionStrategy.php
 
 declare(strict_types=1);
@@ -7,8 +8,8 @@ namespace AndyDefer\Directive\Strategies;
 
 use AndyDefer\Directive\Configs\DirectiveParserConfig;
 use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
-use AndyDefer\Directive\Enums\ParameterTypeOrder;
 use AndyDefer\Directive\Enums\ParameterType;
+use AndyDefer\Directive\Enums\ParameterTypeOrder;
 use AndyDefer\Directive\Records\ParsedParameterRecord;
 
 final class OptionStrategy implements ParameterParsingStrategy
@@ -17,7 +18,7 @@ final class OptionStrategy implements ParameterParsingStrategy
 
     public function __construct(?DirectiveParserConfigInterface $config = null)
     {
-        $this->config = $config ?? new DirectiveParserConfig();
+        $this->config = $config ?? new DirectiveParserConfig;
     }
 
     public function supports(string $parameter): bool

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Tasks;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\RenderRecord;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -24,7 +24,7 @@ final class RenderTaskTest extends UnitTestCase
         parent::setUp();
 
         // Arrange: Create a fresh RenderDispatcher instance for each test
-        $this->task = new RenderDispatcher();
+        $this->task = new RenderDispatcher;
     }
 
     public function test_render_help(): void
@@ -43,9 +43,9 @@ final class RenderTaskTest extends UnitTestCase
     public function test_render_list_with_directives(): void
     {
         // Arrange: Create directives collection
-        $directives = new DirectiveMetadataCollection();
+        $directives = new DirectiveMetadataCollection;
 
-        $aliases = new StringTypedCollection();
+        $aliases = new StringTypedCollection;
         $directive = new DirectiveMetadataRecord(
             signature: 'test-cmd',
             class: \stdClass::class,
@@ -162,13 +162,13 @@ final class RenderTaskTest extends UnitTestCase
     public function test_render_conflict(): void
     {
         // Arrange: Create conflict record with multiple conflicting directives
-        $classNames = new StringTypedCollection();
+        $classNames = new StringTypedCollection;
         $classNames->add('UserCreateDirective');
 
-        $signatures = new StringTypedCollection();
+        $signatures = new StringTypedCollection;
         $signatures->add('user-create');
 
-        $descriptions = new StringTypedCollection();
+        $descriptions = new StringTypedCollection;
         $descriptions->add('Create a user');
 
         $record = new ConflictDisplayRecord(

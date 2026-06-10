@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/StepResultRecord.php
 
 declare(strict_types=1);

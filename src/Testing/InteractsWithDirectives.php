@@ -8,6 +8,8 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\DirectiveKernel;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
@@ -20,8 +22,6 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
@@ -60,13 +60,21 @@ use InvalidArgumentException;
 trait InteractsWithDirectives
 {
     private Container $directiveContainer;
+
     private DirectiveKernel $directiveKernel;
+
     private TestDirectiveRegistry $directiveRegistry;
+
     private DirectiveInteractionService $interaction;
+
     private bool $directiveTestingInitialized = false;
+
     private string $directiveTempDir;
+
     private string $originalCwd;
+
     private ?Application $laravelApp = null;
+
     private bool $bootLaravelEnabled = false;
 
     /**
@@ -75,7 +83,7 @@ trait InteractsWithDirectives
      * Creates a temporary directory, sets up the service container, and optionally
      * bootstraps a minimal Laravel application.
      *
-     * @param bool $bootLaravel Whether to bootstrap Laravel for tests that need it
+     * @param  bool  $bootLaravel  Whether to bootstrap Laravel for tests that need it
      */
     protected function initDirectiveTesting(bool $bootLaravel = false): void
     {
@@ -84,7 +92,7 @@ trait InteractsWithDirectives
         }
 
         $this->bootLaravelEnabled = $bootLaravel;
-        $this->directiveTempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        $this->directiveTempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
         mkdir($this->directiveTempDir, 0777, true);
 
         $this->originalCwd = getcwd();
@@ -95,13 +103,13 @@ trait InteractsWithDirectives
             $this->laravelApp = $this->createApplication();
         }
 
-        $this->directiveContainer = new Container();
+        $this->directiveContainer = new Container;
 
         $this->directiveContainer->singleton(RenderDispatcher::class, function () {
-            return new RenderDispatcher();
+            return new RenderDispatcher;
         });
         $this->directiveContainer->singleton(InputDispatcher::class, function () {
-            return new InputDispatcher();
+            return new InputDispatcher;
         });
 
         $this->directiveContainer->singleton(DirectiveInteractionService::class, function ($c) {
@@ -112,29 +120,29 @@ trait InteractsWithDirectives
         });
 
         $this->directiveContainer->singleton(SignatureValidationService::class, function () {
-            return new SignatureValidationService();
+            return new SignatureValidationService;
         });
 
         $this->directiveContainer->singleton(DirectiveNamingService::class, function () {
-            return new DirectiveNamingService();
+            return new DirectiveNamingService;
         });
 
         $this->directiveContainer->singleton(LaravelBootstrapper::class, function () {
-            $bootstrapper = new LaravelBootstrapper();
+            $bootstrapper = new LaravelBootstrapper;
 
             if ($this->laravelApp !== null) {
-                $bootstrapPath = $this->directiveTempDir . '/bootstrap/app.php';
+                $bootstrapPath = $this->directiveTempDir.'/bootstrap/app.php';
                 $bootstrapper->setCustomBootstrapPath($bootstrapPath);
             }
 
             return $bootstrapper;
         });
 
-        $directiveConfig = DirectiveConfig::default()->withDirectivesPath($this->directiveTempDir . '/app/Directives');
+        $directiveConfig = DirectiveConfig::default()->withDirectivesPath($this->directiveTempDir.'/app/Directives');
         $this->directiveContainer->instance(DirectiveConfig::class, $directiveConfig);
 
         $factory = new ContainerDirectiveFactory($this->directiveContainer);
-        $parser = new DirectiveParserService();
+        $parser = new DirectiveParserService;
         $hydrator = new DirectiveHydratorService($factory);
         $laravelBootstrapper = $this->directiveContainer->make(LaravelBootstrapper::class);
         $hydrator->setLaravelBootstrapper($laravelBootstrapper);
@@ -143,7 +151,7 @@ trait InteractsWithDirectives
         $signatureValidator = $this->directiveContainer->make(SignatureValidationService::class);
         $namingService = $this->directiveContainer->make(DirectiveNamingService::class);
 
-        $this->directiveRegistry = new TestDirectiveRegistry();
+        $this->directiveRegistry = new TestDirectiveRegistry;
 
         $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $this->directiveRegistry);
         $discovery->setLaravelBootstrapper($laravelBootstrapper);
@@ -173,7 +181,7 @@ trait InteractsWithDirectives
      */
     private function createLaravelStructure(): void
     {
-        $bootstrapDir = $this->directiveTempDir . '/bootstrap';
+        $bootstrapDir = $this->directiveTempDir.'/bootstrap';
         mkdir($bootstrapDir, 0777, true);
 
         $appPhp = <<<'PHP'
@@ -200,9 +208,9 @@ $app->singleton(
 
 return $app;
 PHP;
-        file_put_contents($bootstrapDir . '/app.php', $appPhp);
+        file_put_contents($bootstrapDir.'/app.php', $appPhp);
 
-        $configDir = $this->directiveTempDir . '/config';
+        $configDir = $this->directiveTempDir.'/config';
         mkdir($configDir, 0777, true);
 
         $configApp = <<<'PHP'
@@ -222,18 +230,18 @@ return [
     'providers' => [],
 ];
 PHP;
-        file_put_contents($configDir . '/app.php', $configApp);
+        file_put_contents($configDir.'/app.php', $configApp);
 
-        $storageDir = $this->directiveTempDir . '/storage';
+        $storageDir = $this->directiveTempDir.'/storage';
         mkdir($storageDir, 0777, true);
-        mkdir($storageDir . '/framework', 0777, true);
-        mkdir($storageDir . '/framework/views', 0777, true);
-        mkdir($storageDir . '/framework/cache', 0777, true);
-        mkdir($storageDir . '/logs', 0777, true);
+        mkdir($storageDir.'/framework', 0777, true);
+        mkdir($storageDir.'/framework/views', 0777, true);
+        mkdir($storageDir.'/framework/cache', 0777, true);
+        mkdir($storageDir.'/logs', 0777, true);
 
-        mkdir($this->directiveTempDir . '/app', 0777, true);
-        mkdir($this->directiveTempDir . '/app/Http', 0777, true);
-        mkdir($this->directiveTempDir . '/app/Models', 0777, true);
+        mkdir($this->directiveTempDir.'/app', 0777, true);
+        mkdir($this->directiveTempDir.'/app/Http', 0777, true);
+        mkdir($this->directiveTempDir.'/app/Models', 0777, true);
     }
 
     /**
@@ -243,10 +251,10 @@ PHP;
      */
     public function createApplication(): Application
     {
-        $app = require $this->directiveTempDir . '/bootstrap/app.php';
+        $app = require $this->directiveTempDir.'/bootstrap/app.php';
 
-        $app->useStoragePath($this->directiveTempDir . '/storage');
-        $app->instance('path.config', $this->directiveTempDir . '/config');
+        $app->useStoragePath($this->directiveTempDir.'/storage');
+        $app->instance('path.config', $this->directiveTempDir.'/config');
 
         return $app;
     }
@@ -254,7 +262,7 @@ PHP;
     /**
      * Registers a directive instance for testing.
      *
-     * @param AbstractDirective $directive The directive instance to register
+     * @param  AbstractDirective  $directive  The directive instance to register
      */
     protected function registerDirective(AbstractDirective $directive): void
     {
@@ -265,7 +273,7 @@ PHP;
     /**
      * Registers multiple directive instances for testing.
      *
-     * @param array<AbstractDirective> $directives The directive instances to register
+     * @param  array<AbstractDirective>  $directives  The directive instances to register
      */
     protected function registerDirectives(array $directives): void
     {
@@ -286,9 +294,8 @@ PHP;
     /**
      * Creates a temporary test directive with a closure as execution logic.
      *
-     * @param string   $signature The directive signature
-     * @param callable $execute   The execution logic
-     *
+     * @param  string  $signature  The directive signature
+     * @param  callable  $execute  The execution logic
      * @return ClosureDirective The created directive instance
      */
     protected function createTestDirective(string $signature, callable $execute): ClosureDirective
@@ -302,15 +309,15 @@ PHP;
         );
 
         $this->registerDirective($directive);
+
         return $directive;
     }
 
     /**
      * Runs a directive by its FQCN (fully qualified class name).
      *
-     * @param string         $className FQCN of the directive (e.g., App\Directives\MyDirective::class)
-     * @param array<string>  $arguments The arguments to pass to the directive
-     *
+     * @param  string  $className  FQCN of the directive (e.g., App\Directives\MyDirective::class)
+     * @param  array<string>  $arguments  The arguments to pass to the directive
      * @return DirectiveResponseRecord The response containing exit code and output
      */
     protected function runDirective(string $className, array $arguments = []): DirectiveResponseRecord
@@ -339,17 +346,16 @@ PHP;
     /**
      * Executes a directive directly without going through the kernel.
      *
-     * @param AbstractDirective $directive The directive instance
-     * @param array<string>     $arguments The arguments to pass
-     *
+     * @param  AbstractDirective  $directive  The directive instance
+     * @param  array<string>  $arguments  The arguments to pass
      * @return DirectiveResponseRecord The response containing exit code and output
      */
     private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
     {
         $fullSignature = $directive->getSignature();
-        $parser = new DirectiveParserService();
+        $parser = new DirectiveParserService;
 
-        $argumentCollection = new StringTypedCollection();
+        $argumentCollection = new StringTypedCollection;
         foreach ($arguments as $argument) {
             $argumentCollection->add($argument);
         }
@@ -384,6 +390,7 @@ PHP;
             if ($bufferStarted) {
                 ob_end_clean();
             }
+
             return new DirectiveResponseRecord(
                 exitCode: ExitCode::INVALID_ARGUMENT,
                 output: $e->getMessage(),
@@ -392,6 +399,7 @@ PHP;
             if ($bufferStarted) {
                 ob_end_clean();
             }
+
             return new DirectiveResponseRecord(
                 exitCode: ExitCode::FAILURE,
                 output: $e->getMessage(),
@@ -411,13 +419,12 @@ PHP;
         return ob_get_level();
     }
 
-
     /**
      * Destroys the testing environment and cleans up temporary files.
      */
     protected function destroyDirectiveTesting(): void
     {
-        if (!$this->directiveTestingInitialized) {
+        if (! $this->directiveTestingInitialized) {
             return;
         }
 
@@ -439,17 +446,17 @@ PHP;
     /**
      * Recursively removes a directory and all its contents.
      *
-     * @param string $dir The directory path to remove
+     * @param  string  $dir  The directory path to remove
      */
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             if (is_dir($path)) {
                 $this->removeDirectory($path);
             } else {

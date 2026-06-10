@@ -1,4 +1,5 @@
 <?php
+
 // tests/Directive/Unit/Services/DirectiveParserServiceTest.php
 
 declare(strict_types=1);
@@ -20,12 +21,12 @@ final class DirectiveParserServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveParserService();
+        $this->service = new DirectiveParserService;
     }
 
     public function test_parse_with_arguments_only(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John Doe', 'john@example.com');
 
         $result = $this->service->parse('user:create {name} {email}', $arguments);
@@ -39,7 +40,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_argument_default_value(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $result = $this->service->parse('user:list {count=10}', $arguments);
         $parsed = $this->service->toResult($result);
@@ -49,7 +50,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_argument_default_value_overridden(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('5');
 
         $result = $this->service->parse('user:list {count=10}', $arguments);
@@ -60,7 +61,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_optional_argument(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John');
 
         $result = $this->service->parse('user:create {name?}', $arguments);
@@ -71,7 +72,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_missing_optional_argument(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $result = $this->service->parse('user:create {name?}', $arguments);
         $parsed = $this->service->toResult($result);
@@ -83,7 +84,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_missing_required_argument_throws_exception(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Not enough arguments (missing: "name")');
@@ -93,7 +94,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_too_many_arguments_throws_exception(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John', 'Doe', 'Extra');
 
         $this->expectException(InvalidArgumentException::class);
@@ -104,7 +105,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_long_options(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John Doe', '--role=admin');
 
         $result = $this->service->parse('user:create {name} {--role=}', $arguments);
@@ -116,7 +117,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_flag_option(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('--force');
 
         $result = $this->service->parse('cache:clear {--force}', $arguments);
@@ -128,7 +129,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_short_option(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('-v');
 
         $result = $this->service->parse('app:run {-v}', $arguments);
@@ -140,7 +141,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_mixed_arguments_and_options(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John', 'john@example.com', '--role=admin', '--active');
 
         $result = $this->service->parse('user:create {name} {email} {--role=} {--active}', $arguments);
@@ -154,7 +155,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_options_between_arguments(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John', '--role=admin', 'john@example.com', '--active');
 
         $result = $this->service->parse('user:create {name} {email} {--role=} {--active}', $arguments);
@@ -168,7 +169,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_option_without_value(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('--role=');
 
         $result = $this->service->parse('user:create {--role=}', $arguments);
@@ -180,7 +181,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_variadic_argument(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('[', 'file1.txt,', 'file2.txt,', 'file3.txt', ']');
 
         $result = $this->service->parse('process {files*}', $arguments);
@@ -197,7 +198,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_required_and_variadic_arguments(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John Doe', '[', 'file1.txt,', 'file2.txt', ']');
 
         $result = $this->service->parse('user:process {name} {files*}', $arguments);
@@ -213,7 +214,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_variadic_but_no_values(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $result = $this->service->parse('process {files*}', $arguments);
         $parsed = $this->service->toResult($result);
@@ -224,7 +225,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_variadic_and_options(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('[', 'file1.txt,', 'file2.txt', ']', '--verbose');
 
         $result = $this->service->parse('process {files*} {--verbose}', $arguments);
@@ -239,7 +240,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('optional arguments must come before variadic arguments');
 
-        $this->service->parse('user:create {files*} {name?}', new StringTypedCollection());
+        $this->service->parse('user:create {files*} {name?}', new StringTypedCollection);
     }
 
     public function test_invalid_order_required_after_default_throws_exception(): void
@@ -247,7 +248,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('required arguments must come before arguments with default values');
 
-        $this->service->parse('user:create {role=user} {name}', new StringTypedCollection());
+        $this->service->parse('user:create {role=user} {name}', new StringTypedCollection);
     }
 
     public function test_invalid_order_required_after_optional_throws_exception(): void
@@ -255,7 +256,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('required arguments must come before optional arguments');
 
-        $this->service->parse('user:create {name?} {email}', new StringTypedCollection());
+        $this->service->parse('user:create {name?} {email}', new StringTypedCollection);
     }
 
     public function test_invalid_order_default_after_optional_throws_exception(): void
@@ -263,12 +264,12 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('arguments with default values must come before optional arguments');
 
-        $this->service->parse('user:create {name?} {role=user}', new StringTypedCollection());
+        $this->service->parse('user:create {name?} {role=user}', new StringTypedCollection);
     }
 
     public function test_valid_order_required_then_default_then_optional_then_variadic_then_options(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John', 'admin', '[', 'file1.txt,', 'file2.txt', ']', '--force');
 
         $result = $this->service->parse(
@@ -397,7 +398,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_result_converts_parsed_record_correctly(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John', '--role=admin', '--active');
 
         $parsed = $this->service->parse('user:create {name} {--role=} {--active}', $arguments);
@@ -412,7 +413,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_result_with_empty_parsed_record(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $parsed = $this->service->parse('test:cmd', $arguments);
         $result = $this->service->toResult($parsed);
@@ -424,7 +425,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_result_with_variadic_arguments(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('[', 'file1.txt,', 'file2.txt,', 'file3.txt', ']');
 
         $parsed = $this->service->parse('process {files*}', $arguments);
@@ -442,7 +443,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_json_returns_valid_json(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John', '--role=admin');
 
         $parsed = $this->service->parse('user:create {name} {--role=}', $arguments);
@@ -461,7 +462,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_json_with_empty_parsed_record(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $parsed = $this->service->parse('test:cmd', $arguments);
         $json = $this->service->toJson($parsed);
@@ -475,7 +476,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_to_json_with_variadic_arguments(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('[', 'file1.txt,', 'file2.txt', ']');
 
         $parsed = $this->service->parse('process {files*}', $arguments);
@@ -492,7 +493,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_empty_signature(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $result = $this->service->parse('test:cmd', $arguments);
         $parsed = $this->service->toResult($result);
@@ -504,7 +505,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_multiple_short_options(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('-v', '-f', '--verbose');
 
         $result = $this->service->parse('test:cmd {-v} {-f} {--verbose}', $arguments);
@@ -517,7 +518,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_short_options_grouped(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('-vf');
 
         $result = $this->service->parse('test:cmd {-v} {-f}', $arguments);
@@ -529,7 +530,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_option_value_containing_equals(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('--message=Hello=World');
 
         $result = $this->service->parse('test:cmd {--message=}', $arguments);
@@ -540,7 +541,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_false_option_value(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('--active=false');
 
         $result = $this->service->parse('test:cmd {--active}', $arguments);
@@ -552,7 +553,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_multiple_arguments_and_defaults(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('John');
 
         $result = $this->service->parse('user:create {name} {role=user} {status=active}', $arguments);
@@ -565,7 +566,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_optional_argument_null_when_not_provided(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
 
         $result = $this->service->parse('user:create {name?}', $arguments);
         $parsed = $this->service->toResult($result);
@@ -575,7 +576,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
 
     public function test_parse_with_variadic_and_trailing_options(): void
     {
-        $arguments = new StringTypedCollection();
+        $arguments = new StringTypedCollection;
         $arguments->add('[', 'file1.txt,', 'file2.txt', ']', '--verbose', '--debug');
 
         $result = $this->service->parse('process {files*} {--verbose} {--debug}', $arguments);

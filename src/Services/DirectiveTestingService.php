@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/DirectiveTestingService.php
 
 declare(strict_types=1);
@@ -8,8 +9,11 @@ namespace AndyDefer\Directive\Services;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Configs\DirectiveTestingConfig;
-use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
+use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
+use AndyDefer\Directive\DirectiveKernel;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\Steps\BootstrapLaravelStep;
@@ -18,46 +22,83 @@ use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
 use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
 use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
 use AndyDefer\Directive\Steps\DirectiveTestingStepInterface;
+use AndyDefer\Directive\Steps\StartDatabaseStep;
 use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 
 final class DirectiveTestingService
 {
-    /**
-     * @var array<DirectiveTestingStepInterface>
-     */
-    private array $steps = [];
+    private DirectiveTestingContext $context;
+    private bool $isIntegratedMode = false;
 
     public function __construct(
-        private readonly DirectiveTestingContext $context,
+        ?object $application = null,
+        ?DirectiveTestingContext $context = null,
         ?DirectiveTestingConfigInterface $config = null,
     ) {
-        $this->context->setConfig($config ?? new DirectiveTestingConfig());
-        $this->initializeSteps();
-        $this->executeChain();
+        // Créer le contexte si non fourni
+        $this->context = $context ?? new DirectiveTestingContext;
+        $this->context->setConfig($config ?? new DirectiveTestingConfig);
+
+        // Toujours initialiser l'interaction service
+        $this->initializeInteraction();
+
+        // Mode intégré : on a une application Laravel existante
+        if ($application !== null) {
+            $this->isIntegratedMode = true;
+            $this->context->setIntegratedMode(true);
+            $this->context->setLaravelApp($application);
+            $this->context->setBootLaravel(true);
+
+            // Créer le kernel à partir de l'application
+            $kernel = $application->make(DirectiveKernel::class);
+            $this->context->setKernel($kernel);
+            return;
+        }
+
+        // Mode isolé : on crée l'environnement minimal
+        $this->initializeMinimalEnvironment();
     }
 
-    private function initializeSteps(): void
+    private function initializeInteraction(): void
     {
-        $this->steps = [
-            new CreateTempDirectoryStep(),
-            new ChangeToTempDirectoryStep(),
-            new CreateLaravelStructureStep(),
-            new BootstrapLaravelStep(),
-            new BuildContainerStep(),
-        ];
+        $renderDispatcher = new RenderDispatcher;
+        $inputDispatcher = new InputDispatcher;
+
+        $interaction = new DirectiveInteractionService($renderDispatcher, $inputDispatcher);
+        $this->context->setInteraction($interaction);
     }
 
-    private function executeChain(): void
+    private function initializeMinimalEnvironment(): void
+    {
+        $step = new BuildContainerStep;
+        $step->execute($this->context, fn($c) => $c);
+    }
+
+    private function initializeIsolatedEnvironment(): void
     {
         if ($this->context->isInitialized()) {
             return;
         }
 
-        $chain = $this->buildChain($this->steps);
-        $chain($this->context);
+        $steps = [
+            new CreateTempDirectoryStep,
+            new ChangeToTempDirectoryStep,
+            new CreateLaravelStructureStep,
+            new BootstrapLaravelStep,
+            new BuildContainerStep,
+            new StartDatabaseStep,
+        ];
+
+        $this->executeSteps($steps);
         $this->context->setInitialized(true);
+    }
+
+    private function executeSteps(array $steps): void
+    {
+        $chain = $this->buildChain($steps);
+        $chain($this->context);
     }
 
     private function buildChain(array $steps): callable
@@ -73,6 +114,7 @@ final class DirectiveTestingService
                 if ($step->supports($context)) {
                     return $step->execute($context, $currentNext);
                 }
+
                 return $currentNext($context);
             };
         }
@@ -80,21 +122,11 @@ final class DirectiveTestingService
         return $next;
     }
 
-    /**
-     * Register a directive for testing.
-     *
-     * @param AbstractDirective $directive The directive to register
-     */
     public function registerDirective(AbstractDirective $directive): void
     {
         $this->context->getRegistry()->register($directive);
     }
 
-    /**
-     * Register multiple directives for testing.
-     *
-     * @param array<AbstractDirective> $directives The directives to register
-     */
     public function registerDirectives(array $directives): void
     {
         foreach ($directives as $directive) {
@@ -102,22 +134,12 @@ final class DirectiveTestingService
         }
     }
 
-    /**
-     * Clear all registered directives.
-     */
     public function clearRegisteredDirectives(): void
     {
         $this->context->getRegistry()->clear();
+        $this->context->getClosureRegistry()->clear();
     }
 
-    /**
-     * Create a temporary test directive with a closure as execution logic.
-     *
-     * @param string $signature The directive signature
-     * @param callable $execute The execution logic
-     *
-     * @return ClosureDirective The created directive
-     */
     public function createTestDirective(string $signature, callable $execute): ClosureDirective
     {
         $interaction = $this->context->getInteraction();
@@ -128,41 +150,47 @@ final class DirectiveTestingService
             interaction: $interaction,
         );
 
-        // ✅ Enregistrer dans le registre des closures, pas dans le registre principal
         $this->context->getClosureRegistry()->register($directive);
 
         return $directive;
     }
 
-    /**
-     * Run a directive by its class name.
-     *
-     * @param string $className FQCN of the directive
-     * @param array<string> $arguments The arguments to pass
-     *
-     * @return DirectiveResponseRecord The response containing exit code and output
-     */
     public function runDirective(string $className, array $arguments = []): DirectiveResponseRecord
     {
-        // 1. Chercher d'abord dans le registre des closures
+        // 1. Chercher dans le registre des closures
         $directive = $this->context->getClosureRegistry()->get($className);
 
         if ($directive !== null) {
+            if ($directive->shouldBootLaravel() && !$this->isIntegratedMode && !$this->context->isInitialized()) {
+                $this->initializeIsolatedEnvironment();
+            }
             return $this->executeDirectly($directive, $arguments);
         }
 
-        // 2. Chercher dans le registre normal (par FQCN)
+        // 2. Chercher dans le registre normal
         $directive = $this->context->getRegistry()->getDirective($className);
 
         if ($directive !== null) {
+            if ($directive->shouldBootLaravel() && !$this->isIntegratedMode && !$this->context->isInitialized()) {
+                $this->initializeIsolatedEnvironment();
+            }
             return $this->executeDirectly($directive, $arguments);
         }
 
-        // 3. Fallback: try via the kernel with the signature
+        // 3. Fallback: utiliser le kernel
+        $kernel = $this->context->getKernel();
+
+        if ($kernel === null) {
+            return new DirectiveResponseRecord(
+                exitCode: ExitCode::NOT_FOUND,
+                output: "Kernel not available. Cannot execute directive: {$className}",
+            );
+        }
+
         $argv = array_merge(['directive', $className], $arguments);
 
         ob_start();
-        $exitCode = $this->context->getKernel()->run($argv);
+        $exitCode = $kernel->run($argv);
         $output = ob_get_clean();
 
         $this->context->addExecutedDirective($className);
@@ -173,20 +201,12 @@ final class DirectiveTestingService
         );
     }
 
-    /**
-     * Execute a directive directly without going through the kernel.
-     *
-     * @param AbstractDirective $directive The directive instance
-     * @param array<string> $arguments The arguments to pass
-     *
-     * @return DirectiveResponseRecord The response
-     */
     private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
     {
         $fullSignature = $directive->getSignature();
-        $parser = new DirectiveParserService();
+        $parser = new DirectiveParserService;
 
-        $argumentCollection = new StringTypedCollection();
+        $argumentCollection = new StringTypedCollection;
         foreach ($arguments as $argument) {
             $argumentCollection->add($argument);
         }
@@ -228,6 +248,7 @@ final class DirectiveTestingService
             if ($bufferStarted) {
                 ob_end_clean();
             }
+
             return new DirectiveResponseRecord(
                 exitCode: ExitCode::INVALID_ARGUMENT,
                 output: $e->getMessage(),
@@ -236,6 +257,7 @@ final class DirectiveTestingService
             if ($bufferStarted) {
                 ob_end_clean();
             }
+
             return new DirectiveResponseRecord(
                 exitCode: ExitCode::FAILURE,
                 output: $e->getMessage(),
@@ -243,29 +265,16 @@ final class DirectiveTestingService
         }
     }
 
-    /**
-     * Get the interaction service.
-     *
-     * @return DirectiveInteractionService
-     */
-    public function getInteraction()
+    public function getInteraction(): DirectiveInteractionService
     {
         return $this->context->getInteraction();
     }
 
-    /**
-     * Get the context.
-     *
-     * @return DirectiveTestingContext
-     */
     public function getContext(): DirectiveTestingContext
     {
         return $this->context;
     }
 
-    /**
-     * Clean up the testing environment.
-     */
     public function destroy(): void
     {
         $this->clearRegisteredDirectives();
@@ -284,11 +293,6 @@ final class DirectiveTestingService
         $this->context->reset();
     }
 
-    /**
-     * Recursively remove a directory.
-     *
-     * @param string $dir The directory to remove
-     */
     private function removeDirectory(string $dir): void
     {
         if (!is_dir($dir)) {

@@ -1,4 +1,5 @@
 <?php
+
 // src/Contracts/DirectiveInterface.php
 
 declare(strict_types=1);
@@ -61,7 +62,7 @@ interface DirectiveInterface
     /**
      * Set the arguments for this directive.
      *
-     * @param ParameterCollection $arguments Collection of typed argument parameters
+     * @param  ParameterCollection  $arguments  Collection of typed argument parameters
      * @return self Returns the directive instance for method chaining
      */
     public function setArguments(ParameterCollection $arguments): self;
@@ -69,7 +70,7 @@ interface DirectiveInterface
     /**
      * Get an argument value by its key.
      *
-     * @param string $key The argument name
+     * @param  string  $key  The argument name
      * @return string|null The argument value, or null if not found
      */
     public function argument(string $key): ?string;
@@ -77,7 +78,7 @@ interface DirectiveInterface
     /**
      * Check if an argument exists and has a non-empty value.
      *
-     * @param string $key The argument name
+     * @param  string  $key  The argument name
      * @return bool True if the argument exists and has a non-empty value
      */
     public function hasArgument(string $key): bool;
@@ -85,7 +86,7 @@ interface DirectiveInterface
     /**
      * Set the options for this directive.
      *
-     * @param ParameterCollection $options Collection of typed option parameters
+     * @param  ParameterCollection  $options  Collection of typed option parameters
      * @return self Returns the directive instance for method chaining
      */
     public function setOptions(ParameterCollection $options): self;
@@ -93,7 +94,7 @@ interface DirectiveInterface
     /**
      * Get an option value by its key.
      *
-     * @param string $key The option name
+     * @param  string  $key  The option name
      * @return bool|string|null The option value (boolean for flags, string for values), or null if not found
      */
     public function option(string $key): bool|string|null;
@@ -101,7 +102,7 @@ interface DirectiveInterface
     /**
      * Check if an option exists and has a non-empty value.
      *
-     * @param string $key The option name
+     * @param  string  $key  The option name
      * @return bool True if the option exists, false otherwise
      */
     public function hasOption(string $key): bool;
@@ -109,7 +110,7 @@ interface DirectiveInterface
     /**
      * Set the variadic arguments for this directive.
      *
-     * @param StringTypedCollection $variadicArguments Collection of variadic argument values
+     * @param  StringTypedCollection  $variadicArguments  Collection of variadic argument values
      * @return self Returns the directive instance for method chaining
      */
     public function setVariadicArguments(StringTypedCollection $variadicArguments): self;
@@ -168,7 +169,7 @@ interface DirectiveInterface
      * This method is used by the framework to inject the bootstrapper
      * when Laravel support is needed. You don't need to call it manually.
      *
-     * @param LaravelBootstrapper|null $bootstrapper The Laravel bootstrapper instance
+     * @param  LaravelBootstrapper|null  $bootstrapper  The Laravel bootstrapper instance
      * @return self Returns the directive instance for method chaining
      */
     public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): self;
@@ -179,7 +180,7 @@ interface DirectiveInterface
      * This method is used by the framework to inject the interaction service
      * when needed. You don't need to call it manually.
      *
-     * @param DirectiveInteractionService $interaction The interaction service instance
+     * @param  DirectiveInteractionService  $interaction  The interaction service instance
      * @return self Returns the directive instance for method chaining
      */
     public function setInteraction(DirectiveInteractionService $interaction): self;
@@ -189,28 +190,28 @@ interface DirectiveInterface
     /**
      * Outputs a plain text line.
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function line(string $message): void;
 
     /**
      * Outputs an informational message (typically green).
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function info(string $message): void;
 
     /**
      * Outputs an error message (typically red).
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function error(string $message): void;
 
     /**
      * Outputs a warning message (typically yellow).
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function warn(string $message): void;
 
@@ -222,8 +223,8 @@ interface DirectiveInterface
     /**
      * Outputs a separator line.
      *
-     * @param string $character The character to use for the separator (default: '-')
-     * @param int $length The length of the separator line (default: 80)
+     * @param  string  $character  The character to use for the separator (default: '-')
+     * @param  int  $length  The length of the separator line (default: 80)
      */
     public function separator(string $character = '-', int $length = 80): void;
 
@@ -232,7 +233,7 @@ interface DirectiveInterface
     /**
      * Asks a question and returns the user's answer.
      *
-     * @param string $question The question to ask
+     * @param  string  $question  The question to ask
      * @return string The user's answer
      */
     public function ask(string $question): string;
@@ -240,7 +241,7 @@ interface DirectiveInterface
     /**
      * Asks for confirmation and returns the user's choice.
      *
-     * @param string $question The confirmation question
+     * @param  string  $question  The confirmation question
      * @return bool True if the user confirms (y/yes), false otherwise
      */
     public function confirm(string $question): bool;
@@ -250,8 +251,8 @@ interface DirectiveInterface
     /**
      * Displays a formatted table with headers and rows.
      *
-     * @param StringTypedCollection $headers The table headers
-     * @param RowCollection $rows The table rows
+     * @param  StringTypedCollection  $headers  The table headers
+     * @param  RowCollection  $rows  The table rows
      */
     public function table(StringTypedCollection $headers, RowCollection $rows): void;
 }

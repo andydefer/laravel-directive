@@ -1,10 +1,10 @@
 <?php
+
 // src/Enums/ParameterType.php
 
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Enums;
-
 
 /**
  * Defines the type of a directive parameter.
@@ -15,7 +15,6 @@ namespace AndyDefer\Directive\Enums;
  */
 enum ParameterType: string
 {
-
     case ARGUMENT = 'argument';
     case VARIADIC_ARGUMENT = 'variadic_argument';
     case OPTION = 'option';

@@ -7,7 +7,6 @@ namespace AndyDefer\Directive\Records;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
-use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 
 final class RenderRecord extends AbstractRecord
 {

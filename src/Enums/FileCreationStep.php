@@ -1,4 +1,5 @@
 <?php
+
 // src/Enums/FileCreationStep.php
 
 declare(strict_types=1);

@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/DirectiveHydratorService.php
 
 declare(strict_types=1);
@@ -11,7 +12,6 @@ use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 class DirectiveHydratorService
 {
@@ -43,6 +43,7 @@ class DirectiveHydratorService
     {
         $directive = $this->createWithoutConstructor($class);
         $this->injectLaravelBootstrapper($directive);
+
         return $directive->getBlueprint();
     }
 
@@ -50,6 +51,7 @@ class DirectiveHydratorService
     {
         $directive = $this->createWithoutConstructor($class);
         $this->injectLaravelBootstrapper($directive);
+
         return $directive;
     }
 
@@ -73,11 +75,11 @@ class DirectiveHydratorService
     private function setOptions(DirectiveInterface $directive, ParsedDirectiveRecord $parsed): void
     {
 
-        if (!method_exists($directive, 'setOptions')) {
+        if (! method_exists($directive, 'setOptions')) {
             return;
         }
 
-        $normalizedOptions = new ParameterCollection();
+        $normalizedOptions = new ParameterCollection;
         foreach ($parsed->options as $option) {
             $value = $option->value;
             if ($value === 'true') {
@@ -94,7 +96,7 @@ class DirectiveHydratorService
     private function setVariadicArguments(DirectiveInterface $directive, ParsedDirectiveRecord $parsed): void
     {
 
-        if (!method_exists($directive, 'setVariadicArguments')) {
+        if (! method_exists($directive, 'setVariadicArguments')) {
             return;
         }
 
@@ -104,6 +106,7 @@ class DirectiveHydratorService
     private function createWithoutConstructor(string $class): DirectiveInterface
     {
         $reflection = new \ReflectionClass($class);
+
         return $reflection->newInstanceWithoutConstructor();
     }
 }

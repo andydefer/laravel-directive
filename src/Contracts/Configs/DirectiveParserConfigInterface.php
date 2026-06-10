@@ -1,4 +1,5 @@
 <?php
+
 // src/Contracts/Configs/DirectiveParserConfigInterface.php
 
 declare(strict_types=1);

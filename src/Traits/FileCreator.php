@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Traits;
 
-use AndyDefer\Directive\Services\FileCreatorService;
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contexts\FileCreationContext;
-use AndyDefer\Directive\Records\FileCreationResultRecord;
-use AndyDefer\Directive\Records\PathSegmentsRecord;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\Directive\Services\FileCreatorService;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Filesystem\Filesystem;
 
@@ -74,6 +71,7 @@ use Illuminate\Filesystem\Filesystem;
  * });
  *
  * @author Andy Defer
+ *
  * @deprecated since 2.0.0, will be removed in 3.0.0
  */
 trait FileCreator
@@ -87,8 +85,8 @@ trait FileCreator
     {
         @trigger_error(
             sprintf(
-                '%s::initFileCreator() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::initFileCreator() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Inject FileCreatorService in your constructor instead.',
                 static::class
             ),
@@ -103,10 +101,10 @@ trait FileCreator
      *
      * @deprecated Use FileCreatorService::createFile() instead
      *
-     * @param string $stubPath Path to the stub template file
-     * @param string $destinationPath Path where the file should be created
-     * @param array<string, string> $replacements Placeholder-value pairs
-     * @param bool $force Overwrite existing file if true
+     * @param  string  $stubPath  Path to the stub template file
+     * @param  string  $destinationPath  Path where the file should be created
+     * @param  array<string, string>  $replacements  Placeholder-value pairs
+     * @param  bool  $force  Overwrite existing file if true
      * @return bool True on success, false on failure
      */
     protected function createFile(
@@ -117,8 +115,8 @@ trait FileCreator
     ): bool {
         @trigger_error(
             sprintf(
-                '%s::createFile() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::createFile() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::createFile() instead.',
                 static::class
             ),
@@ -178,15 +176,15 @@ trait FileCreator
      *
      * @deprecated Use FileCreatorService::toPascalCase() instead
      *
-     * @param string $string Input string in kebab-case or snake_case
+     * @param  string  $string  Input string in kebab-case or snake_case
      * @return string Converted string in PascalCase
      */
     protected function toPascalCase(string $string): string
     {
         @trigger_error(
             sprintf(
-                '%s::toPascalCase() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::toPascalCase() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::toPascalCase() instead.',
                 static::class
             ),
@@ -204,15 +202,15 @@ trait FileCreator
      *
      * @deprecated Use FileCreatorService::toKebabCase() instead
      *
-     * @param string $string Input string in PascalCase
+     * @param  string  $string  Input string in PascalCase
      * @return string Converted string in kebab-case
      */
     protected function toKebabCase(string $string): string
     {
         @trigger_error(
             sprintf(
-                '%s::toKebabCase() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::toKebabCase() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::toKebabCase() instead.',
                 static::class
             ),
@@ -227,15 +225,15 @@ trait FileCreator
      *
      * @deprecated Use FileCreatorService::extractPathSegments() instead
      *
-     * @param string $name Path string with segments separated by slashes
+     * @param  string  $name  Path string with segments separated by slashes
      * @return array{segments: array, className: string, subPath: string, fullPath: string}
      */
     protected function extractPathSegments(string $name): array
     {
         @trigger_error(
             sprintf(
-                '%s::extractPathSegments() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::extractPathSegments() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::extractPathSegments() instead.',
                 static::class
             ),
@@ -250,7 +248,7 @@ trait FileCreator
             'segments' => $segments,
             'className' => $className,
             'subPath' => $subPath,
-            'fullPath' => $subPath ? $subPath . '/' . $className : $className,
+            'fullPath' => $subPath ? $subPath.'/'.$className : $className,
         ];
     }
 
@@ -259,16 +257,16 @@ trait FileCreator
      *
      * @deprecated Use FileCreatorService::buildNamespace() instead
      *
-     * @param string $baseNamespace Base namespace
-     * @param string $subPath Subdirectory path
+     * @param  string  $baseNamespace  Base namespace
+     * @param  string  $subPath  Subdirectory path
      * @return string Complete namespace
      */
     protected function buildNamespace(string $baseNamespace, string $subPath): string
     {
         @trigger_error(
             sprintf(
-                '%s::buildNamespace() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::buildNamespace() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::buildNamespace() instead.',
                 static::class
             ),
@@ -279,7 +277,7 @@ trait FileCreator
             return $baseNamespace;
         }
 
-        return $baseNamespace . '\\' . str_replace('/', '\\', $subPath);
+        return $baseNamespace.'\\'.str_replace('/', '\\', $subPath);
     }
 
     /**
@@ -287,29 +285,29 @@ trait FileCreator
      *
      * @deprecated Use FileCreatorService::getAppPath() instead
      *
-     * @param string $baseDir Base directory
-     * @param string $className Class name
-     * @param string $subPath Subdirectory path
+     * @param  string  $baseDir  Base directory
+     * @param  string  $className  Class name
+     * @param  string  $subPath  Subdirectory path
      * @return string Absolute file path
      */
     protected function getAppPath(string $baseDir, string $className, string $subPath = ''): string
     {
         @trigger_error(
             sprintf(
-                '%s::getAppPath() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::getAppPath() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::getAppPath() instead.',
                 static::class
             ),
             E_USER_DEPRECATED
         );
 
-        $directory = getcwd() . $baseDir;
+        $directory = getcwd().$baseDir;
         if ($subPath) {
-            $directory .= $subPath . '/';
+            $directory .= $subPath.'/';
         }
 
-        return $directory . $className . '.php';
+        return $directory.$className.'.php';
     }
 
     /**

@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/FileOperationRecord.php
 
 declare(strict_types=1);

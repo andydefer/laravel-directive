@@ -8,6 +8,8 @@ use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -17,9 +19,6 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Dispatchers\CreateDirectiveFileTask;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use Illuminate\Container\Container;
 

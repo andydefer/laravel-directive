@@ -24,9 +24,9 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
     private array $registeredDirectives = [];
 
     /**
-     * @param DirectiveConfig $config Configuration for directive discovery
-     * @param DirectiveHydratorService $hydrator Service for hydrating directives
-     * @param bool $disableFilesystemDiscovery If true, skip filesystem scanning
+     * @param  DirectiveConfig  $config  Configuration for directive discovery
+     * @param  DirectiveHydratorService  $hydrator  Service for hydrating directives
+     * @param  bool  $disableFilesystemDiscovery  If true, skip filesystem scanning
      */
     public function __construct(
         DirectiveConfig $config,
@@ -39,7 +39,7 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
     /**
      * Register a single directive instance.
      *
-     * @param AbstractDirective $directive The directive to register
+     * @param  AbstractDirective  $directive  The directive to register
      */
     public function registerDirective(AbstractDirective $directive): void
     {
@@ -49,7 +49,7 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
     /**
      * Register multiple directive instances.
      *
-     * @param array<AbstractDirective> $directives Array of directives to register
+     * @param  array<AbstractDirective>  $directives  Array of directives to register
      */
     public function registerDirectives(array $directives): void
     {
@@ -63,9 +63,8 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
      *
      * Instantiates the directive with given constructor arguments and registers it.
      *
-     * @param class-string<AbstractDirective> $className The directive class name
-     * @param array<mixed> $constructorArgs Constructor arguments for the directive
-     *
+     * @param  class-string<AbstractDirective>  $className  The directive class name
+     * @param  array<mixed>  $constructorArgs  Constructor arguments for the directive
      * @return AbstractDirective The instantiated directive
      */
     public function registerDirectiveClass(string $className, array $constructorArgs = []): AbstractDirective
@@ -104,7 +103,7 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
     {
         $results = $this->createMetadataFromRegisteredDirectives();
 
-        if (!$this->disableFilesystemDiscovery) {
+        if (! $this->disableFilesystemDiscovery) {
             $results = $this->discoverFromFilesystem($results);
             $results = $this->discoverFromVendorPackagesRecursive($results);
         }
@@ -114,12 +113,10 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
 
     /**
      * Create metadata collection from registered directives.
-     *
-     * @return DirectiveMetadataCollection
      */
     private function createMetadataFromRegisteredDirectives(): DirectiveMetadataCollection
     {
-        $results = new DirectiveMetadataCollection();
+        $results = new DirectiveMetadataCollection;
 
         foreach ($this->registeredDirectives as $directive) {
             $metadata = $this->createMetadataFromDirective($directive);
@@ -132,9 +129,7 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
     /**
      * Create a metadata record from a directive instance.
      *
-     * @param AbstractDirective $directive The directive instance
-     *
-     * @return DirectiveMetadataRecord
+     * @param  AbstractDirective  $directive  The directive instance
      */
     private function createMetadataFromDirective(AbstractDirective $directive): DirectiveMetadataRecord
     {

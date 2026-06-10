@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 
 /**
  * Service for rendering various directive outputs.
@@ -39,7 +39,7 @@ class DirectiveRendererService
     /**
      * Render a list of available directives.
      *
-     * @param DirectiveMetadataCollection $directives Collection of directive metadata to display
+     * @param  DirectiveMetadataCollection  $directives  Collection of directive metadata to display
      */
     public function renderList(DirectiveMetadataCollection $directives): void
     {
@@ -50,7 +50,7 @@ class DirectiveRendererService
     /**
      * Render a "directive not found" error message.
      *
-     * @param string $signature The directive signature that was not found
+     * @param  string  $signature  The directive signature that was not found
      */
     public function renderNotFound(string $signature): void
     {
@@ -61,7 +61,7 @@ class DirectiveRendererService
     /**
      * Render a success message.
      *
-     * @param string $message The success message to display
+     * @param  string  $message  The success message to display
      */
     public function renderSuccess(string $message): void
     {
@@ -72,7 +72,7 @@ class DirectiveRendererService
     /**
      * Render an error message.
      *
-     * @param string $message The error message to display
+     * @param  string  $message  The error message to display
      */
     public function renderError(string $message): void
     {
@@ -83,7 +83,7 @@ class DirectiveRendererService
     /**
      * Render a warning message.
      *
-     * @param string $message The warning message to display
+     * @param  string  $message  The warning message to display
      */
     public function renderWarning(string $message): void
     {
@@ -97,11 +97,11 @@ class DirectiveRendererService
      * Outputs the message only if DIRECTIVE_DEBUG or APP_DEBUG environment
      * variables are set to 'true'.
      *
-     * @param string $message The debug message to display
+     * @param  string  $message  The debug message to display
      */
     public function renderDebug(string $message): void
     {
-        if (!$this->isDebugEnabled()) {
+        if (! $this->isDebugEnabled()) {
             return;
         }
 
@@ -121,7 +121,7 @@ class DirectiveRendererService
     /**
      * Render a conflict display.
      *
-     * @param ConflictDisplayRecord $record The conflict data to display
+     * @param  ConflictDisplayRecord  $record  The conflict data to display
      */
     public function renderConflict(ConflictDisplayRecord $record): void
     {
@@ -131,7 +131,7 @@ class DirectiveRendererService
     /**
      * Render a table display.
      *
-     * @param DisplayTableRecord $record The table data to display
+     * @param  DisplayTableRecord  $record  The table data to display
      */
     public function renderTable(DisplayTableRecord $record): void
     {
@@ -141,7 +141,7 @@ class DirectiveRendererService
     /**
      * Render a validation error.
      *
-     * @param ValidationResultRecord $record The validation error data to display
+     * @param  ValidationResultRecord  $record  The validation error data to display
      */
     public function renderValidationError(ValidationResultRecord $record): void
     {

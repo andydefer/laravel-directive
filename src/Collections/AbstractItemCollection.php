@@ -10,6 +10,7 @@ use AndyDefer\DomainStructures\Abstracts\AbstractTypedCollection;
  * Abstract base class for collections that store records with first/last item access.
  *
  * @template TRecord
+ *
  * @extends AbstractTypedCollection<TRecord>
  */
 abstract class AbstractItemCollection extends AbstractTypedCollection
@@ -32,6 +33,7 @@ abstract class AbstractItemCollection extends AbstractTypedCollection
     public function lastItem(): mixed
     {
         $lastKey = array_key_last($this->items);
+
         return $lastKey !== null ? $this->items[$lastKey] : null;
     }
 }

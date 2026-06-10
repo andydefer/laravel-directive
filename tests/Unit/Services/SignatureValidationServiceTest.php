@@ -17,12 +17,12 @@ final class SignatureValidationServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new SignatureValidationService();
+        $this->service = new SignatureValidationService;
     }
 
     // ==================== Valid Directive Names ====================
 
-    public function testValidatesSimpleName(): void
+    public function test_validates_simple_name(): void
     {
         // Act: Validate a simple hyphenated name
         $result = $this->service->validate('user-create');
@@ -32,7 +32,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesSingleWord(): void
+    public function test_validates_single_word(): void
     {
         // Act: Validate a single-word directive
         $result = $this->service->validate('list');
@@ -42,7 +42,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesWithMultipleHyphens(): void
+    public function test_validates_with_multiple_hyphens(): void
     {
         // Act: Validate a name with multiple hyphens
         $result = $this->service->validate('db-migrate-fresh');
@@ -52,7 +52,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesWithNumbers(): void
+    public function test_validates_with_numbers(): void
     {
         // Act: Validate a name containing numbers
         $result = $this->service->validate('api-v2');
@@ -62,7 +62,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesWithNumbersAtEnd(): void
+    public function test_validates_with_numbers_at_end(): void
     {
         // Act: Validate a name ending with numbers
         $result = $this->service->validate('user-create2');
@@ -72,7 +72,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesLongOptions(): void
+    public function test_validates_long_options(): void
     {
         // Act: Validate a long option
         $result = $this->service->validate('--help');
@@ -82,7 +82,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesShortOptions(): void
+    public function test_validates_short_options(): void
     {
         // Act: Validate a single short option
         $result = $this->service->validate('-h');
@@ -92,7 +92,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesShortOptionMultiple(): void
+    public function test_validates_short_option_multiple(): void
     {
         // Act: Validate multiple grouped short options
         $result = $this->service->validate('-vl');
@@ -104,7 +104,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
 
     // ==================== Invalid Directive Names ====================
 
-    public function testRejectsEmptyName(): void
+    public function test_rejects_empty_name(): void
     {
         // Act: Validate an empty string
         $result = $this->service->validate('');
@@ -114,7 +114,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('cannot be empty', $result->error);
     }
 
-    public function testRejectsSpace(): void
+    public function test_rejects_space(): void
     {
         // Act: Validate a name containing a space
         $result = $this->service->validate('user create');
@@ -124,7 +124,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function testRejectsAtSymbol(): void
+    public function test_rejects_at_symbol(): void
     {
         // Act: Validate a name containing @ symbol
         $result = $this->service->validate('user@create');
@@ -134,7 +134,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function testRejectsColon(): void
+    public function test_rejects_colon(): void
     {
         // Act: Validate a name containing colon
         $result = $this->service->validate('user:create');
@@ -144,7 +144,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function testRejectsUnderscore(): void
+    public function test_rejects_underscore(): void
     {
         // Act: Validate a name containing underscore
         $result = $this->service->validate('user_create');
@@ -154,7 +154,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function testRejectsStartsWithNumber(): void
+    public function test_rejects_starts_with_number(): void
     {
         // Act: Validate a name starting with a number
         $result = $this->service->validate('123-user');
@@ -164,7 +164,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function testRejectsStartsWithHyphen(): void
+    public function test_rejects_starts_with_hyphen(): void
     {
         // Act: Validate a name starting with a hyphen
         $result = $this->service->validate('-user');
@@ -174,7 +174,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function testRejectsConsecutiveHyphens(): void
+    public function test_rejects_consecutive_hyphens(): void
     {
         // Act: Validate a name with consecutive hyphens
         $result = $this->service->validate('user--create');
@@ -184,7 +184,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('consecutive hyphens', $result->error);
     }
 
-    public function testRejectsEndingWithHyphen(): void
+    public function test_rejects_ending_with_hyphen(): void
     {
         // Act: Validate a name ending with a hyphen
         $result = $this->service->validate('user-create-');
@@ -194,7 +194,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('end with a hyphen', $result->error);
     }
 
-    public function testRejectsNumbersOnly(): void
+    public function test_rejects_numbers_only(): void
     {
         // Act: Validate a name that is only numbers
         $result = $this->service->validate('123');
@@ -204,7 +204,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertStringContainsString('Invalid directive name', $result->error);
     }
 
-    public function testRejectsSpecialCharacters(): void
+    public function test_rejects_special_characters(): void
     {
         // Act: Validate a name with special characters
         $result = $this->service->validate('user$create');
@@ -216,7 +216,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
 
     // ==================== Edge Cases ====================
 
-    public function testValidatesDirectiveWithSingleCharacter(): void
+    public function test_validates_directive_with_single_character(): void
     {
         // Act: Validate a single character directive
         $result = $this->service->validate('a');
@@ -226,10 +226,10 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesDirectiveWithMaxLengthName(): void
+    public function test_validates_directive_with_max_length_name(): void
     {
         // Act: Validate a very long but valid name
-        $longName = 'a' . str_repeat('-b', 100);
+        $longName = 'a'.str_repeat('-b', 100);
         $result = $this->service->validate($longName);
 
         // Assert: Should be valid (no length limit enforced)
@@ -237,7 +237,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testValidatesUppercaseLetters(): void
+    public function test_validates_uppercase_letters(): void
     {
         // Act: Validate a name with uppercase letters
         $result = $this->service->validate('UserCreate');
@@ -247,7 +247,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
         $this->assertNull($result->error);
     }
 
-    public function testRejectsLeadingHyphenShortOptionLike(): void
+    public function test_rejects_leading_hyphen_short_option_like(): void
     {
         // Act: Validate a single hyphen (invalid short option)
         $result = $this->service->validate('-');

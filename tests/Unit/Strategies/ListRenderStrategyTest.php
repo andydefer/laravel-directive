@@ -10,7 +10,6 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\ListRenderStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class ListRenderStrategyTest extends UnitTestCase

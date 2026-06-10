@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/ArgumentSplitterService.php
 
 declare(strict_types=1);
@@ -10,7 +11,9 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 final class ArgumentSplitterService
 {
     private const VARIADIC_START = '[';
+
     private const VARIADIC_END = ']';
+
     private const VARIADIC_SEPARATOR = ',';
 
     public function split(StringTypedCollection $argv): array
@@ -23,6 +26,7 @@ final class ArgumentSplitterService
         foreach ($argv as $item) {
             if ($item === self::VARIADIC_START) {
                 $inVariadic = true;
+
                 continue;
             }
 
@@ -37,6 +41,7 @@ final class ArgumentSplitterService
                     }
                 }
                 $variadicContent = '';
+
                 continue;
             }
 

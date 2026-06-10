@@ -1,4 +1,5 @@
 <?php
+
 // src/Contexts/DirectiveTestingContext.php
 
 declare(strict_types=1);
@@ -14,6 +15,7 @@ use AndyDefer\Directive\Enums\PathType;
 use AndyDefer\Directive\Enums\StepResultStatus;
 use AndyDefer\Directive\Enums\TestingStep;
 use AndyDefer\Directive\Records\CreatedPathRecord;
+use AndyDefer\Directive\Records\DatabaseConnectionRecord;
 use AndyDefer\Directive\Records\ExecutionResultRecord;
 use AndyDefer\Directive\Records\StepResultRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
@@ -23,6 +25,7 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
+use PDO;
 
 final class DirectiveTestingContext
 {
@@ -57,20 +60,25 @@ final class DirectiveTestingContext
     private LaravelContext $laravel_context;
     private FileSystemContext $file_system_context;
 
-    // Initialization flag
+    // Database state
+    private ?PDO $database_connection = null;
+    private ?DatabaseConnectionRecord $database_connection_record = null;
+
+    // Mode flags
+    private bool $integrated_mode = false;
     private bool $initialized = false;
 
     public function __construct(bool $boot_laravel = false)
     {
         $this->boot_laravel = $boot_laravel;
-        $this->registry = new TestDirectiveRegistry();
-        $this->closure_registry = new ClosureDirectiveRegistry();
-        $this->executed_directives = new StringTypedCollection();
-        $this->execution_results = new ExecutionResultCollection();
-        $this->created_paths = new CreatedPathCollection();
-        $this->step_results = new StepResultCollection();
-        $this->laravel_context = new LaravelContext();
-        $this->file_system_context = new FileSystemContext();
+        $this->registry = new TestDirectiveRegistry;
+        $this->closure_registry = new ClosureDirectiveRegistry;
+        $this->executed_directives = new StringTypedCollection;
+        $this->execution_results = new ExecutionResultCollection;
+        $this->created_paths = new CreatedPathCollection;
+        $this->step_results = new StepResultCollection;
+        $this->laravel_context = new LaravelContext;
+        $this->file_system_context = new FileSystemContext;
     }
 
     // ========== Getters ==========
@@ -170,6 +178,21 @@ final class DirectiveTestingContext
         return $this->file_system_context;
     }
 
+    public function getDatabaseConnection(): ?PDO
+    {
+        return $this->database_connection;
+    }
+
+    public function getDatabaseConnectionRecord(): ?DatabaseConnectionRecord
+    {
+        return $this->database_connection_record;
+    }
+
+    public function isIntegratedMode(): bool
+    {
+        return $this->integrated_mode;
+    }
+
     public function isInitialized(): bool
     {
         return $this->initialized;
@@ -177,7 +200,7 @@ final class DirectiveTestingContext
 
     // ========== Setters ==========
 
-    public function setTempDir(string $temp_dir): void
+    public function setTempDir(?string $temp_dir): void
     {
         $this->temp_dir = $temp_dir;
     }
@@ -225,6 +248,21 @@ final class DirectiveTestingContext
     public function setConfig(DirectiveTestingConfigInterface $config): void
     {
         $this->config = $config;
+    }
+
+    public function setDatabaseConnection(PDO $connection): void
+    {
+        $this->database_connection = $connection;
+    }
+
+    public function setDatabaseConnectionRecord(DatabaseConnectionRecord $record): void
+    {
+        $this->database_connection_record = $record;
+    }
+
+    public function setIntegratedMode(bool $integrated_mode): void
+    {
+        $this->integrated_mode = $integrated_mode;
     }
 
     public function setInitialized(bool $initialized): void
@@ -309,6 +347,11 @@ final class DirectiveTestingContext
         return $this->interaction !== null;
     }
 
+    public function hasDatabaseConnection(): bool
+    {
+        return $this->database_connection !== null;
+    }
+
     public function hasBeenExecuted(string $directive_class): bool
     {
         return $this->executed_directives->contains($directive_class);
@@ -354,19 +397,22 @@ final class DirectiveTestingContext
         $this->interaction = null;
         $this->registry->clear();
         $this->closure_registry->clear();
-        $this->executed_directives = new StringTypedCollection();
-        $this->execution_results = new ExecutionResultCollection();
-        $this->created_paths = new CreatedPathCollection();
-        $this->step_results = new StepResultCollection();
+        $this->executed_directives = new StringTypedCollection;
+        $this->execution_results = new ExecutionResultCollection;
+        $this->created_paths = new CreatedPathCollection;
+        $this->step_results = new StepResultCollection;
         $this->laravel_context->reset();
         $this->file_system_context->reset();
+        $this->database_connection = null;
+        $this->database_connection_record = null;
+        $this->integrated_mode = false;
         $this->initialized = false;
     }
 
     public function fullReset(): void
     {
         $this->reset();
-        $this->registry = new TestDirectiveRegistry();
-        $this->closure_registry = new ClosureDirectiveRegistry();
+        $this->registry = new TestDirectiveRegistry;
+        $this->closure_registry = new ClosureDirectiveRegistry;
     }
 }

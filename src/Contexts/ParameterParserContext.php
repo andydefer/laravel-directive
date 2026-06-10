@@ -1,4 +1,5 @@
 <?php
+
 // src/Contexts/ParameterParserContext.php (mis à jour)
 
 declare(strict_types=1);
@@ -17,6 +18,7 @@ final class ParameterParserContext
     public function addStrategy(ParameterParsingStrategy $strategy): self
     {
         $this->strategies[] = $strategy;
+
         return $this;
     }
 

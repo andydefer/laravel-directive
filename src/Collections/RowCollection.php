@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Collections;
 
-use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
-
 /**
  * Type-safe collection for table rows.
  *

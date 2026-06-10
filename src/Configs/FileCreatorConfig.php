@@ -1,4 +1,5 @@
 <?php
+
 // src/Configs/FileCreatorConfig.php
 
 declare(strict_types=1);
@@ -15,8 +16,9 @@ final class FileCreatorConfig implements FileCreatorConfigInterface
         private EnumService $enumService
     ) {
 
-        $this->enumService = new EnumService();
+        $this->enumService = new EnumService;
     }
+
     public function directoryPermission(): PermissionMode
     {
         $value = (int) (getenv('FILE_CREATOR_DIR_PERMISSION') ?: 0755);
@@ -27,6 +29,7 @@ final class FileCreatorConfig implements FileCreatorConfigInterface
     public function filePermission(): PermissionMode
     {
         $value = (int) (getenv('FILE_CREATOR_FILE_PERMISSION') ?: 0644);
+
         return $this->enumService->fromValue(PermissionMode::class, $value) ?? PermissionMode::PUBLIC_FILE;
     }
 

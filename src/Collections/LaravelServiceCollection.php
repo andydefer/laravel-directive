@@ -1,4 +1,5 @@
 <?php
+
 // src/Collections/LaravelServiceCollection.php
 
 declare(strict_types=1);

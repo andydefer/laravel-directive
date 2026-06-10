@@ -39,7 +39,7 @@ final class ClosureDirectiveTest extends UnitTestCase
         $signature = 'test-custom-signature';
 
         // Act
-        $directive = $this->createDirective($signature, fn($d) => ExitCode::SUCCESS);
+        $directive = $this->createDirective($signature, fn ($d) => ExitCode::SUCCESS);
 
         // Assert
         $this->assertSame($signature, $directive->getSignature());
@@ -48,7 +48,7 @@ final class ClosureDirectiveTest extends UnitTestCase
     public function test_returns_test_description(): void
     {
         // Act
-        $directive = $this->createDirective('test', fn($d) => ExitCode::SUCCESS);
+        $directive = $this->createDirective('test', fn ($d) => ExitCode::SUCCESS);
 
         // Assert
         $this->assertSame('Test directive created from closure', $directive->getDescription());
@@ -61,6 +61,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) use (&$executed) {
             $executed = true;
+
             return ExitCode::SUCCESS;
         });
 
@@ -79,6 +80,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) use (&$receivedDirective) {
             $receivedDirective = $d;
+
             return ExitCode::SUCCESS;
         });
 
@@ -92,7 +94,7 @@ final class ClosureDirectiveTest extends UnitTestCase
     public function test_can_return_failure(): void
     {
         // Arrange
-        $directive = $this->createDirective('test', fn($d) => ExitCode::FAILURE);
+        $directive = $this->createDirective('test', fn ($d) => ExitCode::FAILURE);
 
         // Act
         $result = $directive->execute();
@@ -104,7 +106,7 @@ final class ClosureDirectiveTest extends UnitTestCase
     public function test_can_return_invalid_argument(): void
     {
         // Arrange
-        $directive = $this->createDirective('test', fn($d) => ExitCode::INVALID_ARGUMENT);
+        $directive = $this->createDirective('test', fn ($d) => ExitCode::INVALID_ARGUMENT);
 
         // Act
         $result = $directive->execute();
@@ -118,6 +120,7 @@ final class ClosureDirectiveTest extends UnitTestCase
         // Arrange
         $directive = $this->createDirective('test {name}', function ($d) {
             $name = $d->argument('name');
+
             return $name === 'John' ? ExitCode::SUCCESS : ExitCode::FAILURE;
         });
 
@@ -156,6 +159,7 @@ final class ClosureDirectiveTest extends UnitTestCase
         // Arrange
         $directive = $this->createDirective('test', function ($d) {
             $d->line('Hello World');
+
             return ExitCode::SUCCESS;
         });
 
@@ -173,6 +177,7 @@ final class ClosureDirectiveTest extends UnitTestCase
         // Arrange
         $directive = $this->createDirective('test', function ($d) {
             $d->info('Information message');
+
             return ExitCode::SUCCESS;
         });
 
@@ -190,6 +195,7 @@ final class ClosureDirectiveTest extends UnitTestCase
         // Arrange
         $directive = $this->createDirective('test', function ($d) {
             $d->error('Error message');
+
             return ExitCode::SUCCESS;
         });
 
@@ -200,8 +206,8 @@ final class ClosureDirectiveTest extends UnitTestCase
     public function test_multiple_directives_can_be_created(): void
     {
         // Act
-        $firstDirective = $this->createDirective('first', fn($d) => ExitCode::SUCCESS);
-        $secondDirective = $this->createDirective('second', fn($d) => ExitCode::SUCCESS);
+        $firstDirective = $this->createDirective('first', fn ($d) => ExitCode::SUCCESS);
+        $secondDirective = $this->createDirective('second', fn ($d) => ExitCode::SUCCESS);
 
         // Assert
         $this->assertSame('first', $firstDirective->getSignature());
@@ -213,7 +219,7 @@ final class ClosureDirectiveTest extends UnitTestCase
      */
     private function setArguments(ClosureDirective $directive, array $arguments): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         foreach ($arguments as $name => $value) {
             $collection->add(new ParameterRecord(name: $name, value: $value));
         }
@@ -228,7 +234,7 @@ final class ClosureDirectiveTest extends UnitTestCase
      */
     private function setOptions(ClosureDirective $directive, array $options): void
     {
-        $collection = new ParameterCollection();
+        $collection = new ParameterCollection;
         foreach ($options as $name => $value) {
             $collection->add(new ParameterRecord(name: $name, value: $value));
         }

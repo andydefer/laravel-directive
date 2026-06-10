@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/LaravelServiceRecord.php
 
 declare(strict_types=1);

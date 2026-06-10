@@ -62,6 +62,7 @@ final class InteractsWithDirectivesTest extends UnitTestCase
         $this->createTestDirective('test-closure', function ($d) use (&$executed) {
             $executed = true;
             $d->line('Closure executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -158,10 +159,11 @@ final class InteractsWithDirectivesTest extends UnitTestCase
     public function test_clear_registered_directives(): void
     {
         // Arrange: Create and register a temporary directive
-        $uniqueName = 'temp-directive-' . uniqid();
+        $uniqueName = 'temp-directive-'.uniqid();
 
         $this->createTestDirective($uniqueName, function ($d) {
             $d->line('Temp directive executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -333,9 +335,9 @@ final class InteractsWithDirectivesTest extends UnitTestCase
         $this->initDirectiveTesting(bootLaravel: true);
 
         // Assert: Verify Laravel structure was created
-        $this->assertFileExists($this->directiveTempDir . '/bootstrap/app.php');
-        $this->assertFileExists($this->directiveTempDir . '/config/app.php');
-        $this->assertDirectoryExists($this->directiveTempDir . '/storage');
+        $this->assertFileExists($this->directiveTempDir.'/bootstrap/app.php');
+        $this->assertFileExists($this->directiveTempDir.'/config/app.php');
+        $this->assertDirectoryExists($this->directiveTempDir.'/storage');
 
         // Act: Register a directive
         $directive = new TestCalculatorDirective($this->interaction);

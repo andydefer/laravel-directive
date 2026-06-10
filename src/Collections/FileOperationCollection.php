@@ -1,4 +1,5 @@
 <?php
+
 // src/Collections/FileOperationCollection.php
 
 declare(strict_types=1);
@@ -17,7 +18,7 @@ final class FileOperationCollection extends AbstractTypedCollection
 
     public function getByOperation(string $operation): self
     {
-        return $this->filter(fn(FileOperationRecord $r) => $r->operation === $operation);
+        return $this->filter(fn (FileOperationRecord $r) => $r->operation === $operation);
     }
 
     public function getWrites(): self

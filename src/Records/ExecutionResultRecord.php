@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/ExecutionResultRecord.php
 
 declare(strict_types=1);

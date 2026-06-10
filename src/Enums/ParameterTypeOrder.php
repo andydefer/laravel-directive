@@ -1,4 +1,5 @@
 <?php
+
 // src/Enums/ParameterTypeOrder.php
 
 declare(strict_types=1);
@@ -58,7 +59,7 @@ enum ParameterTypeOrder: int
     /**
      * Check if this type comes before another in the order.
      *
-     * @param self $other The other type to compare
+     * @param  self  $other  The other type to compare
      * @return bool True if this type comes before the other
      */
     public function comesBefore(self $other): bool
@@ -69,7 +70,7 @@ enum ParameterTypeOrder: int
     /**
      * Check if this type comes after another in the order.
      *
-     * @param self $other The other type to compare
+     * @param  self  $other  The other type to compare
      * @return bool True if this type comes after the other
      */
     public function comesAfter(self $other): bool

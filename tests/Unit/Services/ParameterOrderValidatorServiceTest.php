@@ -1,4 +1,5 @@
 <?php
+
 // tests/Unit/Services/ParameterOrderValidatorServiceTest.php
 
 declare(strict_types=1);
@@ -22,12 +23,12 @@ final class ParameterOrderValidatorServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $context = new ParameterParserContext();
-        $context->addStrategy(new RequiredArgumentStrategy());
-        $context->addStrategy(new DefaultValueArgumentStrategy());
-        $context->addStrategy(new OptionalArgumentStrategy());
-        $context->addStrategy(new VariadicArgumentStrategy());
-        $context->addStrategy(new OptionStrategy());
+        $context = new ParameterParserContext;
+        $context->addStrategy(new RequiredArgumentStrategy);
+        $context->addStrategy(new DefaultValueArgumentStrategy);
+        $context->addStrategy(new OptionalArgumentStrategy);
+        $context->addStrategy(new VariadicArgumentStrategy);
+        $context->addStrategy(new OptionStrategy);
 
         $this->service = new ParameterOrderValidatorService($context);
     }

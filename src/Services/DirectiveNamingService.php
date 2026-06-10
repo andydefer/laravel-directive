@@ -14,7 +14,9 @@ namespace AndyDefer\Directive\Services;
 final class DirectiveNamingService
 {
     private const CLASS_SUFFIX = 'Directive';
+
     private const OPTION_PLACEHOLDER = '{--option}';
+
     private const DEFAULT_DESCRIPTION = 'Generated directive for {{signature}}';
 
     /**
@@ -22,8 +24,7 @@ final class DirectiveNamingService
      *
      * Converts kebab-case to PascalCase and appends 'Directive'.
      *
-     * @param string $name The directive name in kebab-case (e.g., 'user-create')
-     *
+     * @param  string  $name  The directive name in kebab-case (e.g., 'user-create')
      * @return string Generated class name in PascalCase with suffix
      *
      * @example
@@ -41,19 +42,18 @@ final class DirectiveNamingService
             $className .= $this->capitalizeSegment($part);
         }
 
-        return $className . self::CLASS_SUFFIX;
+        return $className.self::CLASS_SUFFIX;
     }
 
     /**
      * Generate signature with placeholder option.
      *
-     * @param string $name Base directive name
-     *
+     * @param  string  $name  Base directive name
      * @return string Full signature with option placeholder
      */
     public function generateSignatureWithOption(string $name): string
     {
-        return $name . ' ' . self::OPTION_PLACEHOLDER;
+        return $name.' '.self::OPTION_PLACEHOLDER;
     }
 
     /**
@@ -65,10 +65,9 @@ final class DirectiveNamingService
      * - {{description}}: Directive description
      * - {{date}}      : Current date and time (Y-m-d H:i:s)
      *
-     * @param string $stub      The stub template content
-     * @param string $className The directive class name
-     * @param string $signature The directive signature
-     *
+     * @param  string  $stub  The stub template content
+     * @param  string  $className  The directive class name
+     * @param  string  $signature  The directive signature
      * @return string Processed content with placeholders replaced
      */
     public function replaceStubVariables(string $stub, string $className, string $signature): string
@@ -87,8 +86,7 @@ final class DirectiveNamingService
      *
      * Removes the 'Directive' suffix and converts PascalCase to kebab-case.
      *
-     * @param string $className The directive class name (e.g., 'UserCreateDirective')
-     *
+     * @param  string  $className  The directive class name (e.g., 'UserCreateDirective')
      * @return string Base directive name in kebab-case
      *
      * @example
@@ -98,22 +96,22 @@ final class DirectiveNamingService
      */
     public function extractBaseName(string $className): string
     {
-        if (!str_ends_with($className, self::CLASS_SUFFIX)) {
+        if (! str_ends_with($className, self::CLASS_SUFFIX)) {
             return $this->convertToKebabCase($className);
         }
 
         $withoutSuffix = substr($className, 0, -strlen(self::CLASS_SUFFIX));
+
         return $this->convertToKebabCase($withoutSuffix);
     }
 
     /**
      * Generate complete stub content from template.
      *
-     * @param string $template  The stub template
-     * @param string $className The directive class name
-     * @param string $signature The directive signature
-     * @param string $description Optional custom description
-     *
+     * @param  string  $template  The stub template
+     * @param  string  $className  The directive class name
+     * @param  string  $signature  The directive signature
+     * @param  string  $description  Optional custom description
      * @return string Complete directive stub
      */
     public function generateStub(

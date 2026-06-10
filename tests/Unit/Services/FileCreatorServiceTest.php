@@ -13,20 +13,21 @@ use AndyDefer\Directive\Records\PathSegmentsRecord;
 use AndyDefer\Directive\Services\FileCreatorService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Services\EnumService;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class FileCreatorServiceTest extends TestCase
 {
     private FileCreatorService $service;
+
     private FileCreatorConfig $config;
+
     private string $tempDir;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->tempDir = sys_get_temp_dir() . '/file_creator_service_test_' . uniqid();
+        $this->tempDir = sys_get_temp_dir().'/file_creator_service_test_'.uniqid();
         mkdir($this->tempDir, PermissionMode::DIRECTORY->value(), true);
 
         $this->config = new FileCreatorConfig(new EnumService);
@@ -46,7 +47,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_to_pascal_case_from_kebab_returns_pascal_case(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'user-profile';
         $expected = 'UserProfile';
 
@@ -60,7 +61,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_to_pascal_case_from_snake_returns_pascal_case(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'user_profile';
         $expected = 'UserProfile';
 
@@ -74,7 +75,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_to_pascal_case_with_multiple_words_returns_pascal_case(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'send-welcome-email-task';
         $expected = 'SendWelcomeEmailTask';
 
@@ -88,7 +89,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_to_kebab_case_returns_kebab_case(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'SendWelcomeEmailTask';
         $expected = 'send-welcome-email-task';
 
@@ -102,7 +103,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_to_kebab_case_with_single_word_returns_lowercase(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'User';
         $expected = 'user';
 
@@ -118,7 +119,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_extract_path_segments_simple_name_returns_correct_segments(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'UserRepository';
 
         // Act
@@ -135,7 +136,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_extract_path_segments_with_subdirectory_returns_correct_segments(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'admin/user/UserRepository';
         $expectedSegments = ['admin', 'user'];
 
@@ -152,7 +153,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_extract_path_segments_uppercases_subdirectories(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $input = 'admin/user/profile';
         $expectedSegments = ['admin', 'user'];
 
@@ -171,10 +172,10 @@ final class FileCreatorServiceTest extends TestCase
     public function test_build_namespace_without_subpath_returns_base_namespace(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $segments = new PathSegmentsRecord(
-            segments: new StringTypedCollection(),
-            pascalSegments: new StringTypedCollection(),
+            segments: new StringTypedCollection,
+            pascalSegments: new StringTypedCollection,
             className: 'UserTask',
             subPath: '',
             fullPath: 'UserTask',
@@ -192,7 +193,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_build_namespace_with_subpath_returns_full_namespace(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $segments = new PathSegmentsRecord(
             segments: new StringTypedCollection(['admin', 'user']),
             pascalSegments: new StringTypedCollection(['Admin', 'User']),
@@ -215,10 +216,10 @@ final class FileCreatorServiceTest extends TestCase
     public function test_get_app_path_without_subpath_returns_correct_path(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $segments = new PathSegmentsRecord(
-            segments: new StringTypedCollection(),
-            pascalSegments: new StringTypedCollection(),
+            segments: new StringTypedCollection,
+            pascalSegments: new StringTypedCollection,
             className: 'UserTask',
             subPath: '',
             fullPath: 'UserTask',
@@ -236,7 +237,7 @@ final class FileCreatorServiceTest extends TestCase
     public function test_get_app_path_with_subpath_returns_correct_path(): void
     {
         // Arrange
-        $context = new FileCreationContext();
+        $context = new FileCreationContext;
         $segments = new PathSegmentsRecord(
             segments: new StringTypedCollection(['admin']),
             pascalSegments: new StringTypedCollection(['Admin']),
@@ -259,12 +260,12 @@ final class FileCreatorServiceTest extends TestCase
     public function test_create_file_success_creates_file_with_replaced_content(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Hello {{ name }}!');
-        $destination = $this->tempDir . '/output.php';
+        $destination = $this->tempDir.'/output.php';
 
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
         $replacements->addReplacement('{{ name }}', 'World');
 
         // Act
@@ -281,11 +282,11 @@ final class FileCreatorServiceTest extends TestCase
     public function test_create_file_creates_directory_if_not_exists(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
-        $destination = $this->tempDir . '/sub/dir/output.php';
-        $replacements = new ReplacementCollection();
+        $destination = $this->tempDir.'/sub/dir/output.php';
+        $replacements = new ReplacementCollection;
 
         // Act
         $result = $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -293,7 +294,7 @@ final class FileCreatorServiceTest extends TestCase
         // Assert
         $this->assertTrue($result->success);
         $this->assertFileExists($destination);
-        $this->assertDirectoryExists($this->tempDir . '/sub/dir');
+        $this->assertDirectoryExists($this->tempDir.'/sub/dir');
         $this->assertTrue($context->hasCreatedDirectories());
         $this->assertEquals(1, $context->getCreatedDirectoriesCount());
     }
@@ -302,11 +303,11 @@ final class FileCreatorServiceTest extends TestCase
     {
         // Arrange
         $context = new FileCreationContext(false);
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
-        $destination = $this->tempDir . '/exists.php';
+        $destination = $this->tempDir.'/exists.php';
         file_put_contents($destination, 'old content');
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
         // Act
         $result = $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -323,11 +324,11 @@ final class FileCreatorServiceTest extends TestCase
     {
         // Arrange
         $context = new FileCreationContext(true);
-        $stubPath = $this->tempDir . '/test.stub';
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'New content');
-        $destination = $this->tempDir . '/exists.php';
+        $destination = $this->tempDir.'/exists.php';
         file_put_contents($destination, 'old content');
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
 
         // Act
         $result = $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -340,10 +341,10 @@ final class FileCreatorServiceTest extends TestCase
     public function test_create_file_returns_false_when_stub_not_found(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/not-exist.stub';
-        $destination = $this->tempDir . '/output.php';
-        $replacements = new ReplacementCollection();
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/not-exist.stub';
+        $destination = $this->tempDir.'/output.php';
+        $replacements = new ReplacementCollection;
 
         // Act
         $result = $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -358,12 +359,12 @@ final class FileCreatorServiceTest extends TestCase
     public function test_create_file_replaces_multiple_variables(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Class {{ class }} extends {{ parent }}');
-        $destination = $this->tempDir . '/output.php';
+        $destination = $this->tempDir.'/output.php';
 
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
         $replacements->addReplacement('{{ class }}', 'UserTask');
         $replacements->addReplacement('{{ parent }}', 'AbstractTask');
 
@@ -378,12 +379,12 @@ final class FileCreatorServiceTest extends TestCase
     public function test_create_file_with_empty_replacement(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Value: {{ value }}');
-        $destination = $this->tempDir . '/output.php';
+        $destination = $this->tempDir.'/output.php';
 
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
         $replacements->addReplacement('{{ value }}', '');
 
         // Act
@@ -397,12 +398,12 @@ final class FileCreatorServiceTest extends TestCase
     public function test_create_file_tracks_transformation_steps_in_context(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Hello {{ name }}!');
-        $destination = $this->tempDir . '/output.php';
+        $destination = $this->tempDir.'/output.php';
 
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
         $replacements->addReplacement('{{ name }}', 'World');
 
         // Act
@@ -420,12 +421,12 @@ final class FileCreatorServiceTest extends TestCase
     public function test_create_file_from_name_creates_file_with_constructed_path(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content for {{ name }}');
         $baseDirectory = '/app/Tasks/';
 
-        $replacements = new ReplacementCollection();
+        $replacements = new ReplacementCollection;
         $replacements->addReplacement('{{ name }}', 'UserTask');
 
         // Act
@@ -448,11 +449,11 @@ final class FileCreatorServiceTest extends TestCase
     public function test_context_tracks_current_step(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
-        $destination = $this->tempDir . '/output.php';
-        $replacements = new ReplacementCollection();
+        $destination = $this->tempDir.'/output.php';
+        $replacements = new ReplacementCollection;
 
         // Act
         $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -464,11 +465,11 @@ final class FileCreatorServiceTest extends TestCase
     public function test_context_tracks_created_directories_and_files(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
-        $destination = $this->tempDir . '/sub/dir/output.php';
-        $replacements = new ReplacementCollection();
+        $destination = $this->tempDir.'/sub/dir/output.php';
+        $replacements = new ReplacementCollection;
 
         // Act
         $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -483,11 +484,11 @@ final class FileCreatorServiceTest extends TestCase
     public function test_context_can_be_reset(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
-        $destination = $this->tempDir . '/output.php';
-        $replacements = new ReplacementCollection();
+        $destination = $this->tempDir.'/output.php';
+        $replacements = new ReplacementCollection;
 
         $this->service->createFile($stubPath, $destination, $replacements, $context);
         $this->assertTrue($context->isCompleted());
@@ -508,10 +509,10 @@ final class FileCreatorServiceTest extends TestCase
     public function test_context_has_error_returns_true_when_error_exists(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/not-exist.stub';
-        $destination = $this->tempDir . '/output.php';
-        $replacements = new ReplacementCollection();
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/not-exist.stub';
+        $destination = $this->tempDir.'/output.php';
+        $replacements = new ReplacementCollection;
 
         // Act
         $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -526,11 +527,11 @@ final class FileCreatorServiceTest extends TestCase
     public function test_context_has_error_returns_false_on_success(): void
     {
         // Arrange
-        $context = new FileCreationContext();
-        $stubPath = $this->tempDir . '/test.stub';
+        $context = new FileCreationContext;
+        $stubPath = $this->tempDir.'/test.stub';
         file_put_contents($stubPath, 'Content');
-        $destination = $this->tempDir . '/output.php';
-        $replacements = new ReplacementCollection();
+        $destination = $this->tempDir.'/output.php';
+        $replacements = new ReplacementCollection;
 
         // Act
         $this->service->createFile($stubPath, $destination, $replacements, $context);
@@ -546,13 +547,13 @@ final class FileCreatorServiceTest extends TestCase
 
     private function deleteDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             is_dir($path) ? $this->deleteDirectory($path) : unlink($path);
         }
         rmdir($dir);

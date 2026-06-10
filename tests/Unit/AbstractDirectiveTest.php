@@ -18,6 +18,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class AbstractDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
+
     private TestConcreteDirective $directive;
 
     protected function setUp(): void
@@ -34,7 +35,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_set_arguments_sets_arguments_correctly(): void
     {
         // Arrange: Create argument collection
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(
             new ParameterRecord(name: 'name', value: 'John Doe'),
             new ParameterRecord(name: 'email', value: 'john@example.com'),
@@ -52,7 +53,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_argument_returns_null_for_unknown_key(): void
     {
         // Arrange: Set empty arguments
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $this->directive->setArguments($arguments);
 
         // Act: Get unknown argument
@@ -65,7 +66,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_argument_returns_null_when_value_is_boolean(): void
     {
         // Arrange: Add boolean argument
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'active', value: true));
         $this->directive->setArguments($arguments);
 
@@ -79,7 +80,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_argument_returns_null_when_value_is_empty_string(): void
     {
         // Arrange: Add empty string argument
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'comment', value: ''));
         $this->directive->setArguments($arguments);
 
@@ -93,7 +94,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_has_argument_returns_true_when_argument_exists_with_non_empty_value(): void
     {
         // Arrange: Add valid argument
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
         $this->directive->setArguments($arguments);
 
@@ -104,7 +105,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_has_argument_returns_false_when_argument_does_not_exist(): void
     {
         // Arrange: Add argument but not the one we're checking
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
         $this->directive->setArguments($arguments);
 
@@ -115,7 +116,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_has_argument_returns_false_for_argument_with_empty_string_value(): void
     {
         // Arrange: Add empty string argument
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'comment', value: ''));
         $this->directive->setArguments($arguments);
 
@@ -126,7 +127,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_has_argument_returns_false_for_argument_with_null_value(): void
     {
         // Arrange: Add null argument
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'optional', value: null));
         $this->directive->setArguments($arguments);
 
@@ -137,7 +138,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_set_arguments_returns_self_for_chaining(): void
     {
         // Arrange: Create argument collection
-        $arguments = new ParameterCollection();
+        $arguments = new ParameterCollection;
         $arguments->add(new ParameterRecord(name: 'name', value: 'John'));
 
         // Act: Set arguments
@@ -152,7 +153,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_set_options_sets_options_correctly(): void
     {
         // Arrange: Create options collection with mixed types
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(
             new ParameterRecord(name: 'role', value: 'admin'),
             new ParameterRecord(name: 'active', value: true),
@@ -172,7 +173,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_option_returns_null_for_unknown_key(): void
     {
         // Arrange: Set empty options
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $this->directive->setOptions($options);
 
         // Act: Get unknown option
@@ -185,7 +186,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_option_returns_null_for_empty_string_value(): void
     {
         // Arrange: Add empty string option
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'role', value: ''));
         $this->directive->setOptions($options);
 
@@ -199,7 +200,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_has_option_returns_true_when_option_exists_with_non_empty_value(): void
     {
         // Arrange: Add boolean flag option
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
         $this->directive->setOptions($options);
 
@@ -210,7 +211,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_has_option_returns_false_when_option_does_not_exist(): void
     {
         // Arrange: Add option but not the one we're checking
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
         $this->directive->setOptions($options);
 
@@ -221,7 +222,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_has_option_returns_false_for_option_with_empty_string_value(): void
     {
         // Arrange: Add empty string option
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'role', value: ''));
         $this->directive->setOptions($options);
 
@@ -232,7 +233,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_set_options_returns_self_for_chaining(): void
     {
         // Arrange: Create options collection
-        $options = new ParameterCollection();
+        $options = new ParameterCollection;
         $options->add(new ParameterRecord(name: 'force', value: true));
 
         // Act: Set options
@@ -345,11 +346,11 @@ final class AbstractDirectiveTest extends UnitTestCase
     public function test_table_delegates_to_interaction(): void
     {
         // Arrange: Create headers and rows
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John', 'john@example.com');
         $rows->add($row);
 

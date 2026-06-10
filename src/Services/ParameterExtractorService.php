@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/ParameterExtractorService.php (mis à jour)
 
 declare(strict_types=1);
@@ -19,7 +20,7 @@ final class ParameterExtractorService
     public function extract(string $signature): ExtractedParameterCollection
     {
         $matches = $this->findSignatureParameters($signature);
-        $collection = new ExtractedParameterCollection();
+        $collection = new ExtractedParameterCollection;
 
         foreach ($matches as $parameter) {
             $parsed = $this->parserContext->parse($parameter);
@@ -42,7 +43,7 @@ final class ParameterExtractorService
     private function findSignatureParameters(string $signature): StringTypedCollection
     {
         preg_match_all('/\{([^}]+)\}/', $signature, $matches);
-        $result = new StringTypedCollection();
+        $result = new StringTypedCollection;
 
         foreach ($matches[1] as $parameter) {
             $result->add($parameter);

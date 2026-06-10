@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Collections\RowCollection;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Enums\MessageType;
 use AndyDefer\Directive\Enums\RenderType;
@@ -13,8 +15,6 @@ use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
@@ -38,7 +38,7 @@ class DirectiveInteractionService
     /**
      * Outputs a plain text line.
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function line(string $message): void
     {
@@ -48,7 +48,7 @@ class DirectiveInteractionService
     /**
      * Outputs an informational message (typically green).
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function info(string $message): void
     {
@@ -58,7 +58,7 @@ class DirectiveInteractionService
     /**
      * Outputs an error message (typically red).
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function error(string $message): void
     {
@@ -68,7 +68,7 @@ class DirectiveInteractionService
     /**
      * Outputs a warning message (typically yellow).
      *
-     * @param string $message The message to display
+     * @param  string  $message  The message to display
      */
     public function warn(string $message): void
     {
@@ -78,8 +78,8 @@ class DirectiveInteractionService
     /**
      * Renders a message with the specified type.
      *
-     * @param string      $message The message content
-     * @param MessageType $type    The message type (LINE, INFO, ERROR, WARNING)
+     * @param  string  $message  The message content
+     * @param  MessageType  $type  The message type (LINE, INFO, ERROR, WARNING)
      */
     private function renderMessage(string $message, MessageType $type): void
     {
@@ -93,40 +93,40 @@ class DirectiveInteractionService
     /**
      * Asks a question and returns the user's answer.
      *
-     * @param string $question The question to ask
-     *
+     * @param  string  $question  The question to ask
      * @return string The user's answer (trimmed)
      */
     public function ask(string $question): string
     {
         $record = new QuestionRecord($question);
+
         return $this->inputDispatcher->execute($record, InputType::SIMPLE_QUESTION);
     }
 
     /**
      * Asks for confirmation and returns the user's choice.
      *
-     * @param string $question The confirmation question
-     *
+     * @param  string  $question  The confirmation question
      * @return bool True if the user confirms (y/yes), false otherwise (n/no)
      */
     public function confirm(string $question): bool
     {
         $record = new QuestionRecord($question);
+
         return $this->inputDispatcher->execute($record, InputType::CONFIRMATION);
     }
 
     /**
      * Asks the user to choose from a numbered list.
      *
-     * @param string $name The name of the choice (for display)
-     * @param int    $max  The maximum choice number (1 to max)
-     *
+     * @param  string  $name  The name of the choice (for display)
+     * @param  int  $max  The maximum choice number (1 to max)
      * @return int The chosen number (1 to max), or 0 if invalid
      */
     public function askUserChoice(string $name, int $max): int
     {
         $record = new UserChoiceRecord(choice: 0, max: $max);
+
         return $this->inputDispatcher->execute($record, InputType::USER_CHOICE);
     }
 
@@ -135,8 +135,8 @@ class DirectiveInteractionService
     /**
      * Displays a formatted table with headers and rows.
      *
-     * @param StringTypedCollection $headers The table headers
-     * @param RowCollection         $rows    The table rows
+     * @param  StringTypedCollection  $headers  The table headers
+     * @param  RowCollection  $rows  The table rows
      */
     public function table(StringTypedCollection $headers, RowCollection $rows): void
     {
@@ -155,9 +155,9 @@ class DirectiveInteractionService
 
     /**
      * Outputs a separator line.
-     * 
-     * @param string $character The character to use for the separator (default: '-')
-     * @param int $length The length of the separator line (default: 80)
+     *
+     * @param  string  $character  The character to use for the separator (default: '-')
+     * @param  int  $length  The length of the separator line (default: 80)
      */
     public function separator(string $character = '-', int $length = 80): void
     {

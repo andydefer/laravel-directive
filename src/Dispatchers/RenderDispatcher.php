@@ -53,26 +53,25 @@ class RenderDispatcher
     private function initializeStrategies(): void
     {
         $this->strategies = [
-            new HelpRenderStrategy(),
-            new ListRenderStrategy(),
-            new NotFoundRenderStrategy(),
-            new MessageRenderStrategy(),
-            new ConflictRenderStrategy(),
-            new TableRenderStrategy(),
-            new ValidationErrorRenderStrategy(),
-            new DisplayMessageRenderStrategy(),
-            new WarningRenderStrategy(),
-            new DebugRenderStrategy(),
-            new VersionRenderStrategy(),
+            new HelpRenderStrategy,
+            new ListRenderStrategy,
+            new NotFoundRenderStrategy,
+            new MessageRenderStrategy,
+            new ConflictRenderStrategy,
+            new TableRenderStrategy,
+            new ValidationErrorRenderStrategy,
+            new DisplayMessageRenderStrategy,
+            new WarningRenderStrategy,
+            new DebugRenderStrategy,
+            new VersionRenderStrategy,
         ];
     }
 
     /**
      * Executes the rendering process for the given record and type.
      *
-     * @param object     $record The record containing data to render
-     * @param RenderType $type   The type of render to perform
-     *
+     * @param  object  $record  The record containing data to render
+     * @param  RenderType  $type  The type of render to perform
      * @return string The rendered output
      */
     public function execute(object $record, RenderType $type): string
@@ -88,9 +87,8 @@ class RenderDispatcher
      *
      * If the type is LIST but there are no directives, fallback to EMPTY.
      *
-     * @param object     $record The record containing data
-     * @param RenderType $type   The requested render type
-     *
+     * @param  object  $record  The record containing data
+     * @param  RenderType  $type  The requested render type
      * @return RenderType The effective render type
      */
     private function determineEffectiveType(object $record, RenderType $type): RenderType
@@ -105,13 +103,12 @@ class RenderDispatcher
     /**
      * Checks if the record has no directives to display.
      *
-     * @param object $record The record to check
-     *
+     * @param  object  $record  The record to check
      * @return bool True if there are no directives to display
      */
     private function isEmptyDirectives(object $record): bool
     {
-        if (!$record instanceof RenderRecord) {
+        if (! $record instanceof RenderRecord) {
             return true;
         }
 
@@ -121,9 +118,8 @@ class RenderDispatcher
     /**
      * Finds the appropriate strategy and executes it to get replacements.
      *
-     * @param object     $record The record containing data
-     * @param RenderType $type   The render type
-     *
+     * @param  object  $record  The record containing data
+     * @param  RenderType  $type  The render type
      * @return ReplacementCollection The replacements for template rendering
      */
     private function getReplacements(object $record, RenderType $type): ReplacementCollection
@@ -134,6 +130,6 @@ class RenderDispatcher
             }
         }
 
-        return new ReplacementCollection();
+        return new ReplacementCollection;
     }
 }

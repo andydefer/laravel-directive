@@ -1,4 +1,5 @@
 <?php
+
 // src/Testing/ClosureDirectiveRegistry.php
 
 declare(strict_types=1);
@@ -17,7 +18,7 @@ final class ClosureDirectiveRegistry
     /**
      * Register a closure directive.
      *
-     * @param ClosureDirective $directive The directive to register
+     * @param  ClosureDirective  $directive  The directive to register
      */
     public function register(ClosureDirective $directive): void
     {
@@ -33,7 +34,7 @@ final class ClosureDirectiveRegistry
     /**
      * Get a closure directive by its name.
      *
-     * @param string $name The directive name
+     * @param  string  $name  The directive name
      * @return ClosureDirective|null The directive or null if not found
      */
     public function get(string $name): ?ClosureDirective
@@ -44,7 +45,7 @@ final class ClosureDirectiveRegistry
     /**
      * Check if a closure directive exists.
      *
-     * @param string $name The directive name
+     * @param  string  $name  The directive name
      * @return bool True if exists
      */
     public function has(string $name): bool

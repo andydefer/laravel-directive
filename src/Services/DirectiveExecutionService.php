@@ -8,7 +8,6 @@ use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use InvalidArgumentException;
 
 /**
@@ -37,7 +36,7 @@ class DirectiveExecutionService
     /**
      * Sets the Laravel bootstrapper for directives that need it.
      *
-     * @param LaravelBootstrapper|null $bootstrapper The bootstrapper instance
+     * @param  LaravelBootstrapper|null  $bootstrapper  The bootstrapper instance
      */
     public function setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void
     {
@@ -47,8 +46,7 @@ class DirectiveExecutionService
     /**
      * Executes a directive based on the execution record.
      *
-     * @param DirectiveExecutionRecord $record The execution record containing signature and arguments
-     *
+     * @param  DirectiveExecutionRecord  $record  The execution record containing signature and arguments
      * @return ExitCode The exit code indicating success or failure
      */
     public function execute(DirectiveExecutionRecord $record): ExitCode
@@ -56,17 +54,20 @@ class DirectiveExecutionService
         // Handle global commands
         if ($this->isHelpCommand($record->signature)) {
             $this->renderer->renderHelp();
+
             return ExitCode::SUCCESS;
         }
 
         if ($this->isListCommand($record->signature)) {
             $directives = $this->discovery->discover();
             $this->renderer->renderList($directives);
+
             return ExitCode::SUCCESS;
         }
 
         if ($this->isVersionCommand($record->signature)) {
             $this->renderer->renderVersion();
+
             return ExitCode::SUCCESS;
         }
 
@@ -76,6 +77,7 @@ class DirectiveExecutionService
 
         if ($directiveMetadata === null) {
             $this->renderer->renderNotFound($record->signature);
+
             return ExitCode::NOT_FOUND;
         }
 
@@ -83,9 +85,11 @@ class DirectiveExecutionService
             return $this->executeDirective($directiveMetadata, $record);
         } catch (InvalidArgumentException $e) {
             $this->renderer->renderError($e->getMessage());
+
             return ExitCode::INVALID_ARGUMENT;
         } catch (\Throwable $e) {
             $this->renderer->renderError($e->getMessage());
+
             return ExitCode::FAILURE;
         }
     }
@@ -93,8 +97,7 @@ class DirectiveExecutionService
     /**
      * Checks if the signature is a help command.
      *
-     * @param string $signature The directive signature
-     *
+     * @param  string  $signature  The directive signature
      * @return bool True if it's a help command
      */
     private function isHelpCommand(string $signature): bool
@@ -105,8 +108,7 @@ class DirectiveExecutionService
     /**
      * Checks if the signature is a list command.
      *
-     * @param string $signature The directive signature
-     *
+     * @param  string  $signature  The directive signature
      * @return bool True if it's a list command
      */
     private function isListCommand(string $signature): bool
@@ -117,8 +119,7 @@ class DirectiveExecutionService
     /**
      * Checks if the signature is a version command.
      *
-     * @param string $signature The directive signature
-     *
+     * @param  string  $signature  The directive signature
      * @return bool True if it's a version command
      */
     private function isVersionCommand(string $signature): bool
@@ -129,9 +130,8 @@ class DirectiveExecutionService
     /**
      * Finds a directive metadata by signature, alias, or base name.
      *
-     * @param DirectiveMetadataCollection $directives Collection of directive metadata
-     * @param string                      $signature  The signature to find
-     *
+     * @param  DirectiveMetadataCollection  $directives  Collection of directive metadata
+     * @param  string  $signature  The signature to find
      * @return DirectiveMetadataRecord|null The found directive or null
      */
     private function findDirective(DirectiveMetadataCollection $directives, string $signature): ?DirectiveMetadataRecord
@@ -160,23 +160,22 @@ class DirectiveExecutionService
     /**
      * Extracts the base name from a full signature.
      *
-     * @param string $fullSignature The full signature (e.g., 'test-echo {message?} {extra?}')
-     *
+     * @param  string  $fullSignature  The full signature (e.g., 'test-echo {message?} {extra?}')
      * @return string The base signature (e.g., 'test-echo')
      */
     private function extractBaseSignature(string $fullSignature): string
     {
         $baseSignature = explode(' ', $fullSignature)[0];
         $baseSignature = explode('{', $baseSignature)[0];
+
         return rtrim($baseSignature, '-');
     }
 
     /**
      * Executes a directive after finding its metadata.
      *
-     * @param DirectiveMetadataRecord $metadata The directive metadata
-     * @param DirectiveExecutionRecord $record   The execution record
-     *
+     * @param  DirectiveMetadataRecord  $metadata  The directive metadata
+     * @param  DirectiveExecutionRecord  $record  The execution record
      * @return ExitCode The exit code from the directive execution
      *
      * @throws InvalidArgumentException If parsing fails
@@ -211,18 +210,18 @@ class DirectiveExecutionService
     /**
      * Determines if a directive requires Laravel bootstrapping.
      *
-     * @param string $class The fully qualified class name
-     *
+     * @param  string  $class  The fully qualified class name
      * @return bool True if Laravel bootstrapping is needed
      */
     private function shouldBootLaravel(string $class): bool
     {
         try {
             $reflection = new \ReflectionClass($class);
-            if (!$reflection->hasMethod('shouldBootLaravel')) {
+            if (! $reflection->hasMethod('shouldBootLaravel')) {
                 return false;
             }
             $tempInstance = $reflection->newInstanceWithoutConstructor();
+
             return $tempInstance->shouldBootLaravel();
         } catch (\Throwable $e) {
             return false;
@@ -236,6 +235,7 @@ class DirectiveExecutionService
     {
         if ($this->laravelBootstrapper === null) {
             $this->renderer->renderWarning('Laravel bootstrap file not found');
+
             return;
         }
         $this->laravelBootstrapper->bootstrap();

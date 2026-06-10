@@ -15,12 +15,12 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
     private DirectiveKernel $kernel;
 
     private string $fixturesDirectivesPath;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->fixturesDirectivesPath = realpath(__DIR__ . '/../Fixtures/Directives');
-
+        $this->fixturesDirectivesPath = realpath(__DIR__.'/../Fixtures/Directives');
 
         $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesDirectivesPath);
         $this->app->instance(DirectiveConfig::class, $config);
@@ -44,7 +44,6 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
             'output' => $output,
         ];
     }
-
 
     public function test_kernel_shows_help_when_no_arguments(): void
     {
@@ -78,7 +77,6 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
     public function test_kernel_returns_success_for_existing_directive(): void
     {
         $response = $this->runAndCaptureOutput(['directive', 'test-echo']);
-
 
         $this->assertSame(ExitCode::SUCCESS, $response['result']);
         $this->assertStringContainsString('Hello World', $response['output']);
@@ -243,7 +241,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_kernel_ignores_invalid_directive_files(): void
     {
-        $invalidDir = sys_get_temp_dir() . '/invalid_directives_' . uniqid();
+        $invalidDir = sys_get_temp_dir().'/invalid_directives_'.uniqid();
         mkdir($invalidDir, 0777, true);
 
         $invalidContent = <<<'PHP'
@@ -259,7 +257,7 @@ final class InvalidDirective implements DirectiveInterface
 }
 PHP;
 
-        file_put_contents($invalidDir . '/InvalidDirective.php', $invalidContent);
+        file_put_contents($invalidDir.'/InvalidDirective.php', $invalidContent);
 
         $config = DirectiveConfig::default()->withDirectivesPath($invalidDir);
         $this->app->instance(DirectiveConfig::class, $config);
@@ -270,7 +268,7 @@ PHP;
         $this->assertStringNotContainsString('InvalidDirective', $response['output']);
         $this->assertStringNotContainsString('invalid', $response['output']);
 
-        unlink($invalidDir . '/InvalidDirective.php');
+        unlink($invalidDir.'/InvalidDirective.php');
         rmdir($invalidDir);
     }
 

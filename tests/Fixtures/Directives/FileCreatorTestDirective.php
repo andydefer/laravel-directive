@@ -35,7 +35,7 @@ class FileCreatorTestDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        return new StringTypedCollection();
+        return new StringTypedCollection;
     }
 
     public function shouldBootLaravel(): bool

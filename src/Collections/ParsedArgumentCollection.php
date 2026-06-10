@@ -1,4 +1,5 @@
 <?php
+
 // src/Collections/ParsedArgumentCollection.php
 
 declare(strict_types=1);
@@ -22,6 +23,7 @@ final class ParsedArgumentCollection extends AbstractTypedCollection
                 return $record->value;
             }
         }
+
         return null;
     }
 
@@ -36,6 +38,7 @@ final class ParsedArgumentCollection extends AbstractTypedCollection
         foreach ($this->items as $record) {
             $result[$record->name] = $record->value;
         }
+
         return $result;
     }
 

@@ -10,7 +10,6 @@ use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
-use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 
 final class ListRenderStrategy implements RenderStrategyInterface
 {
@@ -47,7 +46,7 @@ final class ListRenderStrategy implements RenderStrategyInterface
 
         foreach ($directives as $directive) {
             $aliases = $directive->aliases->count() > 0
-                ? ' (' . implode(', ', $directive->aliases->toArray()) . ')'
+                ? ' ('.implode(', ', $directive->aliases->toArray()).')'
                 : '';
 
             $rows[] = sprintf(

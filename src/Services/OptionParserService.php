@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/OptionParserService.php
 
 declare(strict_types=1);
@@ -16,7 +17,7 @@ final class OptionParserService
 
     public function __construct(?DirectiveParserConfigInterface $config = null)
     {
-        $this->config = $config ?? new DirectiveParserConfig();
+        $this->config = $config ?? new DirectiveParserConfig;
     }
 
     public function parseOptions(StringTypedCollection $argv, ParsedOptionCollection $options): void
@@ -44,7 +45,7 @@ final class OptionParserService
     private function isShortOption(string $argument): bool
     {
         return str_starts_with($argument, $this->config->shortOptionPrefix())
-            && !str_starts_with($argument, $this->config->longOptionPrefix())
+            && ! str_starts_with($argument, $this->config->longOptionPrefix())
             && strlen($argument) > 1;
     }
 

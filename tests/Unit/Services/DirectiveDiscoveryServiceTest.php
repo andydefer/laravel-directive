@@ -8,13 +8,13 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
@@ -26,7 +26,9 @@ use ReflectionClass;
 final class DirectiveDiscoveryServiceTest extends UnitTestCase
 {
     private string $fixturesPath;
+
     private DirectiveDiscoveryService $service;
+
     private Container $container;
 
     protected function setUp(): void
@@ -34,17 +36,17 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
         parent::setUp();
 
         // Arrange: Set up fixtures path and container
-        $this->fixturesPath = realpath(__DIR__ . '/../../Fixtures/Directives');
+        $this->fixturesPath = realpath(__DIR__.'/../../Fixtures/Directives');
 
         $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesPath);
 
-        $this->container = new Container();
+        $this->container = new Container;
 
         $this->container->singleton(RenderDispatcher::class, function () {
-            return new RenderDispatcher();
+            return new RenderDispatcher;
         });
         $this->container->singleton(InputDispatcher::class, function () {
-            return new InputDispatcher();
+            return new InputDispatcher;
         });
 
         $this->container->singleton(DirectiveInteractionService::class, function ($c) {
@@ -71,7 +73,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
         // Assert: Verify result is a typed collection of metadata records
         $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
         $this->assertContains(DirectiveMetadataRecord::class, $result->getAllowedTypes());
-        $this->assertGreaterThan(0, $result->count(), 'No directives discovered. Check fixtures path: ' . $this->fixturesPath);
+        $this->assertGreaterThan(0, $result->count(), 'No directives discovered. Check fixtures path: '.$this->fixturesPath);
     }
 
     public function test_finds_test_echo_directive(): void
@@ -90,16 +92,16 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
             }
         }
 
-        $this->assertTrue($found, 'Directive "test-echo" not found in path: ' . $this->fixturesPath);
+        $this->assertTrue($found, 'Directive "test-echo" not found in path: '.$this->fixturesPath);
     }
 
     public function test_ignores_invalid_directives_that_dont_extend_abstract_directive(): void
     {
         // Arrange: Create a temporary directory with an invalid directive
-        $tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        $tempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
         mkdir($tempDir, 0777, true);
 
-        $invalidClassPath = $tempDir . '/InvalidDirective.php';
+        $invalidClassPath = $tempDir.'/InvalidDirective.php';
         $invalidClassContent = <<<'PHP'
 <?php
 
@@ -159,8 +161,8 @@ PHP;
 
         foreach ($result as $directive) {
             $reflection = new ReflectionClass($directive->class);
-            $this->assertFalse($reflection->isAbstract(), 'Directive ' . $directive->class . ' should not be abstract');
-            $this->assertTrue(is_subclass_of($directive->class, AbstractDirective::class), 'Directive ' . $directive->class . ' must extend AbstractDirective');
+            $this->assertFalse($reflection->isAbstract(), 'Directive '.$directive->class.' should not be abstract');
+            $this->assertTrue(is_subclass_of($directive->class, AbstractDirective::class), 'Directive '.$directive->class.' must extend AbstractDirective');
         }
     }
 
@@ -175,7 +177,7 @@ PHP;
             $signatures[] = $directive->signature;
         }
 
-        $this->assertNotEmpty($signatures, 'No signatures found in path: ' . $this->fixturesPath);
+        $this->assertNotEmpty($signatures, 'No signatures found in path: '.$this->fixturesPath);
 
         $found = false;
         foreach ($signatures as $signature) {
@@ -184,7 +186,7 @@ PHP;
                 break;
             }
         }
-        $this->assertTrue($found, 'No test-echo directive found in signatures: ' . implode(', ', $signatures));
+        $this->assertTrue($found, 'No test-echo directive found in signatures: '.implode(', ', $signatures));
     }
 
     public function test_returns_complete_metadata_structure(): void
@@ -193,7 +195,7 @@ PHP;
         $result = $this->service->discover();
 
         // Assert: Verify each directive has complete metadata
-        $this->assertGreaterThan(0, $result->count(), 'No directives found to test in path: ' . $this->fixturesPath);
+        $this->assertGreaterThan(0, $result->count(), 'No directives found to test in path: '.$this->fixturesPath);
 
         foreach ($result as $directive) {
             $this->assertIsString($directive->signature);
@@ -211,7 +213,7 @@ PHP;
         $result = $this->service->discover();
 
         // Assert: Verify at least one directive is discovered
-        $this->assertGreaterThanOrEqual(1, $result->count(), 'No directives discovered in path: ' . $this->fixturesPath);
+        $this->assertGreaterThanOrEqual(1, $result->count(), 'No directives discovered in path: '.$this->fixturesPath);
     }
 
     public function test_signatures_are_unique(): void
@@ -227,7 +229,7 @@ PHP;
             $signatures[] = $directive->signature;
         }
 
-        $this->assertEquals(count($signatures), count(array_unique($signatures)), 'Duplicate signatures found: ' . print_r(array_count_values($signatures), true));
+        $this->assertEquals(count($signatures), count(array_unique($signatures)), 'Duplicate signatures found: '.print_r(array_count_values($signatures), true));
     }
 
     public function test_returns_empty_result_for_invalid_path(): void
@@ -251,7 +253,7 @@ PHP;
     public function test_returns_empty_result_for_empty_directory(): void
     {
         // Arrange: Create empty directory
-        $emptyDir = sys_get_temp_dir() . '/empty_directives_' . uniqid();
+        $emptyDir = sys_get_temp_dir().'/empty_directives_'.uniqid();
         mkdir($emptyDir, 0777, true);
 
         $config = DirectiveConfig::default()->withDirectivesPath($emptyDir);
@@ -300,7 +302,7 @@ PHP;
         $reflection = new ReflectionClass($service);
         $method = $reflection->getMethod('discoverFromVendorPackagesRecursive');
 
-        $results = new DirectiveMetadataCollection();
+        $results = new DirectiveMetadataCollection;
 
         // Act
         $results = $method->invoke($service, $results);
@@ -322,7 +324,7 @@ PHP;
         $reflection = new ReflectionClass($service);
         $scanPackageMethod = $reflection->getMethod('scanPackage');
 
-        $results = new DirectiveMetadataCollection();
+        $results = new DirectiveMetadataCollection;
 
         // Act: Scan a non-existent package (should not crash)
         $scanPackageMethod->invoke($service, $results, 'andydefer/laravel-directive', 1);
@@ -346,7 +348,7 @@ PHP;
         // Reset cache
         $scannedPackagesProperty->setValue($service, []);
 
-        $results = new DirectiveMetadataCollection();
+        $results = new DirectiveMetadataCollection;
 
         // Act: Scan a PHP internal package
         $scanPackageMethod->invoke($service, $results, 'php', 1);
@@ -368,7 +370,7 @@ PHP;
         $scanPackageMethod = $reflection->getMethod('scanPackage');
 
         // Act: Scan at depth 3 (should be ignored)
-        $scanPackageMethod->invoke($service, new DirectiveMetadataCollection(), 'test-package', 3);
+        $scanPackageMethod->invoke($service, new DirectiveMetadataCollection, 'test-package', 3);
 
         // Assert: No exception thrown, just ignored
         $this->assertTrue(true);
@@ -389,20 +391,20 @@ PHP;
         // Reset cache
         $scannedPackagesProperty->setValue($service, []);
 
-        $results = new DirectiveMetadataCollection();
+        $results = new DirectiveMetadataCollection;
 
         // Create a mock package
-        $tempVendorDir = sys_get_temp_dir() . '/vendor_test_' . uniqid();
-        $testPackageName = 'test/mock-package-' . uniqid();
-        $testPackagePath = $tempVendorDir . '/' . $testPackageName;
+        $tempVendorDir = sys_get_temp_dir().'/vendor_test_'.uniqid();
+        $testPackageName = 'test/mock-package-'.uniqid();
+        $testPackagePath = $tempVendorDir.'/'.$testPackageName;
 
         mkdir($testPackagePath, 0777, true);
 
         // Create composer.json
-        file_put_contents($testPackagePath . '/composer.json', '{"name":"' . $testPackageName . '"}');
+        file_put_contents($testPackagePath.'/composer.json', '{"name":"'.$testPackageName.'"}');
 
         // Create directives directory
-        $directivesPath = $testPackagePath . '/src/Directives';
+        $directivesPath = $testPackagePath.'/src/Directives';
         mkdir($directivesPath, 0777, true);
 
         $directiveContent = <<<'PHP'
@@ -420,7 +422,7 @@ final class TestDirective extends AbstractDirective
     public function execute(): ExitCode { return ExitCode::SUCCESS; }
 }
 PHP;
-        file_put_contents($directivesPath . '/TestDirective.php', $directiveContent);
+        file_put_contents($directivesPath.'/TestDirective.php', $directiveContent);
 
         // Redirect vendor directory
         $vendorDirProperty = $reflection->getProperty('vendorDir');
@@ -458,8 +460,8 @@ PHP;
         $reflection = new ReflectionClass($service);
         $scanPackageDirectoriesMethod = $reflection->getMethod('scanPackageDirectories');
 
-        $tempPackageDir = sys_get_temp_dir() . '/test_package_' . uniqid();
-        mkdir($tempPackageDir . '/src/Directives', 0777, true);
+        $tempPackageDir = sys_get_temp_dir().'/test_package_'.uniqid();
+        mkdir($tempPackageDir.'/src/Directives', 0777, true);
 
         $directiveContent = <<<'PHP'
 <?php
@@ -477,9 +479,9 @@ final class TestDirective extends AbstractDirective
 }
 PHP;
 
-        file_put_contents($tempPackageDir . '/src/Directives/TestDirective.php', $directiveContent);
+        file_put_contents($tempPackageDir.'/src/Directives/TestDirective.php', $directiveContent);
 
-        $results = new DirectiveMetadataCollection();
+        $results = new DirectiveMetadataCollection;
 
         // Act: Scan directories (should not throw exception)
         $scanPackageDirectoriesMethod->invoke($service, $results, $tempPackageDir);
@@ -500,7 +502,7 @@ PHP;
 
         putenv('DIRECTIVE_DEBUG=true');
 
-        $tempDir = sys_get_temp_dir() . '/debug_test_' . uniqid();
+        $tempDir = sys_get_temp_dir().'/debug_test_'.uniqid();
         mkdir($tempDir, 0777, true);
 
         $abstractContent = <<<'PHP'
@@ -513,7 +515,7 @@ use AndyDefer\Directive\AbstractDirective;
 abstract class AbstractTestDirective extends AbstractDirective {}
 PHP;
 
-        file_put_contents($tempDir . '/AbstractTestDirective.php', $abstractContent);
+        file_put_contents($tempDir.'/AbstractTestDirective.php', $abstractContent);
 
         $config = DirectiveConfig::default()->withDirectivesPath($tempDir);
         $factory = new ContainerDirectiveFactory($this->container);
@@ -532,10 +534,10 @@ PHP;
         if ($originalDebug === false) {
             putenv('DIRECTIVE_DEBUG');
         } else {
-            putenv('DIRECTIVE_DEBUG=' . $originalDebug);
+            putenv('DIRECTIVE_DEBUG='.$originalDebug);
         }
 
-        unlink($tempDir . '/AbstractTestDirective.php');
+        unlink($tempDir.'/AbstractTestDirective.php');
         rmdir($tempDir);
     }
 
@@ -563,10 +565,10 @@ PHP;
     public function test_handles_malformed_php_files_gracefully(): void
     {
         // Arrange: Create malformed PHP file
-        $tempDir = sys_get_temp_dir() . '/malformed_test_' . uniqid();
+        $tempDir = sys_get_temp_dir().'/malformed_test_'.uniqid();
         mkdir($tempDir, 0777, true);
 
-        $malformedPath = $tempDir . '/MalformedDirective.php';
+        $malformedPath = $tempDir.'/MalformedDirective.php';
         file_put_contents($malformedPath, '<?php this is not valid php code {');
 
         $config = DirectiveConfig::default()->withDirectivesPath($tempDir);
@@ -589,17 +591,17 @@ PHP;
     /**
      * Recursively removes a directory and all its contents.
      *
-     * @param string $dir Directory path to remove
+     * @param  string  $dir  Directory path to remove
      */
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             if (is_dir($path)) {
                 $this->removeDirectory($path);
             } else {

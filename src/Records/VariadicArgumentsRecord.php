@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/VariadicArgumentsRecord.php
 
 declare(strict_types=1);

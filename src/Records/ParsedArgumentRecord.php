@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/ParsedArgumentRecord.php
 
 declare(strict_types=1);

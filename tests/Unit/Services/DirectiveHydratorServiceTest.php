@@ -1,4 +1,5 @@
 <?php
+
 // tests/Unit/Services/DirectiveHydratorServiceTest.php
 
 declare(strict_types=1);
@@ -22,7 +23,9 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveHydratorServiceTest extends UnitTestCase
 {
     private DirectiveFactoryInterface&MockObject $factory;
+
     private DirectiveInteractionService&MockObject $interaction;
+
     private DirectiveHydratorService $service;
 
     protected function setUp(): void
@@ -46,18 +49,19 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
 
     private function createParsedArgumentCollection(array $items): ParsedArgumentCollection
     {
-        $collection = new ParsedArgumentCollection();
+        $collection = new ParsedArgumentCollection;
         for ($i = 0; $i < count($items); $i += 2) {
             if (isset($items[$i + 1])) {
                 $collection->addArgument($items[$i + 1], $items[$i]);
             }
         }
+
         return $collection;
     }
 
     private function createParsedOptionCollection(array $items): ParsedOptionCollection
     {
-        $collection = new ParsedOptionCollection();
+        $collection = new ParsedOptionCollection;
         for ($i = 0; $i < count($items); $i += 2) {
             if (isset($items[$i])) {
                 $value = $items[$i + 1] ?? 'true';
@@ -65,15 +69,16 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
                 $collection->addOption($items[$i], $value, $isFlag);
             }
         }
+
         return $collection;
     }
 
     private function createEmptyParsedDirectiveRecord(): ParsedDirectiveRecord
     {
         return new ParsedDirectiveRecord(
-            arguments: new ParsedArgumentCollection(),
-            options: new ParsedOptionCollection(),
-            variadic_arguments: new StringTypedCollection(),
+            arguments: new ParsedArgumentCollection,
+            options: new ParsedOptionCollection,
+            variadic_arguments: new StringTypedCollection,
         );
     }
 
@@ -89,8 +94,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createParsedArgumentCollection(['John Doe', 'name', 'john@example.com', 'email']);
-        $options = new ParsedOptionCollection();
-        $variadicArguments = new StringTypedCollection();
+        $options = new ParsedOptionCollection;
+        $variadicArguments = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -113,9 +118,9 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $options = $this->createParsedOptionCollection(['active', 'true', 'verbose', 'true', 'role', 'admin']);
-        $variadicArguments = new StringTypedCollection();
+        $variadicArguments = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -140,9 +145,9 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
-        $variadicArguments = new StringTypedCollection();
+        $variadicArguments = new StringTypedCollection;
         $variadicArguments->add('file1.txt');
         $variadicArguments->add('file2.txt');
         $variadicArguments->add('file3.txt');
@@ -172,8 +177,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createParsedArgumentCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
-        $options = new ParsedOptionCollection();
-        $variadicArguments = new StringTypedCollection();
+        $options = new ParsedOptionCollection;
+        $variadicArguments = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -214,8 +219,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createParsedArgumentCollection(['value1', 'key1']);
-        $options = new ParsedOptionCollection();
-        $variadicArguments = new StringTypedCollection();
+        $options = new ParsedOptionCollection;
+        $variadicArguments = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -236,9 +241,9 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $options = $this->createParsedOptionCollection(['active', 'true']);
-        $variadicArguments = new StringTypedCollection();
+        $variadicArguments = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -259,7 +264,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $options = $this->createParsedOptionCollection([
             'string_value',
             'hello',
@@ -274,7 +279,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             'numeric_value',
             '42',
         ]);
-        $variadicArguments = new StringTypedCollection();
+        $variadicArguments = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
@@ -326,9 +331,9 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
-        $variadicArguments = new StringTypedCollection();
+        $variadicArguments = new StringTypedCollection;
         $variadicArguments->add('a.txt');
         $variadicArguments->add('b.txt');
         $variadicArguments->add('c.txt');
@@ -360,7 +365,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
         $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
         $options = $this->createParsedOptionCollection(['verbose', 'true']);
 
-        $variadicArguments = new StringTypedCollection();
+        $variadicArguments = new StringTypedCollection;
         $variadicArguments->add('file1.txt');
         $variadicArguments->add('file2.txt');
 
@@ -389,8 +394,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->willReturn($directive);
 
         $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
-        $options = new ParsedOptionCollection();
-        $variadicArguments = new StringTypedCollection();
+        $options = new ParsedOptionCollection;
+        $variadicArguments = new StringTypedCollection;
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,

@@ -21,8 +21,7 @@ final class ReplacementCollection extends AbstractKeyValueCollection
      * Add a replacement pair.
      *
      * @param  string  $placeholder  The placeholder to replace (e.g., {{name}})
-     * @param  string  $value        The replacement value
-     * @return self
+     * @param  string  $value  The replacement value
      */
     public function addReplacement(string $placeholder, string $value): self
     {
@@ -33,8 +32,6 @@ final class ReplacementCollection extends AbstractKeyValueCollection
 
     /**
      * Get all placeholders as a string collection.
-     *
-     * @return StringTypedCollection
      */
     public function getPlaceholders(): StringTypedCollection
     {
@@ -48,8 +45,6 @@ final class ReplacementCollection extends AbstractKeyValueCollection
 
     /**
      * Get all values as a string collection.
-     *
-     * @return StringTypedCollection
      */
     public function getValues(): StringTypedCollection
     {

@@ -1,11 +1,11 @@
 <?php
+
 // src/Records/ParsedResultRecord.php
 
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Records;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\ParsedArgumentCollection;
 use AndyDefer\Directive\Collections\ParsedOptionCollection;
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;

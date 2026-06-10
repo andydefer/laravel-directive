@@ -1,4 +1,5 @@
 <?php
+
 // src/Steps/CreateTempDirectoryStep.php
 
 declare(strict_types=1);
@@ -13,7 +14,7 @@ final class CreateTempDirectoryStep implements DirectiveTestingStepInterface
 {
     public function supports(DirectiveTestingContext $context): bool
     {
-        return !$context->hasTempDir();
+        return ! $context->hasTempDir();
     }
 
     public function execute(DirectiveTestingContext $context, callable $next): DirectiveTestingContext
@@ -21,7 +22,7 @@ final class CreateTempDirectoryStep implements DirectiveTestingStepInterface
         $prefix = $context->getConfig()->tempDirectoryPrefix();
         $permission = $context->getConfig()->tempDirectoryPermission();
 
-        $tempDir = sys_get_temp_dir() . '/' . $prefix . uniqid();
+        $tempDir = sys_get_temp_dir().'/'.$prefix.uniqid();
 
         if (mkdir($tempDir, $permission->value(), true)) {
             $context->setTempDir($tempDir);

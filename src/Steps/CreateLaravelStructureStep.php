@@ -1,4 +1,5 @@
 <?php
+
 // src/Steps/CreateLaravelStructureStep.php
 
 declare(strict_types=1);
@@ -14,11 +15,12 @@ use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
 final class CreateLaravelStructureStep implements DirectiveTestingStepInterface
 {
     private const BOOTSTRAP_APP_PATH = '/bootstrap/app.php';
+
     private const CONFIG_APP_PATH = '/config/app.php';
 
     public function supports(DirectiveTestingContext $context): bool
     {
-        return $context->shouldBootLaravel() && !$context->hasLaravelStructure();
+        return $context->shouldBootLaravel() && ! $context->hasLaravelStructure();
     }
 
     public function execute(DirectiveTestingContext $context, callable $next): DirectiveTestingContext
@@ -29,8 +31,9 @@ final class CreateLaravelStructureStep implements DirectiveTestingStepInterface
             $context->addStepResult(
                 step_name: TestingStep::CREATE_LARAVEL_STRUCTURE,
                 status: StepResultStatus::FAILED,
-                message: "Cannot create Laravel structure: temporary directory is null"
+                message: 'Cannot create Laravel structure: temporary directory is null'
             );
+
             return $next($context);
         }
 
@@ -58,52 +61,52 @@ final class CreateLaravelStructureStep implements DirectiveTestingStepInterface
 
     private function createBootstrapDirectory(string $tempDir, DirectiveTestingContext $context): void
     {
-        $bootstrapDir = $tempDir . '/bootstrap';
+        $bootstrapDir = $tempDir.'/bootstrap';
         mkdir($bootstrapDir, 0777, true);
 
-        $bootstrapAppPath = $tempDir . self::BOOTSTRAP_APP_PATH;
+        $bootstrapAppPath = $tempDir.self::BOOTSTRAP_APP_PATH;
 
         $this->copyStubToDestination('bootstrap/app.php', $bootstrapAppPath, $context);
     }
 
     private function createConfigDirectory(string $tempDir, DirectiveTestingContext $context): void
     {
-        $configDir = $tempDir . '/config';
+        $configDir = $tempDir.'/config';
         mkdir($configDir, 0777, true);
 
-        $configAppPath = $tempDir . self::CONFIG_APP_PATH;
+        $configAppPath = $tempDir.self::CONFIG_APP_PATH;
 
         $this->copyStubToDestination('config/app.php', $configAppPath, $context);
     }
 
     private function createStorageDirectory(string $tempDir, DirectiveTestingContext $context): void
     {
-        $storageDir = $tempDir . '/storage';
+        $storageDir = $tempDir.'/storage';
         mkdir($storageDir, 0777, true);
-        mkdir($storageDir . '/framework', 0777, true);
-        mkdir($storageDir . '/framework/views', 0777, true);
-        mkdir($storageDir . '/framework/cache', 0777, true);
-        mkdir($storageDir . '/logs', 0777, true);
+        mkdir($storageDir.'/framework', 0777, true);
+        mkdir($storageDir.'/framework/views', 0777, true);
+        mkdir($storageDir.'/framework/cache', 0777, true);
+        mkdir($storageDir.'/logs', 0777, true);
 
         $context->addCreatedPath($storageDir, PathType::DIRECTORY, new DateTimeVO(null));
     }
 
     private function createAppDirectory(string $tempDir, DirectiveTestingContext $context): void
     {
-        $appDir = $tempDir . '/app';
+        $appDir = $tempDir.'/app';
         mkdir($appDir, 0777, true);
-        mkdir($appDir . '/Http', 0777, true);
-        mkdir($appDir . '/Models', 0777, true);
-        mkdir($appDir . '/Directives', 0777, true);
+        mkdir($appDir.'/Http', 0777, true);
+        mkdir($appDir.'/Models', 0777, true);
+        mkdir($appDir.'/Directives', 0777, true);
 
         $context->addCreatedPath($appDir, PathType::DIRECTORY, new DateTimeVO(null));
     }
 
     private function copyStubToDestination(string $stubPath, string $destinationPath, DirectiveTestingContext $context): void
     {
-        $stubFullPath = __DIR__ . '/../../stubs/laravel/' . $stubPath;
+        $stubFullPath = __DIR__.'/../../stubs/laravel/'.$stubPath;
 
-        if (!file_exists($stubFullPath)) {
+        if (! file_exists($stubFullPath)) {
             throw new \RuntimeException(sprintf('Stub file not found: %s', $stubFullPath));
         }
 

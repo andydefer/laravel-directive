@@ -10,7 +10,6 @@ use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 /**
  * Core kernel that orchestrates directive execution from CLI.
@@ -39,8 +38,7 @@ final class DirectiveKernel
      * This method parses the arguments, determines which directive to execute,
      * and returns the appropriate exit code.
      *
-     * @param array<int, string> $argv Command-line arguments (e.g., ['directive', 'user:create', 'John'])
-     *
+     * @param  array<int, string>  $argv  Command-line arguments (e.g., ['directive', 'user:create', 'John'])
      * @return ExitCode The exit code indicating success or failure
      */
     public function run(array $argv): ExitCode
@@ -57,8 +55,9 @@ final class DirectiveKernel
 
         $validation = $this->signatureValidator->validate($signature);
 
-        if (!$validation->isValid) {
+        if (! $validation->isValid) {
             $this->renderer->renderValidationError($validation);
+
             return ExitCode::INVALID_ARGUMENT;
         }
 
@@ -74,8 +73,7 @@ final class DirectiveKernel
      * - Long options starting with '--' (--help, --list, --version)
      * - Short options (-h, -l, -v)
      *
-     * @param string $signature The directive signature or option
-     *
+     * @param  string  $signature  The directive signature or option
      * @return bool True if the signature is a global option
      */
     private function isGlobalOption(string $signature): bool
@@ -86,9 +84,8 @@ final class DirectiveKernel
     /**
      * Executes a directive with the given signature and arguments.
      *
-     * @param string $signature The directive signature (e.g., 'user:create')
-     * @param array<int, string> $arguments The list of arguments to pass to the directive
-     *
+     * @param  string  $signature  The directive signature (e.g., 'user:create')
+     * @param  array<int, string>  $arguments  The list of arguments to pass to the directive
      * @return ExitCode The exit code from the directive execution
      */
     private function executeDirective(string $signature, array $arguments): ExitCode

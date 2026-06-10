@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/ParsedOptionRecord.php
 
 declare(strict_types=1);

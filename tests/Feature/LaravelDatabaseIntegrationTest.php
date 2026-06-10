@@ -92,7 +92,7 @@ final class LaravelDatabaseIntegrationTest extends IntegrationTestCase
 
         $response = $this->runAndCaptureOutput(['directive', 'test-laravel-db']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response['result'], 'Output: '.$response['output']);
+        $this->assertSame(ExitCode::SUCCESS, $response['result'], 'Output: ' . $response['output']);
         $this->assertStringContainsString('Laravel is available', $response['output']);
         $this->assertStringContainsString('3 users in database', $response['output']);
         $this->assertStringContainsString('2 active users', $response['output']);

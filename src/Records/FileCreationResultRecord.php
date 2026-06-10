@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/FileCreationResultRecord.php
 
 declare(strict_types=1);

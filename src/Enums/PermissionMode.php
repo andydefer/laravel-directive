@@ -1,4 +1,5 @@
 <?php
+
 // src/Enums/PermissionMode.php
 
 declare(strict_types=1);
@@ -173,13 +174,14 @@ enum PermissionMode: int
     /**
      * Get formatted octal string representation
      *
-     * @param bool $withLeadingZero Include leading zero in output
+     * @param  bool  $withLeadingZero  Include leading zero in output
      * @return string Formatted permission string (e.g., "755" or "0755")
      */
     public function toOctalString(bool $withLeadingZero = true): string
     {
         $octal = decoct($this->value);
-        return $withLeadingZero ? '0' . $octal : $octal;
+
+        return $withLeadingZero ? '0'.$octal : $octal;
     }
 
     /**
@@ -210,7 +212,7 @@ enum PermissionMode: int
     /**
      * Create a PermissionMode from an octal value
      *
-     * @param int $value Octal permission value (e.g., 0755)
+     * @param  int  $value  Octal permission value (e.g., 0755)
      * @return self|null Returns null if no matching permission mode found
      */
     public static function fromValue(int $value): ?self
@@ -221,12 +223,12 @@ enum PermissionMode: int
     /**
      * Create a PermissionMode from symbolic notation
      *
-     * @param string $notation Symbolic notation (e.g., "rwxr-xr-x")
+     * @param  string  $notation  Symbolic notation (e.g., "rwxr-xr-x")
      * @return self|null Returns null if invalid notation
      */
     public static function fromSymbolicNotation(string $notation): ?self
     {
-        if (!preg_match('/^[rwx-]{9}$/', $notation)) {
+        if (! preg_match('/^[rwx-]{9}$/', $notation)) {
             return null;
         }
 
@@ -244,7 +246,7 @@ enum PermissionMode: int
      */
     public function isSecureForFile(): bool
     {
-        return !$this->othersCanWrite() && !$this->groupCanWrite();
+        return ! $this->othersCanWrite() && ! $this->groupCanWrite();
     }
 
     /**
@@ -252,7 +254,7 @@ enum PermissionMode: int
      */
     public function isSecureForDirectory(): bool
     {
-        return !$this->othersCanWrite() && !$this->othersCanExecute();
+        return ! $this->othersCanWrite() && ! $this->othersCanExecute();
     }
 
     /**

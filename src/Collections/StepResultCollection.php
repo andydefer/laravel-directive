@@ -1,4 +1,5 @@
 <?php
+
 // src/Collections/StepResultCollection.php
 
 declare(strict_types=1);
@@ -31,9 +32,9 @@ final class StepResultCollection extends AbstractTypedCollection
     public function getOrderedByExecution(): self
     {
         $items = $this->items;
-        usort($items, fn($a, $b) => $a->executed_at <=> $b->executed_at);
+        usort($items, fn ($a, $b) => $a->executed_at <=> $b->executed_at);
 
-        $collection = new self();
+        $collection = new self;
         foreach ($items as $item) {
             $collection->add($item);
         }
@@ -48,21 +49,21 @@ final class StepResultCollection extends AbstractTypedCollection
 
     public function getSuccessfulSteps(): self
     {
-        return $this->filter(fn(StepResultRecord $record) => $record->status === StepResultStatus::SUCCESS);
+        return $this->filter(fn (StepResultRecord $record) => $record->status === StepResultStatus::SUCCESS);
     }
 
     public function getFailedSteps(): self
     {
-        return $this->filter(fn(StepResultRecord $record) => $record->status === StepResultStatus::FAILED);
+        return $this->filter(fn (StepResultRecord $record) => $record->status === StepResultStatus::FAILED);
     }
 
     public function getSkippedSteps(): self
     {
-        return $this->filter(fn(StepResultRecord $record) => $record->status === StepResultStatus::SKIPPED);
+        return $this->filter(fn (StepResultRecord $record) => $record->status === StepResultStatus::SKIPPED);
     }
 
     public function getStepsByStatus(StepResultStatus $status): self
     {
-        return $this->filter(fn(StepResultRecord $record) => $record->status === $status);
+        return $this->filter(fn (StepResultRecord $record) => $record->status === $status);
     }
 }

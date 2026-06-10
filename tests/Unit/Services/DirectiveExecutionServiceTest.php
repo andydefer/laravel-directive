@@ -1,4 +1,5 @@
 <?php
+
 // tests/Unit/Services/DirectiveExecutionServiceTest.php
 
 declare(strict_types=1);
@@ -24,7 +25,6 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-use AndyDefer\DomainStructures\Utils\StrictDataObject;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -33,11 +33,17 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveExecutionServiceTest extends UnitTestCase
 {
     private DirectiveDiscoveryService&MockObject $discovery;
+
     private DirectiveParserService&MockObject $parser;
+
     private DirectiveHydratorService&MockObject $hydrator;
+
     private DirectiveRendererService&MockObject $renderer;
+
     private DirectiveExecutionService $service;
+
     protected LaravelBootstrapper $laravelBootstrapper;
+
     private string|false $originalDebug;
 
     protected function setUp(): void
@@ -48,7 +54,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->parser = $this->createMock(DirectiveParserService::class);
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->renderer = $this->createMock(DirectiveRendererService::class);
-        $this->laravelBootstrapper = new LaravelBootstrapper();
+        $this->laravelBootstrapper = new LaravelBootstrapper;
 
         $this->service = new DirectiveExecutionService(
             discovery: $this->discovery,
@@ -66,7 +72,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         if ($this->originalDebug === false) {
             putenv('DIRECTIVE_DEBUG');
         } else {
-            putenv('DIRECTIVE_DEBUG=' . $this->originalDebug);
+            putenv('DIRECTIVE_DEBUG='.$this->originalDebug);
         }
 
         $this->laravelBootstrapper->reset();
@@ -75,9 +81,9 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     private function createDirectivesCollection(): DirectiveMetadataCollection
     {
-        $collection = new DirectiveMetadataCollection();
+        $collection = new DirectiveMetadataCollection;
 
-        $aliases1 = new StringTypedCollection();
+        $aliases1 = new StringTypedCollection;
         $directive1 = new DirectiveMetadataRecord(
             signature: 'test-concrete',
             class: TestConcreteDirective::class,
@@ -86,7 +92,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive1);
 
-        $aliases2 = new StringTypedCollection();
+        $aliases2 = new StringTypedCollection;
         $aliases2->add('tpkg');
         $directive2 = new DirectiveMetadataRecord(
             signature: 'test-package',
@@ -96,7 +102,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive2);
 
-        $aliases3 = new StringTypedCollection();
+        $aliases3 = new StringTypedCollection;
         $directive3 = new DirectiveMetadataRecord(
             signature: 'test-laravel',
             class: TestLaravelDirective::class,
@@ -111,9 +117,9 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
     private function createEmptyParsedDirectiveRecord(): ParsedDirectiveRecord
     {
         return new ParsedDirectiveRecord(
-            arguments: new ParsedArgumentCollection(),
-            options: new ParsedOptionCollection(),
-            variadic_arguments: new StringTypedCollection(),
+            arguments: new ParsedArgumentCollection,
+            options: new ParsedOptionCollection,
+            variadic_arguments: new StringTypedCollection,
         );
     }
 
@@ -121,7 +127,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
     {
-        $directives = new DirectiveMetadataCollection();
+        $directives = new DirectiveMetadataCollection;
 
         $this->discovery->expects($this->once())
             ->method('discover')

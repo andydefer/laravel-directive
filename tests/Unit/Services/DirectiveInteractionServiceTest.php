@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Collections\RowCollection;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Enums\MessageType;
 use AndyDefer\Directive\Enums\RenderType;
@@ -14,8 +16,6 @@ use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -25,7 +25,9 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveInteractionServiceTest extends UnitTestCase
 {
     private RenderDispatcher&MockObject $renderDispatcher;
+
     private InputDispatcher&MockObject $inputDispatcher;
+
     private DirectiveInteractionService $service;
 
     protected function setUp(): void
@@ -210,11 +212,11 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
     public function test_table_renders_table(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John Doe', 'john@example.com');
         $rows->add($row);
 
@@ -238,10 +240,10 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
     public function test_table_handles_empty_rows(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
 
         $this->renderDispatcher->expects($this->once())
             ->method('execute')
@@ -261,9 +263,9 @@ final class DirectiveInteractionServiceTest extends UnitTestCase
     public function test_table_handles_empty_headers(): void
     {
         // Arrange
-        $headers = new StringTypedCollection();
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $headers = new StringTypedCollection;
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John Doe');
         $rows->add($row);
 

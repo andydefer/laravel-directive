@@ -1,4 +1,5 @@
 <?php
+
 // src/Contexts/FileCreationContext.php
 
 declare(strict_types=1);
@@ -12,25 +13,37 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 final class FileCreationContext
 {
     private FileCreationStep $currentStep = FileCreationStep::START;
+
     private string $stubPath = '';
+
     private string $destinationPath = '';
+
     private string $stubContent = '';
+
     private ?string $errorMessage = null;
+
     private bool $force = false;
+
     private StringTypedCollection $createdDirectories;
+
     private StringTypedCollection $createdFiles;
+
     private StringTypedCollection $transformationLogs;
+
     private ?PathSegmentsRecord $currentSegments = null;
+
     private ?string $builtNamespace = null;
+
     private ?string $builtPath = null;
+
     private string $currentDirectory = '';
 
     public function __construct(bool $force = false)
     {
         $this->force = $force;
-        $this->createdDirectories = new StringTypedCollection();
-        $this->createdFiles = new StringTypedCollection();
-        $this->transformationLogs = new StringTypedCollection();
+        $this->createdDirectories = new StringTypedCollection;
+        $this->createdFiles = new StringTypedCollection;
+        $this->transformationLogs = new StringTypedCollection;
     }
 
     // ========== GETTERS ==========
@@ -179,9 +192,9 @@ final class FileCreationContext
         $this->destinationPath = '';
         $this->stubContent = '';
         $this->errorMessage = null;
-        $this->createdDirectories = new StringTypedCollection();
-        $this->createdFiles = new StringTypedCollection();
-        $this->transformationLogs = new StringTypedCollection();
+        $this->createdDirectories = new StringTypedCollection;
+        $this->createdFiles = new StringTypedCollection;
+        $this->transformationLogs = new StringTypedCollection;
         $this->currentSegments = null;
         $this->builtNamespace = null;
         $this->builtPath = null;
@@ -207,7 +220,7 @@ final class FileCreationContext
 
     public function isInProgress(): bool
     {
-        return !$this->isCompleted() && !$this->isFailed();
+        return ! $this->isCompleted() && ! $this->isFailed();
     }
 
     public function hasCreatedDirectories(): bool

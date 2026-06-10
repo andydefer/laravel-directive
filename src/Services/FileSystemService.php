@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/FileSystemService.php
 
 declare(strict_types=1);
@@ -32,7 +33,7 @@ final class FileSystemService implements FileSystemInterface
      */
     public function get(string $path): string
     {
-        if (!$this->exists($path)) {
+        if (! $this->exists($path)) {
             throw new \RuntimeException(sprintf('File does not exist at path: %s', $path));
         }
 
@@ -78,11 +79,11 @@ final class FileSystemService implements FileSystemInterface
     /**
      * Ensure a directory exists, creating it if necessary.
      *
-     * @param string $path Directory path to check/create
+     * @param  string  $path  Directory path to check/create
      */
     private function ensureDirectoryExists(string $path): void
     {
-        if (!$this->isDirectory($path)) {
+        if (! $this->isDirectory($path)) {
             $this->makeDirectory($path, PermissionMode::DIRECTORY, true);
         }
     }

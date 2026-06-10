@@ -1,4 +1,5 @@
 <?php
+
 // src/Steps/ChangeToTempDirectoryStep.php
 
 declare(strict_types=1);
@@ -13,7 +14,7 @@ final class ChangeToTempDirectoryStep implements DirectiveTestingStepInterface
 {
     public function supports(DirectiveTestingContext $context): bool
     {
-        return $context->hasTempDir() && !$context->isInTempDirectory();
+        return $context->hasTempDir() && ! $context->isInTempDirectory();
     }
 
     public function execute(DirectiveTestingContext $context, callable $next): DirectiveTestingContext
@@ -24,8 +25,9 @@ final class ChangeToTempDirectoryStep implements DirectiveTestingStepInterface
             $context->addStepResult(
                 step_name: TestingStep::CHANGE_TO_TEMP_DIRECTORY,
                 status: StepResultStatus::FAILED,
-                message: "Cannot change to null temporary directory"
+                message: 'Cannot change to null temporary directory'
             );
+
             return $next($context);
         }
 

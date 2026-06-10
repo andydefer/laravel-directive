@@ -1,24 +1,28 @@
 <?php
+
 // src/Contexts/FileSystemContext.php
 
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contexts;
 
-use AndyDefer\Directive\Records\FileOperationRecord;
 use AndyDefer\Directive\Collections\FileOperationCollection;
+use AndyDefer\Directive\Records\FileOperationRecord;
 use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
 
 final class FileSystemContext
 {
     private FileOperationCollection $fileOperations;
+
     private int $totalBytesWritten = 0;
+
     private int $totalFilesCreated = 0;
+
     private int $totalDirectoriesCreated = 0;
 
     public function __construct()
     {
-        $this->fileOperations = new FileOperationCollection();
+        $this->fileOperations = new FileOperationCollection;
     }
 
     public function addFileOperation(string $operation, string $path, ?int $bytes = null): void
@@ -61,7 +65,7 @@ final class FileSystemContext
 
     public function reset(): void
     {
-        $this->fileOperations = new FileOperationCollection();
+        $this->fileOperations = new FileOperationCollection;
         $this->totalBytesWritten = 0;
         $this->totalFilesCreated = 0;
         $this->totalDirectoriesCreated = 0;

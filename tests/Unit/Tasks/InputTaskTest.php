@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Tasks;
 
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Enums\InputType;
 use AndyDefer\Directive\Records\QuestionRecord;
 use AndyDefer\Directive\Records\UserChoiceRecord;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
 
 final class InputTaskTest extends UnitTestCase
 {
     private InputDispatcher $task;
+
     private $inputStream;
 
     protected function setUp(): void
@@ -35,19 +36,18 @@ final class InputTaskTest extends UnitTestCase
     /**
      * Helper method to simulate user input.
      *
-     * @param string $input The input to simulate
+     * @param  string  $input  The input to simulate
      */
     private function setUserInput(string $input): void
     {
-        fwrite($this->inputStream, $input . "\n");
+        fwrite($this->inputStream, $input."\n");
         rewind($this->inputStream);
     }
 
     /**
      * Helper method to capture output during execution.
      *
-     * @param callable $callback The function to execute
-     *
+     * @param  callable  $callback  The function to execute
      * @return array{result: mixed, output: string}
      */
     private function runAndCaptureOutput(callable $callback): array

@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/PathSegmentsRecord.php
 
 declare(strict_types=1);

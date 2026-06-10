@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/ParsedDirectiveRecord.php
 
 declare(strict_types=1);
@@ -9,7 +10,6 @@ use AndyDefer\Directive\Collections\ParsedArgumentCollection;
 use AndyDefer\Directive\Collections\ParsedOptionCollection;
 use AndyDefer\DomainStructures\Abstracts\AbstractRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-use AndyDefer\DomainStructures\Utils\StrictDataObject;
 
 final class ParsedDirectiveRecord extends AbstractRecord
 {

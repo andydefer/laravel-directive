@@ -1,4 +1,5 @@
 <?php
+
 // src/Services/ParameterOrderValidatorService.php
 
 declare(strict_types=1);
@@ -6,7 +7,6 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\Contexts\ParameterParserContext;
-use AndyDefer\Directive\Enums\ParameterTypeOrder;
 use InvalidArgumentException;
 
 final class ParameterOrderValidatorService
@@ -21,10 +21,8 @@ final class ParameterOrderValidatorService
         $lastType = null;
         $matches = $this->extractParameters($signature);
 
-
         foreach ($matches as $parameter) {
             $currentType = $this->parserContext->getTypeOrderForParameter($parameter);
-
 
             if ($lastType !== null && $currentType->value < $lastType->value) {
                 $expected = strtolower($lastType->getLabel());
@@ -47,6 +45,7 @@ final class ParameterOrderValidatorService
     private function extractParameters(string $signature): array
     {
         preg_match_all('/\{([^}]+)\}/', $signature, $matches);
+
         return $matches[1] ?? [];
     }
 }

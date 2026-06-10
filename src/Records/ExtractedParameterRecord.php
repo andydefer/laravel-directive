@@ -1,4 +1,5 @@
 <?php
+
 // src/Records/ExtractedParameterRecord.php
 
 declare(strict_types=1);

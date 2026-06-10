@@ -32,7 +32,7 @@ class InputDispatcher
     private array $strategies;
 
     /**
-     * @param resource $inputStream The input stream to read from (default: STDIN)
+     * @param  resource  $inputStream  The input stream to read from (default: STDIN)
      */
     public function __construct($inputStream = STDIN)
     {
@@ -49,9 +49,8 @@ class InputDispatcher
      * Finds the appropriate strategy that supports the input type and
      * delegates the execution. Returns null if no strategy supports the type.
      *
-     * @param object    $record The record containing input configuration
-     * @param InputType $type   The type of input to perform
-     *
+     * @param  object  $record  The record containing input configuration
+     * @param  InputType  $type  The type of input to perform
      * @return mixed The user input result, or null if no strategy supports the type
      */
     public function execute(object $record, InputType $type): mixed

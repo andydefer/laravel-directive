@@ -21,16 +21,19 @@ use AndyDefer\Directive\Records\ValidationResultRecord;
 class SignatureValidationService
 {
     private const PATTERN_VALID_NAME = '/^[a-zA-Z][a-zA-Z0-9-]*$/';
+
     private const ERROR_EMPTY = 'Directive name cannot be empty';
+
     private const ERROR_INVALID_FORMAT = 'Invalid directive name: "%s". Use only letters, numbers, and hyphens. Must start with a letter. No spaces. Examples: user-create, clean-log, db-migrate-fresh';
+
     private const ERROR_CONSECUTIVE_HYPHENS = 'Invalid directive name: "%s". Cannot have consecutive hyphens';
+
     private const ERROR_TRAILING_HYPHEN = 'Invalid directive name: "%s". Cannot end with a hyphen';
 
     /**
      * Validate a directive signature.
      *
-     * @param string $signature The directive signature to validate
-     *
+     * @param  string  $signature  The directive signature to validate
      * @return ValidationResultRecord Contains validation status and error message if invalid
      */
     public function validate(string $signature): ValidationResultRecord
@@ -43,7 +46,7 @@ class SignatureValidationService
             return $this->createValidResult();
         }
 
-        if (!$this->matchesAllowedPattern($signature)) {
+        if (! $this->matchesAllowedPattern($signature)) {
             return $this->createInvalidResult(sprintf(self::ERROR_INVALID_FORMAT, $signature));
         }
 

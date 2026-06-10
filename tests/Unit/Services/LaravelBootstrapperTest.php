@@ -17,7 +17,7 @@ final class LaravelBootstrapperTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->bootstrapper = new LaravelBootstrapper();
+        $this->bootstrapper = new LaravelBootstrapper;
     }
 
     protected function tearDown(): void
@@ -49,7 +49,7 @@ final class LaravelBootstrapperTest extends UnitTestCase
         // Assert: Error should be set
         $error = $this->bootstrapper->getError();
 
-        if (!$this->bootstrapper->isBootstrapped()) {
+        if (! $this->bootstrapper->isBootstrapped()) {
             $this->assertNotNull($error);
             $this->assertStringContainsString('bootstrap', $error);
         }

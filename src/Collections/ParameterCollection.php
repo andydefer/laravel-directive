@@ -35,6 +35,7 @@ final class ParameterCollection extends AbstractKeyValueCollection
             foreach ($flat as $record) {
                 $result->add(new ParameterRecord(name: $record->name, value: $record->value));
             }
+
             return $result;
         }
 
@@ -67,6 +68,7 @@ final class ParameterCollection extends AbstractKeyValueCollection
             foreach ($flat as $record) {
                 $result->add(new ParameterRecord(name: $record->name, value: $record->value));
             }
+
             return $result;
         }
 

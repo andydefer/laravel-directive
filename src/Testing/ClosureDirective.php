@@ -29,9 +29,9 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 final class ClosureDirective extends AbstractDirective
 {
     /**
-     * @param string $signature The directive signature
-     * @param callable(ClosureDirective): ExitCode $execute Execution logic as a closure
-     * @param DirectiveInteractionService $interaction Interaction service for output
+     * @param  string  $signature  The directive signature
+     * @param  callable(ClosureDirective): ExitCode  $execute  Execution logic as a closure
+     * @param  DirectiveInteractionService  $interaction  Interaction service for output
      */
     public function __construct(
         private readonly string $signature,

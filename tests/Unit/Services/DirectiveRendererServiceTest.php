@@ -6,14 +6,12 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Collections\RowCollection;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Records\ConflictDisplayRecord;
-use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\DisplayTableRecord;
 use AndyDefer\Directive\Records\ValidationResultRecord;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\DomainStructures\Collections\Core\TypedCollection;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -23,6 +21,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveRendererServiceTest extends UnitTestCase
 {
     private RenderDispatcher&MockObject $renderDispatcher;
+
     private DirectiveRendererService $renderer;
 
     protected function setUp(): void
@@ -39,7 +38,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         putenv('APP_DEBUG');
     }
 
-    public function testRenderHelpCallsRenderTask(): void
+    public function test_render_help_calls_render_task(): void
     {
         // Arrange: Set up render task expectation
         $expectedOutput = 'help output';
@@ -56,10 +55,10 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderListCallsRenderTask(): void
+    public function test_render_list_calls_render_task(): void
     {
         // Arrange: Create empty directives collection
-        $directives = new DirectiveMetadataCollection();
+        $directives = new DirectiveMetadataCollection;
         $expectedOutput = 'list output';
 
         $this->renderDispatcher->expects($this->once())
@@ -75,7 +74,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderNotFoundCallsRenderTask(): void
+    public function test_render_not_found_calls_render_task(): void
     {
         // Arrange: Set up render task expectation
         $signature = 'test-cmd';
@@ -94,7 +93,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderSuccessCallsRenderTask(): void
+    public function test_render_success_calls_render_task(): void
     {
         // Arrange: Set up render task expectation
         $message = 'Success message';
@@ -113,7 +112,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderErrorCallsRenderTask(): void
+    public function test_render_error_calls_render_task(): void
     {
         // Arrange: Set up render task expectation
         $message = 'Error message';
@@ -132,7 +131,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderWarningCallsRenderTask(): void
+    public function test_render_warning_calls_render_task(): void
     {
         // Arrange: Set up render task expectation
         $message = 'Warning message';
@@ -151,7 +150,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderDebugDoesNothingWhenDebugDisabled(): void
+    public function test_render_debug_does_nothing_when_debug_disabled(): void
     {
         // Arrange: Disable debug mode
         putenv('DIRECTIVE_DEBUG=false');
@@ -169,7 +168,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertEmpty($actualOutput);
     }
 
-    public function testRenderDebugCallsRenderTaskWhenDirectiveDebugEnabled(): void
+    public function test_render_debug_calls_render_task_when_directive_debug_enabled(): void
     {
         // Arrange: Enable DIRECTIVE_DEBUG
         putenv('DIRECTIVE_DEBUG=true');
@@ -189,7 +188,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderDebugCallsRenderTaskWhenAppDebugEnabled(): void
+    public function test_render_debug_calls_render_task_when_app_debug_enabled(): void
     {
         // Arrange: Enable APP_DEBUG
         putenv('DIRECTIVE_DEBUG=false');
@@ -209,7 +208,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderVersionCallsRenderTask(): void
+    public function test_render_version_calls_render_task(): void
     {
         // Arrange: Set up render task expectation
         $expectedOutput = 'version output';
@@ -227,7 +226,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderConflictCallsRenderTask(): void
+    public function test_render_conflict_calls_render_task(): void
     {
         // Arrange: Create conflict display record
         $record = $this->createConflictDisplayRecord();
@@ -246,7 +245,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderTableCallsRenderTask(): void
+    public function test_render_table_calls_render_task(): void
     {
         // Arrange: Create table display record
         $record = $this->createDisplayTableRecord();
@@ -265,7 +264,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderValidationErrorCallsRenderTask(): void
+    public function test_render_validation_error_calls_render_task(): void
     {
         // Arrange: Create validation error record
         $record = new ValidationResultRecord(
@@ -287,7 +286,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderDebugWithBothDebugVariablesEnabled(): void
+    public function test_render_debug_with_both_debug_variables_enabled(): void
     {
         // Arrange: Enable both debug flags
         putenv('DIRECTIVE_DEBUG=true');
@@ -307,7 +306,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $this->assertSame($expectedOutput, $actualOutput);
     }
 
-    public function testRenderDebugWithInvalidDebugValues(): void
+    public function test_render_debug_with_invalid_debug_values(): void
     {
         // Arrange: Set invalid debug values
         putenv('DIRECTIVE_DEBUG=1');
@@ -332,9 +331,9 @@ final class DirectiveRendererServiceTest extends UnitTestCase
     {
         return new ConflictDisplayRecord(
             name: 'test',
-            classNames: new StringTypedCollection(),
-            signatures: new StringTypedCollection(),
-            descriptions: new StringTypedCollection(),
+            classNames: new StringTypedCollection,
+            signatures: new StringTypedCollection,
+            descriptions: new StringTypedCollection,
         );
     }
 
@@ -346,7 +345,7 @@ final class DirectiveRendererServiceTest extends UnitTestCase
         $rows = $this->createTestRows();
 
         return new DisplayTableRecord(
-            headers: new StringTypedCollection(),
+            headers: new StringTypedCollection,
             rows: $rows,
         );
     }
@@ -356,13 +355,13 @@ final class DirectiveRendererServiceTest extends UnitTestCase
      */
     private function createTestRows(): RowCollection
     {
-        $firstRow = new RowCollection();
+        $firstRow = new RowCollection;
         $firstRow->add('John Doe', 'john@example.com', 'Admin');
 
-        $secondRow = new RowCollection();
+        $secondRow = new RowCollection;
         $secondRow->add('Jane Smith', 'jane@example.com', 'User');
 
-        $rows = new RowCollection();
+        $rows = new RowCollection;
         $rows->add($firstRow);
         $rows->add($secondRow);
 

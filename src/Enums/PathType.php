@@ -1,4 +1,5 @@
 <?php
+
 // src/Enums/PathType.php
 
 declare(strict_types=1);

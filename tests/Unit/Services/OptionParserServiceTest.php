@@ -1,4 +1,5 @@
 <?php
+
 // tests/Unit/Services/OptionParserServiceTest.php
 
 declare(strict_types=1);
@@ -17,7 +18,7 @@ final class OptionParserServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new OptionParserService();
+        $this->service = new OptionParserService;
     }
 
     public function test_is_option_with_long_option(): void
@@ -38,10 +39,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_long_option_flag(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--force');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 
@@ -52,10 +53,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_long_option_with_value(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--role=admin');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 
@@ -66,10 +67,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_long_option_with_empty_value(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--role=');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 
@@ -80,10 +81,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_long_option_with_value_containing_equals(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--message=Hello=World');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 
@@ -94,10 +95,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_short_option_single(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('-v');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 
@@ -108,10 +109,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_multiple_short_options(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('-v', '-f', '-d');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 
@@ -125,10 +126,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_grouped_short_options(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('-vfd');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 
@@ -142,10 +143,10 @@ final class OptionParserServiceTest extends UnitTestCase
 
     public function test_parse_mixed_options(): void
     {
-        $argv = new StringTypedCollection();
+        $argv = new StringTypedCollection;
         $argv->add('--force', '--role=admin', '-v', '--verbose', '--message=Hello=World');
 
-        $options = new ParsedOptionCollection();
+        $options = new ParsedOptionCollection;
 
         $this->service->parseOptions($argv, $options);
 

@@ -1,4 +1,5 @@
 <?php
+
 // tests/Fixtures/Directives/TestVariadicDirective.php
 
 declare(strict_types=1);
@@ -26,14 +27,14 @@ final class TestVariadicDirective extends AbstractDirective
         $this->line("Name: {$name}");
 
         if ($this->hasVariadicArguments()) {
-            $this->line("Files:");
+            $this->line('Files:');
             foreach ($this->getVariadicArguments() as $file) {
                 $this->line("  - {$file}");
             }
         }
 
         if ($this->option('verbose')) {
-            $this->info("Verbose mode enabled");
+            $this->info('Verbose mode enabled');
         }
 
         return ExitCode::SUCCESS;

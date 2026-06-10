@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\FileCreatorConfig;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
+use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
@@ -14,14 +18,10 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\Directive\Services\FileCreatorService;
+use AndyDefer\Directive\Services\FileSystemService;
 use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
-use AndyDefer\Directive\Services\FileCreatorService;
-use AndyDefer\Directive\Configs\FileCreatorConfig;
-use AndyDefer\Directive\Services\FileSystemService;
-use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\DomainStructures\Services\EnumService;
 use Illuminate\Support\ServiceProvider;
 
@@ -52,7 +52,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/config/directive.php' => config_path('directive.php'),
+            __DIR__.'/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -207,7 +207,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         // Register FileSystemInterface with native implementation
         $this->app->bind(FileSystemInterface::class, function ($app) {
-            return new FileSystemService();
+            return new FileSystemService;
         });
 
         // Register FileCreatorConfig

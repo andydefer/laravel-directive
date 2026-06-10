@@ -1,4 +1,5 @@
 <?php
+
 // src/Collections/ParsedOptionCollection.php
 
 declare(strict_types=1);
@@ -18,10 +19,11 @@ final class ParsedOptionCollection extends AbstractTypedCollection
     public function get(string $name): ?string
     {
         foreach ($this->items as $record) {
-            if ($record->name === $name && !$record->is_flag) {
+            if ($record->name === $name && ! $record->is_flag) {
                 return $record->value;
             }
         }
+
         return null;
     }
 
@@ -37,6 +39,7 @@ final class ParsedOptionCollection extends AbstractTypedCollection
                 return $record->is_flag;
             }
         }
+
         return false;
     }
 
@@ -47,6 +50,7 @@ final class ParsedOptionCollection extends AbstractTypedCollection
                 return true;
             }
         }
+
         return false;
     }
 
@@ -57,9 +61,11 @@ final class ParsedOptionCollection extends AbstractTypedCollection
                 if ($record->is_flag) {
                     return true;
                 }
+
                 return $record->value === 'true' || $record->value === '1';
             }
         }
+
         return false;
     }
 
@@ -73,6 +79,7 @@ final class ParsedOptionCollection extends AbstractTypedCollection
                 $result[$record->name] = $record->value;
             }
         }
+
         return $result;
     }
 

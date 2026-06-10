@@ -21,8 +21,11 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
 {
     private TestDirectiveDiscoveryService $service;
+
     private DirectiveConfig $config;
+
     private DirectiveHydratorService&MockObject $hydrator;
+
     private DirectiveInteractionService&MockObject $interaction;
 
     protected function setUp(): void
@@ -164,11 +167,11 @@ final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
         // Assert: Expect parent methods to be called
         $mockService->expects($this->once())
             ->method('discoverFromFilesystem')
-            ->willReturn(new DirectiveMetadataCollection());
+            ->willReturn(new DirectiveMetadataCollection);
 
         $mockService->expects($this->once())
             ->method('discoverFromVendorPackagesRecursive')
-            ->willReturn(new DirectiveMetadataCollection());
+            ->willReturn(new DirectiveMetadataCollection);
 
         // Act: Discover directives
         $mockService->discover();

@@ -14,6 +14,7 @@ use AndyDefer\DomainStructures\Abstracts\AbstractTypedCollection;
  * Provides common methods for collections of ParameterRecord or ReplacementRecord.
  *
  * @template TRecord of ParameterRecord|ReplacementRecord
+ *
  * @extends AbstractTypedCollection<TRecord>
  */
 abstract class AbstractKeyValueCollection extends AbstractItemCollection

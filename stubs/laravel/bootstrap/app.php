@@ -1,11 +1,17 @@
 <?php
 
-$app = new Illuminate\Foundation\Application(
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Support\Facades\Facade;
+
+$app = new Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
 $app->singleton(
-    Illuminate\Contracts\Http\Kernel::class,
+    Kernel::class,
     Illuminate\Foundation\Http\Kernel::class
 );
 
@@ -15,8 +21,12 @@ $app->singleton(
 );
 
 $app->singleton(
-    Illuminate\Contracts\Debug\ExceptionHandler::class,
-    Illuminate\Foundation\Exceptions\Handler::class
+    ExceptionHandler::class,
+    Handler::class
 );
+
+// Démarrer les Facades
+Facade::setFacadeApplication($app);
+
 
 return $app;

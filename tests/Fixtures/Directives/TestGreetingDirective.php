@@ -1,4 +1,5 @@
 <?php
+
 // tests/Fixtures/Directives/TestGreetingDirective.php
 
 declare(strict_types=1);
@@ -24,6 +25,7 @@ final class TestGreetingDirective extends AbstractDirective
     {
         $name = $this->argument('name') ?? 'World';
         $this->line("Hello, {$name}!");
+
         return ExitCode::SUCCESS;
     }
 }

@@ -13,12 +13,14 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
 {
     /**
      * Stockage par classe (FQCN)
+     *
      * @var array<class-string<AbstractDirective>, AbstractDirective>
      */
     private array $directives = [];
 
     /**
      * Index de recherche : signature/alias/nom de base -> FQCN
+     *
      * @var array<string, class-string<AbstractDirective>>
      */
     private array $index = [];
@@ -30,7 +32,6 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     {
         $className = get_class($directive);
         $signature = $directive->getSignature();
-
 
         if (isset($this->directives[$className])) {
             return;
@@ -55,7 +56,7 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     /**
      * Enregistre plusieurs directives
      *
-     * @param array<AbstractDirective> $directives
+     * @param  array<AbstractDirective>  $directives
      */
     public function registerAll(array $directives): void
     {
@@ -92,11 +93,13 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
 
         if (isset($this->index[$identifier])) {
             $className = $this->index[$identifier];
+
             return $this->directives[$className];
         }
 
         return null;
     }
+
     /**
      * Vérifie si une directive est enregistrée par son FQCN
      */

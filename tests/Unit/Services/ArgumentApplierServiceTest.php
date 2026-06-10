@@ -1,4 +1,5 @@
 <?php
+
 // tests/Unit/Services/ArgumentApplierServiceTest.php
 
 declare(strict_types=1);
@@ -19,12 +20,12 @@ final class ArgumentApplierServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ArgumentApplierService();
+        $this->service = new ArgumentApplierService;
     }
 
     public function test_apply_with_required_arguments(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'name',
             isOption: false,
@@ -43,7 +44,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = ['John Doe', 'john@example.com'];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -55,7 +56,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_default_values(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'count',
             isOption: false,
@@ -66,7 +67,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = [];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -77,7 +78,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_default_value_overridden(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'count',
             isOption: false,
@@ -88,7 +89,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = ['5'];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -99,7 +100,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_optional_argument(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'name',
             isOption: false,
@@ -110,7 +111,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = ['John'];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -121,7 +122,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_missing_optional_argument(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'name',
             isOption: false,
@@ -132,7 +133,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = [];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -143,7 +144,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_missing_required_argument_throws_exception(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'name',
             isOption: false,
@@ -154,7 +155,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = [];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->expectException(InvalidArgumentException::class);
@@ -165,7 +166,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_too_many_arguments_throws_exception(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'first',
             isOption: false,
@@ -184,7 +185,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = ['John', 'Doe', 'Extra'];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->expectException(InvalidArgumentException::class);
@@ -195,7 +196,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_variadic_arguments(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'files',
             isOption: false,
@@ -206,7 +207,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = ['file1.txt', 'file2.txt', 'file3.txt'];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -220,7 +221,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_required_and_variadic_arguments(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'name',
             isOption: false,
@@ -239,7 +240,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = ['John Doe', 'file1.txt', 'file2.txt'];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -252,7 +253,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_variadic_and_no_arguments(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'files',
             isOption: false,
@@ -263,7 +264,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = [];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);
@@ -274,7 +275,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
 
     public function test_apply_with_multiple_arguments_and_defaults(): void
     {
-        $parameters = new ExtractedParameterCollection();
+        $parameters = new ExtractedParameterCollection;
         $parameters->add(new ExtractedParameterRecord(
             name: 'name',
             isOption: false,
@@ -301,7 +302,7 @@ final class ArgumentApplierServiceTest extends UnitTestCase
         ));
 
         $providedArguments = ['John'];
-        $arguments = new ParsedArgumentCollection();
+        $arguments = new ParsedArgumentCollection;
         $variadicArguments = [];
 
         $this->service->apply($parameters, $providedArguments, $arguments, $variadicArguments);

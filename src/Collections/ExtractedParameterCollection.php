@@ -1,4 +1,5 @@
 <?php
+
 // src/Collections/ExtractedParameterCollection.php
 
 declare(strict_types=1);
@@ -17,17 +18,17 @@ final class ExtractedParameterCollection extends AbstractTypedCollection
 
     public function getNonOptions(): self
     {
-        return $this->filter(fn(ExtractedParameterRecord $record) => !$record->isOption);
+        return $this->filter(fn (ExtractedParameterRecord $record) => ! $record->isOption);
     }
 
     public function getOptions(): self
     {
-        return $this->filter(fn(ExtractedParameterRecord $record) => $record->isOption);
+        return $this->filter(fn (ExtractedParameterRecord $record) => $record->isOption);
     }
 
     public function getRequired(): self
     {
-        return $this->filter(fn(ExtractedParameterRecord $record) => $record->required);
+        return $this->filter(fn (ExtractedParameterRecord $record) => $record->required);
     }
 
     public function getVariadic(): ?ExtractedParameterRecord
@@ -37,6 +38,7 @@ final class ExtractedParameterCollection extends AbstractTypedCollection
                 return $record;
             }
         }
+
         return null;
     }
 
