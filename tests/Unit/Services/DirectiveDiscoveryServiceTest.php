@@ -6,6 +6,7 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
@@ -30,6 +31,8 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
     private DirectiveDiscoveryService $service;
 
     private Container $container;
+
+    private DirectiveDiscoveryContext $context;
 
     protected function setUp(): void
     {
@@ -58,7 +61,8 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
 
-        $this->service = new DirectiveDiscoveryService($config, $hydrator);
+        $this->context = new DirectiveDiscoveryContext;
+        $this->service = new DirectiveDiscoveryService($config, $hydrator, $this->context);
     }
 
     public function test_discover_returns_typed_records_of_directive_metadata(): void
@@ -129,7 +133,8 @@ PHP;
         $config = new TestDirectiveConfig($tempDir);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $result = $service->discover();
 
@@ -217,7 +222,8 @@ PHP;
 
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $result = $service->discover();
 
@@ -233,7 +239,8 @@ PHP;
         $config = new TestDirectiveConfig($emptyDir);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $result = $service->discover();
 
@@ -258,21 +265,26 @@ PHP;
         }
     }
 
-    public function test_discover_from_vendor_packages_scans_only_composer_packages(): void
+    public function test_discover_from_vendor_packages_does_not_throw_exception(): void
     {
         $config = new TestDirectiveConfig($this->fixturesPath);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('discoverFromVendorPackagesRecursive');
+        $method = $reflection->getMethod('discoverFromVendorPackages');
 
         $results = new DirectiveMetadataCollection;
 
-        $results = $method->invoke($service, $results);
-
-        $this->assertInstanceOf(DirectiveMetadataCollection::class, $results);
+        // La méthode ne doit pas lever d'exception
+        try {
+            $method->invoke($service, $results);
+            $this->assertTrue(true);
+        } catch (\Exception $e) {
+            $this->fail('Method discoverFromVendorPackages threw an exception: ' . $e->getMessage());
+        }
     }
 
     public function test_scan_package_at_depth_1(): void
@@ -280,7 +292,8 @@ PHP;
         $config = new TestDirectiveConfig($this->fixturesPath);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $reflection = new ReflectionClass($service);
         $scanPackageMethod = $reflection->getMethod('scanPackage');
@@ -297,20 +310,22 @@ PHP;
         $config = new TestDirectiveConfig($this->fixturesPath);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
-        $reflection = new ReflectionClass($service);
-        $scanPackageMethod = $reflection->getMethod('scanPackage');
-        $scannedPackagesProperty = $reflection->getProperty('scannedPackages');
+        // La propriété scannedPackages est maintenant dans le contexte
+        $reflectionContext = new ReflectionClass($tempContext);
+        $scannedPackagesProperty = $reflectionContext->getProperty('scannedPackages');
+        $scannedPackagesProperty->setValue($tempContext, []);
 
-
-        $scannedPackagesProperty->setValue($service, []);
+        $reflectionService = new ReflectionClass($service);
+        $scanPackageMethod = $reflectionService->getMethod('scanPackage');
 
         $results = new DirectiveMetadataCollection;
 
         $scanPackageMethod->invoke($service, $results, 'php', 1);
 
-        $scannedPackages = $scannedPackagesProperty->getValue($service);
+        $scannedPackages = $scannedPackagesProperty->getValue($tempContext);
         $this->assertArrayNotHasKey('php', $scannedPackages);
     }
 
@@ -319,7 +334,8 @@ PHP;
         $config = new TestDirectiveConfig($this->fixturesPath);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $reflection = new ReflectionClass($service);
         $scanPackageMethod = $reflection->getMethod('scanPackage');
@@ -335,19 +351,21 @@ PHP;
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
 
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
-        $reflection = new ReflectionClass($service);
-        $scannedPackagesProperty = $reflection->getProperty('scannedPackages');
+        // La propriété scannedPackages est maintenant dans le contexte
+        $reflectionContext = new ReflectionClass($tempContext);
+        $scannedPackagesProperty = $reflectionContext->getProperty('scannedPackages');
 
-        $scannedPackagesProperty->setValue($service, []);
-        $scannedPackages = $scannedPackagesProperty->getValue($service);
+        $scannedPackagesProperty->setValue($tempContext, []);
+        $scannedPackages = $scannedPackagesProperty->getValue($tempContext);
 
         $this->assertIsArray($scannedPackages);
         $this->assertEmpty($scannedPackages);
 
-        $scannedPackagesProperty->setValue($service, ['test-package' => true]);
-        $scannedPackagesAfter = $scannedPackagesProperty->getValue($service);
+        $scannedPackagesProperty->setValue($tempContext, ['test-package' => true]);
+        $scannedPackagesAfter = $scannedPackagesProperty->getValue($tempContext);
 
         $this->assertArrayHasKey('test-package', $scannedPackagesAfter);
         $this->assertCount(1, $scannedPackagesAfter);
@@ -355,11 +373,11 @@ PHP;
 
     public function test_scan_package_directories_scans_multiple_paths(): void
     {
-        // Utiliser le chemin des fixtures existant qui contient déjà des directives valides
         $config = new TestDirectiveConfig($this->fixturesPath);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $result = $service->discover();
 
@@ -400,7 +418,8 @@ PHP;
         $config = new TestDirectiveConfig($tempDir);
         $factory = new ContainerDirectiveFactory($this->container);
         $hydrator = new DirectiveHydratorService($factory);
-        $service = new DirectiveDiscoveryService($config, $hydrator);
+        $tempContext = new DirectiveDiscoveryContext;
+        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext);
 
         $result = $service->discover();
 

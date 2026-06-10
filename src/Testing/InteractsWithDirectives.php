@@ -7,6 +7,7 @@ namespace AndyDefer\Directive\Testing;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\DirectiveKernel;
@@ -139,6 +140,11 @@ trait InteractsWithDirectives
             return $bootstrapperContext;
         });
 
+        // Register directive discovery context
+        $this->directiveContainer->singleton(DirectiveDiscoveryContext::class, function () {
+            return new DirectiveDiscoveryContext;
+        });
+
         $directiveConfig = new EnvDirectiveConfig;
         $this->directiveContainer->instance(DirectiveConfigInterface::class, $directiveConfig);
 
@@ -154,7 +160,13 @@ trait InteractsWithDirectives
 
         $this->directiveRegistry = new TestDirectiveRegistry;
 
-        $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $this->directiveRegistry);
+        $discoveryContext = $this->directiveContainer->make(DirectiveDiscoveryContext::class);
+        $discovery = new DirectiveDiscoveryService(
+            config: $directiveConfig,
+            hydrator: $hydrator,
+            context: $discoveryContext,
+            loader: null,
+        );
         $discovery->setLaravelBootstrapper($laravelBootstrapperContext);
 
         $renderer = new DirectiveRendererService($this->directiveContainer->make(RenderDispatcher::class));

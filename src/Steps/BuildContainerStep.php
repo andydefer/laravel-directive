@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Steps;
 
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
@@ -80,6 +81,11 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
                 return $bootstrapperContext;
             });
 
+            // Register directive discovery context
+            $container->singleton(DirectiveDiscoveryContext::class, function () {
+                return new DirectiveDiscoveryContext;
+            });
+
             // Register config
             $directiveConfig = new EnvDirectiveConfig;
             $container->instance(DirectiveConfigInterface::class, $directiveConfig);
@@ -95,7 +101,13 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $context->setRegistry($registry);
 
             // Register discovery service
-            $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $registry);
+            $discoveryContext = $container->make(DirectiveDiscoveryContext::class);
+            $discovery = new DirectiveDiscoveryService(
+                config: $directiveConfig,
+                hydrator: $hydrator,
+                context: $discoveryContext,
+                loader: null,
+            );
             $discovery->setLaravelBootstrapper($laravelBootstrapperContext);
 
             // Register renderer

@@ -6,6 +6,7 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Configs\FileCreatorConfig;
+use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
@@ -35,6 +36,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->registerConfig();
         $this->registerLaravelBootstrapperContext();
+        $this->registerDirectiveDiscoveryContext();
         $this->registerFactory();
         $this->registerParser();
         $this->registerHydrator();
@@ -68,6 +70,13 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(LaravelBootstrapperContext::class, function ($app) {
             return new LaravelBootstrapperContext;
+        });
+    }
+
+    private function registerDirectiveDiscoveryContext(): void
+    {
+        $this->app->singleton(DirectiveDiscoveryContext::class, function ($app) {
+            return new DirectiveDiscoveryContext;
         });
     }
 
@@ -108,6 +117,7 @@ final class DirectiveServiceProvider extends ServiceProvider
             $discovery = new DirectiveDiscoveryService(
                 config: $app->make(DirectiveConfigInterface::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
+                context: $app->make(DirectiveDiscoveryContext::class),
                 loader: null,
             );
 

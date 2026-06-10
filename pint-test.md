@@ -1,20 +1,21 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 09:13:46 WAT*
+*Generated: mer. 10 juin 2026 09:50:00 WAT*
 
 
-  ⨯................................................⨯...⨯....⨯.⨯⨯...⨯...⨯..⨯.....................⨯........⨯...⨯.⨯.........⨯.⨯.⨯..............⨯.⨯..⨯⨯⨯.⨯.........................⨯.....⨯
-  .⨯...⨯⨯............⨯.......⨯......
+  ⨯...............................................⨯.⨯...⨯....⨯.⨯⨯...⨯...⨯.......................⨯........⨯...⨯.⨯.........⨯.⨯.⨯..............⨯.⨯..⨯⨯⨯.⨯........................⨯.....⨯.
+  ⨯...⨯⨯............⨯.......⨯......
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ................................................................................................................................................ 214 files, 29 style issues  
+    FAIL   ................................................................................................................................................ 213 files, 29 style issues  
   ⨯ src/AbstractDirective.php                                                                                                 class_attributes_separation, blank_line_before_statement  
   ⨯ src/Configs/EnvDirectiveConfig.php                                                                                                                                    concat_space  
+  ⨯ src/Contexts/DirectiveDiscoveryContext.php                                                                                               class_attributes_separation, concat_space  
   ⨯ src/Contexts/DirectiveTestingContext.php                                                                                                 class_attributes_separation, concat_space  
   ⨯ src/Contexts/LaravelBootstrapperContext.php class_attributes_separation, concat_space, no_trailing_whitespace_in_comment, unary_operator_spaces, not_operator_with_successor_spac…  
   ⨯ src/Contracts/Configs/DirectiveConfigInterface.php                                                                                               no_trailing_whitespace_in_comment  
   ⨯ src/DirectiveServiceProvider.php                                                                                                                                      concat_space  
   ⨯ src/Services/ArgumentSplitterService.php                                                                      braces_position, single_line_empty_body, blank_line_before_statement  
-  ⨯ src/Services/DirectiveDiscoveryService.php                                                                  concat_space, unary_operator_spaces, not_operator_with_successor_space  
+  ⨯ src/Services/DirectiveDiscoveryService.php                                                            concat_space, not_operator_with_successor_space, blank_line_before_statement  
   ⨯ src/Services/DirectiveParserService.php                                                                                                                          no_unused_imports  
   ⨯ src/Services/DirectiveTestingService.php class_attributes_separation, function_declaration, concat_space, no_unused_imports, not_operator_with_successor_space, blank_line_before…  
   ⨯ src/Services/LaravelBootstrapper.php              class_attributes_separation, concat_space, unary_operator_spaces, not_operator_with_successor_space, blank_line_before_statement  
@@ -22,7 +23,6 @@
   ⨯ src/Steps/BuildContainerStep.php                        function_declaration, fully_qualified_strict_types, concat_space, unary_operator_spaces, not_operator_with_successor_space  
   ⨯ src/Steps/StartDatabaseStep.php          single_quote, fully_qualified_strict_types, concat_space, not_operator_with_successor_space, blank_line_before_statement, ordered_imports  
   ⨯ src/Testing/InteractsWithDirectives.php                                                                     concat_space, unary_operator_spaces, not_operator_with_successor_space  
-  ⨯ src/Testing/TestDirectiveDiscoveryService.php                                                          unary_operator_spaces, no_unused_imports, not_operator_with_successor_space  
   ⨯ stubs/laravel/bootstrap/app.php                                                                                                                               no_extra_blank_lines  
   ⨯ stubs/laravel/config/app.php                                                                fully_qualified_strict_types, concat_space, single_line_after_imports, ordered_imports  
   ⨯ tests/Feature/DirectiveIntegrationTest.php                                                                                                                            concat_space  
@@ -31,7 +31,7 @@
   ⨯ tests/Fixtures/Directives/TestLaravelDatabaseDirective.php                                                  concat_space, unary_operator_spaces, not_operator_with_successor_space  
   ⨯ tests/IntegrationTestCase.php                                                                               concat_space, unary_operator_spaces, not_operator_with_successor_space  
   ⨯ tests/Unit/DirectiveServiceProviderTest.php                                                                                   class_definition, braces_position, no_unused_imports  
-  ⨯ tests/Unit/Services/DirectiveDiscoveryServiceTest.php                                                        concat_space, not_operator_with_successor_space, no_extra_blank_lines  
+  ⨯ tests/Unit/Services/DirectiveDiscoveryServiceTest.php                                                                              concat_space, not_operator_with_successor_space  
   ⨯ tests/Unit/Services/DirectiveExecutionServiceTest.php                                                                                                                 concat_space  
   ⨯ tests/Unit/Services/DirectiveTestingServiceDatabaseTest.php                                                                                                           concat_space  
   ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php                                                                       class_attributes_separation, blank_line_before_statement  
