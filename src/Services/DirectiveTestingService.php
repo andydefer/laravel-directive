@@ -40,6 +40,7 @@ final class DirectiveTestingService
         ?DirectiveTestingContext $context = null,
         ?DirectiveTestingConfigInterface $config = null,
     ) {
+
         $this->context = $context ?? new DirectiveTestingContext;
         $this->context->setConfig($config ?? new DirectiveTestingConfig);
 
@@ -86,6 +87,7 @@ final class DirectiveTestingService
 
     private function initializeIsolatedEnvironment(): void
     {
+
         if ($this->context->isInitialized()) {
             return;
         }
@@ -141,6 +143,7 @@ final class DirectiveTestingService
 
     public function registerDirective(AbstractDirective $directive): void
     {
+        $signature = $directive->getSignature();
         $this->context->getRegistry()->register($directive);
     }
 
@@ -159,6 +162,7 @@ final class DirectiveTestingService
 
     public function createTestDirective(string $signature, callable $execute): ClosureDirective
     {
+
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext ?? new LaravelBootstrapperContext,
             blueprint: new \AndyDefer\Directive\Records\DirectiveBlueprintRecord(ClosureDirective::class, $signature, 'Test directive created from closure'),
@@ -180,8 +184,8 @@ final class DirectiveTestingService
 
     public function runDirective(string $className, array $arguments = []): DirectiveResponseRecord
     {
-        $directive = $this->context->getClosureRegistry()->get($className);
 
+        $directive = $this->context->getClosureRegistry()->get($className);
         if ($directive !== null) {
             if ($directive->shouldBootLaravel() && !$this->context->isIntegratedMode() && !$this->context->isInitialized()) {
                 $this->initializeIsolatedEnvironment();
@@ -190,13 +194,13 @@ final class DirectiveTestingService
         }
 
         $directive = $this->context->getRegistry()->getDirective($className);
-
         if ($directive !== null) {
             if ($directive->shouldBootLaravel() && !$this->context->isIntegratedMode() && !$this->context->isInitialized()) {
                 $this->initializeIsolatedEnvironment();
             }
             return $this->executeDirectly($directive, $arguments);
         }
+
 
         $kernel = $this->context->getKernel();
 
@@ -224,6 +228,7 @@ final class DirectiveTestingService
     private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
     {
         $fullSignature = $directive->getSignature();
+
         $parser = new DirectiveParserService;
 
         $argumentCollection = new StringTypedCollection;
@@ -251,7 +256,6 @@ final class DirectiveTestingService
             $constructor = $reflection->getConstructor();
 
             if ($constructor === null) {
-                // Pas de constructeur, on ne peut pas hydrater
                 return new DirectiveResponseRecord(
                     exitCode: ExitCode::FAILURE,
                     output: "Directive has no constructor",
@@ -265,10 +269,7 @@ final class DirectiveTestingService
                 $paramType = $param->getType();
 
                 if ($paramType === null) {
-                    // Paramètre sans type, on essaie de voir si c'est le execute closure
                     if ($param->getName() === 'execute') {
-                        // Pour ClosureDirective, le 4ème paramètre est le closure execute
-                        // On doit le récupérer depuis la directive originale
                         $executeProperty = $reflection->getProperty('execute');
                         $args[] = $executeProperty->getValue($directive);
                     } else {
@@ -284,19 +285,34 @@ final class DirectiveTestingService
                 } elseif ($paramName === DirectiveInteractionService::class) {
                     $args[] = $this->interaction;
                 } elseif ($paramName === 'string') {
-                    // Pour le paramètre signature de ClosureDirective
                     if ($param->getName() === 'signature') {
                         $args[] = $fullSignature;
                     } else {
                         $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
                     }
                 } elseif ($paramName === 'Closure' || $paramName === 'callable' || $paramName === '\\Closure') {
-                    // Pour le paramètre execute de ClosureDirective
                     $executeProperty = $reflection->getProperty('execute');
                     $args[] = $executeProperty->getValue($directive);
-                } else {
-                    // Autres types (int, bool, array, etc.)
+                } elseif ($paramType->isBuiltin()) {
+                    // Type scalaire (int, bool, float, etc.)
                     $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
+                } else {
+                    // C'est un objet ! Utiliser le conteneur pour l'instancier
+                    try {
+                        if ($this->context->isIntegratedMode() && $this->context->getLaravelApp() !== null) {
+                            $args[] = $this->context->getLaravelApp()->make($paramName);
+                        } else {
+                            // Fallback: essayer de créer l'instance sans paramètres
+                            $objClass = new \ReflectionClass($paramName);
+                            if ($objClass->isInstantiable()) {
+                                $args[] = $objClass->newInstance();
+                            } else {
+                                $args[] = null;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        $args[] = null;
+                    }
                 }
             }
 
@@ -309,6 +325,7 @@ final class DirectiveTestingService
 
             $directiveName = explode(' ', $fullSignature)[0];
             $this->context->addExecutedDirective($directiveName);
+
 
             return new DirectiveResponseRecord(
                 exitCode: $exitCode,
