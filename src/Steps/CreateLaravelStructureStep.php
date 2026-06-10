@@ -7,13 +7,10 @@ namespace AndyDefer\Directive\Steps;
 
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\Enums\PathType;
+use AndyDefer\Directive\Enums\StepResultStatus;
+use AndyDefer\Directive\Enums\TestingStep;
 use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
 
-/**
- * Step that creates a minimal Laravel application structure.
- *
- * @author Andy Defer
- */
 final class CreateLaravelStructureStep implements DirectiveTestingStepInterface
 {
     private const BOOTSTRAP_APP_PATH = '/bootstrap/app.php';
@@ -28,12 +25,33 @@ final class CreateLaravelStructureStep implements DirectiveTestingStepInterface
     {
         $tempDir = $context->getTempDir();
 
-        $this->createBootstrapDirectory($tempDir, $context);
-        $this->createConfigDirectory($tempDir, $context);
-        $this->createStorageDirectory($tempDir, $context);
-        $this->createAppDirectory($tempDir, $context);
+        if ($tempDir === null) {
+            $context->addStepResult(
+                step_name: TestingStep::CREATE_LARAVEL_STRUCTURE,
+                status: StepResultStatus::FAILED,
+                message: "Cannot create Laravel structure: temporary directory is null"
+            );
+            return $next($context);
+        }
 
-        $context->addStepResult('create_laravel_structure', $tempDir, new DateTimeVO(null));
+        try {
+            $this->createBootstrapDirectory($tempDir, $context);
+            $this->createConfigDirectory($tempDir, $context);
+            $this->createStorageDirectory($tempDir, $context);
+            $this->createAppDirectory($tempDir, $context);
+
+            $context->addStepResult(
+                step_name: TestingStep::CREATE_LARAVEL_STRUCTURE,
+                status: StepResultStatus::SUCCESS,
+                message: $tempDir
+            );
+        } catch (\Exception $e) {
+            $context->addStepResult(
+                step_name: TestingStep::CREATE_LARAVEL_STRUCTURE,
+                status: StepResultStatus::FAILED,
+                message: $e->getMessage()
+            );
+        }
 
         return $next($context);
     }

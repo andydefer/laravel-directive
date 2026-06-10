@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Enums\TestingStep;
 use AndyDefer\Directive\Services\DirectiveTestingService;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\Configs\DirectiveTestingConfig;
@@ -318,8 +319,8 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         // Assert
         $this->assertGreaterThan(0, $this->context->getStepsExecutedCount());
-        $this->assertTrue($this->context->hasStepResult('create_temp_directory'));
-        $this->assertTrue($this->context->hasStepResult('build_container'));
+        $this->assertTrue($this->context->hasStepResult(TestingStep::CREATE_TEMP_DIRECTORY));
+        $this->assertTrue($this->context->hasStepResult(TestingStep::BUILD_CONTAINER));
     }
 
     // ==================== Verbose Option Tests ====================
@@ -452,7 +453,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertContains('test-1', $executed);
         $this->assertContains('test-2', $executed);
     }
-
 
     // ==================== Response Content Tests ====================
 

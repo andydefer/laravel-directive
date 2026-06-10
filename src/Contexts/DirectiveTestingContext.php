@@ -11,6 +11,8 @@ use AndyDefer\Directive\Collections\StepResultCollection;
 use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\PathType;
+use AndyDefer\Directive\Enums\StepResultStatus;
+use AndyDefer\Directive\Enums\TestingStep;
 use AndyDefer\Directive\Records\CreatedPathRecord;
 use AndyDefer\Directive\Records\ExecutionResultRecord;
 use AndyDefer\Directive\Records\StepResultRecord;
@@ -153,7 +155,7 @@ final class DirectiveTestingContext
         return $this->step_results;
     }
 
-    public function getStepResult(string $step_name): ?StepResultRecord
+    public function getStepResult(TestingStep $step_name): ?StepResultRecord
     {
         return $this->step_results->getByStepName($step_name);
     }
@@ -257,11 +259,12 @@ final class DirectiveTestingContext
         $this->created_paths->add($record);
     }
 
-    public function addStepResult(string $step_name, string $result, ?DateTimeVO $executed_at = null): void
+    public function addStepResult(TestingStep $step_name, StepResultStatus $status, string $message, ?DateTimeVO $executed_at = null): void
     {
         $record = new StepResultRecord(
             step_name: $step_name,
-            result: $result,
+            status: $status,
+            message: $message,
             executed_at: $executed_at ?? new DateTimeVO(null),
         );
         $this->step_results->add($record);
@@ -316,7 +319,7 @@ final class DirectiveTestingContext
         return $this->created_paths->isNotEmpty();
     }
 
-    public function hasStepResult(string $step_name): bool
+    public function hasStepResult(TestingStep $step_name): bool
     {
         return $this->step_results->getByStepName($step_name) !== null;
     }

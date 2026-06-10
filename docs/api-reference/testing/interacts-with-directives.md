@@ -1,4 +1,136 @@
+```markdown
 # InteractsWithDirectives - Référence Technique
+
+> ⚠️ **DÉPRÉCIÉ depuis la version 3.8.0** - Ce trait est déprécié et sera supprimé dans la version 4.0.0.
+> 
+> Veuillez utiliser `DirectiveTestingService` à la place.
+
+## 📌 Raisons de la dépréciation
+
+| Problème | Explication |
+|----------|-------------|
+| **Couplage implicite** | Le trait crée un couplage caché entre la classe de test et les services internes. Les méthodes `initDirectiveTesting()`, `registerDirective()`, `runDirective()` apparaissent comme par magie sans injection explicite. |
+| **État caché** | Les propriétés privées (`$directiveTempDir`, `$directiveKernel`, `$interaction`) sont stockées dans la classe de test, créant un état implicite difficile à traquer. |
+| **Difficulté de test** | Impossible de tester le comportement du trait lui-même car il doit être utilisé dans une classe. |
+| **Singletons implicites** | `NormalizerChain::get()`, `Hydrator::hydrate()` sont appelés en interne sans possibilité de substitution. |
+| **Violation du SRP** | La classe de test se retrouve avec des responsabilités supplémentaires (gestion de l'environnement de test, nettoyage, registre) qu'elle ne devrait pas avoir. |
+| **Pas de traçabilité** | Impossible de savoir ce qui s'est passé pendant l'exécution (étapes, fichiers créés, erreurs) car l'état n'est pas exposé. |
+| **Composition vs Héritage** | Le trait force l'héritage au lieu de la composition. On ne peut pas réutiliser la logique sans hériter de `TestCase`. |
+
+## 🎯 Avantages de la nouvelle approche avec `DirectiveTestingService`
+
+| Avantage | Explication |
+|----------|-------------|
+| **Découplage total** | Le service est injecté, pas hérité. La classe de test ne dépend que de ce dont elle a besoin. |
+| **État traçable** | Le `DirectiveTestingContext` expose tout l'état : répertoire temporaire, étapes exécutées, fichiers créés, résultats. |
+| **Testabilité** | Le service peut être testé isolément, mocké, remplacé. |
+| **Composition explicite** | On compose ce dont on a besoin, on n'hérite pas de comportements non désirés. |
+| **Flux observable** | Chaque étape est enregistrée dans le contexte. On peut savoir exactement ce qui s'est passé. |
+| **Nettoyage garanti** | `destroy()` nettoie proprement toutes les ressources. |
+| **Pas de pollution** | La classe de test ne contient plus de propriétés techniques. |
+
+## 🔄 Migration
+
+```php
+// ❌ Ancienne approche (dépréciée depuis 3.8.0)
+class MyDirectiveTest extends TestCase
+{
+    use InteractsWithDirectives;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->initDirectiveTesting();
+    }
+    
+    public function test_directive(): void
+    {
+        $directive = new MyDirective();
+        $this->registerDirective($directive);
+        $response = $this->runDirective('my-cmd');
+        
+        // ❌ Impossible de savoir quels fichiers ont été créés
+        // ❌ Impossible de savoir quelles étapes ont été exécutées
+    }
+}
+
+// ✅ Nouvelle approche (recommandée)
+use AndyDefer\Directive\Services\DirectiveTestingService;
+use AndyDefer\Directive\Contexts\DirectiveTestingContext;
+use AndyDefer\Directive\Configs\DirectiveTestingConfig;
+
+class MyDirectiveTest extends TestCase
+{
+    private DirectiveTestingService $service;
+    private DirectiveTestingContext $context;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Composition explicite
+        $config = new DirectiveTestingConfig();
+        $this->context = new DirectiveTestingContext(false);
+        $this->context->setConfig($config);
+        $this->service = new DirectiveTestingService($this->context);
+    }
+    
+    protected function tearDown(): void
+    {
+        $this->service->destroy();
+        parent::tearDown();
+    }
+    
+    public function test_directive(): void
+    {
+        $directive = new MyDirective($this->service->getInteraction());
+        $this->service->registerDirective($directive);
+        
+        // Exécution
+        $response = $this->service->runDirective('my-cmd');
+        
+        // ✅ Traçabilité : on peut inspecter le contexte
+        $this->assertTrue($this->context->hasStepResult('create_temp_directory'));
+        $this->assertTrue($this->context->hasCreatedPaths());
+        $this->assertEquals(1, $this->context->getCreatedFilesCount());
+        
+        // ✅ Chaque étape est enregistrée
+        $stepResult = $this->context->getStepResult('create_temp_directory');
+        $this->assertNotNull($stepResult);
+    }
+}
+```
+
+## 📖 Philosophie : Composition over Inheritance
+
+| Principe | Trait (`InteractsWithDirectives`) | Service (`DirectiveTestingService`) |
+|----------|-----------------------------------|-------------------------------------|
+| **Composition** | ❌ Héritage implicite | ✅ Injection explicite |
+| **État** | ❌ Caché dans les propriétés privées | ✅ Exposé via `DirectiveTestingContext` |
+| **Testabilité** | ❌ Difficile (trait à tester via une classe) | ✅ Facile (service mockable) |
+| **Couplage** | ❌ Fort (dépendances internes cachées) | ✅ Faible (dépendances injectées) |
+| **Traçabilité** | ❌ Aucune (boîte noire) | ✅ Totale (contexte observable) |
+| **Réutilisabilité** | ❌ Limitée (doit être utilisé dans un TestCase) | ✅ Totale (peut être utilisé partout) |
+| **SRP** | ❌ Violé (test + gestion environnement) | ✅ Respecté (service spécialisé) |
+
+## 🧠 Leçon : Pourquoi les traits sont souvent une mauvaise idée
+
+Les traits créent une **illusion de réutilisabilité** mais cachent des dépendances et de l'état. Ils violent plusieurs principes SOLID :
+
+1. **Single Responsibility Principle (SRP)** : Le trait ajoute des responsabilités à la classe qui l'utilise.
+2. **Dependency Inversion Principle (DIP)** : On dépend d'une implémentation concrète (le trait), pas d'une abstraction.
+3. **Interface Segregation Principle (ISP)** : On hérite de toutes les méthodes du trait, même celles dont on n'a pas besoin.
+
+La **composition** (injection de service) résout tous ces problèmes :
+- ✅ Le service a une seule responsabilité
+- ✅ On dépend d'une abstraction (l'interface du service)
+- ✅ On ne prend que ce dont on a besoin
+
+## Description
+
+Trait PHPUnit fournissant des utilitaires de test pour les directives, permettant un environnement isolé sans dépendance au système de fichiers.
+
+> ⚠️ **Ce trait est déprécié depuis la version 3.8.0.** Utilisez `DirectiveTestingService` pour les nouveaux développements.
 
 ## Description
 

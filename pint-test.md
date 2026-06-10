@@ -1,12 +1,12 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 02:41:11 WAT*
+*Generated: mer. 10 juin 2026 03:07:26 WAT*
 
 
-  ⨯...⨯.⨯⨯..⨯⨯..⨯....⨯⨯⨯.⨯⨯⨯⨯.⨯..⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯..⨯⨯⨯⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯...⨯⨯......⨯.⨯⨯⨯⨯...⨯.⨯.⨯⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯.⨯.⨯⨯..⨯⨯⨯⨯⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯...
-  .⨯.⨯...⨯...........
+  ⨯...⨯.⨯⨯..⨯⨯..⨯....⨯⨯⨯.⨯⨯⨯⨯.⨯..⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯..⨯⨯⨯⨯⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯...⨯⨯......⨯.⨯⨯⨯⨯...⨯.⨯.⨯⨯⨯.⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.⨯.⨯.⨯⨯⨯..⨯⨯⨯⨯⨯..⨯.⨯⨯..⨯⨯⨯⨯⨯⨯......⨯.......⨯.⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯⨯.
+  ...⨯.⨯...⨯...........
 
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Laravel  
-    FAIL   ............................................................................................................................................... 199 files, 118 style issues  
+    FAIL   ............................................................................................................................................... 201 files, 120 style issues  
   ⨯ src/AbstractDirective.php                                          class_attributes_separation, new_with_parentheses, phpdoc_separation, blank_line_before_statement, phpdoc_align  
   ⨯ src/Collections/AbstractItemCollection.php                                                                                          phpdoc_separation, blank_line_before_statement  
   ⨯ src/Collections/AbstractKeyValueCollection.php                                                                                                                   phpdoc_separation  
@@ -43,6 +43,8 @@
   ⨯ src/Enums/ParameterTypeOrder.php                                                                                                        blank_line_after_opening_tag, phpdoc_align  
   ⨯ src/Enums/PathType.php                                                                                                                                blank_line_after_opening_tag  
   ⨯ src/Enums/PermissionMode.php                              blank_line_after_opening_tag, concat_space, not_operator_with_successor_space, blank_line_before_statement, phpdoc_align  
+  ⨯ src/Enums/StepResultStatus.php                                                                              no_superfluous_phpdoc_tags, blank_line_after_opening_tag, phpdoc_align  
+  ⨯ src/Enums/TestingStep.php                                                                                                               blank_line_after_opening_tag, phpdoc_align  
   ⨯ src/Records/CreatedPathRecord.php                                                                                         braces_position, single_line_empty_body, ordered_imports  
   ⨯ src/Records/ExecutionResultRecord.php                                                                        blank_line_after_opening_tag, braces_position, single_line_empty_body  
   ⨯ src/Records/ExtractedParameterRecord.php                                                                     blank_line_after_opening_tag, braces_position, single_line_empty_body  
@@ -74,10 +76,10 @@
   ⨯ src/Services/ParameterExtractorService.php                                             new_with_parentheses, blank_line_after_opening_tag, braces_position, single_line_empty_body  
   ⨯ src/Services/ParameterOrderValidatorService.php blank_line_after_opening_tag, braces_position, no_unused_imports, single_line_empty_body, no_extra_blank_lines, blank_line_before…  
   ⨯ src/Services/SignatureValidationService.php                                        class_attributes_separation, phpdoc_separation, not_operator_with_successor_space, phpdoc_align  
-  ⨯ src/Steps/BootstrapLaravelStep.php                                                                   blank_line_after_opening_tag, concat_space, not_operator_with_successor_space  
+  ⨯ src/Steps/BootstrapLaravelStep.php                        single_quote, blank_line_after_opening_tag, concat_space, not_operator_with_successor_space, blank_line_before_statement  
   ⨯ src/Steps/BuildContainerStep.php                         new_with_parentheses, function_declaration, blank_line_after_opening_tag, concat_space, not_operator_with_successor_space  
-  ⨯ src/Steps/ChangeToTempDirectoryStep.php                                                                            blank_line_after_opening_tag, not_operator_with_successor_space  
-  ⨯ src/Steps/CreateLaravelStructureStep.php                                class_attributes_separation, blank_line_after_opening_tag, concat_space, not_operator_with_successor_space  
+  ⨯ src/Steps/ChangeToTempDirectoryStep.php                                 single_quote, blank_line_after_opening_tag, not_operator_with_successor_space, blank_line_before_statement  
+  ⨯ src/Steps/CreateLaravelStructureStep.php class_attributes_separation, single_quote, blank_line_after_opening_tag, concat_space, not_operator_with_successor_space, blank_line_bef…  
   ⨯ src/Steps/CreateTempDirectoryStep.php                                                                blank_line_after_opening_tag, concat_space, not_operator_with_successor_space  
   ⨯ src/Steps/DirectiveTestingStepInterface.php                                                                          blank_line_after_opening_tag, phpdoc_separation, phpdoc_align  
   ⨯ src/Strategies/DefaultValueArgumentStrategy.php                                                   blank_line_after_opening_tag, not_operator_with_successor_space, ordered_imports  
@@ -110,7 +112,7 @@
   ⨯ tests/Unit/Services/DirectiveNamingServiceTest.php                                                                                                            new_with_parentheses  
   ⨯ tests/Unit/Services/DirectiveParserServiceTest.php                                                                              new_with_parentheses, blank_line_after_opening_tag  
   ⨯ tests/Unit/Services/DirectiveRendererServiceTest.php                 class_attributes_separation, new_with_parentheses, php_unit_method_casing, no_unused_imports, ordered_imports  
-  ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php class_attributes_separation, new_with_parentheses, fully_qualified_strict_types, blank_line_after_opening_tag, no_extra_blank…  
+  ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php class_attributes_separation, new_with_parentheses, fully_qualified_strict_types, blank_line_after_opening_tag, blank_line_bef…  
   ⨯ tests/Unit/Services/FileCreatorServiceTest.php               class_attributes_separation, new_with_parentheses, concat_space, no_unused_imports, not_operator_with_successor_space  
   ⨯ tests/Unit/Services/LaravelBootstrapperTest.php                                                                            new_with_parentheses, not_operator_with_successor_space  
   ⨯ tests/Unit/Services/OptionParserServiceTest.php                                                                                 new_with_parentheses, blank_line_after_opening_tag  

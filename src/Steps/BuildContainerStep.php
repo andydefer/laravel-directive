@@ -10,6 +10,8 @@ use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
+use AndyDefer\Directive\Enums\StepResultStatus;
+use AndyDefer\Directive\Enums\TestingStep;
 use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
@@ -23,11 +25,6 @@ use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
 use Illuminate\Container\Container;
 
-/**
- * Step that builds the service container for testing.
- *
- * @author Andy Defer
- */
 final class BuildContainerStep implements DirectiveTestingStepInterface
 {
     public function supports(DirectiveTestingContext $context): bool
@@ -37,80 +34,93 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
 
     public function execute(DirectiveTestingContext $context, callable $next): DirectiveTestingContext
     {
-        $container = new Container();
-        $tempDir = $context->getTempDir();
-        $bootLaravel = $context->shouldBootLaravel();
+        try {
+            $container = new Container();
+            $tempDir = $context->getTempDir();
+            $bootLaravel = $context->shouldBootLaravel();
 
-        // Register dispatchers
-        $container->singleton(RenderDispatcher::class, fn() => new RenderDispatcher());
-        $container->singleton(InputDispatcher::class, fn() => new InputDispatcher());
+            // Register dispatchers
+            $container->singleton(RenderDispatcher::class, fn() => new RenderDispatcher());
+            $container->singleton(InputDispatcher::class, fn() => new InputDispatcher());
 
-        // Register interaction service
-        $container->singleton(DirectiveInteractionService::class, function ($c) {
-            return new DirectiveInteractionService(
-                $c->make(RenderDispatcher::class),
-                $c->make(InputDispatcher::class),
+            // Register interaction service
+            $container->singleton(DirectiveInteractionService::class, function ($c) {
+                return new DirectiveInteractionService(
+                    $c->make(RenderDispatcher::class),
+                    $c->make(InputDispatcher::class),
+                );
+            });
+
+            $interaction = $container->make(DirectiveInteractionService::class);
+            $context->setInteraction($interaction);
+
+            // Register validation and naming services
+            $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService());
+            $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService());
+
+            // Register Laravel bootstrapper
+            $container->singleton(LaravelBootstrapper::class, function () use ($bootLaravel, $tempDir) {
+                $bootstrapper = new LaravelBootstrapper();
+
+                if ($bootLaravel && $tempDir !== null) {
+                    $bootstrapper->setCustomBootstrapPath($tempDir . '/bootstrap/app.php');
+                }
+
+                return $bootstrapper;
+            });
+
+            // Register config
+            $directiveConfig = DirectiveConfig::default()->withDirectivesPath($tempDir . '/app/Directives');
+            $container->instance(DirectiveConfig::class, $directiveConfig);
+
+            // Register factory and hydrator
+            $factory = new ContainerDirectiveFactory($container);
+            $hydrator = new DirectiveHydratorService($factory);
+            $laravelBootstrapper = $container->make(LaravelBootstrapper::class);
+            $hydrator->setLaravelBootstrapper($laravelBootstrapper);
+
+            // Register registry
+            $registry = new TestDirectiveRegistry();
+            $context->setRegistry($registry);
+
+            // Register discovery service
+            $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $registry);
+            $discovery->setLaravelBootstrapper($laravelBootstrapper);
+
+            // Register renderer
+            $renderer = new DirectiveRendererService($container->make(RenderDispatcher::class));
+
+            // Register execution service
+            $executionService = new DirectiveExecutionService(
+                discovery: $discovery,
+                parser: new DirectiveParserService(),
+                hydrator: $hydrator,
+                renderer: $renderer,
             );
-        });
+            $executionService->setLaravelBootstrapper($laravelBootstrapper);
 
-        $interaction = $container->make(DirectiveInteractionService::class);
-        $context->setInteraction($interaction);
+            // Register kernel
+            $kernel = new DirectiveKernel(
+                $executionService,
+                $container->make(SignatureValidationService::class),
+                $renderer,
+            );
 
-        // Register validation and naming services
-        $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService());
-        $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService());
+            $context->setContainer($container);
+            $context->setKernel($kernel);
 
-        // Register Laravel bootstrapper
-        $container->singleton(LaravelBootstrapper::class, function () use ($bootLaravel, $tempDir) {
-            $bootstrapper = new LaravelBootstrapper();
-
-            if ($bootLaravel) {
-                $bootstrapper->setCustomBootstrapPath($tempDir . '/bootstrap/app.php');
-            }
-
-            return $bootstrapper;
-        });
-
-        // Register config
-        $directiveConfig = DirectiveConfig::default()->withDirectivesPath($tempDir . '/app/Directives');
-        $container->instance(DirectiveConfig::class, $directiveConfig);
-
-        // Register factory and hydrator
-        $factory = new ContainerDirectiveFactory($container);
-        $hydrator = new DirectiveHydratorService($factory);
-        $laravelBootstrapper = $container->make(LaravelBootstrapper::class);
-        $hydrator->setLaravelBootstrapper($laravelBootstrapper);
-
-        // Register registry
-        $registry = new TestDirectiveRegistry();
-        $context->setRegistry($registry);
-
-        // Register discovery service
-        $discovery = new DirectiveDiscoveryService($directiveConfig, $hydrator, $registry);
-        $discovery->setLaravelBootstrapper($laravelBootstrapper);
-
-        // Register renderer
-        $renderer = new DirectiveRendererService($container->make(RenderDispatcher::class));
-
-        // Register execution service
-        $executionService = new DirectiveExecutionService(
-            discovery: $discovery,
-            parser: new DirectiveParserService(),
-            hydrator: $hydrator,
-            renderer: $renderer,
-        );
-        $executionService->setLaravelBootstrapper($laravelBootstrapper);
-
-        // Register kernel
-        $kernel = new DirectiveKernel(
-            $executionService,
-            $container->make(SignatureValidationService::class),
-            $renderer,
-        );
-
-        $context->setContainer($container);
-        $context->setKernel($kernel);
-        $context->addStepResult('build_container', 'Container built successfully');
+            $context->addStepResult(
+                step_name: TestingStep::BUILD_CONTAINER,
+                status: StepResultStatus::SUCCESS,
+                message: 'Container built successfully'
+            );
+        } catch (\Exception $e) {
+            $context->addStepResult(
+                step_name: TestingStep::BUILD_CONTAINER,
+                status: StepResultStatus::FAILED,
+                message: $e->getMessage()
+            );
+        }
 
         return $next($context);
     }
