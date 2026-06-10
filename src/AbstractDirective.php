@@ -18,6 +18,7 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
  *
  * This class provides the foundation for creating CLI commands with:
  * - Argument and option management
+ * - Variadic argument support
  * - User interaction methods (ask, confirm, line, info, error, warn)
  * - Table display capabilities
  * - Optional Laravel bootstrapping
@@ -46,20 +47,39 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
  *     }
  * }
  *
+ * @example
+ * // Directive with variadic arguments
+ * final class ProcessFilesDirective extends AbstractDirective
+ * {
+ *     public function getSignature(): string
+ *     {
+ *         return 'process {files*} {--verbose}';
+ *     }
+ *
+ *     public function execute(): ExitCode
+ *     {
+ *         foreach ($this->getVariadicArguments() as $file) {
+ *             $this->line("Processing: {$file}");
+ *         }
+ *         return ExitCode::SUCCESS;
+ *     }
+ * }
+ *
  * @author Andy Defer
  */
 abstract class AbstractDirective implements DirectiveInterface
 {
     protected ParameterCollection $arguments;
     protected ParameterCollection $options;
+    protected StringTypedCollection $variadicArguments;
     protected ?LaravelBootstrapper $laravelBootstrapper = null;
-
 
     public function __construct(
         protected readonly DirectiveInteractionService $interaction,
     ) {
         $this->arguments = new ParameterCollection();
         $this->options = new ParameterCollection();
+        $this->variadicArguments = new StringTypedCollection();
     }
 
     /**
@@ -264,6 +284,28 @@ abstract class AbstractDirective implements DirectiveInterface
         return $value !== '';
     }
 
+    // Dans AbstractDirective.php, ajoutez ces méthodes si elles n'existent pas ou ajoutez des echo
+
+    final public function setVariadicArguments(StringTypedCollection $variadicArguments): self
+    {
+
+        $this->variadicArguments = $variadicArguments;
+        return $this;
+    }
+
+    final public function getVariadicArguments(): StringTypedCollection
+    {
+
+        return $this->variadicArguments;
+    }
+
+    final public function hasVariadicArguments(): bool
+    {
+        $has = $this->variadicArguments->isNotEmpty();
+
+        return $has;
+    }
+
     // ==================== Display Methods ====================
 
     /**
@@ -306,6 +348,25 @@ abstract class AbstractDirective implements DirectiveInterface
         $this->interaction->warn($message);
     }
 
+    /**
+     * Outputs a blank line (empty line).
+     */
+    final public function newLine(): void
+    {
+        $this->interaction->newLine();
+    }
+
+    /**
+     * Outputs a separator line.
+     *
+     * @param string $character The character to use for the separator (default: '-')
+     * @param int $length The length of the separator line (default: 80)
+     */
+    final public function separator(string $character = '-', int $length = 80): void
+    {
+        $this->interaction->separator($character, $length);
+    }
+
     // ==================== User Interaction Methods ====================
 
     /**
@@ -343,25 +404,6 @@ abstract class AbstractDirective implements DirectiveInterface
     final public function table(StringTypedCollection $headers, RowCollection $rows): void
     {
         $this->interaction->table($headers, $rows);
-    }
-
-    /**
-     * Outputs a blank line (empty line).
-     */
-    final public function newLine(): void
-    {
-        $this->interaction->newLine();
-    }
-
-    /**
-     * Outputs a separator line.
-     * 
-     * @param string $character The character to use for the separator (default: '-')
-     * @param int $length The length of the separator line (default: 80)
-     */
-    final public function separator(string $character = '-', int $length = 80): void
-    {
-        $this->interaction->separator($character, $length);
     }
 
     /**

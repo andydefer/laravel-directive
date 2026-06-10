@@ -29,27 +29,36 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
     public function register(AbstractDirective $directive): void
     {
         $className = get_class($directive);
+        $signature = $directive->getSignature();
+
+        echo "\n========== REGISTER ==========\n";
+        echo "Class: {$className}\n";
+        echo "Signature: {$signature}\n";
 
         if (isset($this->directives[$className])) {
+            echo "  -> Already registered by class\n";
             return;
         }
 
         $this->directives[$className] = $directive;
 
-        $signature = $directive->getSignature();
-
         // Indexer la signature complète
         $this->index[$signature] = $className;
+        echo "  -> Indexed by full signature: {$signature}\n";
 
-        // Indexer le nom de base (sans les {} ni les paramètres)
+        // Indexer le nom de base
         $baseSignature = explode(' ', $signature)[0];
         $baseSignature = explode('{', $baseSignature)[0];
         $this->index[$baseSignature] = $className;
+        echo "  -> Indexed by base signature: {$baseSignature}\n";
 
         // Indexer les alias
         foreach ($directive->getAliases() as $alias) {
             $this->index[$alias] = $className;
+            echo "  -> Indexed by alias: {$alias}\n";
         }
+
+        echo "Current index keys: " . json_encode(array_keys($this->index)) . "\n";
     }
 
     /**
@@ -85,20 +94,24 @@ final class TestDirectiveRegistry implements DirectiveLoaderInterface
      */
     public function getDirective(string $identifier): ?AbstractDirective
     {
-        // 1. Chercher par FQCN
+        echo "\n========== GET DIRECTIVE ==========\n";
+        echo "Identifier: {$identifier}\n";
+        echo "Index keys: " . json_encode(array_keys($this->index)) . "\n";
+
         if (isset($this->directives[$identifier])) {
+            echo "  -> Found by class\n";
             return $this->directives[$identifier];
         }
 
-        // 2. Chercher dans l'index (signature exacte, alias, ou nom de base)
         if (isset($this->index[$identifier])) {
             $className = $this->index[$identifier];
-            return $this->directives[$className] ?? null;
+            echo "  -> Found by index: {$className}\n";
+            return $this->directives[$className];
         }
 
+        echo "  -> NOT FOUND\n";
         return null;
     }
-
     /**
      * Vérifie si une directive est enregistrée par son FQCN
      */

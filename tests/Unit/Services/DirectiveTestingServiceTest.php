@@ -408,16 +408,17 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
     public function test_run_directive_with_special_characters_in_arguments(): void
     {
-        // Arrange
-        $this->service->createTestDirective('test-special', function ($d) {
-            $args = $d->argument('args') ?? '';
-            $d->line("Received: {$args}");
+        // Arrange - signature avec un paramètre variadique
+        $this->service->createTestDirective('test-special {args*}', function ($d) {
+            // Récupérer tous les arguments via getVariadicArguments()
+            $args = $d->getVariadicArguments()->toArray();
+            $argsString = implode(', ', $args);
+            $d->line("Received: {$argsString}");
             return ExitCode::SUCCESS;
         });
 
         // Act
         $response = $this->service->runDirective('test-special', ['hello-world', 'foo_bar', 'test@domain.com']);
-        dump($response->output);
 
         // Assert
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
@@ -431,22 +432,25 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         // Act
         $this->service->createTestDirective('test-1', function ($d) use (&$executed) {
             $executed[] = 'test-1';
-            $d->line('Test 1');
+            $d->line('Test 1 executed');
             return ExitCode::SUCCESS;
         });
 
         $this->service->createTestDirective('test-2', function ($d) use (&$executed) {
             $executed[] = 'test-2';
-            $d->line('Test 2');
+            $d->line('Test 2 executed');
             return ExitCode::SUCCESS;
         });
 
         // Assert
         $response1 = $this->service->runDirective('test-1');
         $response2 = $this->service->runDirective('test-2');
+        echo "{$response2->output}";
 
         $this->assertSame(ExitCode::SUCCESS, $response1->exitCode);
         $this->assertSame(ExitCode::SUCCESS, $response2->exitCode);
+        $this->assertStringContainsString('Test 1 executed', $response1->output);
+        $this->assertStringContainsString('Test 2 executed', $response2->output);
         $this->assertContains('test-1', $executed);
         $this->assertContains('test-2', $executed);
     }

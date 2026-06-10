@@ -1,4 +1,5 @@
 <?php
+// src/Contracts/DirectiveInterface.php
 
 declare(strict_types=1);
 
@@ -104,6 +105,31 @@ interface DirectiveInterface
      * @return bool True if the option exists, false otherwise
      */
     public function hasOption(string $key): bool;
+
+    /**
+     * Set the variadic arguments for this directive.
+     *
+     * @param StringTypedCollection $variadicArguments Collection of variadic argument values
+     * @return self Returns the directive instance for method chaining
+     */
+    public function setVariadicArguments(StringTypedCollection $variadicArguments): self;
+
+    /**
+     * Get all variadic arguments as a typed collection.
+     *
+     * Variadic arguments capture all remaining command-line arguments
+     * that are not consumed by named arguments or options.
+     *
+     * @return StringTypedCollection Collection of variadic argument values
+     */
+    public function getVariadicArguments(): StringTypedCollection;
+
+    /**
+     * Check if the directive has variadic arguments.
+     *
+     * @return bool True if variadic arguments exist and are not empty
+     */
+    public function hasVariadicArguments(): bool;
 
     /**
      * Override this method to enable Laravel bootstrapping for this directive.

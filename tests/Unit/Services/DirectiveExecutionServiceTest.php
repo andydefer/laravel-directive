@@ -1,10 +1,13 @@
 <?php
+// tests/Unit/Services/DirectiveExecutionServiceTest.php
 
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Collections\ParsedArgumentCollection;
+use AndyDefer\Directive\Collections\ParsedOptionCollection;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
@@ -20,8 +23,8 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Utils\StrictDataObject;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -105,11 +108,19 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         return $collection;
     }
 
+    private function createEmptyParsedDirectiveRecord(): ParsedDirectiveRecord
+    {
+        return new ParsedDirectiveRecord(
+            arguments: new ParsedArgumentCollection(),
+            options: new ParsedOptionCollection(),
+            variadic_arguments: new StringTypedCollection(),
+        );
+    }
+
     // ==================== Not Found Tests ====================
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
     {
-        // Arrange: Empty directives collection
         $directives = new DirectiveMetadataCollection();
 
         $this->discovery->expects($this->once())
@@ -125,10 +136,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::NOT_FOUND, $result);
     }
 
@@ -136,17 +145,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_returns_success_when_directive_exists(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
             ->method('discover')
             ->willReturn($directives);
 
-        $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection(),
-            options: new ScalarTypedCollection(),
-        );
+        $parsedRecord = $this->createEmptyParsedDirectiveRecord();
 
         $this->parser->expects($this->once())
             ->method('parse')
@@ -172,26 +177,20 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => ['John'],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_returns_failure_when_directive_fails(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
             ->method('discover')
             ->willReturn($directives);
 
-        $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection(),
-            options: new ScalarTypedCollection(),
-        );
+        $parsedRecord = $this->createEmptyParsedDirectiveRecord();
 
         $this->parser->expects($this->once())
             ->method('parse')
@@ -217,26 +216,20 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::FAILURE, $result);
     }
 
     public function test_execute_handles_directive_by_alias(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
             ->method('discover')
             ->willReturn($directives);
 
-        $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection(),
-            options: new ScalarTypedCollection(),
-        );
+        $parsedRecord = $this->createEmptyParsedDirectiveRecord();
 
         $this->parser->expects($this->once())
             ->method('parse')
@@ -262,10 +255,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
@@ -273,7 +264,6 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_handles_help_command(): void
     {
-        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderHelp');
 
@@ -282,16 +272,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_short_help_command(): void
     {
-        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderHelp');
 
@@ -300,16 +287,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_list_command(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -325,16 +309,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_short_list_command(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -350,16 +331,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_version_command(): void
     {
-        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderVersion');
 
@@ -368,16 +346,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_execute_handles_short_version_command(): void
     {
-        // Arrange
         $this->renderer->expects($this->once())
             ->method('renderVersion');
 
@@ -386,10 +361,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
@@ -397,7 +370,6 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_passes_arguments_and_options_to_parser(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -407,10 +379,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->parser->expects($this->once())
             ->method('parse')
             ->with('test-concrete', $this->isInstanceOf(StringTypedCollection::class))
-            ->willReturn(new ParsedDirectiveRecord(
-                arguments: new ScalarTypedCollection(),
-                options: new ScalarTypedCollection(),
-            ));
+            ->willReturn($this->createEmptyParsedDirectiveRecord());
 
         $directive = $this->createMock(DirectiveInterface::class);
         $directive->expects($this->once())
@@ -430,7 +399,6 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => ['John', '--role=admin', '--verbose'],
         ]);
 
-        // Act
         $this->service->execute($record);
     }
 
@@ -438,17 +406,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_boots_laravel_when_directive_requests_it(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
             ->method('discover')
             ->willReturn($directives);
 
-        $parsedRecord = new ParsedDirectiveRecord(
-            arguments: new ScalarTypedCollection(),
-            options: new ScalarTypedCollection(),
-        );
+        $parsedRecord = $this->createEmptyParsedDirectiveRecord();
 
         $this->parser->expects($this->once())
             ->method('parse')
@@ -479,10 +443,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
@@ -490,7 +452,6 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_captures_parser_invalid_argument_exception_and_returns_invalid_argument(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -513,16 +474,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 
     public function test_execute_captures_parser_too_many_arguments_exception(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -545,16 +503,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => ['arg1', 'arg2', 'arg3'],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 
     public function test_execute_captures_parser_invalid_signature_format_exception(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -577,16 +532,13 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => [],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $result);
     }
 
     public function test_execute_captures_generic_exception_and_returns_failure(): void
     {
-        // Arrange
         $directives = $this->createDirectivesCollection();
 
         $this->discovery->expects($this->once())
@@ -609,10 +561,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             'arguments' => ['John'],
         ]);
 
-        // Act
         $result = $this->service->execute($record);
 
-        // Assert
         $this->assertSame(ExitCode::FAILURE, $result);
     }
 }

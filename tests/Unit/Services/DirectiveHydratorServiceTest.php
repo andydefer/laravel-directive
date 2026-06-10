@@ -1,16 +1,20 @@
 <?php
+// tests/Unit/Services/DirectiveHydratorServiceTest.php
 
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\Collections\ParsedArgumentCollection;
+use AndyDefer\Directive\Collections\ParsedOptionCollection;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestVariadicDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\DomainStructures\Collections\Utility\ScalarTypedCollection;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -25,44 +29,58 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
     {
         parent::setUp();
 
-        // Arrange: Create mocked dependencies
         $this->factory = $this->createMock(DirectiveFactoryInterface::class);
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
         $this->service = new DirectiveHydratorService($this->factory);
     }
 
-    /**
-     * Creates a test directive instance.
-     *
-     * @return TestDirective
-     */
     private function createTestDirective(): TestDirective
     {
         return new TestDirective($this->interaction);
     }
 
-    /**
-     * Creates a scalar typed collection from an array of items.
-     *
-     * @param array<mixed> $items
-     *
-     * @return ScalarTypedCollection
-     */
-    private function createScalarCollection(array $items): ScalarTypedCollection
+    private function createTestVariadicDirective(): TestVariadicDirective
     {
-        $collection = new ScalarTypedCollection();
-        foreach ($items as $item) {
-            $collection->add($item);
-        }
+        return new TestVariadicDirective($this->interaction);
+    }
 
+    private function createParsedArgumentCollection(array $items): ParsedArgumentCollection
+    {
+        $collection = new ParsedArgumentCollection();
+        for ($i = 0; $i < count($items); $i += 2) {
+            if (isset($items[$i + 1])) {
+                $collection->addArgument($items[$i + 1], $items[$i]);
+            }
+        }
         return $collection;
+    }
+
+    private function createParsedOptionCollection(array $items): ParsedOptionCollection
+    {
+        $collection = new ParsedOptionCollection();
+        for ($i = 0; $i < count($items); $i += 2) {
+            if (isset($items[$i])) {
+                $value = $items[$i + 1] ?? 'true';
+                $isFlag = $value === 'true';
+                $collection->addOption($items[$i], $value, $isFlag);
+            }
+        }
+        return $collection;
+    }
+
+    private function createEmptyParsedDirectiveRecord(): ParsedDirectiveRecord
+    {
+        return new ParsedDirectiveRecord(
+            arguments: new ParsedArgumentCollection(),
+            options: new ParsedOptionCollection(),
+            variadic_arguments: new StringTypedCollection(),
+        );
     }
 
     // ==================== Hydrate Method Tests ====================
 
     public function test_hydrate_calls_factory_and_sets_arguments(): void
     {
-        // Arrange: Create directive and set up expectations
         $directive = $this->createTestDirective();
 
         $this->factory->expects($this->once())
@@ -70,25 +88,24 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = $this->createScalarCollection(['John Doe', 'name', 'john@example.com', 'email']);
-        $options = new ScalarTypedCollection();
+        $arguments = $this->createParsedArgumentCollection(['John Doe', 'name', 'john@example.com', 'email']);
+        $options = new ParsedOptionCollection();
+        $variadicArguments = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
             options: $options,
+            variadic_arguments: $variadicArguments,
         );
 
-        // Act: Hydrate the directive
         $result = $this->service->hydrate(TestDirective::class, $parsed);
 
-        // Assert: Verify arguments were set correctly
         $this->assertSame('John Doe', $result->argument('name'));
         $this->assertSame('john@example.com', $result->argument('email'));
     }
 
     public function test_hydrate_sets_options_with_boolean_normalization(): void
     {
-        // Arrange: Create directive and set up expectations
         $directive = $this->createTestDirective();
 
         $this->factory->expects($this->once())
@@ -96,44 +113,76 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             ->with(TestDirective::class)
             ->willReturn($directive);
 
-        $arguments = new ScalarTypedCollection();
-        $options = $this->createScalarCollection(['active', 'true', 'verbose', null, 'role', 'admin']);
+        $arguments = new ParsedArgumentCollection();
+        $options = $this->createParsedOptionCollection(['active', 'true', 'verbose', 'true', 'role', 'admin']);
+        $variadicArguments = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
             options: $options,
+            variadic_arguments: $variadicArguments,
         );
 
-        // Act: Hydrate the directive
         $result = $this->service->hydrate(TestDirective::class, $parsed);
 
-        // Assert: Verify options were normalized correctly
         $this->assertTrue($result->option('active'));
         $this->assertTrue($result->option('verbose'));
         $this->assertSame('admin', $result->option('role'));
     }
 
+    public function test_hydrate_sets_variadic_arguments(): void
+    {
+        $directive = $this->createTestVariadicDirective();
+
+        $this->factory->expects($this->once())
+            ->method('make')
+            ->with(TestVariadicDirective::class)
+            ->willReturn($directive);
+
+        $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
+        $options = new ParsedOptionCollection();
+
+        $variadicArguments = new StringTypedCollection();
+        $variadicArguments->add('file1.txt');
+        $variadicArguments->add('file2.txt');
+        $variadicArguments->add('file3.txt');
+
+        $parsed = new ParsedDirectiveRecord(
+            arguments: $arguments,
+            options: $options,
+            variadic_arguments: $variadicArguments,
+        );
+
+        $result = $this->service->hydrate(TestVariadicDirective::class, $parsed);
+
+        $this->assertSame('John Doe', $result->argument('name'));
+        $this->assertTrue($result->hasVariadicArguments());
+        $this->assertEquals(3, $result->getVariadicArguments()->count());
+        $this->assertTrue($result->getVariadicArguments()->contains('file1.txt'));
+        $this->assertTrue($result->getVariadicArguments()->contains('file2.txt'));
+        $this->assertTrue($result->getVariadicArguments()->contains('file3.txt'));
+    }
+
     public function test_hydrate_handles_multiple_arguments(): void
     {
-        // Arrange: Create directive and set up expectations
         $directive = $this->createTestDirective();
 
         $this->factory->expects($this->once())
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = $this->createScalarCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
-        $options = new ScalarTypedCollection();
+        $arguments = $this->createParsedArgumentCollection(['value1', 'key1', 'value2', 'key2', 'value3', 'key3']);
+        $options = new ParsedOptionCollection();
+        $variadicArguments = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
             options: $options,
+            variadic_arguments: $variadicArguments,
         );
 
-        // Act: Hydrate the directive
         $result = $this->service->hydrate(TestDirective::class, $parsed);
 
-        // Assert: Verify all arguments were set correctly
         $this->assertSame('value1', $result->argument('key1'));
         $this->assertSame('value2', $result->argument('key2'));
         $this->assertSame('value3', $result->argument('key3'));
@@ -141,88 +190,77 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
 
     public function test_hydrate_handles_empty_arguments(): void
     {
-        // Arrange: Create directive and set up expectations
         $directive = $this->createTestDirective();
 
         $this->factory->expects($this->once())
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new ScalarTypedCollection();
-        $options = new ScalarTypedCollection();
+        $parsed = $this->createEmptyParsedDirectiveRecord();
 
-        $parsed = new ParsedDirectiveRecord(
-            arguments: $arguments,
-            options: $options,
-        );
-
-        // Act: Hydrate the directive
         $result = $this->service->hydrate(TestDirective::class, $parsed);
 
-        // Assert: Verify no arguments or options are present
         $this->assertNull($result->argument('any'));
         $this->assertNull($result->option('any'));
+        $this->assertTrue($result->getVariadicArguments()->isEmpty());
     }
 
     public function test_hydrate_handles_incomplete_argument_pair(): void
     {
-        // Arrange: Create directive and set up expectations
         $directive = $this->createTestDirective();
 
         $this->factory->expects($this->once())
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = $this->createScalarCollection(['value1', 'key1', 'value2']);
-        $options = new ScalarTypedCollection();
+        $arguments = $this->createParsedArgumentCollection(['value1', 'key1']);
+        $options = new ParsedOptionCollection();
+        $variadicArguments = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
             options: $options,
+            variadic_arguments: $variadicArguments,
         );
 
-        // Act: Hydrate the directive
         $result = $this->service->hydrate(TestDirective::class, $parsed);
 
-        // Assert: Verify complete pair is set, incomplete is ignored
         $this->assertSame('value1', $result->argument('key1'));
     }
 
     public function test_hydrate_handles_incomplete_option_pair(): void
     {
-        // Arrange: Create directive and set up expectations
         $directive = $this->createTestDirective();
 
         $this->factory->expects($this->once())
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new ScalarTypedCollection();
-        $options = $this->createScalarCollection(['active', 'true', 'verbose']);
+        $arguments = new ParsedArgumentCollection();
+        $options = $this->createParsedOptionCollection(['active', 'true']);
+        $variadicArguments = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
             options: $options,
+            variadic_arguments: $variadicArguments,
         );
 
-        // Act: Hydrate the directive
         $result = $this->service->hydrate(TestDirective::class, $parsed);
 
-        // Assert: Verify complete option pair is set
         $this->assertTrue($result->option('active'));
     }
 
     public function test_hydrate_handles_options_with_various_values(): void
     {
-        // Arrange: Create directive and set up expectations
         $directive = $this->createTestDirective();
 
         $this->factory->expects($this->once())
             ->method('make')
             ->willReturn($directive);
 
-        $arguments = new ScalarTypedCollection();
-        $options = $this->createScalarCollection([
+        $arguments = new ParsedArgumentCollection();
+        $options = $this->createParsedOptionCollection([
             'string_value',
             'hello',
             'true_value',
@@ -230,22 +268,22 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             'false_value',
             'false',
             'null_value',
-            null,
+            'true',
             'empty_value',
-            '',
+            'true',
             'numeric_value',
             '42',
         ]);
+        $variadicArguments = new StringTypedCollection();
 
         $parsed = new ParsedDirectiveRecord(
             arguments: $arguments,
             options: $options,
+            variadic_arguments: $variadicArguments,
         );
 
-        // Act: Hydrate the directive
         $result = $this->service->hydrate(TestDirective::class, $parsed);
 
-        // Assert: Verify all option types are handled correctly
         $this->assertSame('hello', $result->option('string_value'));
         $this->assertTrue($result->option('true_value'));
         $this->assertFalse($result->option('false_value'));
@@ -258,10 +296,8 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
 
     public function test_hydrate_blueprint_returns_blueprint_record(): void
     {
-        // Act: Hydrate only the blueprint
         $blueprint = $this->service->hydrateBlueprint(TestDirective::class);
 
-        // Assert: Verify blueprint contains correct data
         $this->assertSame(TestDirective::class, $blueprint->class);
         $this->assertSame('test-directive', $blueprint->signature);
         $this->assertSame('Test directive', $blueprint->description);
@@ -271,12 +307,101 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
 
     public function test_hydrate_for_aliases_returns_directive_instance(): void
     {
-        // Act: Hydrate directive for aliases only
         $result = $this->service->hydrateForAliases(TestDirective::class);
 
-        // Assert: Verify directive instance has correct metadata
         $this->assertInstanceOf(TestDirective::class, $result);
         $this->assertSame('test-directive', $result->getSignature());
         $this->assertSame('Test directive', $result->getDescription());
+    }
+
+    // ==================== Hydrate With Variadic Only Tests ====================
+
+    public function test_hydrate_with_only_variadic_arguments(): void
+    {
+        $directive = $this->createTestVariadicDirective();
+
+        $this->factory->expects($this->once())
+            ->method('make')
+            ->with(TestVariadicDirective::class)
+            ->willReturn($directive);
+
+        $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
+        $options = new ParsedOptionCollection();
+
+        $variadicArguments = new StringTypedCollection();
+        $variadicArguments->add('a.txt');
+        $variadicArguments->add('b.txt');
+        $variadicArguments->add('c.txt');
+
+        $parsed = new ParsedDirectiveRecord(
+            arguments: $arguments,
+            options: $options,
+            variadic_arguments: $variadicArguments,
+        );
+
+        $result = $this->service->hydrate(TestVariadicDirective::class, $parsed);
+
+        $this->assertEquals(3, $result->getVariadicArguments()->count());
+        $this->assertTrue($result->hasVariadicArguments());
+        $this->assertTrue($result->getVariadicArguments()->contains('a.txt'));
+        $this->assertTrue($result->getVariadicArguments()->contains('b.txt'));
+        $this->assertTrue($result->getVariadicArguments()->contains('c.txt'));
+    }
+
+    public function test_hydrate_with_mixed_arguments_and_variadic(): void
+    {
+        $directive = $this->createTestVariadicDirective();
+
+        $this->factory->expects($this->once())
+            ->method('make')
+            ->with(TestVariadicDirective::class)
+            ->willReturn($directive);
+
+        $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
+        $options = $this->createParsedOptionCollection(['verbose', 'true']);
+
+        $variadicArguments = new StringTypedCollection();
+        $variadicArguments->add('file1.txt');
+        $variadicArguments->add('file2.txt');
+
+        $parsed = new ParsedDirectiveRecord(
+            arguments: $arguments,
+            options: $options,
+            variadic_arguments: $variadicArguments,
+        );
+
+        $result = $this->service->hydrate(TestVariadicDirective::class, $parsed);
+
+        $this->assertSame('John Doe', $result->argument('name'));
+        $this->assertTrue($result->option('verbose'));
+        $this->assertEquals(2, $result->getVariadicArguments()->count());
+        $this->assertTrue($result->getVariadicArguments()->contains('file1.txt'));
+        $this->assertTrue($result->getVariadicArguments()->contains('file2.txt'));
+    }
+
+    public function test_hydrate_with_empty_variadic_arguments(): void
+    {
+        $directive = $this->createTestVariadicDirective();
+
+        $this->factory->expects($this->once())
+            ->method('make')
+            ->with(TestVariadicDirective::class)
+            ->willReturn($directive);
+
+        $arguments = $this->createParsedArgumentCollection(['John Doe', 'name']);
+        $options = new ParsedOptionCollection();
+        $variadicArguments = new StringTypedCollection();
+
+        $parsed = new ParsedDirectiveRecord(
+            arguments: $arguments,
+            options: $options,
+            variadic_arguments: $variadicArguments,
+        );
+
+        $result = $this->service->hydrate(TestVariadicDirective::class, $parsed);
+
+        $this->assertSame('John Doe', $result->argument('name'));
+        $this->assertTrue($result->getVariadicArguments()->isEmpty());
+        $this->assertFalse($result->hasVariadicArguments());
     }
 }

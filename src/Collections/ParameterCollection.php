@@ -24,14 +24,21 @@ final class ParameterCollection extends AbstractKeyValueCollection
      *
      * Flat format: [value1, name1, value2, name2, ...]
      *
-     * @param  ScalarTypedCollection  $flat  Flat arguments collection
+     * @param  ScalarTypedCollection|ParsedArgumentCollection  $flat  Flat arguments collection
      * @return self New collection with ParameterRecord objects
      */
-    public static function fromFlatArguments(ScalarTypedCollection $flat): self
+    public static function fromFlatArguments(ScalarTypedCollection|ParsedArgumentCollection $flat): self
     {
         $result = new self;
-        $items = $flat->toArray();
 
+        if ($flat instanceof ParsedArgumentCollection) {
+            foreach ($flat as $record) {
+                $result->add(new ParameterRecord(name: $record->name, value: $record->value));
+            }
+            return $result;
+        }
+
+        $items = $flat->toArray();
         for ($i = 0; $i < $flat->count(); $i += 2) {
             $value = $items[$i] ?? null;
             $name = $items[$i + 1] ?? null;
@@ -49,14 +56,21 @@ final class ParameterCollection extends AbstractKeyValueCollection
      *
      * Flat format: [name1, value1, name2, value2, ...]
      *
-     * @param  ScalarTypedCollection  $flat  Flat options collection
+     * @param  ScalarTypedCollection|ParsedOptionCollection  $flat  Flat options collection
      * @return self New collection with ParameterRecord objects
      */
-    public static function fromFlatOptions(ScalarTypedCollection $flat): self
+    public static function fromFlatOptions(ScalarTypedCollection|ParsedOptionCollection $flat): self
     {
         $result = new self;
-        $items = $flat->toArray();
 
+        if ($flat instanceof ParsedOptionCollection) {
+            foreach ($flat as $record) {
+                $result->add(new ParameterRecord(name: $record->name, value: $record->value));
+            }
+            return $result;
+        }
+
+        $items = $flat->toArray();
         for ($i = 0; $i < $flat->count(); $i += 2) {
             $name = $items[$i] ?? null;
             $rawValue = $items[$i + 1] ?? null;
