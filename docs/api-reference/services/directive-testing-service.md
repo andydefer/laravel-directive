@@ -2,20 +2,18 @@
 
 ## Description
 
-Service de test pour les directives. Il permet d'exécuter des directives dans un environnement isolé, avec traçabilité complète et sans dépendance au système de fichiers.
+Service de test pour les directives CLI. Fournit un environnement isolé pour exécuter et tester des directives, avec ou sans intégration Laravel, en redirigeant automatiquement toutes les opérations de fichiers vers un répertoire temporaire.
 
 ## Hiérarchie
 
 ```
-DirectiveTestingService
-    ├── Dépend de DirectiveTestingContext (état)
-    ├── Utilise une chaîne de responsabilité (Chain of Responsibility)
-    └── Agrège OptionParserService, ArgumentApplierService, etc.
+DirectiveTestingService (final)
+    └── Implémente : DirectiveTestingServiceInterface
 ```
 
 ## Rôle principal
 
-Ce service est le point d'entrée pour tester des directives. Il est **stateless** : tout l'état est stocké dans `DirectiveTestingContext`. Il suit le principe de séparation entre l'état et le comportement, ce qui le rend parfaitement testable.
+Faciliter les tests unitaires et d'intégration des directives en offrant une API unifiée pour l'enregistrement et l'exécution. Le service crée automatiquement un répertoire temporaire, isole les opérations de fichiers, nettoie après les tests, et supporte l'injection automatique des dépendances via le conteneur Laravel.
 
 ## Installation
 
@@ -25,124 +23,356 @@ composer require --dev andydefer/laravel-directive
 
 ## API / Méthodes publiques
 
-### `__construct(?DirectiveTestingContext $context = null, ?DirectiveTestingConfigInterface $config = null)`
+### `__construct(?object $application = null, ?DirectiveTestingContext $context = null, ?DirectiveTestingConfigInterface $config = null)`
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$context` | `DirectiveTestingContext|null` | Contexte optionnel (créé par défaut) |
-| `$config` | `DirectiveTestingConfigInterface|null` | Configuration optionnelle |
+| `$application` | `object|null` | Application Laravel (mode intégré) ou `null` (mode isolé) |
+| `$context` | `DirectiveTestingContext|null` | Contexte de test (créé automatiquement si null) |
+| `$config` | `DirectiveTestingConfigInterface|null` | Configuration (créée automatiquement si null) |
 
 **Exemple :**
 ```php
-$config = new DirectiveTestingConfig();
-$context = new DirectiveTestingContext(false);
-$context->setConfig($config);
-$service = new DirectiveTestingService($context);
+// Mode isolé (sans Laravel)
+$service = new DirectiveTestingService();
+
+// Mode intégré (avec Laravel)
+$service = new DirectiveTestingService($this->app);
 ```
 
-### `registerDirective(AbstractDirective $directive): void`
+### `registerDirective(string $class): void`
 
-Enregistre une directive pour les tests.
+Enregistre une directive par son nom de classe.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$directive` | `AbstractDirective` | Instance de directive à enregistrer |
+| `$class` | `string` | FQCN de la directive (ex: `UserListDirective::class`) |
+
+**Exceptions :** `InvalidArgumentException` - La classe n'existe pas
 
 **Exemple :**
 ```php
-$directive = new MyDirective($service->getInteraction());
-$service->registerDirective($directive);
+$service->registerDirective(UserListDirective::class);
 ```
 
-### `registerDirectives(array $directives): void`
+### `registerDirectiveInstance(AbstractDirective $directive): void`
 
-Enregistre plusieurs directives.
+Enregistre une instance de directive directement.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$directives` | `array<AbstractDirective>` | Tableau de directives |
+| `$directive` | `AbstractDirective` | Instance de directive |
 
 **Exemple :**
 ```php
-$service->registerDirectives([$directive1, $directive2]);
+$directive = new UserListDirective($context, $interaction);
+$service->registerDirectiveInstance($directive);
+```
+
+### `registerAndRun(string $class, array $arguments = []): DirectiveResponseRecord`
+
+Enregistre une directive par son nom de classe et l'exécute immédiatement.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$class` | `string` | FQCN de la directive |
+| `$arguments` | `array<string>` | Arguments à passer |
+
+**Retourne :** `DirectiveResponseRecord` - Réponse avec code de sortie et sortie
+
+**Exemple :**
+```php
+$response = $service->registerAndRun(UserListDirective::class, ['--active']);
+```
+
+### `registerAndRunInstance(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord`
+
+Enregistre une instance de directive et l'exécute immédiatement.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$directive` | `AbstractDirective` | Instance de directive |
+| `$arguments` | `array<string>` | Arguments à passer |
+
+**Retourne :** `DirectiveResponseRecord` - Réponse avec code de sortie et sortie
+
+### `run(string $class, array $arguments = []): DirectiveResponseRecord`
+
+Exécute une directive en l'enregistrant automatiquement (alias de `registerAndRun`).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$class` | `string` | FQCN de la directive |
+| `$arguments` | `array<string>` | Arguments à passer |
+
+**Retourne :** `DirectiveResponseRecord` - Réponse avec code de sortie et sortie
+
+**Exemple :**
+```php
+$response = $service->run(UserListDirective::class, ['--active']);
+```
+
+### `runDirective(string $signature, array $arguments = []): DirectiveResponseRecord`
+
+Exécute une directive par sa signature (doit être déjà enregistrée).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature de la directive (ex: `user-list`) |
+| `$arguments` | `array<string>` | Arguments à passer |
+
+**Retourne :** `DirectiveResponseRecord` - Réponse avec code de sortie et sortie
+
+### `createTestDirective(string $signature, callable $execute): ClosureDirective`
+
+Crée une directive temporaire avec une closure comme logique d'exécution.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature de la directive |
+| `$execute` | `callable(ClosureDirective): ExitCode` | Logique d'exécution |
+
+**Retourne :** `ClosureDirective` - La directive créée
+
+**Exemple :**
+```php
+$service->createTestDirective('test-calc', function ($d) {
+    $result = 5 + 3;
+    $d->line("Result: {$result}");
+    return ExitCode::SUCCESS;
+});
 ```
 
 ### `clearRegisteredDirectives(): void`
 
 Supprime toutes les directives enregistrées.
 
-### `createTestDirective(string $signature, callable $execute): ClosureDirective`
+### `destroy(): void`
 
-Crée une directive temporaire avec une closure.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$signature` | `string` | Signature de la directive |
-| `$execute` | `callable` | Logique d'exécution |
-
-**Retourne :** `ClosureDirective` - La directive créée
-
-**Exemple :**
-```php
-$service->createTestDirective('test:cmd', function ($d) {
-    $d->line('Hello World');
-    return ExitCode::SUCCESS;
-});
-```
-
-### `runDirective(string $className, array $arguments = []): DirectiveResponseRecord`
-
-Exécute une directive.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$className` | `string` | Signature ou FQCN de la directive |
-| `$arguments` | `array<string>` | Arguments à passer |
-
-**Retourne :** `DirectiveResponseRecord` - Réponse avec code de sortie et sortie
-
-**Exceptions :** Aucune (les erreurs sont capturées et retournées dans la réponse)
-
-**Exemple :**
-```php
-$response = $service->runDirective('calculator', ['add', '5', '3']);
-if ($response->exitCode === ExitCode::SUCCESS) {
-    echo $response->output;
-}
-```
+Détruit l'environnement de test : restaure le répertoire original et supprime le répertoire temporaire.
 
 ### `getInteraction(): DirectiveInteractionService`
 
-Retourne le service d'interaction pour créer des directives.
-
-**Exemple :**
-```php
-$directive = new MyDirective($service->getInteraction());
-```
+Retourne le service d'interaction utilisateur.
 
 ### `getContext(): DirectiveTestingContext`
 
-Retourne le contexte pour inspection.
-
-**Exemple :**
-```php
-$context = $service->getContext();
-$executed = $context->hasBeenExecuted('my-cmd');
-```
-
-### `destroy(): void`
-
-Nettoie l'environnement de test (supprime le répertoire temporaire, vide les registres).
+Retourne le contexte de test.
 
 ## Cas d'utilisation
 
-### Cas 1 : Tester une directive simple
+### Cas 1 : Test unitaire sans Laravel
 
 ```php
 <?php
 
+namespace Tests\Unit\Directives;
+
 use AndyDefer\Directive\Services\DirectiveTestingService;
 use AndyDefer\Directive\Enums\ExitCode;
+use App\Directives\HelloDirective;
+
+final class HelloDirectiveTest extends TestCase
+{
+    private DirectiveTestingService $service;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->service = new DirectiveTestingService();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->service->destroy();
+        parent::tearDown();
+    }
+
+    public function test_hello_directive(): void
+    {
+        $response = $this->service->run(HelloDirective::class, ['John']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertStringContainsString('Hello, John!', $response->output);
+    }
+}
+```
+
+### Cas 2 : Test d'intégration avec Laravel
+
+```php
+<?php
+
+namespace Tests\Integration\Directives;
+
+use AndyDefer\Directive\Services\DirectiveTestingService;
+use Orchestra\Testbench\TestCase;
+
+final class UserStatsDirectiveTest extends TestCase
+{
+    private DirectiveTestingService $service;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->service = new DirectiveTestingService($this->app);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->service->destroy();
+        parent::tearDown();
+    }
+
+    public function test_user_stats(): void
+    {
+        // Créer des données en base
+        User::create(['name' => 'John', 'email' => 'john@example.com']);
+
+        $response = $this->service->run(UserStatsDirective::class);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertStringContainsString('Total users: 1', $response->output);
+    }
+}
+```
+
+### Cas 3 : Directive temporaire pour test rapide
+
+```php
+public function test_temporary_directive(): void
+{
+    $executed = false;
+
+    $this->service->createTestDirective('test-calc', function ($d) use (&$executed) {
+        $executed = true;
+        $d->line('42');
+        return ExitCode::SUCCESS;
+    });
+
+    $response = $this->service->runDirective('test-calc');
+
+    $this->assertTrue($executed);
+    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertStringContainsString('42', $response->output);
+}
+```
+
+### Cas 4 : Enregistrement manuel d'une instance
+
+```php
+public function test_manual_registration(): void
+{
+    $context = new DirectiveContext(
+        laravelBootstrapper: new LaravelBootstrapperContext,
+        blueprint: new DirectiveBlueprintRecord(HelloDirective::class, 'hello', 'Say hello'),
+        aliases: new StringTypedCollection,
+        shouldBootLaravel: false,
+    );
+
+    $directive = new HelloDirective($context, $this->service->getInteraction());
+    $this->service->registerDirectiveInstance($directive);
+
+    $response = $this->service->runDirective('hello', ['John']);
+
+    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+}
+```
+
+## Flux d'exécution
+
+```
+__construct()
+    │
+    ├── initializeInteraction()
+    │
+    ├── setupTempDirectory()
+    │   ├── Sauvegarde originalCwd
+    │   ├── Création tempDir
+    │   ├── chdir() vers tempDir
+    │   ├── putenv() variables d'environnement
+    │   └── createTempDirectories()
+    │
+    ├── Si application !== null (mode intégré)
+    │   ├── setIntegratedMode(true)
+    │   ├── updateApplicationPaths()
+    │   ├── Récupération du kernel
+    │   └── Récupération du LaravelBootstrapperContext
+    │
+    └── Sinon (mode isolé)
+        └── initializeMinimalEnvironment()
+
+run() / registerAndRun()
+    │
+    ├── registerDirective($class)
+    │   ├── Instanciation via conteneur ou réflexion
+    │   └── Enregistrement dans le Registry
+    │
+    ├── extractSignatureFromClass($class)
+    │
+    └── runDirective($signature, $arguments)
+        ├── Recherche dans ClosureRegistry
+        ├── Recherche dans Registry
+        └── Fallback via Kernel
+
+destroy()
+    │
+    ├── clearRegisteredDirectives()
+    ├── Restauration originalCwd (si répertoire existe)
+    └── Suppression tempDir
+```
+
+## Gestion des erreurs
+
+| Situation | Exception | Message |
+|-----------|-----------|---------|
+| Classe de directive inexistante | `InvalidArgumentException` | `Directive class {$class} does not exist` |
+| Classe sans méthode `getSignature` | `RuntimeException` | `Class {$class} does not have a getSignature method` |
+| Directive non trouvée | `ExitCode::NOT_FOUND` (pas d'exception) | `Kernel not available...` ou message du renderer |
+| Constructeur manquant | `ExitCode::FAILURE` | `Directive has no constructor` |
+
+## Intégration
+
+`DirectiveTestingService` s'intègre avec :
+
+- **`DirectiveTestingContext`** : Stockage de l'état (temp dir, cwd original, registres)
+- **`DirectiveInteractionService`** : Gestion des affichages et entrées utilisateur
+- **`LaravelBootstrapperContext`** : Bootstrap optionnel de Laravel
+- **`DirectiveKernel`** : Noyau d'exécution (fallback)
+- **`FileCreatorConfig`** : Via variable d'environnement `FILE_CREATOR_WORKING_DIR`
+- **`EnvDirectiveConfig`** : Via variable d'environnement `DIRECTIVE_PATH`
+
+## Performance
+
+| Aspect | Caractéristique |
+|--------|----------------|
+| Répertoire temporaire | Créé une fois par instance |
+| Changement de répertoire | `chdir()` - O(1) |
+| Variables d'environnement | `putenv()` - O(1) |
+| Nettoyage | Suppression récursive du temp dir |
+| Mode intégré vs isolé | Même isolation, seule la résolution des dépendances diffère |
+
+## Compatibilité
+
+| Version | Support |
+|---------|---------|
+| PHP 8.1+ | ✅ Requis |
+| PHP 8.2+ | ✅ Complet |
+| PHP 8.3+ | ✅ Complet |
+| Laravel 10+ | ✅ Mode intégré |
+
+## Exemple complet
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Unit\Directives;
+
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Services\DirectiveTestingService;
+use PHPUnit\Framework\TestCase;
 
 final class CalculatorDirectiveTest extends TestCase
 {
@@ -160,293 +390,48 @@ final class CalculatorDirectiveTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_calculator_adds_numbers(): void
+    public function test_addition(): void
     {
-        $directive = new CalculatorDirective($this->service->getInteraction());
-        $this->service->registerDirective($directive);
+        $this->service->createTestDirective('calc {a} {b}', function ($d) {
+            $a = (int) $d->argument('a');
+            $b = (int) $d->argument('b');
+            $result = $a + $b;
+            $d->line((string) $result);
+            return ExitCode::SUCCESS;
+        });
 
-        $response = $this->service->runDirective('calculator', ['add', '5', '3']);
+        $response = $this->service->runDirective('calc', ['10', '20']);
 
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-        $this->assertStringContainsString('8', $response->output);
-    }
-}
-```
-
-### Cas 2 : Tester une directive temporaire avec closure
-
-```php
-public function test_temporary_directive(): void
-{
-    $executed = false;
-
-    $this->service->createTestDirective('test:ping', function ($d) use (&$executed) {
-        $executed = true;
-        $d->line('Pong!');
-        return ExitCode::SUCCESS;
-    });
-
-    $response = $this->service->runDirective('test:ping');
-
-    $this->assertTrue($executed);
-    $this->assertStringContainsString('Pong!', $response->output);
-}
-```
-
-### Cas 3 : Tester une directive avec arguments variadiques
-
-```php
-public function test_variadic_arguments(): void
-{
-    $this->service->createTestDirective('process {files*}', function ($d) {
-        $files = $d->getVariadicArguments()->toArray();
-        $count = count($files);
-        $d->line("Processing {$count} files");
-        return ExitCode::SUCCESS;
-    });
-
-    $response = $this->service->runDirective('process', ['[', 'file1.txt,', 'file2.txt', ']']);
-
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-    $this->assertStringContainsString('Processing 2 files', $response->output);
-}
-```
-
-### Cas 4 : Inspecter le contexte après exécution
-
-```php
-public function test_context_tracks_execution(): void
-{
-    $directive = new CalculatorDirective($this->service->getInteraction());
-    $this->service->registerDirective($directive);
-
-    $response = $this->service->runDirective('calculator', ['add', '1', '2']);
-
-    $context = $this->service->getContext();
-
-    $this->assertTrue($context->hasBeenExecuted('calculator'));
-    $this->assertEquals(1, $context->getExecutedDirectivesCount());
-    $this->assertTrue($context->hasStepResult(TestingStep::CREATE_TEMP_DIRECTORY));
-    $this->assertTrue($context->hasStepResult(TestingStep::BUILD_CONTAINER));
-}
-```
-
-### Cas 5 : Nettoyage garanti
-
-```php
-public function test_service_cleans_up(): void
-{
-    $service = new DirectiveTestingService();
-    $tempDir = $service->getContext()->getTempDir();
-
-    $this->assertDirectoryExists($tempDir);
-
-    $service->destroy();
-
-    $this->assertNull($service->getContext()->getTempDir());
-    $this->assertFileDoesNotExist($tempDir);
-}
-```
-
-## Flux d'exécution
-
-```
-DirectiveTestingService::__construct()
-    │
-    ├── setConfig()
-    │
-    ├── initializeSteps()
-    │       ├── CreateTempDirectoryStep
-    │       ├── ChangeToTempDirectoryStep
-    │       ├── CreateLaravelStructureStep (optionnel)
-    │       ├── BootstrapLaravelStep (optionnel)
-    │       └── BuildContainerStep
-    │
-    └── executeChain()
-            │
-            └── Chaque étape modifie le contexte
-                    ├── setTempDir()
-                    ├── setOriginalCwd()
-                    ├── setLaravelApp()
-                    ├── setContainer()
-                    ├── setKernel()
-                    ├── addStepResult()
-                    └── addCreatedPath()
-```
-
-## Gestion des erreurs
-
-| Situation | Code retour | Message dans la réponse |
-|-----------|-------------|------------------------|
-| Directive non trouvée | `ExitCode::NOT_FOUND` | `Directive not found: {name}` |
-| Arguments invalides (parser) | `ExitCode::INVALID_ARGUMENT` | Message de l'exception (ex: `Not enough arguments (missing: "name")`) |
-| Exception pendant l'exécution | `ExitCode::FAILURE` | Message de l'exception |
-
-## Intégration
-
-### Avec PHPUnit
-
-```php
-use PHPUnit\Framework\TestCase;
-use AndyDefer\Directive\Services\DirectiveTestingService;
-
-final class MyTest extends TestCase
-{
-    private DirectiveTestingService $service;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->service = new DirectiveTestingService();
+        $this->assertStringContainsString('30', $response->output);
     }
 
-    protected function tearDown(): void
+    public function test_division_by_zero(): void
     {
-        $this->service->destroy();
-        parent::tearDown();
-    }
-}
-```
-
-### Avec Laravel
-
-```php
-$config = new DirectiveTestingConfig();
-$context = new DirectiveTestingContext(bootLaravel: true);
-$context->setConfig($config);
-$service = new DirectiveTestingService($context);
-
-$directive = new EloquentDirective($service->getInteraction());
-$service->registerDirective($directive);
-$response = $service->runDirective('db:query');
-```
-
-## Performance
-
-| Opération | Complexité |
-|-----------|------------|
-| `registerDirective()` | O(1) |
-| `runDirective()` (premier appel) | O(n) avec n = initialisation des steps |
-| `runDirective()` (appels suivants) | O(1) après initialisation |
-| `destroy()` | O(m) avec m = fichiers créés |
-
-- L'initialisation des steps (création du répertoire, bootstrap Laravel) est **une seule fois** par instance
-- Le service est **stateless** : toutes les données sont dans le contexte
-- Aucun cache interne
-
-## Compatibilité
-
-| Version PHP | Support |
-|-------------|---------|
-| PHP 8.2+ | ✅ Complet |
-| PHP 8.1 | ✅ Complet |
-
-| Version Laravel | Support (bootLaravel = true) |
-|----------------|-------------------------------|
-| Laravel 10.x | ✅ Complet |
-| Laravel 11.x | ✅ Complet |
-| Laravel 12.x | ✅ Complet |
-
-## Exemple complet
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use AndyDefer\Directive\Services\DirectiveTestingService;
-use AndyDefer\Directive\Contexts\DirectiveTestingContext;
-use AndyDefer\Directive\Configs\DirectiveTestingConfig;
-use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Enums\TestingStep;
-use PHPUnit\Framework\TestCase;
-
-final class CompleteTest extends TestCase
-{
-    private DirectiveTestingService $service;
-    private DirectiveTestingContext $context;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $config = new DirectiveTestingConfig();
-        $this->context = new DirectiveTestingContext(false);
-        $this->context->setConfig($config);
-        $this->service = new DirectiveTestingService($this->context);
-    }
-
-    protected function tearDown(): void
-    {
-        $this->service->destroy();
-        parent::tearDown();
-    }
-
-    public function test_full_workflow_with_traçabilité(): void
-    {
-        // 1. Création d'une directive temporaire
-        $this->service->createTestDirective('test:cmd', function ($d) {
-            $d->line('Hello World');
+        $this->service->createTestDirective('calc {a} {b}', function ($d) {
+            $b = (int) $d->argument('b');
+            if ($b === 0) {
+                $d->error('Division by zero');
+                return ExitCode::INVALID_ARGUMENT;
+            }
+            $a = (int) $d->argument('a');
+            $result = $a / $b;
+            $d->line((string) $result);
             return ExitCode::SUCCESS;
         });
 
-        // 2. Exécution
-        $response = $this->service->runDirective('test:cmd');
+        $response = $this->service->runDirective('calc', ['10', '0']);
 
-        // 3. Assertions sur le résultat
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-        $this->assertStringContainsString('Hello World', $response->output);
-
-        // 4. Assertions sur le contexte
-        $this->assertTrue($this->context->hasBeenExecuted('test:cmd'));
-        $this->assertEquals(1, $this->context->getExecutedDirectivesCount());
-        $this->assertTrue($this->context->hasTempDir());
-        $this->assertTrue($this->context->hasStepResult(TestingStep::CREATE_TEMP_DIRECTORY));
-        $this->assertTrue($this->context->hasStepResult(TestingStep::BUILD_CONTAINER));
-
-        // 5. Inspection des étapes
-        $stepResult = $this->context->getStepResult(TestingStep::CREATE_TEMP_DIRECTORY);
-        $this->assertNotNull($stepResult);
-        $this->assertTrue($stepResult->isSuccess());
-        $this->assertStringContainsString('directive_test_', $stepResult->message);
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
+        $this->assertStringContainsString('Division by zero', $response->output);
     }
 
-    public function test_multiple_directives(): void
+    public function test_temp_directory_isolation(): void
     {
-        $executed = [];
-
-        $this->service->createTestDirective('cmd:one', function ($d) use (&$executed) {
-            $executed[] = 'one';
-            $d->line('Command One');
-            return ExitCode::SUCCESS;
-        });
-
-        $this->service->createTestDirective('cmd:two', function ($d) use (&$executed) {
-            $executed[] = 'two';
-            $d->line('Command Two');
-            return ExitCode::SUCCESS;
-        });
-
-        $response1 = $this->service->runDirective('cmd:one');
-        $response2 = $this->service->runDirective('cmd:two');
-
-        $this->assertStringContainsString('Command One', $response1->output);
-        $this->assertStringContainsString('Command Two', $response2->output);
-        $this->assertContains('one', $executed);
-        $this->assertContains('two', $executed);
-    }
-
-    public function test_error_handling(): void
-    {
-        $this->service->createTestDirective('test:error', function () {
-            throw new \RuntimeException('Something went wrong');
-        });
-
-        $response = $this->service->runDirective('test:error');
-
-        $this->assertSame(ExitCode::FAILURE, $response->exitCode);
-        $this->assertStringContainsString('Something went wrong', $response->output);
-        $this->assertTrue($this->context->hasBeenExecuted('test:error'));
+        $tempDir = $this->service->getContext()->getTempDir();
+        $this->assertNotNull($tempDir);
+        $this->assertDirectoryExists($tempDir);
+        $this->assertStringContainsString('directive_test', getcwd());
     }
 }
 ```
