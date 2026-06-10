@@ -203,6 +203,7 @@ final class DirectiveTestingContext
     public function setTempDir(?string $temp_dir): void
     {
         $this->temp_dir = $temp_dir;
+        $this->in_temp_directory = $temp_dir !== null;
     }
 
     public function setOriginalCwd(string $original_cwd): void

@@ -47,10 +47,16 @@ final class DirectiveTestingService implements DirectiveTestingServiceInterface
 
         $this->initializeInteraction();
 
+        // TOUJOURS créer un répertoire temporaire
+        $this->setupTempDirectory();
+
         if ($application !== null) {
             $this->context->setIntegratedMode(true);
             $this->context->setLaravelApp($application);
             $this->context->setBootLaravel(true);
+
+            // Mettre à jour les chemins dans l'application
+            $this->updateApplicationPaths($application);
 
             $kernel = $application->make(DirectiveKernel::class);
             $this->context->setKernel($kernel);
@@ -60,6 +66,82 @@ final class DirectiveTestingService implements DirectiveTestingServiceInterface
         }
 
         $this->initializeMinimalEnvironment();
+    }
+
+    private function setupTempDirectory(): void
+    {
+        // Sauvegarder le répertoire original
+        $originalCwd = getcwd();
+        $this->context->setOriginalCwd($originalCwd);
+
+        // Créer un répertoire temporaire
+        $tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        mkdir($tempDir, 0777, true);
+        $this->context->setTempDir($tempDir);
+
+        // Changer le répertoire de travail vers le temporaire
+        chdir($tempDir);
+        $this->context->setInTempDirectory(true);
+
+        // Configurer les variables d'environnement
+        putenv('FILE_CREATOR_WORKING_DIR=' . $tempDir);
+        putenv('DIRECTIVE_PATH=' . $tempDir . '/app/Directives');
+        putenv('DIRECTIVE_TEST_TEMP_DIR=' . $tempDir);
+
+        // Créer la structure de répertoires
+        $this->createTempDirectories($tempDir);
+    }
+
+    private function createTempDirectories(string $tempDir): void
+    {
+        $directories = [
+            $tempDir . '/app/Directives',
+            $tempDir . '/src/Directives',
+            $tempDir . '/app/Actions',
+            $tempDir . '/app/Tasks',
+            $tempDir . '/app/Repositories',
+            $tempDir . '/app/Records',
+            $tempDir . '/app/Collections',
+            $tempDir . '/app/Services',
+            $tempDir . '/app/Http/Requests',
+            $tempDir . '/app/ValueObjects',
+            $tempDir . '/app/Configs',
+            $tempDir . '/app/Data',
+            $tempDir . '/bootstrap',
+            $tempDir . '/config',
+            $tempDir . '/storage',
+        ];
+
+        foreach ($directories as $directory) {
+            if (!is_dir($directory)) {
+                mkdir($directory, 0777, true);
+            }
+        }
+    }
+
+    private function updateApplicationPaths(object $application): void
+    {
+        $tempDir = $this->context->getTempDir();
+        if ($tempDir === null) {
+            return;
+        }
+
+        $directivesPath = $tempDir . '/app/Directives';
+
+        // La variable d'environnement DIRECTIVE_PATH est déjà définie dans setupTempDirectory()
+        // EnvDirectiveConfig la lira automatiquement
+
+        // Mettre à jour la config array si disponible
+        if (method_exists($application, 'make') && $application->bound('config')) {
+            try {
+                $config = $application->make('config');
+                if (method_exists($config, 'set')) {
+                    $config->set('directive.path', $directivesPath);
+                }
+            } catch (\Exception $e) {
+                // Ignorer si config n'est pas disponible
+            }
+        }
     }
 
     private function initializeInteraction(): void
@@ -279,14 +361,15 @@ final class DirectiveTestingService implements DirectiveTestingServiceInterface
         $this->clearRegisteredDirectives();
         $this->context->getClosureRegistry()->clear();
 
+        // Restaurer le répertoire original seulement s'il existe
+        $originalCwd = $this->context->getOriginalCwd();
+        if ($originalCwd !== null && is_dir($originalCwd) && $this->context->isInTempDirectory()) {
+            chdir($originalCwd);
+        }
+
         $tempDir = $this->context->getTempDir();
         if ($tempDir !== null && is_dir($tempDir) && $this->context->getConfig()->cleanupAfterTest()) {
             $this->removeDirectory($tempDir);
-        }
-
-        $originalCwd = $this->context->getOriginalCwd();
-        if ($originalCwd !== null) {
-            chdir($originalCwd);
         }
 
         $this->context->reset();

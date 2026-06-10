@@ -572,4 +572,144 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $this->assertNull($this->context->getClosureRegistry()->get('test-clear'));
     }
+
+    // ==================== Tests pour le répertoire temporaire ====================
+
+    public function test_temp_directory_is_created_and_destroyed(): void
+    {
+        $tempDir = $this->context->getTempDir();
+
+        $this->assertNotNull($tempDir);
+        $this->assertDirectoryExists($tempDir);
+        $this->assertTrue($this->context->isInTempDirectory());
+
+        $this->service->destroy();
+
+        $this->assertNull($this->context->getTempDir());
+        $this->assertFalse($this->context->isInTempDirectory());
+    }
+
+    public function test_working_directory_changes_to_temp(): void
+    {
+        $tempDir = $this->context->getTempDir();
+        $currentDir = getcwd();
+
+        $this->assertStringContainsString('directive_test', $currentDir);
+        $this->assertSame($tempDir, $currentDir);
+    }
+
+    public function test_environment_variables_are_set(): void
+    {
+        $tempDir = $this->context->getTempDir();
+
+        $this->assertSame($tempDir, getenv('FILE_CREATOR_WORKING_DIR'));
+        $this->assertSame($tempDir . '/app/Directives', getenv('DIRECTIVE_PATH'));
+    }
+
+    // ==================== Tests pour registerAndRun ====================
+
+    public function test_register_and_run_with_class_name(): void
+    {
+        $directive = $this->service->createTestDirective('test-register-run-class', function ($d) {
+            $d->line('Success via registerAndRun');
+            return ExitCode::SUCCESS;
+        });
+
+        $this->service->registerDirectiveInstance($directive);
+
+        $response = $this->service->registerAndRun(TestConcreteDirective::class, []);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    }
+
+    // ==================== Tests pour la méthode run() ====================
+
+    public function test_run_method_with_class(): void
+    {
+        $directive = $this->service->createTestDirective('test-run-class', function ($d) {
+            $d->line('Success via run method');
+            return ExitCode::SUCCESS;
+        });
+
+        $this->service->registerDirectiveInstance($directive);
+
+        $response = $this->service->run(TestConcreteDirective::class, []);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    }
+
+    // ==================== Tests pour le nettoyage ====================
+
+    public function test_destroy_cleans_temp_directory(): void
+    {
+        $tempDir = $this->context->getTempDir();
+        $testFile = $tempDir . '/test.txt';
+        file_put_contents($testFile, 'test');
+
+        $this->assertFileExists($testFile);
+
+        $this->service->destroy();
+
+        $this->assertFileDoesNotExist($tempDir);
+    }
+
+    public function test_multiple_services_have_different_temp_dirs(): void
+    {
+        $config = new DirectiveTestingConfig;
+        $context2 = new DirectiveTestingContext(false);
+        $context2->setConfig($config);
+        $service2 = new DirectiveTestingService(null, $context2);
+
+        $tempDir1 = $this->context->getTempDir();
+        $tempDir2 = $context2->getTempDir();
+
+        $this->assertNotSame($tempDir1, $tempDir2);
+        $this->assertDirectoryExists($tempDir1);
+        $this->assertDirectoryExists($tempDir2);
+
+        $service2->destroy();
+    }
+
+    // ==================== Tests pour les variables d'environnement ====================
+
+    public function test_file_creator_working_dir_env_is_set(): void
+    {
+        $tempDir = $this->context->getTempDir();
+        $envValue = getenv('FILE_CREATOR_WORKING_DIR');
+
+        $this->assertSame($tempDir, $envValue);
+    }
+
+    public function test_directive_path_env_is_set(): void
+    {
+        $tempDir = $this->context->getTempDir();
+        $expectedPath = $tempDir . '/app/Directives';
+        $envValue = getenv('DIRECTIVE_PATH');
+
+        $this->assertSame($expectedPath, $envValue);
+    }
+
+    // ==================== Tests pour extractSignatureFromClass ====================
+
+    public function test_extract_signature_from_existing_class(): void
+    {
+        $reflection = new \ReflectionClass($this->service);
+        $method = $reflection->getMethod('extractSignatureFromClass');
+
+        $signature = $method->invoke($this->service, TestConcreteDirective::class);
+
+        $this->assertSame('test-concrete', $signature);
+    }
+
+    // ==================== Tests pour createDirectiveInstance ====================
+
+    public function test_create_directive_instance_without_constructor(): void
+    {
+        $reflection = new \ReflectionClass($this->service);
+        $method = $reflection->getMethod('createDirectiveInstance');
+
+        $directive = $method->invoke($this->service, TestConcreteDirective::class);
+
+        $this->assertInstanceOf(TestConcreteDirective::class, $directive);
+    }
 }

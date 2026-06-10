@@ -1,5 +1,5 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 17:22:06 WAT*
+*Generated: mer. 10 juin 2026 19:03:21 WAT*
 
 
   ⨯...............................................⨯.⨯...⨯⨯......⨯.⨯⨯...⨯...⨯...⨯....................⨯...⨯.......⨯...⨯.⨯⨯...⨯..⨯⨯⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯⨯....⨯⨯⨯⨯................⨯
@@ -46,7 +46,7 @@
   ⨯ tests/Unit/Services/DirectiveExecutionServiceTest.php                                                                                                                 concat_space  
   ⨯ tests/Unit/Services/DirectiveHydratorServiceTest.php                                                class_attributes_separation, no_extra_blank_lines, blank_line_before_statement  
   ⨯ tests/Unit/Services/DirectiveTestingServiceDatabaseTest.php                                                                                                           concat_space  
-  ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php                                                                       class_attributes_separation, blank_line_before_statement  
+  ⨯ tests/Unit/Services/DirectiveTestingServiceTest.php                                                         class_attributes_separation, concat_space, blank_line_before_statement  
   ⨯ tests/Unit/Services/SignatureValidationServiceTest.php                                                                                                                concat_space  
   ⨯ tests/Unit/Testing/ClosureDirectiveTest.php                                                         class_attributes_separation, function_declaration, blank_line_before_statement  
   ⨯ tests/Unit/Testing/InteractsWithDirectivesTest.php                                                                                       concat_space, blank_line_before_statement  
