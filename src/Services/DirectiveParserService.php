@@ -12,6 +12,7 @@ use AndyDefer\Directive\Collections\ParsedParameterCollection;
 use AndyDefer\Directive\Configs\DirectiveParserConfig;
 use AndyDefer\Directive\Contexts\ParameterParserContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
+use AndyDefer\Directive\Records\ArgumentSplitResultRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Records\ParsedResultRecord;
 use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;
@@ -43,7 +44,7 @@ class DirectiveParserService
         $this->extractor = new ParameterExtractorService($this->parserContext);
         $this->optionParser = new OptionParserService($config);
         $this->argumentApplier = new ArgumentApplierService;
-        $this->argumentSplitter = new ArgumentSplitterService;
+        $this->argumentSplitter = new ArgumentSplitterService($config);
     }
 
     private function buildParserContext(): ParameterParserContext
@@ -64,9 +65,9 @@ class DirectiveParserService
         $options = new ParsedOptionCollection;
 
         // Séparer les arguments normaux des variadiques
-        $split = $this->argumentSplitter->split($argv);
-        $regularArgs = $split['regular'];
-        $variadicItems = $split['variadic'];
+        $splitResult = $this->argumentSplitter->split($argv);
+        $regularArgs = $splitResult->regular->toArray();
+        $variadicItems = $splitResult->variadic->toArray();
 
         // Valider la signature
         $this->orderValidator->validate([], $signature);

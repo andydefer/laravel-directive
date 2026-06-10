@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Feature;
 
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestPost;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestUser;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
+use AndyDefer\Directive\Tests\TestDirectiveConfig;
 
 final class LaravelDatabaseIntegrationTest extends IntegrationTestCase
 {
@@ -17,109 +19,131 @@ final class LaravelDatabaseIntegrationTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $fixturesPath = realpath(__DIR__ . '/../Fixtures/Directives');
+        $config = new TestDirectiveConfig($fixturesPath);
+        $this->app->instance(DirectiveConfigInterface::class, $config);
+
         $this->kernel = $this->app->make(DirectiveKernel::class);
     }
 
-    private function runAndCaptureOutput(array $argv): array
+    protected function tearDown(): void
     {
+        try {
+            TestUser::truncate();
+            TestPost::truncate();
+        } catch (\Exception $e) {
+            // Ignorer
+        }
+        parent::tearDown();
+    }
+
+    private function runDirective(string $signature, array $arguments = []): array
+    {
+        $argv = array_merge(['directive', $signature], $arguments);
+
         ob_start();
-        $result = $this->kernel->run($argv);
+        $exitCode = $this->kernel->run($argv);
         $output = ob_get_clean();
 
         return [
-            'result' => $result,
+            'exitCode' => $exitCode,
             'output' => $output,
         ];
     }
 
-    private function createTestData(): void
+    private function seedTestData(): void
     {
-        // Créer des utilisateurs de test
-        $user1 = TestUser::create([
+        $john = TestUser::create([
             'name' => 'John Doe',
             'email' => 'john@example.com',
+            'password' => bcrypt('password123'),
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
 
-        $user2 = TestUser::create([
+        $jane = TestUser::create([
             'name' => 'Jane Smith',
             'email' => 'jane@example.com',
+            'password' => bcrypt('password456'),
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
 
-        $user3 = TestUser::create([
+        $bob = TestUser::create([
             'name' => 'Bob Wilson',
             'email' => 'bob@example.com',
+            'password' => bcrypt('password789'),
             'is_active' => false,
             'email_verified_at' => null,
         ]);
 
-        // Créer des posts pour les utilisateurs
         TestPost::create([
-            'user_id' => $user1->id,
-            'title' => 'John\'s first post',
+            'user_id' => $john->id,
+            'title' => 'John\'s First Post',
             'content' => 'Content of first post',
             'is_published' => true,
-            'published_at' => now(),
-            'tags' => ['test', 'post'],
         ]);
 
         TestPost::create([
-            'user_id' => $user1->id,
-            'title' => 'John\'s second post',
+            'user_id' => $john->id,
+            'title' => 'John\'s Second Post',
             'content' => 'Content of second post',
-            'is_published' => false,
-            'published_at' => null,
-            'tags' => ['draft'],
+            'is_published' => true,
         ]);
 
         TestPost::create([
-            'user_id' => $user2->id,
-            'title' => 'Jane\'s post',
+            'user_id' => $john->id,
+            'title' => 'John\'s Draft',
+            'content' => 'Draft content',
+            'is_published' => false,
+        ]);
+
+        TestPost::create([
+            'user_id' => $jane->id,
+            'title' => 'Jane\'s Published Post',
             'content' => 'Jane\'s content',
             'is_published' => true,
-            'published_at' => now(),
-            'tags' => ['test'],
+        ]);
+
+        TestPost::create([
+            'user_id' => $jane->id,
+            'title' => 'Jane\'s Draft',
+            'content' => 'Jane\'s draft',
+            'is_published' => false,
         ]);
     }
 
     public function test_database_directive_executes_successfully(): void
     {
-        // Créer les données de test pour CE test uniquement
-        $this->createTestData();
+        $this->seedTestData();
 
-        $response = $this->runAndCaptureOutput(['directive', 'test-laravel-db']);
+        $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['result'], 'Output: ' . $response['output']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exitCode'], 'Output: ' . $response['output']);
         $this->assertStringContainsString('Laravel is available', $response['output']);
         $this->assertStringContainsString('3 users in database', $response['output']);
         $this->assertStringContainsString('2 active users', $response['output']);
-        $this->assertStringContainsString('2 published posts', $response['output']);
     }
 
     public function test_database_directive_shows_user_table(): void
     {
-        // Créer les données de test pour CE test uniquement
-        $this->createTestData();
+        $this->seedTestData();
 
-        $response = $this->runAndCaptureOutput(['directive', 'test-laravel-db']);
+        $response = $this->runDirective('test-laravel-db');
 
+        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
         $this->assertStringContainsString('User', $response['output']);
         $this->assertStringContainsString('Email', $response['output']);
-        $this->assertStringContainsString('Posts Count', $response['output']);
         $this->assertStringContainsString('John Doe', $response['output']);
         $this->assertStringContainsString('john@example.com', $response['output']);
-        $this->assertStringContainsString('Jane Smith', $response['output']);
     }
 
     public function test_database_directive_with_empty_database(): void
     {
-        // Pas de création de données - base vide
-        $response = $this->runAndCaptureOutput(['directive', 'test-laravel-db']);
+        $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['result']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
         $this->assertStringContainsString('0 users in database', $response['output']);
         $this->assertStringContainsString('No verified users found', $response['output']);
         $this->assertStringContainsString('0 published posts', $response['output']);

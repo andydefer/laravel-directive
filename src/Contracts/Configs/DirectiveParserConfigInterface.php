@@ -68,4 +68,25 @@ interface DirectiveParserConfigInterface
      * @return string Variadic marker character
      */
     public function variadicMarker(): string;
+
+    /**
+     * Get the character used to mark the start of variadic arguments.
+     *
+     * @return string Variadic start character
+     */
+    public function variadicStart(): string;
+
+    /**
+     * Get the character used to mark the end of variadic arguments.
+     *
+     * @return string Variadic end character
+     */
+    public function variadicEnd(): string;
+
+    /**
+     * Get the character used to separate variadic arguments.
+     *
+     * @return string Variadic separator character
+     */
+    public function variadicSeparator(): string;
 }

@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Feature;
 
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
+use AndyDefer\Directive\Tests\TestDirectiveConfig;
 
 final class DirectiveIntegrationTest extends IntegrationTestCase
 {
@@ -20,21 +21,17 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        $this->fixturesDirectivesPath = realpath(__DIR__.'/../Fixtures/Directives');
+        $this->fixturesDirectivesPath = realpath(__DIR__ . '/../Fixtures/Directives');
 
-        $config = DirectiveConfig::default()->withDirectivesPath($this->fixturesDirectivesPath);
-        $this->app->instance(DirectiveConfig::class, $config);
+        $config = new TestDirectiveConfig($this->fixturesDirectivesPath);
+        $this->app->instance(DirectiveConfigInterface::class, $config);
         $this->app->register(DirectiveServiceProvider::class);
 
         $this->kernel = $this->app->make(DirectiveKernel::class);
-
-        // Debug: Vérifier que le chemin est bien pris en compte
-        $resolvedConfig = $this->app->make(DirectiveConfig::class);
     }
 
     private function runAndCaptureOutput(array $argv): array
     {
-
         ob_start();
         $result = $this->kernel->run($argv);
         $output = ob_get_clean();
@@ -241,7 +238,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_kernel_ignores_invalid_directive_files(): void
     {
-        $invalidDir = sys_get_temp_dir().'/invalid_directives_'.uniqid();
+        $invalidDir = sys_get_temp_dir() . '/invalid_directives_' . uniqid();
         mkdir($invalidDir, 0777, true);
 
         $invalidContent = <<<'PHP'
@@ -257,10 +254,10 @@ final class InvalidDirective implements DirectiveInterface
 }
 PHP;
 
-        file_put_contents($invalidDir.'/InvalidDirective.php', $invalidContent);
+        file_put_contents($invalidDir . '/InvalidDirective.php', $invalidContent);
 
-        $config = DirectiveConfig::default()->withDirectivesPath($invalidDir);
-        $this->app->instance(DirectiveConfig::class, $config);
+        $config = new TestDirectiveConfig($invalidDir);
+        $this->app->instance(DirectiveConfigInterface::class, $config);
 
         $kernel = $this->app->make(DirectiveKernel::class);
         $response = $this->runAndCaptureOutput(['directive', '--list']);
@@ -268,7 +265,7 @@ PHP;
         $this->assertStringNotContainsString('InvalidDirective', $response['output']);
         $this->assertStringNotContainsString('invalid', $response['output']);
 
-        unlink($invalidDir.'/InvalidDirective.php');
+        unlink($invalidDir . '/InvalidDirective.php');
         rmdir($invalidDir);
     }
 

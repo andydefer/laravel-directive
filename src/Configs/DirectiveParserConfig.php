@@ -63,4 +63,19 @@ final class DirectiveParserConfig implements DirectiveParserConfigInterface
     {
         return getenv('DIRECTIVE_VARIADIC_MARKER') ?: '*';
     }
+
+    public function variadicStart(): string
+    {
+        return getenv('DIRECTIVE_VARIADIC_START') ?: '[';
+    }
+
+    public function variadicEnd(): string
+    {
+        return getenv('DIRECTIVE_VARIADIC_END') ?: ']';
+    }
+
+    public function variadicSeparator(): string
+    {
+        return getenv('DIRECTIVE_VARIADIC_SEPARATOR') ?: ',';
+    }
 }

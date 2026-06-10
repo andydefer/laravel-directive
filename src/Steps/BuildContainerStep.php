@@ -6,9 +6,10 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Steps;
 
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
@@ -80,8 +81,8 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             });
 
             // Register config
-            $directiveConfig = DirectiveConfig::default()->withDirectivesPath($tempDir . '/app/Directives');
-            $container->instance(DirectiveConfig::class, $directiveConfig);
+            $directiveConfig = new EnvDirectiveConfig;
+            $container->instance(DirectiveConfigInterface::class, $directiveConfig);
 
             // Register factory and hydrator
             $factory = new ContainerDirectiveFactory($container);

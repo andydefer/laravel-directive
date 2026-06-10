@@ -6,17 +6,17 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
+use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
+use AndyDefer\Directive\Records\ArgumentSplitResultRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class ArgumentSplitterService
 {
-    private const VARIADIC_START = '[';
+    public function __construct(
+        private readonly DirectiveParserConfigInterface $config,
+    ) {}
 
-    private const VARIADIC_END = ']';
-
-    private const VARIADIC_SEPARATOR = ',';
-
-    public function split(StringTypedCollection $argv): array
+    public function split(StringTypedCollection $argv): ArgumentSplitResultRecord
     {
         $regular = [];
         $variadic = [];
@@ -24,16 +24,14 @@ final class ArgumentSplitterService
         $variadicContent = '';
 
         foreach ($argv as $item) {
-            if ($item === self::VARIADIC_START) {
+            if ($item === $this->config->variadicStart()) {
                 $inVariadic = true;
-
                 continue;
             }
 
-            if ($inVariadic && $item === self::VARIADIC_END) {
+            if ($inVariadic && $item === $this->config->variadicEnd()) {
                 $inVariadic = false;
-                // Extraire les éléments séparés par des virgules
-                $items = explode(self::VARIADIC_SEPARATOR, $variadicContent);
+                $items = explode($this->config->variadicSeparator(), $variadicContent);
                 foreach ($items as $variadicItem) {
                     $trimmed = trim($variadicItem);
                     if ($trimmed !== '') {
@@ -41,12 +39,10 @@ final class ArgumentSplitterService
                     }
                 }
                 $variadicContent = '';
-
                 continue;
             }
 
             if ($inVariadic) {
-                // Accumuler le contenu variadique
                 if ($variadicContent !== '') {
                     $variadicContent .= ' ';
                 }
@@ -56,9 +52,19 @@ final class ArgumentSplitterService
             }
         }
 
-        return [
-            'regular' => $regular,
-            'variadic' => $variadic,
-        ];
+        $regularCollection = new StringTypedCollection;
+        foreach ($regular as $item) {
+            $regularCollection->add($item);
+        }
+
+        $variadicCollection = new StringTypedCollection;
+        foreach ($variadic as $item) {
+            $variadicCollection->add($item);
+        }
+
+        return new ArgumentSplitResultRecord(
+            regular: $regularCollection,
+            variadic: $variadicCollection,
+        );
     }
 }

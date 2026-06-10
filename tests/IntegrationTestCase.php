@@ -6,8 +6,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests;
 
-use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use Carbon\Carbon;
@@ -32,7 +32,11 @@ abstract class IntegrationTestCase extends Orchestra
             $this->markTestSkipped('Laravel bootstrap failed: ' . $this->laravelBootstrapperContext->getError());
         }
 
-        $this->configureDirectivesPath();
+        $fixturesPath = __DIR__ . '/Fixtures/Directives';
+        $config = new TestDirectiveConfig($fixturesPath);
+        $this->app->instance(DirectiveConfigInterface::class, $config);
+        $this->app['config']->set('directive.path', $fixturesPath);
+
         $this->runDatabaseMigrations();
         $this->app->forgetInstance(DirectiveDiscoveryService::class);
     }
@@ -42,14 +46,6 @@ abstract class IntegrationTestCase extends Orchestra
         Carbon::setTestNow();
         $this->laravelBootstrapperContext->reset();
         parent::tearDown();
-    }
-
-    private function configureDirectivesPath(): void
-    {
-        $fixturesPath = __DIR__ . '/Fixtures/Directives';
-        $config = DirectiveConfig::default()->withDirectivesPath($fixturesPath);
-        $this->app->instance(DirectiveConfig::class, $config);
-        $this->app['config']->set('directive.path', $fixturesPath);
     }
 
     protected function getEnvironmentSetUp($app): void

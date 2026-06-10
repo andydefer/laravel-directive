@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Testing;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
@@ -22,7 +23,7 @@ final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
 {
     private TestDirectiveDiscoveryService $service;
 
-    private DirectiveConfig $config;
+    private DirectiveConfigInterface $config;
 
     private DirectiveHydratorService&MockObject $hydrator;
 
@@ -33,7 +34,7 @@ final class TestDirectiveDiscoveryServiceTest extends UnitTestCase
         parent::setUp();
 
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
-        $this->config = DirectiveConfig::default()->withDirectivesPath('/test/path');
+        $this->config = new EnvDirectiveConfig;
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->service = new TestDirectiveDiscoveryService($this->config, $this->hydrator, true);
     }

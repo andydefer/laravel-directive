@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive;
 
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Configs\FileCreatorConfig;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
@@ -58,18 +59,8 @@ final class DirectiveServiceProvider extends ServiceProvider
 
     private function registerConfig(): void
     {
-        $this->app->singleton(DirectiveConfig::class, function ($app) {
-            $config = DirectiveConfig::default();
-
-            if ($this->isLaravelConfigAvailable($app)) {
-                $appConfig = $app['config']->get('directive', []);
-
-                if (isset($appConfig['path'])) {
-                    $config = $config->withDirectivesPath($appConfig['path']);
-                }
-            }
-
-            return $config;
+        $this->app->singleton(DirectiveConfigInterface::class, function ($app) {
+            return new EnvDirectiveConfig;
         });
     }
 
@@ -115,7 +106,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
             $discovery = new DirectiveDiscoveryService(
-                config: $app->make(DirectiveConfig::class),
+                config: $app->make(DirectiveConfigInterface::class),
                 hydrator: $app->make(DirectiveHydratorService::class),
                 loader: null,
             );

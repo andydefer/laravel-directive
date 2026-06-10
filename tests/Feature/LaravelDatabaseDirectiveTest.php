@@ -1,27 +1,30 @@
 <?php
 
-// tests/Feature/LaravelDatabaseDirectiveTest.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Feature;
 
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
+use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveTestingService;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestPost;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestUser;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
+use AndyDefer\Directive\Tests\TestDirectiveConfig;
 
 final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
 {
-    private DirectiveTestingService $service;
+    private DirectiveKernel $kernel;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Plus simple : on passe seulement l'application
-        $this->service = new DirectiveTestingService($this->app);
+        $fixturesPath = realpath(__DIR__ . '/../Fixtures/Directives');
+        $config = new TestDirectiveConfig($fixturesPath);
+        $this->app->instance(DirectiveConfigInterface::class, $config);
+
+        $this->kernel = $this->app->make(DirectiveKernel::class);
     }
 
     protected function tearDown(): void
@@ -32,9 +35,21 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
         } catch (\Exception $e) {
             // Ignorer
         }
-
-        $this->service->destroy();
         parent::tearDown();
+    }
+
+    private function runDirective(string $signature, array $arguments = []): array
+    {
+        $argv = array_merge(['directive', $signature], $arguments);
+
+        ob_start();
+        $exitCode = $this->kernel->run($argv);
+        $output = ob_get_clean();
+
+        return [
+            'exitCode' => $exitCode,
+            'output' => $output,
+        ];
     }
 
     private function seedTestData(): void
@@ -103,46 +118,46 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
     {
         $this->seedTestData();
 
-        $response = $this->service->runDirective('test-laravel-db');
+        $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode, 'Output: ' . $response->output);
-        $this->assertStringContainsString('Testing Laravel database integration', $response->output);
-        $this->assertStringContainsString('Laravel is available', $response->output);
-        $this->assertStringContainsString('Found 3 users in database', $response->output);
-        $this->assertStringContainsString('Found 2 active users', $response->output);
-        $this->assertStringContainsString('Found 3 published posts', $response->output);
+        $this->assertSame(ExitCode::SUCCESS, $response['exitCode'], 'Output: ' . $response['output']);
+        $this->assertStringContainsString('Testing Laravel database integration', $response['output']);
+        $this->assertStringContainsString('Laravel is available', $response['output']);
+        $this->assertStringContainsString('Found 3 users in database', $response['output']);
+        $this->assertStringContainsString('Found 2 active users', $response['output']);
+        $this->assertStringContainsString('Found 3 published posts', $response['output']);
     }
 
     public function test_database_directive_with_verbose_option(): void
     {
         $this->seedTestData();
 
-        $response = $this->service->runDirective('test-laravel-db', ['--verbose']);
+        $response = $this->runDirective('test-laravel-db', ['--verbose']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-        $this->assertNotEmpty($response->output);
+        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertNotEmpty($response['output']);
     }
 
     public function test_database_directive_shows_user_info(): void
     {
         $this->seedTestData();
 
-        $response = $this->service->runDirective('test-laravel-db');
+        $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-        $this->assertStringContainsString('John Doe', $response->output);
-        $this->assertStringContainsString('john@example.com', $response->output);
-        $this->assertStringContainsString('Jane Smith', $response->output);
-        $this->assertStringContainsString('jane@example.com', $response->output);
+        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertStringContainsString('John Doe', $response['output']);
+        $this->assertStringContainsString('john@example.com', $response['output']);
+        $this->assertStringContainsString('Jane Smith', $response['output']);
+        $this->assertStringContainsString('jane@example.com', $response['output']);
     }
 
     public function test_database_directive_with_empty_database(): void
     {
-        $response = $this->service->runDirective('test-laravel-db');
+        $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
-        $this->assertStringContainsString('Found 0 users in database', $response->output);
-        $this->assertStringContainsString('No verified users found', $response->output);
-        $this->assertStringContainsString('Found 0 published posts', $response->output);
+        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertStringContainsString('Found 0 users in database', $response['output']);
+        $this->assertStringContainsString('No verified users found', $response['output']);
+        $this->assertStringContainsString('Found 0 published posts', $response['output']);
     }
 }

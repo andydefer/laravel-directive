@@ -6,7 +6,8 @@ namespace AndyDefer\Directive\Testing;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveConfig;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -24,12 +25,12 @@ class TestDirectiveDiscoveryService extends DirectiveDiscoveryService
     private array $registeredDirectives = [];
 
     /**
-     * @param  DirectiveConfig  $config  Configuration for directive discovery
+     * @param  DirectiveConfigInterface  $config  Configuration for directive discovery
      * @param  DirectiveHydratorService  $hydrator  Service for hydrating directives
      * @param  bool  $disableFilesystemDiscovery  If true, skip filesystem scanning
      */
     public function __construct(
-        DirectiveConfig $config,
+        DirectiveConfigInterface $config,
         DirectiveHydratorService $hydrator,
         private readonly bool $disableFilesystemDiscovery = true,
     ) {

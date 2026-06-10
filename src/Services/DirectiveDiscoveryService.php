@@ -6,8 +6,8 @@ namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
-use AndyDefer\Directive\Config\DirectiveConfig;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
@@ -41,7 +41,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
     private ?DirectiveLoaderInterface $loader = null;
 
     public function __construct(
-        private readonly DirectiveConfig $config,
+        private readonly DirectiveConfigInterface $config,
         private readonly DirectiveHydratorService $hydrator,
         ?DirectiveLoaderInterface $loader = null,
     ) {
@@ -103,7 +103,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
      */
     protected function discoverFromFilesystem(DirectiveMetadataCollection $results): DirectiveMetadataCollection
     {
-        $path = $this->config->directivesPath;
+        $path = $this->config->directivesPath();
 
         if ($path === '' || ! is_dir($path)) {
             return $results;

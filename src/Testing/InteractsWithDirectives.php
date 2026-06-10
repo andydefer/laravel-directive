@@ -6,8 +6,9 @@ namespace AndyDefer\Directive\Testing;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\ParameterCollection;
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
@@ -138,8 +139,8 @@ trait InteractsWithDirectives
             return $bootstrapperContext;
         });
 
-        $directiveConfig = DirectiveConfig::default()->withDirectivesPath($this->directiveTempDir . '/app/Directives');
-        $this->directiveContainer->instance(DirectiveConfig::class, $directiveConfig);
+        $directiveConfig = new EnvDirectiveConfig;
+        $this->directiveContainer->instance(DirectiveConfigInterface::class, $directiveConfig);
 
         $factory = new ContainerDirectiveFactory($this->directiveContainer);
         $parser = new DirectiveParserService;

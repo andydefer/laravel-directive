@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit;
 
-use AndyDefer\Directive\Config\DirectiveConfig;
+use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DirectiveFactoryInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
@@ -59,7 +60,7 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveConfig::class));
+        $this->assertTrue($this->container->bound(DirectiveConfigInterface::class));
     }
 
     public function test_laravel_bootstrapper_context_is_registered_as_singleton(): void
@@ -158,8 +159,8 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_config_can_be_resolved(): void
     {
         $this->provider->register();
-        $config = $this->container->make(DirectiveConfig::class);
-        $this->assertInstanceOf(DirectiveConfig::class, $config);
+        $config = $this->container->make(DirectiveConfigInterface::class);
+        $this->assertInstanceOf(DirectiveConfigInterface::class, $config);
     }
 
     public function test_laravel_bootstrapper_context_can_be_resolved(): void
