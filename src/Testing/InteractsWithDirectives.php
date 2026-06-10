@@ -32,6 +32,22 @@ use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
+/**
+ * @deprecated since version 3.8.0, will be removed in 4.0.0
+ * 
+ * Use DirectiveTestingService instead.
+ * 
+ * Reasons for deprecation:
+ * - Implicit coupling and hidden state
+ * - Violates Single Responsibility Principle
+ * - Forces inheritance over composition
+ * - Untraceable execution flow
+ * - Difficult to test in isolation
+ * 
+ * @see DirectiveTestingService
+ * @see DirectiveTestingContext
+ */
+
 trait InteractsWithDirectives
 {
     private Container $directiveContainer;

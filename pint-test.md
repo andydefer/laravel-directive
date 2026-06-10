@@ -1,5 +1,5 @@
 # Pint Formatting Test Report
-*Generated: mer. 10 juin 2026 14:33:29 WAT*
+*Generated: mer. 10 juin 2026 14:53:40 WAT*
 
 
   ⨯...............................................⨯.⨯...⨯⨯......⨯.⨯⨯...⨯...⨯...⨯....................⨯..........⨯...⨯.⨯⨯...⨯..⨯⨯⨯.⨯...............⨯.⨯..⨯⨯⨯.⨯⨯....⨯⨯⨯⨯................⨯.
@@ -27,7 +27,7 @@
   ⨯ src/Steps/BootstrapLaravelStep.php                                                    concat_space, unary_operator_spaces, not_operator_with_successor_space, no_extra_blank_lines  
   ⨯ src/Steps/BuildContainerStep.php     function_declaration, fully_qualified_strict_types, concat_space, unary_operator_spaces, no_unused_imports, not_operator_with_successor_space  
   ⨯ src/Steps/StartDatabaseStep.php          single_quote, fully_qualified_strict_types, concat_space, not_operator_with_successor_space, blank_line_before_statement, ordered_imports  
-  ⨯ src/Testing/InteractsWithDirectives.php           class_attributes_separation, concat_space, unary_operator_spaces, not_operator_with_successor_space, blank_line_before_statement  
+  ⨯ src/Testing/InteractsWithDirectives.php class_attributes_separation, concat_space, no_trailing_whitespace_in_comment, unary_operator_spaces, phpdoc_separation, not_operator_with…  
   ⨯ stubs/laravel/bootstrap/app.php                                                                                                                               no_extra_blank_lines  
   ⨯ stubs/laravel/config/app.php                                                                fully_qualified_strict_types, concat_space, single_line_after_imports, ordered_imports  
   ⨯ tests/Feature/DirectiveIntegrationTest.php                                                                                                                            concat_space  
