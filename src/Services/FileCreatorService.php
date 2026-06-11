@@ -29,7 +29,7 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
  *
  * @author Andy Defer
  */
-final class FileCreatorService
+class FileCreatorService
 {
     private FileSystemInterface $filesystem;
 

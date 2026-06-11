@@ -13,7 +13,7 @@ use AndyDefer\Directive\Contracts\Configs\DirectiveNamingConfigInterface;
  * automatic directive code generation. Converts between naming conventions
  * (kebab-case to PascalCase) and generates standard signatures.
  */
-final class DirectiveNamingService
+class DirectiveNamingService
 {
     public function __construct(
         private readonly DirectiveNamingConfigInterface $config,

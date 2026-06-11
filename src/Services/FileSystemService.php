@@ -18,7 +18,7 @@ use AndyDefer\Directive\Enums\PermissionMode;
  *
  * @author Andy Defer
  */
-final class FileSystemService implements FileSystemInterface
+class FileSystemService implements FileSystemInterface
 {
     /**
      * {@inheritDoc}

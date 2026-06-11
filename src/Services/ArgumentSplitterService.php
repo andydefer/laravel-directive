@@ -10,7 +10,7 @@ use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
 use AndyDefer\Directive\Records\ArgumentSplitResultRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class ArgumentSplitterService
+class ArgumentSplitterService
 {
     public function __construct(
         private readonly DirectiveParserConfigInterface $config,

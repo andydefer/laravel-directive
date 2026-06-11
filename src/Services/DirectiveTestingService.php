@@ -31,7 +31,7 @@ use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 
-final class DirectiveTestingService implements DirectiveTestingServiceInterface
+class DirectiveTestingService implements DirectiveTestingServiceInterface
 {
     private DirectiveTestingContext $context;
     private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;

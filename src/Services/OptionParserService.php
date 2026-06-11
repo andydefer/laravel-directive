@@ -11,7 +11,7 @@ use AndyDefer\Directive\Configs\DirectiveParserConfig;
 use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class OptionParserService
+class OptionParserService
 {
     private DirectiveParserConfigInterface $config;
 

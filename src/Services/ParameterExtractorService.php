@@ -11,7 +11,7 @@ use AndyDefer\Directive\Contexts\ParameterParserContext;
 use AndyDefer\Directive\Records\ExtractedParameterRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class ParameterExtractorService
+class ParameterExtractorService
 {
     public function __construct(
         private readonly ParameterParserContext $parserContext

@@ -9,7 +9,7 @@ namespace AndyDefer\Directive\Services;
 use AndyDefer\Directive\Contexts\ParameterParserContext;
 use InvalidArgumentException;
 
-final class ParameterOrderValidatorService
+class ParameterOrderValidatorService
 {
     public function __construct(
         private readonly ParameterParserContext $parserContext

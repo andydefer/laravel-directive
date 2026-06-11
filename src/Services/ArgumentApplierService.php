@@ -10,7 +10,7 @@ use AndyDefer\Directive\Collections\ExtractedParameterCollection;
 use AndyDefer\Directive\Collections\ParsedArgumentCollection;
 use InvalidArgumentException;
 
-final class ArgumentApplierService
+class ArgumentApplierService
 {
     public function apply(
         ExtractedParameterCollection $parameters,
