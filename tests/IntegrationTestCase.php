@@ -23,16 +23,16 @@ abstract class IntegrationTestCase extends Orchestra
         Carbon::setTestNow(Carbon::create(2024, 1, 1, 12, 0, 0));
 
         $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
-        $this->laravelBootstrapperContext->setCustomBootstrapPath(__DIR__ . '/bootstrap/app.php');
+        $this->laravelBootstrapperContext->setCustomBootstrapPath(__DIR__.'/bootstrap/app.php');
         $this->app->instance(LaravelBootstrapperContext::class, $this->laravelBootstrapperContext);
 
         $success = $this->laravelBootstrapperContext->bootstrap();
 
         if (! $success) {
-            $this->markTestSkipped('Laravel bootstrap failed: ' . $this->laravelBootstrapperContext->getError());
+            $this->markTestSkipped('Laravel bootstrap failed: '.$this->laravelBootstrapperContext->getError());
         }
 
-        $fixturesPath = __DIR__ . '/Fixtures/Directives';
+        $fixturesPath = __DIR__.'/Fixtures/Directives';
         $config = new TestDirectiveConfig($fixturesPath);
         $this->app->instance(DirectiveConfigInterface::class, $config);
         $this->app['config']->set('directive.path', $fixturesPath);
@@ -59,13 +59,13 @@ abstract class IntegrationTestCase extends Orchestra
         ]);
 
         $app['config']->set('cache.default', 'array');
-        $app['config']->set('view.compiled', __DIR__ . '/storage/framework/views');
-        $app['config']->set('directive.path', __DIR__ . '/Fixtures/Directives');
+        $app['config']->set('view.compiled', __DIR__.'/storage/framework/views');
+        $app['config']->set('directive.path', __DIR__.'/Fixtures/Directives');
     }
 
     protected function defineEnvironment($app): void
     {
-        $app['config']->set('view.paths', [__DIR__ . '/Fixtures/views']);
+        $app['config']->set('view.paths', [__DIR__.'/Fixtures/views']);
     }
 
     protected function getPackageProviders($app)
@@ -77,7 +77,7 @@ abstract class IntegrationTestCase extends Orchestra
 
     protected function runDatabaseMigrations(): void
     {
-        $migrationPath = __DIR__ . '/database/migrations';
+        $migrationPath = __DIR__.'/database/migrations';
 
         if (is_dir($migrationPath)) {
             $this->loadMigrationsFrom($migrationPath);

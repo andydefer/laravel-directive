@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Testing;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
+use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\PrimitiveTypeConverterService;
 use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -21,13 +22,17 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class ClosureDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
+
     private LaravelBootstrapperContext $laravelBootstrapperContext;
+
+    private PrimitiveTypeConverterService $converter;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
         $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
+        $this->converter = new PrimitiveTypeConverterService();
     }
 
     private function createDirective(string $signature, callable $execute): ClosureDirective
@@ -68,6 +73,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) use (&$executed) {
             $executed = true;
+
             return ExitCode::SUCCESS;
         });
 
@@ -83,6 +89,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) use (&$receivedDirective) {
             $receivedDirective = $d;
+
             return ExitCode::SUCCESS;
         });
 
@@ -111,6 +118,7 @@ final class ClosureDirectiveTest extends UnitTestCase
     {
         $directive = $this->createDirective('test {name}', function ($d) {
             $name = $d->argument('name');
+
             return $name === 'John' ? ExitCode::SUCCESS : ExitCode::FAILURE;
         });
 
@@ -142,6 +150,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) {
             $d->line('Hello World');
+
             return ExitCode::SUCCESS;
         });
 
@@ -156,6 +165,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) {
             $d->info('Information message');
+
             return ExitCode::SUCCESS;
         });
 
@@ -170,6 +180,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) {
             $d->error('Error message');
+
             return ExitCode::SUCCESS;
         });
 
@@ -187,9 +198,11 @@ final class ClosureDirectiveTest extends UnitTestCase
 
     private function setArguments(ClosureDirective $directive, array $arguments): void
     {
-        $collection = new ParameterCollection;
+        $collection = new ParameterVOCollection;
+
         foreach ($arguments as $name => $value) {
-            $collection->add(new ParameterRecord(name: $name, value: $value));
+            $type = $this->converter->detectType($value);
+            $collection->add(new ParameterVO(name: $name, value: $value, type: $type));
         }
 
         $reflection = new \ReflectionClass($directive);
@@ -200,9 +213,11 @@ final class ClosureDirectiveTest extends UnitTestCase
 
     private function setOptions(ClosureDirective $directive, array $options): void
     {
-        $collection = new ParameterCollection;
+        $collection = new ParameterVOCollection;
+
         foreach ($options as $name => $value) {
-            $collection->add(new ParameterRecord(name: $name, value: $value));
+            $type = $this->converter->detectType($value);
+            $collection->add(new ParameterVO(name: $name, value: $value, type: $type));
         }
 
         $reflection = new \ReflectionClass($directive);

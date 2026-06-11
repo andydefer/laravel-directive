@@ -20,15 +20,19 @@ use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 final class DirectiveDiscoveryContext
 {
     private bool $bootstrapped = false;
+
     private ?DirectiveLoaderInterface $loader = null;
+
     private string $projectRoot;
+
     private string $vendorDir;
+
     private array $scannedPackages = [];
 
     public function __construct()
     {
         $this->projectRoot = getcwd();
-        $this->vendorDir = $this->projectRoot . '/vendor';
+        $this->vendorDir = $this->projectRoot.'/vendor';
     }
 
     public function isBootstrapped(): bool

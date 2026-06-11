@@ -230,7 +230,7 @@ final class SignatureValidationServiceTest extends UnitTestCase
     public function test_validates_directive_with_max_length_name(): void
     {
         // Act: Validate a very long but valid name
-        $longName = 'a' . str_repeat('-b', 100);
+        $longName = 'a'.str_repeat('-b', 100);
         $result = $this->service->validate($longName);
 
         // Assert: Should be valid (no length limit enforced)

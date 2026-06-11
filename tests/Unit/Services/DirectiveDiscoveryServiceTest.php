@@ -27,17 +27,22 @@ use ReflectionClass;
 final class DirectiveDiscoveryServiceTest extends UnitTestCase
 {
     private string $fixturesPath;
+
     private DirectiveDiscoveryService $service;
+
     private Container $container;
+
     private DirectiveDiscoveryContext $context;
+
     private LaravelBootstrapperContext $laravelBootstrapperContext;
+
     private DirectiveInteractionService $interaction;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->fixturesPath = realpath(__DIR__ . '/../../Fixtures/Directives');
+        $this->fixturesPath = realpath(__DIR__.'/../../Fixtures/Directives');
         $config = new TestDirectiveConfig($this->fixturesPath);
 
         $this->container = new Container;
@@ -82,7 +87,7 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
 
         $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
         $this->assertContains(DirectiveMetadataRecord::class, $result->getAllowedTypes());
-        $this->assertGreaterThan(0, $result->count(), 'No directives discovered. Check fixtures path: ' . $this->fixturesPath);
+        $this->assertGreaterThan(0, $result->count(), 'No directives discovered. Check fixtures path: '.$this->fixturesPath);
     }
 
     public function test_finds_test_echo_directive(): void
@@ -99,15 +104,15 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
             }
         }
 
-        $this->assertTrue($found, 'Directive "test-echo" not found in path: ' . $this->fixturesPath);
+        $this->assertTrue($found, 'Directive "test-echo" not found in path: '.$this->fixturesPath);
     }
 
     public function test_ignores_invalid_directives_that_dont_extend_abstract_directive(): void
     {
-        $tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        $tempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
         mkdir($tempDir, 0777, true);
 
-        $invalidClassPath = $tempDir . '/InvalidDirective.php';
+        $invalidClassPath = $tempDir.'/InvalidDirective.php';
         $invalidClassContent = <<<'PHP'
 <?php
 
@@ -170,8 +175,8 @@ PHP;
 
         foreach ($result as $directive) {
             $reflection = new ReflectionClass($directive->class);
-            $this->assertFalse($reflection->isAbstract(), 'Directive ' . $directive->class . ' should not be abstract');
-            $this->assertTrue(is_subclass_of($directive->class, AbstractDirective::class), 'Directive ' . $directive->class . ' must extend AbstractDirective');
+            $this->assertFalse($reflection->isAbstract(), 'Directive '.$directive->class.' should not be abstract');
+            $this->assertTrue(is_subclass_of($directive->class, AbstractDirective::class), 'Directive '.$directive->class.' must extend AbstractDirective');
         }
     }
 
@@ -184,7 +189,7 @@ PHP;
             $signatures[] = $directive->signature;
         }
 
-        $this->assertNotEmpty($signatures, 'No signatures found in path: ' . $this->fixturesPath);
+        $this->assertNotEmpty($signatures, 'No signatures found in path: '.$this->fixturesPath);
 
         $found = false;
         foreach ($signatures as $signature) {
@@ -193,14 +198,14 @@ PHP;
                 break;
             }
         }
-        $this->assertTrue($found, 'No test-echo directive found in signatures: ' . implode(', ', $signatures));
+        $this->assertTrue($found, 'No test-echo directive found in signatures: '.implode(', ', $signatures));
     }
 
     public function test_returns_complete_metadata_structure(): void
     {
         $result = $this->service->discover();
 
-        $this->assertGreaterThan(0, $result->count(), 'No directives found to test in path: ' . $this->fixturesPath);
+        $this->assertGreaterThan(0, $result->count(), 'No directives found to test in path: '.$this->fixturesPath);
 
         foreach ($result as $directive) {
             $this->assertIsString($directive->signature);
@@ -216,7 +221,7 @@ PHP;
     {
         $result = $this->service->discover();
 
-        $this->assertGreaterThanOrEqual(1, $result->count(), 'No directives discovered in path: ' . $this->fixturesPath);
+        $this->assertGreaterThanOrEqual(1, $result->count(), 'No directives discovered in path: '.$this->fixturesPath);
     }
 
     public function test_signatures_are_unique(): void
@@ -230,7 +235,7 @@ PHP;
             $signatures[] = $directive->signature;
         }
 
-        $this->assertEquals(count($signatures), count(array_unique($signatures)), 'Duplicate signatures found: ' . print_r(array_count_values($signatures), true));
+        $this->assertEquals(count($signatures), count(array_unique($signatures)), 'Duplicate signatures found: '.print_r(array_count_values($signatures), true));
     }
 
     public function test_returns_empty_result_for_invalid_path(): void
@@ -258,7 +263,7 @@ PHP;
 
     public function test_returns_empty_result_for_empty_directory(): void
     {
-        $emptyDir = sys_get_temp_dir() . '/empty_directives_' . uniqid();
+        $emptyDir = sys_get_temp_dir().'/empty_directives_'.uniqid();
         mkdir($emptyDir, 0777, true);
 
         $config = new TestDirectiveConfig($emptyDir);
@@ -451,7 +456,7 @@ PHP;
         $this->assertGreaterThanOrEqual(
             1,
             $result->count(),
-            'No directives discovered in fixtures path: ' . $this->fixturesPath
+            'No directives discovered in fixtures path: '.$this->fixturesPath
         );
     }
 
@@ -476,10 +481,10 @@ PHP;
 
     public function test_handles_malformed_php_files_gracefully(): void
     {
-        $tempDir = sys_get_temp_dir() . '/malformed_test_' . uniqid();
+        $tempDir = sys_get_temp_dir().'/malformed_test_'.uniqid();
         mkdir($tempDir, 0777, true);
 
-        $malformedPath = $tempDir . '/MalformedDirective.php';
+        $malformedPath = $tempDir.'/MalformedDirective.php';
         file_put_contents($malformedPath, '<?php this is not valid php code {');
 
         $config = new TestDirectiveConfig($tempDir);

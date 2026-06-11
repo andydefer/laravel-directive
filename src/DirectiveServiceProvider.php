@@ -14,8 +14,8 @@ use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\FileCreationContext;
 use AndyDefer\Directive\Contexts\FileSystemContext;
-use AndyDefer\Directive\Contexts\LaravelContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contexts\LaravelContext;
 use AndyDefer\Directive\Contexts\ParameterParserContext;
 use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
@@ -27,6 +27,7 @@ use AndyDefer\Directive\Contracts\Configs\SignatureValidationConfigInterface;
 use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\ArgumentApplierService;
 use AndyDefer\Directive\Services\ArgumentSplitterService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -53,6 +54,7 @@ use AndyDefer\Directive\Strategies\OptionalArgumentStrategy;
 use AndyDefer\Directive\Strategies\OptionStrategy;
 use AndyDefer\Directive\Strategies\RequiredArgumentStrategy;
 use AndyDefer\Directive\Strategies\VariadicArgumentStrategy;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Services\EnumService;
 use Illuminate\Support\ServiceProvider;
 
@@ -85,7 +87,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/config/directive.php' => config_path('directive.php'),
+            __DIR__.'/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -147,8 +149,8 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->singleton(DirectiveContext::class, function ($app) {
             return new DirectiveContext(
                 laravelBootstrapper: $app->make(LaravelBootstrapperContext::class),
-                blueprint: new \AndyDefer\Directive\Records\DirectiveBlueprintRecord('', '', ''),
-                aliases: new \AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection,
+                blueprint: new DirectiveBlueprintRecord('', '', ''),
+                aliases: new StringTypedCollection,
                 shouldBootLaravel: false,
             );
         });

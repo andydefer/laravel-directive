@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
@@ -45,7 +44,7 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->context->getLaravel();
     }
 
-    final public function argument(string $key): ?string
+    final public function argument(string $key): mixed
     {
         return $this->context->getArgument($key);
     }
@@ -55,7 +54,7 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->context->hasArgument($key);
     }
 
-    final public function option(string $key): bool|string|null
+    final public function option(string $key): mixed
     {
         return $this->context->getOption($key);
     }

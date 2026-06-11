@@ -31,20 +31,26 @@ final class DirectiveTestingContext
 {
     // Directory state
     private ?string $temp_dir = null;
+
     private ?string $original_cwd = null;
+
     private bool $in_temp_directory = false;
 
     // Laravel state
     private ?Application $laravel_app = null;
+
     private bool $boot_laravel = false;
 
     // Service container state
     private ?Container $container = null;
+
     private ?DirectiveKernel $kernel = null;
+
     private ?DirectiveInteractionService $interaction = null;
 
     // Registry state
     private TestDirectiveRegistry $registry;
+
     private ClosureDirectiveRegistry $closure_registry;
 
     // Configuration
@@ -52,20 +58,26 @@ final class DirectiveTestingContext
 
     // Execution tracking
     private StringTypedCollection $executed_directives;
+
     private ExecutionResultCollection $execution_results;
+
     private CreatedPathCollection $created_paths;
+
     private StepResultCollection $step_results;
 
     // Sub-contexts
     private LaravelContext $laravel_context;
+
     private FileSystemContext $file_system_context;
 
     // Database state
     private ?PDO $database_connection = null;
+
     private ?DatabaseConnectionRecord $database_connection_record = null;
 
     // Mode flags
     private bool $integrated_mode = false;
+
     private bool $initialized = false;
 
     public function __construct(bool $boot_laravel = false)
@@ -327,10 +339,10 @@ final class DirectiveTestingContext
             return false;
         }
 
-        return is_dir($this->temp_dir . '/bootstrap')
-            && is_dir($this->temp_dir . '/config')
-            && is_dir($this->temp_dir . '/storage')
-            && file_exists($this->temp_dir . '/bootstrap/app.php');
+        return is_dir($this->temp_dir.'/bootstrap')
+            && is_dir($this->temp_dir.'/config')
+            && is_dir($this->temp_dir.'/storage')
+            && file_exists($this->temp_dir.'/bootstrap/app.php');
     }
 
     public function hasContainer(): bool

@@ -60,9 +60,9 @@ interface DirectiveInterface
      * Get an argument value by its key.
      *
      * @param  string  $key  The argument name
-     * @return string|null The argument value, or null if not found
+     * @return mixed|null The argument value with its original type, or null if not found
      */
-    public function argument(string $key): ?string;
+    public function argument(string $key): mixed;
 
     /**
      * Check if an argument exists and has a non-empty value.
@@ -76,9 +76,9 @@ interface DirectiveInterface
      * Get an option value by its key.
      *
      * @param  string  $key  The option name
-     * @return bool|string|null The option value (boolean for flags, string for values), or null if not found
+     * @return mixed|null The option value with its original type, or null if not found
      */
-    public function option(string $key): bool|string|null;
+    public function option(string $key): mixed;
 
     /**
      * Check if an option exists and has a non-empty value.

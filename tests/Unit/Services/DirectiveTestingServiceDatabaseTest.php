@@ -114,7 +114,7 @@ final class DirectiveTestingServiceDatabaseTest extends IntegrationTestCase
 
         $response = $this->service->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Testing Laravel database integration', $response->output);
         $this->assertStringContainsString('Laravel is available', $response->output);
     }

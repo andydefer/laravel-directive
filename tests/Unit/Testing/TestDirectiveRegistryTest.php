@@ -17,7 +17,9 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 final class TestDirectiveRegistryTest extends UnitTestCase
 {
     private TestDirectiveRegistry $registry;
+
     private DirectiveInteractionService $interaction;
+
     private DirectiveContext $context;
 
     protected function setUp(): void

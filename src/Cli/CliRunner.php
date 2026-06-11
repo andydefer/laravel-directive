@@ -23,11 +23,12 @@ use Illuminate\Container\Container;
 final class CliRunner
 {
     private Container $container;
+
     private string $directivesPath;
 
     public function __construct()
     {
-        $this->container = new Container();
+        $this->container = new Container;
         $this->directivesPath = $this->resolveDirectivesPath();
         putenv("DIRECTIVE_PATH={$this->directivesPath}");
     }
@@ -43,9 +44,9 @@ final class CliRunner
     private function resolveDirectivesPath(): string
     {
         $candidates = [
-            getcwd() . '/app/Directives',
-            getcwd() . '/directives',
-            getcwd() . '/src/Directives',
+            getcwd().'/app/Directives',
+            getcwd().'/directives',
+            getcwd().'/src/Directives',
         ];
 
         foreach ($candidates as $candidate) {
@@ -60,23 +61,23 @@ final class CliRunner
     private function registerBaseServices(): void
     {
         // Dispatchers
-        $this->container->singleton(RenderDispatcher::class, fn() => new RenderDispatcher);
-        $this->container->singleton(InputDispatcher::class, fn() => new InputDispatcher);
+        $this->container->singleton(RenderDispatcher::class, fn () => new RenderDispatcher);
+        $this->container->singleton(InputDispatcher::class, fn () => new InputDispatcher);
 
         // Contexts
-        $this->container->singleton(LaravelBootstrapperContext::class, fn() => new LaravelBootstrapperContext);
-        $this->container->singleton(DirectiveDiscoveryContext::class, fn() => new DirectiveDiscoveryContext);
+        $this->container->singleton(LaravelBootstrapperContext::class, fn () => new LaravelBootstrapperContext);
+        $this->container->singleton(DirectiveDiscoveryContext::class, fn () => new DirectiveDiscoveryContext);
 
         // Validation
         $this->container->singleton(
             SignatureValidationService::class,
-            fn() => new SignatureValidationService(new EnvSignatureValidationConfig)
+            fn () => new SignatureValidationService(new EnvSignatureValidationConfig)
         );
 
         // Interaction
         $this->container->singleton(
             DirectiveInteractionService::class,
-            fn($c) => new DirectiveInteractionService(
+            fn ($c) => new DirectiveInteractionService(
                 $c->make(RenderDispatcher::class),
                 $c->make(InputDispatcher::class),
             )
@@ -85,8 +86,8 @@ final class CliRunner
 
     private function buildKernel(): DirectiveKernel
     {
-        $config = new EnvDirectiveConfig();
-        $parser = new DirectiveParserService();
+        $config = new EnvDirectiveConfig;
+        $parser = new DirectiveParserService;
 
         $laravelContext = $this->container->make(LaravelBootstrapperContext::class);
         $discoveryContext = $this->container->make(DirectiveDiscoveryContext::class);

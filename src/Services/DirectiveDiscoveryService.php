@@ -49,9 +49,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     private function discoverFromVendorPackages(DirectiveMetadataCollection $results): void
     {
-        $composerFile = $this->context->getProjectRoot() . '/composer.json';
+        $composerFile = $this->context->getProjectRoot().'/composer.json';
 
-        if (!file_exists($composerFile)) {
+        if (! file_exists($composerFile)) {
             return;
         }
 
@@ -78,9 +78,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
             return;
         }
 
-        $packagePath = $this->context->getVendorDir() . '/' . $packageName;
+        $packagePath = $this->context->getVendorDir().'/'.$packageName;
 
-        if (!is_dir($packagePath)) {
+        if (! is_dir($packagePath)) {
             return;
         }
 
@@ -94,9 +94,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     private function scanPackageDependencies(DirectiveMetadataCollection $results, string $packagePath, int $currentDepth): void
     {
-        $composerFile = $packagePath . '/composer.json';
+        $composerFile = $packagePath.'/composer.json';
 
-        if (!file_exists($composerFile)) {
+        if (! file_exists($composerFile)) {
             return;
         }
 
@@ -118,10 +118,10 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
     private function scanPackageDirectories(DirectiveMetadataCollection $results, string $packagePath): void
     {
         $possiblePaths = [
-            $packagePath . '/src/Directives',
-            $packagePath . '/Directives',
-            $packagePath . '/src/Directive',
-            $packagePath . '/Directive',
+            $packagePath.'/src/Directives',
+            $packagePath.'/Directives',
+            $packagePath.'/src/Directive',
+            $packagePath.'/Directive',
         ];
 
         foreach ($possiblePaths as $directivesPath) {
@@ -133,7 +133,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     private function scanDirectoryForDirectives(DirectiveMetadataCollection $results, string $directory): void
     {
-        $files = glob($directory . '/*.php');
+        $files = glob($directory.'/*.php');
 
         if ($files === false) {
             return;
@@ -141,7 +141,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
         foreach ($files as $file) {
             $metadata = $this->extractMetadataFromFile($file);
-            if ($metadata !== null && !$this->isAlreadyRegistered($results, $metadata->signature)) {
+            if ($metadata !== null && ! $this->isAlreadyRegistered($results, $metadata->signature)) {
                 $results->add($metadata);
             }
         }
@@ -154,12 +154,14 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
                 return true;
             }
         }
+
         return false;
     }
 
     private function extractMetadataFromFile(string $file): ?DirectiveMetadataRecord
     {
         $class = $this->getClassFromFile($file);
+
         return ($class !== '' && class_exists($class)) ? $this->extractMetadataFromClass($class) : null;
     }
 
@@ -169,15 +171,15 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
         if (
             $reflection->isAbstract() ||
-            !is_subclass_of($class, AbstractDirective::class) ||
-            !is_subclass_of($class, DirectiveInterface::class)
+            ! is_subclass_of($class, AbstractDirective::class) ||
+            ! is_subclass_of($class, DirectiveInterface::class)
         ) {
             return null;
         }
 
         if (
             $this->checkIfNeedsLaravel($class) &&
-            !$this->context->isBootstrapped()
+            ! $this->context->isBootstrapped()
         ) {
             $this->laravelBootstrapperContext->bootstrap();
             $this->context->setBootstrapped(true);
@@ -202,10 +204,11 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
     {
         try {
             $reflection = new \ReflectionClass($class);
-            if (!$reflection->hasMethod('shouldBootLaravel')) {
+            if (! $reflection->hasMethod('shouldBootLaravel')) {
                 return false;
             }
             $tempInstance = $reflection->newInstanceWithoutConstructor();
+
             return $tempInstance->shouldBootLaravel();
         } catch (\Throwable $e) {
             return false;
@@ -223,6 +226,6 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         $namespace = $match[1] ?? '';
         $class = basename($file, '.php');
 
-        return $namespace === '' ? $class : $namespace . '\\' . $class;
+        return $namespace === '' ? $class : $namespace.'\\'.$class;
     }
 }

@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
+use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\Directive\Records\ParameterRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Hydration\Hydrator;
+use AndyDefer\DomainStructures\Services\HydrationService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -21,7 +24,10 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class AbstractDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
+
     private LaravelBootstrapperContext $laravelBootstrapperContext;
+
+    private HydrationService $hydration;
 
     protected function setUp(): void
     {
@@ -29,6 +35,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
         $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
+        $this->hydration = new HydrationService;
     }
 
     private function createDirectiveWithContext(DirectiveContext $context): TestConcreteDirective
@@ -40,10 +47,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_arguments_are_set_correctly_via_context(): void
     {
-        $arguments = new ParameterCollection;
+        $arguments = new ParameterVOCollection;
         $arguments->add(
-            new ParameterRecord(name: 'name', value: 'John Doe'),
-            new ParameterRecord(name: 'email', value: 'john@example.com'),
+            new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING),
+            new ParameterVO(name: 'email', value: 'john@example.com', type: PrimitiveType::STRING),
         );
 
         $context = new DirectiveContext(
@@ -55,6 +62,7 @@ final class AbstractDirectiveTest extends UnitTestCase
         $context->setArguments($arguments);
 
         $directive = $this->createDirectiveWithContext($context);
+
 
         $this->assertSame('John Doe', $directive->argument('name'));
         $this->assertSame('john@example.com', $directive->argument('email'));
@@ -74,28 +82,10 @@ final class AbstractDirectiveTest extends UnitTestCase
         $this->assertNull($directive->argument('unknown'));
     }
 
-    public function test_argument_returns_null_when_value_is_boolean(): void
-    {
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'active', value: true));
-
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
-        $context->setArguments($arguments);
-
-        $directive = $this->createDirectiveWithContext($context);
-
-        $this->assertNull($directive->argument('active'));
-    }
-
     public function test_argument_returns_null_when_value_is_empty_string(): void
     {
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'comment', value: ''));
+        $arguments = new ParameterVOCollection;
+        $arguments->add(new ParameterVO(name: 'comment', value: '', type: PrimitiveType::STRING));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,
@@ -112,8 +102,8 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_true_when_argument_exists(): void
     {
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
+        $arguments = new ParameterVOCollection;
+        $arguments->add(new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,
@@ -130,8 +120,8 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_false_when_argument_does_not_exist(): void
     {
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'name', value: 'John Doe'));
+        $arguments = new ParameterVOCollection;
+        $arguments->add(new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,
@@ -148,8 +138,8 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_false_for_empty_string_value(): void
     {
-        $arguments = new ParameterCollection;
-        $arguments->add(new ParameterRecord(name: 'comment', value: ''));
+        $arguments = new ParameterVOCollection;
+        $arguments->add(new ParameterVO(name: 'comment', value: '', type: PrimitiveType::STRING));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,
@@ -168,11 +158,11 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_options_are_set_correctly_via_context(): void
     {
-        $options = new ParameterCollection;
+        $options = new ParameterVOCollection;
         $options->add(
-            new ParameterRecord(name: 'role', value: 'admin'),
-            new ParameterRecord(name: 'active', value: true),
-            new ParameterRecord(name: 'count', value: '10'),
+            new ParameterVO(name: 'role', value: 'admin', type: PrimitiveType::STRING),
+            new ParameterVO(name: 'active', value: true, type: PrimitiveType::BOOL),
+            new ParameterVO(name: 'count', value: 10, type: PrimitiveType::INT),
         );
 
         $context = new DirectiveContext(
@@ -187,7 +177,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
         $this->assertSame('admin', $directive->option('role'));
         $this->assertTrue($directive->option('active'));
-        $this->assertSame('10', $directive->option('count'));
+        $this->assertSame(10, $directive->option('count'));
     }
 
     public function test_option_returns_null_for_unknown_key(): void
@@ -206,8 +196,8 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_option_returns_null_for_empty_string_value(): void
     {
-        $options = new ParameterCollection;
-        $options->add(new ParameterRecord(name: 'role', value: ''));
+        $options = new ParameterVOCollection;
+        $options->add(new ParameterVO(name: 'role', value: '', type: PrimitiveType::STRING));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,
@@ -224,8 +214,8 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_true_when_option_exists(): void
     {
-        $options = new ParameterCollection;
-        $options->add(new ParameterRecord(name: 'force', value: true));
+        $options = new ParameterVOCollection;
+        $options->add(new ParameterVO(name: 'force', value: true, type: PrimitiveType::BOOL));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,
@@ -242,8 +232,8 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_false_when_option_does_not_exist(): void
     {
-        $options = new ParameterCollection;
-        $options->add(new ParameterRecord(name: 'force', value: true));
+        $options = new ParameterVOCollection;
+        $options->add(new ParameterVO(name: 'force', value: true, type: PrimitiveType::BOOL));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,
@@ -260,8 +250,8 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_false_for_empty_string_value(): void
     {
-        $options = new ParameterCollection;
-        $options->add(new ParameterRecord(name: 'role', value: ''));
+        $options = new ParameterVOCollection;
+        $options->add(new ParameterVO(name: 'role', value: '', type: PrimitiveType::STRING));
 
         $context = new DirectiveContext(
             laravelBootstrapper: $this->laravelBootstrapperContext,

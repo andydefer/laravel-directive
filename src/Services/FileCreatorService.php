@@ -203,7 +203,7 @@ class FileCreatorService
         $pascalSegments = $this->createPascalCaseSegments($segments, $context);
 
         $subPath = $pascalSegments->isNotEmpty() ? $pascalSegments->join('/') : '';
-        $fullPath = $subPath ? $subPath . '/' . $className : $className;
+        $fullPath = $subPath ? $subPath.'/'.$className : $className;
 
         $record = new PathSegmentsRecord(
             segments: $segmentsCollection,
@@ -235,7 +235,7 @@ class FileCreatorService
             return $baseNamespace;
         }
 
-        $namespace = $baseNamespace . '\\' . str_replace('/', '\\', $segments->subPath);
+        $namespace = $baseNamespace.'\\'.str_replace('/', '\\', $segments->subPath);
         $context->setBuiltNamespace($namespace);
 
         return $namespace;
@@ -345,13 +345,13 @@ class FileCreatorService
     private function buildDestinationPath(string $baseDirectory, PathSegmentsRecord $segments): string
     {
         $workingDir = rtrim($this->config->workingDirectory(), '/');
-        $directory = rtrim($workingDir . $baseDirectory, '/');
+        $directory = rtrim($workingDir.$baseDirectory, '/');
 
         if ($segments->subPath !== '') {
-            $directory .= '/' . $segments->subPath;
+            $directory .= '/'.$segments->subPath;
         }
 
-        return $directory . '/' . $segments->className . '.php';
+        return $directory.'/'.$segments->className.'.php';
     }
 
     /**
@@ -364,13 +364,13 @@ class FileCreatorService
     private function buildPath(string $baseDirectory, PathSegmentsRecord $segments): string
     {
         $workingDir = rtrim($this->config->workingDirectory(), '/');
-        $directory = rtrim($workingDir . $baseDirectory, '/');
+        $directory = rtrim($workingDir.$baseDirectory, '/');
 
         if ($segments->subPath !== '') {
-            $directory .= '/' . $segments->subPath;
+            $directory .= '/'.$segments->subPath;
         }
 
-        return $directory . '/' . $segments->className . '.php';
+        return $directory.'/'.$segments->className.'.php';
     }
 
     /**
@@ -418,7 +418,7 @@ class FileCreatorService
     {
         $context->addTransformationLog(
             'replaceVariables',
-            'replacing ' . $replacements->getPlaceholders()->count() . ' placeholders',
+            'replacing '.$replacements->getPlaceholders()->count().' placeholders',
             'done'
         );
     }

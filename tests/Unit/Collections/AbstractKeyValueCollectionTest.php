@@ -4,77 +4,78 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Collections;
 
-use AndyDefer\Directive\Collections\ParameterCollection;
-use AndyDefer\Directive\Records\ParameterRecord;
+use AndyDefer\Directive\Collections\ParameterVOCollection;
+use AndyDefer\Directive\Enums\PrimitiveType;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\Directive\ValueObjects\ParameterVO;
 
 final class AbstractKeyValueCollectionTest extends UnitTestCase
 {
     public function test_first_item_returns_first_element(): void
     {
-        $collection = new ParameterCollection;
-        $record1 = new ParameterRecord(name: 'first', value: 'value1');
-        $record2 = new ParameterRecord(name: 'second', value: 'value2');
+        $collection = new ParameterVOCollection;
+        $vo1 = new ParameterVO(name: 'first', value: 'value1', type: PrimitiveType::STRING);
+        $vo2 = new ParameterVO(name: 'second', value: 'value2', type: PrimitiveType::STRING);
 
-        $collection->add($record1, $record2);
+        $collection->add($vo1, $vo2);
 
-        $this->assertSame($record1, $collection->firstItem());
+        $this->assertSame($vo1, $collection->first());
     }
 
     public function test_first_item_returns_null_when_collection_empty(): void
     {
-        $collection = new ParameterCollection;
+        $collection = new ParameterVOCollection;
 
-        $this->assertNull($collection->firstItem());
+        $this->assertNull($collection->first());
     }
 
     public function test_first_item_returns_single_element(): void
     {
-        $collection = new ParameterCollection;
-        $record = new ParameterRecord(name: 'only', value: 'value');
+        $collection = new ParameterVOCollection;
+        $vo = new ParameterVO(name: 'only', value: 'value', type: PrimitiveType::STRING);
 
-        $collection->add($record);
+        $collection->add($vo);
 
-        $this->assertSame($record, $collection->firstItem());
+        $this->assertSame($vo, $collection->first());
     }
 
     public function test_last_item_returns_last_element(): void
     {
-        $collection = new ParameterCollection;
-        $record1 = new ParameterRecord(name: 'first', value: 'value1');
-        $record2 = new ParameterRecord(name: 'second', value: 'value2');
+        $collection = new ParameterVOCollection;
+        $vo1 = new ParameterVO(name: 'first', value: 'value1', type: PrimitiveType::STRING);
+        $vo2 = new ParameterVO(name: 'second', value: 'value2', type: PrimitiveType::STRING);
 
-        $collection->add($record1, $record2);
+        $collection->add($vo1, $vo2);
 
-        $this->assertSame($record2, $collection->lastItem());
+        $this->assertSame($vo2, $collection->last());
     }
 
     public function test_last_item_returns_null_when_collection_empty(): void
     {
-        $collection = new ParameterCollection;
+        $collection = new ParameterVOCollection;
 
-        $this->assertNull($collection->lastItem());
+        $this->assertNull($collection->last());
     }
 
     public function test_last_item_returns_single_element(): void
     {
-        $collection = new ParameterCollection;
-        $record = new ParameterRecord(name: 'only', value: 'value');
+        $collection = new ParameterVOCollection;
+        $vo = new ParameterVO(name: 'only', value: 'value', type: PrimitiveType::STRING);
 
-        $collection->add($record);
+        $collection->add($vo);
 
-        $this->assertSame($record, $collection->lastItem());
+        $this->assertSame($vo, $collection->last());
     }
 
     public function test_first_item_and_last_item_return_same_element_when_only_one(): void
     {
-        $collection = new ParameterCollection;
-        $record = new ParameterRecord(name: 'unique', value: 'value');
+        $collection = new ParameterVOCollection;
+        $vo = new ParameterVO(name: 'unique', value: 'value', type: PrimitiveType::STRING);
 
-        $collection->add($record);
+        $collection->add($vo);
 
-        $this->assertSame($collection->firstItem(), $collection->lastItem());
-        $this->assertSame($record, $collection->firstItem());
-        $this->assertSame($record, $collection->lastItem());
+        $this->assertSame($collection->first(), $collection->last());
+        $this->assertSame($vo, $collection->first());
+        $this->assertSame($vo, $collection->last());
     }
 }

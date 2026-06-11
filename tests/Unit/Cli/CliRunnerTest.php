@@ -12,6 +12,7 @@ use AndyDefer\Directive\Tests\UnitTestCase;
 final class CliRunnerTest extends UnitTestCase
 {
     private static ?string $appRoot = null;
+
     private string $originalCwd;
 
     public static function setUpBeforeClass(): void
@@ -50,18 +51,18 @@ final class CliRunnerTest extends UnitTestCase
     /**
      * Exécute une directive et retourne le code de sortie et la sortie capturée
      *
-     * @param CliRunner $runner L'instance du runner
-     * @param array<string> $argv Les arguments de la ligne de commande
-     * @return array{exitCode: int, output: string}
+     * @param  CliRunner  $runner  L'instance du runner
+     * @param  array<string>  $argv  Les arguments de la ligne de commande
+     * @return array{exit_code: int, output: string}
      */
     private function runDirective(CliRunner $runner, array $argv): array
     {
         ob_start();
-        $exitCode = $runner->run($argv);
+        $exit_code = $runner->run($argv);
         $output = ob_get_clean();
 
         return [
-            'exitCode' => $exitCode,
+            'exit_code' => $exit_code,
             'output' => $output,
         ];
     }
@@ -69,17 +70,17 @@ final class CliRunnerTest extends UnitTestCase
     /**
      * Exécute une directive et retourne uniquement le code de sortie (supprime la sortie)
      *
-     * @param CliRunner $runner L'instance du runner
-     * @param array<string> $argv Les arguments de la ligne de commande
+     * @param  CliRunner  $runner  L'instance du runner
+     * @param  array<string>  $argv  Les arguments de la ligne de commande
      * @return int Le code de sortie
      */
     private function runDirectiveSilent(CliRunner $runner, array $argv): int
     {
         ob_start();
-        $exitCode = $runner->run($argv);
+        $exit_code = $runner->run($argv);
         ob_end_clean();
 
-        return $exitCode;
+        return $exit_code;
     }
 
     private static function createRealisticLaravelStructure(string $appRoot): void
@@ -91,7 +92,7 @@ final class CliRunnerTest extends UnitTestCase
         ];
 
         foreach ($directories as $dir) {
-            if (!is_dir($appRoot . $dir)) {
+            if (! is_dir($appRoot . $dir)) {
                 mkdir($appRoot . $dir, 0777, true);
             }
         }
@@ -255,7 +256,7 @@ PHP;
 
     private static function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
@@ -275,81 +276,81 @@ PHP;
 
     public function test_runner_finds_app_directive(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', 'user-create', 'John Doe', 'john@example.com']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('User John Doe (john@example.com) created', $result['output']);
     }
 
     public function test_runner_finds_app_directive_with_option(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', 'user-create', 'Jane Doe', 'jane@example.com', '--admin']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('User Jane Doe (jane@example.com) created as admin', $result['output']);
     }
 
     public function test_runner_finds_another_app_directive(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', 'cache-clear']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('Cache cleared', $result['output']);
     }
 
     public function test_runner_handles_force_option(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', 'cache-clear', '--force']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('Cache cleared (forced)', $result['output']);
     }
 
     public function test_runner_displays_all_directives(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', '--list']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('user-create', $result['output']);
         $this->assertStringContainsString('cache-clear', $result['output']);
     }
 
     public function test_runner_returns_not_found_for_unknown(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
-        $exitCode = $this->runDirectiveSilent($runner, ['directive', 'unknown-command']);
+        $exit_code = $this->runDirectiveSilent($runner, ['directive', 'unknown-command']);
 
-        $this->assertSame(3, $exitCode);
+        $this->assertSame(3, $exit_code);
     }
 
     public function test_runner_shows_help(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', '--help']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('Directive System', $result['output']);
     }
 
     public function test_runner_shows_version(): void
     {
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', '--version']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('Laravel Directive', $result['output']);
     }
 
@@ -395,15 +396,15 @@ PHP;
 
         file_put_contents($appRoot . '/app/Directives/AliasTestDirective.php', $content);
 
-        if (!class_exists('App\\Directives\\AliasTestDirective', false)) {
+        if (! class_exists('App\\Directives\\AliasTestDirective', false)) {
             require_once $appRoot . '/app/Directives/AliasTestDirective.php';
         }
 
-        $runner = new CliRunner();
+        $runner = new CliRunner;
 
         $result = $this->runDirective($runner, ['directive', 'alias']);
 
-        $this->assertSame(0, $result['exitCode']);
+        $this->assertSame(0, $result['exit_code']);
         $this->assertStringContainsString('Alias works!', $result['output']);
     }
 }

@@ -43,11 +43,11 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
         $argv = array_merge(['directive', $signature], $arguments);
 
         ob_start();
-        $exitCode = $this->kernel->run($argv);
+        $exit_code = $this->kernel->run($argv);
         $output = ob_get_clean();
 
         return [
-            'exitCode' => $exitCode,
+            'exit_code' => $exit_code,
             'output' => $output,
         ];
     }
@@ -120,7 +120,7 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
 
         $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exitCode'], 'Output: ' . $response['output']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code'], 'Output: ' . $response['output']);
         $this->assertStringContainsString('Testing Laravel database integration', $response['output']);
         $this->assertStringContainsString('Laravel is available', $response['output']);
         $this->assertStringContainsString('Found 3 users in database', $response['output']);
@@ -134,7 +134,7 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
 
         $response = $this->runDirective('test-laravel-db', ['--verbose']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code']);
         $this->assertNotEmpty($response['output']);
     }
 
@@ -144,7 +144,7 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
 
         $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code']);
         $this->assertStringContainsString('John Doe', $response['output']);
         $this->assertStringContainsString('john@example.com', $response['output']);
         $this->assertStringContainsString('Jane Smith', $response['output']);
@@ -155,7 +155,7 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
     {
         $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code']);
         $this->assertStringContainsString('Found 0 users in database', $response['output']);
         $this->assertStringContainsString('No verified users found', $response['output']);
         $this->assertStringContainsString('Found 0 published posts', $response['output']);

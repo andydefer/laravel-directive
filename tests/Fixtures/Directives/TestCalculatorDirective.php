@@ -6,12 +6,10 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 class TestCalculatorDirective extends AbstractDirective
 {
-
     public function getSignature(): string
     {
         return 'calculator {operation} {a} {b?}';

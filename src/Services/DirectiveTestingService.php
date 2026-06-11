@@ -7,17 +7,18 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Collections\ParameterCollection;
+use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Configs\DirectiveTestingConfig;
-use AndyDefer\Directive\Contracts\DirectiveTestingServiceInterface;
 use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
+use AndyDefer\Directive\Contracts\DirectiveTestingServiceInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\Steps\BootstrapLaravelStep;
@@ -25,17 +26,21 @@ use AndyDefer\Directive\Steps\BuildContainerStep;
 use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
 use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
 use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
-use AndyDefer\Directive\Steps\DirectiveTestingStepInterface;
 use AndyDefer\Directive\Steps\StartDatabaseStep;
 use AndyDefer\Directive\Testing\ClosureDirective;
+use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 
 class DirectiveTestingService implements DirectiveTestingServiceInterface
 {
     private DirectiveTestingContext $context;
+
     private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
+
     private ?DirectiveInteractionService $interaction = null;
+
+    private PrimitiveTypeConverterService $typeConverter;
 
     public function __construct(
         ?object $application = null,
@@ -44,6 +49,7 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
     ) {
         $this->context = $context ?? new DirectiveTestingContext;
         $this->context->setConfig($config ?? new DirectiveTestingConfig);
+        $this->typeConverter = new PrimitiveTypeConverterService();
 
         $this->initializeInteraction();
 
@@ -62,6 +68,7 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
             $this->context->setKernel($kernel);
 
             $this->laravelBootstrapperContext = $application->make(LaravelBootstrapperContext::class);
+
             return;
         }
 
@@ -113,7 +120,7 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
         ];
 
         foreach ($directories as $directory) {
-            if (!is_dir($directory)) {
+            if (! is_dir($directory)) {
                 mkdir($directory, 0777, true);
             }
         }
@@ -227,8 +234,8 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
 
     public function registerDirective(string $class): void
     {
-        if (!class_exists($class)) {
-            throw new \InvalidArgumentException("Directive class {$class} does not exist");
+        if (! class_exists($class)) {
+            throw new InvalidArgumentException("Directive class {$class} does not exist");
         }
 
         if ($this->context->isIntegratedMode() && $this->context->getLaravelApp() !== null) {
@@ -267,12 +274,14 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
     {
         $this->registerDirective($class);
         $signature = $this->extractSignatureFromClass($class);
+
         return $this->runDirective($signature, $arguments);
     }
 
     public function registerAndRunInstance(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
     {
         $this->registerDirectiveInstance($directive);
+
         return $this->runDirective($directive->getSignature(), $arguments);
     }
 
@@ -288,18 +297,20 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
         // Vérifier d'abord dans ClosureRegistry
         $directive = $this->context->getClosureRegistry()->get($signature);
         if ($directive !== null) {
-            if ($directive->shouldBootLaravel() && !$this->context->isIntegratedMode() && !$this->context->isInitialized()) {
+            if ($directive->shouldBootLaravel() && ! $this->context->isIntegratedMode() && ! $this->context->isInitialized()) {
                 $this->initializeIsolatedEnvironment();
             }
+
             return $this->executeDirectly($directive, $arguments);
         }
 
         // Vérifier dans Registry
         $directive = $this->context->getRegistry()->getDirective($signature);
         if ($directive !== null) {
-            if ($directive->shouldBootLaravel() && !$this->context->isIntegratedMode() && !$this->context->isInitialized()) {
+            if ($directive->shouldBootLaravel() && ! $this->context->isIntegratedMode() && ! $this->context->isInitialized()) {
                 $this->initializeIsolatedEnvironment();
             }
+
             return $this->executeDirectly($directive, $arguments);
         }
 
@@ -308,7 +319,7 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
 
         if ($kernel === null) {
             return new DirectiveResponseRecord(
-                exitCode: ExitCode::NOT_FOUND,
+                exit_code: ExitCode::NOT_FOUND,
                 output: "Kernel not available. Cannot execute directive: {$signature}",
             );
         }
@@ -316,13 +327,13 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
         $argv = array_merge(['directive', $signature], $arguments);
 
         ob_start();
-        $exitCode = $kernel->run($argv);
+        $exit_code = $kernel->run($argv);
         $output = ob_get_clean();
 
         $this->context->addExecutedDirective($signature);
 
         return new DirectiveResponseRecord(
-            exitCode: $exitCode,
+            exit_code: $exit_code,
             output: $output,
         );
     }
@@ -391,13 +402,14 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
     {
         if ($this->context->isIntegratedMode() && $this->context->getLaravelApp() !== null) {
             $directive = $this->context->getLaravelApp()->make($class);
+
             return $directive->getSignature();
         }
 
         $reflection = new \ReflectionClass($class);
         $directive = $reflection->newInstanceWithoutConstructor();
 
-        if (!method_exists($directive, 'getSignature')) {
+        if (! method_exists($directive, 'getSignature')) {
             throw new \RuntimeException("Class {$class} does not have a getSignature method");
         }
 
@@ -462,8 +474,30 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
                 shouldBootLaravel: $directive->shouldBootLaravel(),
             );
 
-            $context->setArguments(ParameterCollection::fromFlatArguments($parsed->arguments));
-            $context->setOptions(ParameterCollection::fromFlatOptions($parsed->options));
+            // Convertir les arguments parsés en ParameterVOCollection
+            $argumentsVO = new ParameterVOCollection;
+            foreach ($parsed->arguments as $argument) {
+                $value = $argument->value;
+                $detectedType = $this->detectTypeFromString($value);
+                $convertedValue = $this->typeConverter->convert($value, $detectedType);
+                $argumentsVO->add(new ParameterVO($argument->name, $convertedValue, $detectedType));
+            }
+
+            // Convertir les options parsées en ParameterVOCollection
+            $optionsVO = new ParameterVOCollection;
+            foreach ($parsed->options as $option) {
+                $value = $option->value;
+                if ($value === 'true') {
+                    $value = true;
+                } elseif ($value === 'false') {
+                    $value = false;
+                }
+                $detectedType = $this->typeConverter->detectType($value);
+                $optionsVO->add(new ParameterVO($option->name, $value, $detectedType));
+            }
+
+            $context->setArguments($argumentsVO);
+            $context->setOptions($optionsVO);
             $context->setVariadicArguments($parsed->variadic_arguments);
 
             $reflection = new \ReflectionClass($directive);
@@ -471,8 +505,8 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
 
             if ($constructor === null) {
                 return new DirectiveResponseRecord(
-                    exitCode: ExitCode::FAILURE,
-                    output: "Directive has no constructor",
+                    exit_code: ExitCode::FAILURE,
+                    output: 'Directive has no constructor',
                 );
             }
 
@@ -489,6 +523,7 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
                     } else {
                         $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
                     }
+
                     continue;
                 }
 
@@ -531,14 +566,14 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
 
             ob_start();
             $bufferStarted = true;
-            $exitCode = $hydratedDirective->execute();
+            $exit_code = $hydratedDirective->execute();
             $output = ob_get_clean();
 
             $directiveName = explode(' ', $fullSignature)[0];
             $this->context->addExecutedDirective($directiveName);
 
             return new DirectiveResponseRecord(
-                exitCode: $exitCode,
+                exit_code: $exit_code,
                 output: $output,
             );
         } catch (InvalidArgumentException $e) {
@@ -547,7 +582,7 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
             }
 
             return new DirectiveResponseRecord(
-                exitCode: ExitCode::INVALID_ARGUMENT,
+                exit_code: ExitCode::INVALID_ARGUMENT,
                 output: $e->getMessage(),
             );
         } catch (\Throwable $e) {
@@ -556,15 +591,37 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
             }
 
             return new DirectiveResponseRecord(
-                exitCode: ExitCode::FAILURE,
+                exit_code: ExitCode::FAILURE,
                 output: $e->getMessage(),
             );
         }
     }
 
+    private function detectTypeFromString(string $value): PrimitiveType
+    {
+        $lowerValue = strtolower($value);
+
+        if ($lowerValue === 'null') {
+            return PrimitiveType::NULL;
+        }
+
+        if ($lowerValue === 'true' || $lowerValue === 'false') {
+            return PrimitiveType::BOOL;
+        }
+
+        if (is_numeric($value)) {
+            if (str_contains($value, '.') || str_contains($value, 'e')) {
+                return PrimitiveType::FLOAT;
+            }
+            return PrimitiveType::INT;
+        }
+
+        return PrimitiveType::STRING;
+    }
+
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 

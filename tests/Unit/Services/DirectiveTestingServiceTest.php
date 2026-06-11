@@ -21,6 +21,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 final class DirectiveTestingServiceTest extends UnitTestCase
 {
     private DirectiveTestingService $service;
+
     private DirectiveTestingContext $context;
 
     protected function setUp(): void
@@ -52,6 +53,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $directive = $this->service->createTestDirective('test-calculator', function ($d) {
             $d->line('Calculator executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -65,10 +67,12 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $directive1 = $this->service->createTestDirective('test-1', function ($d) {
             $d->line('Test 1');
+
             return ExitCode::SUCCESS;
         });
         $directive2 = $this->service->createTestDirective('test-2', function ($d) {
             $d->line('Test 2');
+
             return ExitCode::SUCCESS;
         });
 
@@ -85,6 +89,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         // Créer d'abord une directive temporaire avec une classe concrète
         $directive = $this->service->createTestDirective('test-by-class', function ($d) {
             $d->line('Executed by class');
+
             return ExitCode::SUCCESS;
         });
 
@@ -125,12 +130,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $directive = $this->service->createTestDirective('test-register-run', function ($d) {
             $d->line('Register and run executed');
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->registerAndRunInstance($directive, []);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Register and run executed', $response->output);
     }
 
@@ -139,6 +145,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         // Créer une directive et l'enregistrer par classe
         $directive = $this->service->createTestDirective('test-register-run-class', function ($d) {
             $d->line('Register and run by class executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -147,7 +154,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $response = $this->service->runDirective('test-register-run-class');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Register and run by class executed', $response->output);
     }
 
@@ -157,6 +164,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $directive = $this->service->createTestDirective('test-run-method', function ($d) {
             $d->line('Run method executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -166,7 +174,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         // runDirective est l'équivalent pour les signatures
         $response = $this->service->runDirective('test-run-method');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Run method executed', $response->output);
     }
 
@@ -177,12 +185,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->service->createTestDirective('calculator', function ($d) {
             $result = 5 + 3;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calculator');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('8', $response->output);
     }
 
@@ -190,7 +199,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $response = $this->service->runDirective('non-existent-directive');
 
-        $this->assertSame(ExitCode::NOT_FOUND, $response->exitCode);
+        $this->assertSame(ExitCode::NOT_FOUND, $response->exit_code);
         $this->assertStringContainsString('not found', $response->output);
     }
 
@@ -203,13 +212,14 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->service->createTestDirective('test-closure', function ($d) use (&$executed) {
             $executed = true;
             $d->line('Closure executed');
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('test-closure');
 
         $this->assertTrue($executed);
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Closure executed', $response->output);
     }
 
@@ -221,7 +231,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $response = $this->service->runDirective('test-error');
 
-        $this->assertSame(ExitCode::FAILURE, $response->exitCode);
+        $this->assertSame(ExitCode::FAILURE, $response->exit_code);
     }
 
     // ==================== Calculator Operation Tests ====================
@@ -233,12 +243,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a + $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-add', ['15', '25']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('40', $response->output);
     }
 
@@ -249,12 +260,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a - $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-sub', ['100', '30']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('70', $response->output);
     }
 
@@ -265,12 +277,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a * $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-mul', ['12', '12']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('144', $response->output);
     }
 
@@ -281,12 +294,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a / $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-div', ['100', '4']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('25', $response->output);
     }
 
@@ -298,17 +312,19 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             if ($b === 0) {
                 $d->error('Division by zero');
+
                 return ExitCode::INVALID_ARGUMENT;
             }
             $a = (int) $d->argument('a');
             $result = $a / $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-div-zero', ['10', '0']);
 
-        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
         $this->assertStringContainsString('Division by zero', $response->output);
     }
 
@@ -319,12 +335,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a + $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-add', ['10']);
 
-        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
         $this->assertStringContainsString('Not enough arguments', $response->output);
     }
 
@@ -334,6 +351,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $this->service->createTestDirective('track-test', function ($d) {
             $d->line('executed');
+
             return ExitCode::SUCCESS;
         });
 
@@ -347,6 +365,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $this->service->createTestDirective('step-test', function ($d) {
             $d->line('test');
+
             return ExitCode::SUCCESS;
         });
 
@@ -362,12 +381,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $this->service->createTestDirective('verbose-test', function ($d) {
             $d->line('Executed');
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('verbose-test', ['--verbose']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     }
 
     // ==================== Service Lifecycle Tests ====================
@@ -388,11 +408,12 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $newService->createTestDirective('new-test', function ($d) {
             $d->line('works');
+
             return ExitCode::SUCCESS;
         });
         $response = $newService->runDirective('new-test');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('works', $response->output);
 
         $newService->destroy();
@@ -422,12 +443,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $this->service->createTestDirective('test-empty', function ($d) {
             $d->line('No arguments received');
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('test-empty', []);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('No arguments received', $response->output);
     }
 
@@ -437,12 +459,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $args = $d->getVariadicArguments()->toArray();
             $argsString = implode(', ', $args);
             $d->line("Received: {$argsString}");
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('test-special', ['hello-world', 'foo_bar', 'test@domain.com']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     }
 
     public function test_create_multiple_test_directives(): void
@@ -452,20 +475,22 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->service->createTestDirective('test-1', function ($d) use (&$executed) {
             $executed[] = 'test-1';
             $d->line('Test 1 executed');
+
             return ExitCode::SUCCESS;
         });
 
         $this->service->createTestDirective('test-2', function ($d) use (&$executed) {
             $executed[] = 'test-2';
             $d->line('Test 2 executed');
+
             return ExitCode::SUCCESS;
         });
 
         $response1 = $this->service->runDirective('test-1');
         $response2 = $this->service->runDirective('test-2');
 
-        $this->assertSame(ExitCode::SUCCESS, $response1->exitCode);
-        $this->assertSame(ExitCode::SUCCESS, $response2->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response1->exit_code);
+        $this->assertSame(ExitCode::SUCCESS, $response2->exit_code);
         $this->assertStringContainsString('Test 1 executed', $response1->output);
         $this->assertStringContainsString('Test 2 executed', $response2->output);
         $this->assertContains('test-1', $executed);
@@ -481,12 +506,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a * $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-mul', ['4', '5']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('20', $response->output);
     }
 
@@ -497,12 +523,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a * $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-mul', ['4', '5']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringNotContainsString('999', $response->output);
     }
 
@@ -513,12 +540,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a * $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-mul', ['4', '5']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertMatchesRegularExpression('/20/', $response->output);
     }
 
@@ -529,12 +557,13 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $b = (int) $d->argument('b');
             $result = $a + $b;
             $d->line((string) $result);
+
             return ExitCode::SUCCESS;
         });
 
         $response = $this->service->runDirective('calc-add', ['100', '50']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('150', $response->output);
         $this->assertStringNotContainsString('error', $response->output);
         $this->assertIsString($response->output);
@@ -563,6 +592,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $directive = $this->service->createTestDirective('test-clear', function ($d) {
             $d->line('Test');
+
             return ExitCode::SUCCESS;
         });
         $this->service->registerDirectiveInstance($directive);
@@ -612,6 +642,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $directive = $this->service->createTestDirective('test-register-run-class', function ($d) {
             $d->line('Success via registerAndRun');
+
             return ExitCode::SUCCESS;
         });
 
@@ -619,7 +650,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $response = $this->service->registerAndRun(TestConcreteDirective::class, []);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     }
 
     // ==================== Tests pour la méthode run() ====================
@@ -628,6 +659,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $directive = $this->service->createTestDirective('test-run-class', function ($d) {
             $d->line('Success via run method');
+
             return ExitCode::SUCCESS;
         });
 
@@ -635,7 +667,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $response = $this->service->run(TestConcreteDirective::class, []);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     }
 
     // ==================== Tests pour le nettoyage ====================

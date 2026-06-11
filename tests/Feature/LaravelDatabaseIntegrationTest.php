@@ -43,11 +43,11 @@ final class LaravelDatabaseIntegrationTest extends IntegrationTestCase
         $argv = array_merge(['directive', $signature], $arguments);
 
         ob_start();
-        $exitCode = $this->kernel->run($argv);
+        $exit_code = $this->kernel->run($argv);
         $output = ob_get_clean();
 
         return [
-            'exitCode' => $exitCode,
+            'exit_code' => $exit_code,
             'output' => $output,
         ];
     }
@@ -120,7 +120,7 @@ final class LaravelDatabaseIntegrationTest extends IntegrationTestCase
 
         $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exitCode'], 'Output: ' . $response['output']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code'], 'Output: ' . $response['output']);
         $this->assertStringContainsString('Laravel is available', $response['output']);
         $this->assertStringContainsString('3 users in database', $response['output']);
         $this->assertStringContainsString('2 active users', $response['output']);
@@ -132,7 +132,7 @@ final class LaravelDatabaseIntegrationTest extends IntegrationTestCase
 
         $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code']);
         $this->assertStringContainsString('User', $response['output']);
         $this->assertStringContainsString('Email', $response['output']);
         $this->assertStringContainsString('John Doe', $response['output']);
@@ -143,7 +143,7 @@ final class LaravelDatabaseIntegrationTest extends IntegrationTestCase
     {
         $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exitCode']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code']);
         $this->assertStringContainsString('0 users in database', $response['output']);
         $this->assertStringContainsString('No verified users found', $response['output']);
         $this->assertStringContainsString('0 published posts', $response['output']);

@@ -20,7 +20,7 @@ use AndyDefer\Directive\Services\SignatureValidationService;
  *
  * @example
  * $kernel = new DirectiveKernel($executionService, $validator, $renderer);
- * $exitCode = $kernel->run(['directive', 'user:create', 'John']);
+ * $exit_code = $kernel->run(['directive', 'user:create', 'John']);
  *
  * @author Andy Defer
  */

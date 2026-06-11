@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Testing;
 
 use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Collections\ParameterCollection;
+use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Configs\EnvDirectiveConfig;
 use AndyDefer\Directive\Configs\EnvDirectiveNamingConfig;
 use AndyDefer\Directive\Configs\EnvSignatureValidationConfig;
@@ -17,6 +17,7 @@ use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -26,7 +27,9 @@ use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\Directive\Services\PrimitiveTypeConverterService;
 use AndyDefer\Directive\Services\SignatureValidationService;
+use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
@@ -34,32 +37,41 @@ use InvalidArgumentException;
 
 /**
  * @deprecated since version 3.8.0, will be removed in 4.0.0
- * 
+ *
  * Use DirectiveTestingService instead.
- * 
+ *
  * Reasons for deprecation:
  * - Implicit coupling and hidden state
  * - Violates Single Responsibility Principle
  * - Forces inheritance over composition
  * - Untraceable execution flow
  * - Difficult to test in isolation
- * 
  * @see DirectiveTestingService
  * @see DirectiveTestingContext
  */
-
 trait InteractsWithDirectives
 {
     private Container $directiveContainer;
+
     private DirectiveKernel $directiveKernel;
+
     private TestDirectiveRegistry $directiveRegistry;
+
     private DirectiveInteractionService $interaction;
+
     private bool $directiveTestingInitialized = false;
+
     private string $directiveTempDir;
+
     private string $originalCwd;
+
     private ?Application $laravelApp = null;
+
     private bool $bootLaravelEnabled = false;
+
     private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
+
+    private PrimitiveTypeConverterService $typeConverter;
 
     protected function initDirectiveTesting(bool $bootLaravel = false): void
     {
@@ -67,6 +79,7 @@ trait InteractsWithDirectives
             return;
         }
 
+        $this->typeConverter = new PrimitiveTypeConverterService();
         $this->bootLaravelEnabled = $bootLaravel;
         $this->directiveTempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
         mkdir($this->directiveTempDir, 0777, true);
@@ -325,11 +338,11 @@ PHP;
         $argv = array_merge(['directive', $className], $arguments);
 
         ob_start();
-        $exitCode = $this->directiveKernel->run($argv);
+        $exit_code = $this->directiveKernel->run($argv);
         $output = ob_get_clean();
 
         return new DirectiveResponseRecord(
-            exitCode: $exitCode,
+            exit_code: $exit_code,
             output: $output,
         );
     }
@@ -356,8 +369,29 @@ PHP;
                 shouldBootLaravel: $directive->shouldBootLaravel(),
             );
 
-            $context->setArguments(ParameterCollection::fromFlatArguments($parsed->arguments));
-            $context->setOptions(ParameterCollection::fromFlatOptions($parsed->options));
+            // Convertir les arguments parsés en ParameterVOCollection
+            $argumentsVO = new ParameterVOCollection;
+            foreach ($parsed->arguments as $name => $value) {
+                $detectedType = $this->typeConverter->detectType($value);
+                $convertedValue = $this->typeConverter->convert($value, $detectedType);
+                $argumentsVO->add(new ParameterVO($name, $convertedValue, $detectedType));
+            }
+
+            // Convertir les options parsées en ParameterVOCollection
+            $optionsVO = new ParameterVOCollection;
+            foreach ($parsed->options as $option) {
+                $value = $option->value;
+                if ($value === 'true') {
+                    $value = true;
+                } elseif ($value === 'false') {
+                    $value = false;
+                }
+                $detectedType = $this->typeConverter->detectType($value);
+                $optionsVO->add(new ParameterVO($option->name, $value, $detectedType));
+            }
+
+            $context->setArguments($argumentsVO);
+            $context->setOptions($optionsVO);
             $context->setVariadicArguments($parsed->variadic_arguments);
 
             $reflection = new \ReflectionClass($directive);
@@ -366,9 +400,10 @@ PHP;
             if ($constructor === null) {
                 ob_start();
                 $bufferStarted = true;
-                $exitCode = $directive->execute();
+                $exit_code = $directive->execute();
                 $output = ob_get_clean();
-                return new DirectiveResponseRecord(exitCode: $exitCode, output: $output);
+
+                return new DirectiveResponseRecord(exit_code: $exit_code, output: $output);
             }
 
             $parameters = $constructor->getParameters();
@@ -384,6 +419,7 @@ PHP;
                     } else {
                         $args[] = null;
                     }
+
                     continue;
                 }
 
@@ -426,11 +462,11 @@ PHP;
 
             ob_start();
             $bufferStarted = true;
-            $exitCode = $hydratedDirective->execute();
+            $exit_code = $hydratedDirective->execute();
             $output = ob_get_clean();
 
             return new DirectiveResponseRecord(
-                exitCode: $exitCode,
+                exit_code: $exit_code,
                 output: $output,
             );
         } catch (InvalidArgumentException $e) {
@@ -439,7 +475,7 @@ PHP;
             }
 
             return new DirectiveResponseRecord(
-                exitCode: ExitCode::INVALID_ARGUMENT,
+                exit_code: ExitCode::INVALID_ARGUMENT,
                 output: $e->getMessage(),
             );
         } catch (\Throwable $e) {
@@ -448,7 +484,7 @@ PHP;
             }
 
             return new DirectiveResponseRecord(
-                exitCode: ExitCode::FAILURE,
+                exit_code: ExitCode::FAILURE,
                 output: $e->getMessage(),
             );
         }
@@ -483,7 +519,7 @@ PHP;
 
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 

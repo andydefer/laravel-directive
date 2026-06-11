@@ -42,7 +42,7 @@ class DirectiveNamingService
             $className .= $this->capitalizeSegment($part);
         }
 
-        return $className . $this->config->classSuffix();
+        return $className.$this->config->classSuffix();
     }
 
     /**
@@ -53,7 +53,7 @@ class DirectiveNamingService
      */
     public function generateSignatureWithOption(string $name): string
     {
-        return $name . ' ' . $this->config->optionPlaceholder();
+        return $name.' '.$this->config->optionPlaceholder();
     }
 
     /**
@@ -98,7 +98,7 @@ class DirectiveNamingService
     {
         $suffix = $this->config->classSuffix();
 
-        if (!str_ends_with($className, $suffix)) {
+        if (! str_ends_with($className, $suffix)) {
             return $this->convertToKebabCase($className);
         }
 
@@ -171,6 +171,7 @@ class DirectiveNamingService
     private function getDefaultDescription(string $signature): string
     {
         $template = $this->config->defaultDescriptionTemplate();
+
         return str_replace('{{signature}}', $signature, $template);
     }
 

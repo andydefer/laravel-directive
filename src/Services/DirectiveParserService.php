@@ -12,7 +12,6 @@ use AndyDefer\Directive\Collections\ParsedParameterCollection;
 use AndyDefer\Directive\Configs\DirectiveParserConfig;
 use AndyDefer\Directive\Contexts\ParameterParserContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
-use AndyDefer\Directive\Records\ArgumentSplitResultRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\Records\ParsedResultRecord;
 use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;

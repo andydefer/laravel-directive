@@ -26,6 +26,7 @@ class ArgumentSplitterService
         foreach ($argv as $item) {
             if ($item === $this->config->variadicStart()) {
                 $inVariadic = true;
+
                 continue;
             }
 
@@ -39,6 +40,7 @@ class ArgumentSplitterService
                     }
                 }
                 $variadicContent = '';
+
                 continue;
             }
 

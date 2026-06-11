@@ -78,7 +78,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         if ($this->originalDebug === false) {
             putenv('DIRECTIVE_DEBUG');
         } else {
-            putenv('DIRECTIVE_DEBUG=' . $this->originalDebug);
+            putenv('DIRECTIVE_DEBUG='.$this->originalDebug);
         }
 
         $this->laravelBootstrapperContext->reset();

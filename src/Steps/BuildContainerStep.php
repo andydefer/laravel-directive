@@ -18,7 +18,6 @@ use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\StepResultStatus;
 use AndyDefer\Directive\Enums\TestingStep;
-use AndyDefer\Directive\Factories\ContainerDirectiveFactory;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -29,6 +28,7 @@ use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
 use Illuminate\Container\Container;
+use Illuminate\Support\Facades\Facade;
 
 final class BuildContainerStep implements DirectiveTestingStepInterface
 {
@@ -47,15 +47,15 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             if ($laravelApp !== null) {
                 $container->instance('app', $laravelApp);
                 // Configurer les Facades pour utiliser ce container
-                \Illuminate\Support\Facades\Facade::setFacadeApplication($laravelApp);
+                Facade::setFacadeApplication($laravelApp);
             }
 
             $tempDir = $context->getTempDir();
             $bootLaravel = $context->shouldBootLaravel();
 
             // Register dispatchers
-            $container->singleton(RenderDispatcher::class, fn() => new RenderDispatcher);
-            $container->singleton(InputDispatcher::class, fn() => new InputDispatcher);
+            $container->singleton(RenderDispatcher::class, fn () => new RenderDispatcher);
+            $container->singleton(InputDispatcher::class, fn () => new InputDispatcher);
 
             // Register interaction service
             $container->singleton(DirectiveInteractionService::class, function ($c) {
@@ -69,15 +69,15 @@ final class BuildContainerStep implements DirectiveTestingStepInterface
             $context->setInteraction($interaction);
 
             // Register validation and naming services
-            $container->singleton(SignatureValidationService::class, fn() => new SignatureValidationService(new EnvSignatureValidationConfig));
-            $container->singleton(DirectiveNamingService::class, fn() => new DirectiveNamingService(new EnvDirectiveNamingConfig));
+            $container->singleton(SignatureValidationService::class, fn () => new SignatureValidationService(new EnvSignatureValidationConfig));
+            $container->singleton(DirectiveNamingService::class, fn () => new DirectiveNamingService(new EnvDirectiveNamingConfig));
 
             // Register Laravel bootstrapper context
             $container->singleton(LaravelBootstrapperContext::class, function () use ($bootLaravel, $tempDir) {
                 $bootstrapperContext = new LaravelBootstrapperContext;
 
                 if ($bootLaravel && $tempDir !== null) {
-                    $bootstrapperContext->setCustomBootstrapPath($tempDir . '/bootstrap/app.php');
+                    $bootstrapperContext->setCustomBootstrapPath($tempDir.'/bootstrap/app.php');
                 }
 
                 return $bootstrapperContext;

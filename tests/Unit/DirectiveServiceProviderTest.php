@@ -14,8 +14,8 @@ use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\FileCreationContext;
 use AndyDefer\Directive\Contexts\FileSystemContext;
-use AndyDefer\Directive\Contexts\LaravelContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contexts\LaravelContext;
 use AndyDefer\Directive\Contexts\ParameterParserContext;
 use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
@@ -39,6 +39,7 @@ use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\FileCreatorService;
+use AndyDefer\Directive\Services\FileSystemService;
 use AndyDefer\Directive\Services\OptionParserService;
 use AndyDefer\Directive\Services\ParameterExtractorService;
 use AndyDefer\Directive\Services\ParameterOrderValidatorService;
@@ -60,6 +61,7 @@ use Illuminate\Container\Container;
 final class DirectiveServiceProviderTest extends UnitTestCase
 {
     private Container $container;
+
     private DirectiveServiceProvider $provider;
 
     protected function setUp(): void
@@ -369,7 +371,7 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     {
         $this->provider->register();
         $service = $this->container->make(FileSystemInterface::class);
-        $this->assertInstanceOf(\AndyDefer\Directive\Services\FileSystemService::class, $service);
+        $this->assertInstanceOf(FileSystemService::class, $service);
     }
 
     public function test_file_creator_service_is_registered_as_singleton(): void
@@ -634,7 +636,6 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     }
 
     // ==================== Resolution Tests ====================
-
 
     // ==================== Additional Context Resolution Tests ====================
 

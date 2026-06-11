@@ -12,20 +12,24 @@ use Throwable;
 
 /**
  * Context responsible for bootstrapping Laravel when needed.
- * 
+ *
  * This context manages the state of Laravel bootstrap process,
  * caching the application instance and any errors that occur.
  */
 class LaravelBootstrapperContext implements LaravelBootstrapperInterface
 {
     private bool $bootstrapped = false;
+
     private ?object $application = null;
+
     private ?string $error = null;
+
     private ?string $customBootstrapPath = null;
 
     public function setCustomBootstrapPath(string $path): self
     {
         $this->customBootstrapPath = $path;
+
         return $this;
     }
 
@@ -81,6 +85,7 @@ class LaravelBootstrapperContext implements LaravelBootstrapperInterface
 
         if (! $this->isValidBootstrapFile($bootstrapPath)) {
             $this->error = "Laravel bootstrap file not found at: {$bootstrapPath}";
+
             return false;
         }
 
@@ -88,16 +93,18 @@ class LaravelBootstrapperContext implements LaravelBootstrapperInterface
             $this->application = $this->loadApplication($bootstrapPath);
             $this->bootstrapConsoleKernel();
             $this->bootstrapped = true;
+
             return true;
         } catch (Throwable $exception) {
             $this->error = "Failed to bootstrap Laravel: {$exception->getMessage()}";
+
             return false;
         }
     }
 
     private function resolveBootstrapPath(): string
     {
-        return $this->customBootstrapPath ?? getcwd() . '/bootstrap/app.php';
+        return $this->customBootstrapPath ?? getcwd().'/bootstrap/app.php';
     }
 
     private function isValidBootstrapFile(string $path): bool
@@ -109,6 +116,7 @@ class LaravelBootstrapperContext implements LaravelBootstrapperInterface
     {
         /** @var object $app */
         $app = require $bootstrapPath;
+
         return $app;
     }
 

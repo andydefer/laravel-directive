@@ -6,7 +6,6 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveInteractionService;
 
 final class TestConcreteDirective extends AbstractDirective
 {

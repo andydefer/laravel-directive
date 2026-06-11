@@ -28,5 +28,4 @@ $app->singleton(
 // Démarrer les Facades
 Facade::setFacadeApplication($app);
 
-
 return $app;

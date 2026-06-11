@@ -25,7 +25,9 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveHydratorServiceTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
+
     private DirectiveHydratorService $service;
+
     private LaravelBootstrapperContext $laravelBootstrapperContext;
 
     protected function setUp(): void
@@ -49,6 +51,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             new StringTypedCollection,
             false,
         );
+
         return new TestDirective($context, $this->interaction);
     }
 
@@ -60,6 +63,7 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
             new StringTypedCollection,
             false,
         );
+
         return new TestVariadicDirective($context, $this->interaction);
     }
 
@@ -268,7 +272,6 @@ final class DirectiveHydratorServiceTest extends UnitTestCase
     {
 
         $blueprint = $this->service->hydrateBlueprint(TestDirective::class);
-
 
         $this->assertSame(TestDirective::class, $blueprint->class);
         $this->assertSame('test-directive', $blueprint->signature);

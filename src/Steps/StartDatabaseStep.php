@@ -7,11 +7,12 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Steps;
 
 use AndyDefer\Directive\Configs\DirectiveTestingConfig;
-use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
 use AndyDefer\Directive\Contexts\DirectiveTestingContext;
+use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
 use AndyDefer\Directive\Enums\StepResultStatus;
 use AndyDefer\Directive\Enums\TestingStep;
 use AndyDefer\Directive\Records\DatabaseConnectionRecord;
+use Illuminate\Database\Capsule\Manager;
 use PDO;
 use PDOException;
 
@@ -26,7 +27,7 @@ final class StartDatabaseStep implements DirectiveTestingStepInterface
 
     public function supports(DirectiveTestingContext $context): bool
     {
-        return $context->shouldBootLaravel() && !$context->hasDatabaseConnection();
+        return $context->shouldBootLaravel() && ! $context->hasDatabaseConnection();
     }
 
     public function execute(DirectiveTestingContext $context, callable $next): DirectiveTestingContext
@@ -37,8 +38,9 @@ final class StartDatabaseStep implements DirectiveTestingStepInterface
             $context->addStepResult(
                 step_name: TestingStep::START_DATABASE,
                 status: StepResultStatus::FAILED,
-                message: "Cannot start database: temporary directory is null"
+                message: 'Cannot start database: temporary directory is null'
             );
+
             return $next($context);
         }
 
@@ -59,7 +61,7 @@ final class StartDatabaseStep implements DirectiveTestingStepInterface
                 step_name: TestingStep::START_DATABASE,
                 status: StepResultStatus::SUCCESS,
                 message: sprintf(
-                    "Database started successfully (driver: %s)",
+                    'Database started successfully (driver: %s)',
                     $record->driver
                 )
             );
@@ -67,7 +69,7 @@ final class StartDatabaseStep implements DirectiveTestingStepInterface
             $context->addStepResult(
                 step_name: TestingStep::START_DATABASE,
                 status: StepResultStatus::FAILED,
-                message: "Failed to start database: " . $e->getMessage()
+                message: 'Failed to start database: '.$e->getMessage()
             );
         }
 
@@ -76,7 +78,7 @@ final class StartDatabaseStep implements DirectiveTestingStepInterface
 
     private function setupEloquentConnection(object $app, DatabaseConnectionRecord $record): void
     {
-        $capsule = new \Illuminate\Database\Capsule\Manager($app);
+        $capsule = new Manager($app);
 
         $config = [
             'driver' => $record->driver,
@@ -110,7 +112,7 @@ final class StartDatabaseStep implements DirectiveTestingStepInterface
             $database = $this->config->getSqliteDatabase();
 
             if ($database !== ':memory:') {
-                $database = $tempDir . '/' . $database;
+                $database = $tempDir.'/'.$database;
             }
 
             return new DatabaseConnectionRecord(
@@ -198,7 +200,7 @@ final class StartDatabaseStep implements DirectiveTestingStepInterface
 
         throw new \RuntimeException(
             sprintf(
-                "Failed to connect to database after %d attempts: %s",
+                'Failed to connect to database after %d attempts: %s',
                 $maxRetries,
                 $lastException?->getMessage()
             )

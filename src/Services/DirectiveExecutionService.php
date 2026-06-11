@@ -172,7 +172,7 @@ class DirectiveExecutionService
     {
         try {
             $reflection = new \ReflectionClass($class);
-            if (!$reflection->hasMethod('shouldBootLaravel')) {
+            if (! $reflection->hasMethod('shouldBootLaravel')) {
                 return false;
             }
             $tempInstance = $reflection->newInstanceWithoutConstructor();

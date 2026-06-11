@@ -32,8 +32,7 @@ final class BootstrapLaravelStep implements DirectiveTestingStepInterface
             return $next($context);
         }
 
-        $bootstrapPath = $tempDir . '/bootstrap/app.php';
-
+        $bootstrapPath = $tempDir.'/bootstrap/app.php';
 
         if (! file_exists($bootstrapPath)) {
             $context->addStepResult(
@@ -52,8 +51,8 @@ final class BootstrapLaravelStep implements DirectiveTestingStepInterface
                 throw new \RuntimeException('Bootstrap file did not return an Application instance');
             }
 
-            $app->useStoragePath($tempDir . '/storage');
-            $app->instance('path.config', $tempDir . '/config');
+            $app->useStoragePath($tempDir.'/storage');
+            $app->instance('path.config', $tempDir.'/config');
 
             $context->setLaravelApp($app);
             $context->addStepResult(

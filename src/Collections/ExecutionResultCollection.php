@@ -31,7 +31,7 @@ final class ExecutionResultCollection extends AbstractTypedCollection
     public function getSuccessful(): self
     {
         return $this->filter(function (ExecutionResultRecord $record) {
-            $exit_code = $record->result->exitCode ?? null;
+            $exit_code = $record->result->exit_code ?? null;
 
             return $exit_code === ExitCode::SUCCESS->value;
         });
@@ -40,7 +40,7 @@ final class ExecutionResultCollection extends AbstractTypedCollection
     public function getFailed(): self
     {
         return $this->filter(function (ExecutionResultRecord $record) {
-            $exit_code = $record->result->exitCode ?? null;
+            $exit_code = $record->result->exit_code ?? null;
 
             return $exit_code !== ExitCode::SUCCESS->value;
         });
@@ -49,17 +49,17 @@ final class ExecutionResultCollection extends AbstractTypedCollection
     public function getByExitCode(int $exit_code): self
     {
         return $this->filter(function (ExecutionResultRecord $record) use ($exit_code) {
-            return ($record->result->exitCode ?? null) === $exit_code;
+            return ($record->result->exit_code ?? null) === $exit_code;
         });
     }
 
     public function getWithOutput(): self
     {
-        return $this->filter(fn (ExecutionResultRecord $record) => ! empty($record->result->output ?? ''));
+        return $this->filter(fn(ExecutionResultRecord $record) => ! empty($record->result->output ?? ''));
     }
 
     public function getWithoutOutput(): self
     {
-        return $this->filter(fn (ExecutionResultRecord $record) => empty($record->result->output ?? ''));
+        return $this->filter(fn(ExecutionResultRecord $record) => empty($record->result->output ?? ''));
     }
 }

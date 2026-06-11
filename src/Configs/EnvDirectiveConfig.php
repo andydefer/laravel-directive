@@ -16,6 +16,6 @@ final class EnvDirectiveConfig implements DirectiveConfigInterface
             return $path;
         }
 
-        return getcwd() . '/app/Directives';
+        return getcwd().'/app/Directives';
     }
 }
