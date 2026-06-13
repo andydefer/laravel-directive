@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Contexts;
 
 use AndyDefer\Directive\Collections\ParameterVOCollection;
-use AndyDefer\Directive\Enums\PrimitiveType;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 

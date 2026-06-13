@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Collections;
 
-use AndyDefer\Directive\Enums\PrimitiveType;
-use AndyDefer\Directive\Services\PrimitiveTypeConverterService;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Abstracts\AbstractTypedCollection;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 
 /**
  * Type-safe collection for ParameterVO instances.

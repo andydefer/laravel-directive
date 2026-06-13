@@ -2,8 +2,8 @@
 
 namespace AndyDefer\Directive\Tests\Services;
 
-use AndyDefer\Directive\Enums\PrimitiveType;
-use AndyDefer\Directive\Services\PrimitiveTypeConverterService;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 

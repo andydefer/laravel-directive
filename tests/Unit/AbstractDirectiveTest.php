@@ -8,7 +8,6 @@ use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
-use AndyDefer\Directive\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
@@ -17,6 +16,8 @@ use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Hydration\Hydrator;
 use AndyDefer\DomainStructures\Services\HydrationService;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 

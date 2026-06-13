@@ -18,7 +18,7 @@ use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Enums\PrimitiveType;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\Steps\BootstrapLaravelStep;
@@ -30,6 +30,7 @@ use AndyDefer\Directive\Steps\StartDatabaseStep;
 use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use InvalidArgumentException;
 
 class DirectiveTestingService implements DirectiveTestingServiceInterface

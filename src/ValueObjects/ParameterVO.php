@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\ValueObjects;
 
-use AndyDefer\Directive\Enums\PrimitiveType;
-use AndyDefer\Directive\Services\PrimitiveTypeConverterService;
 use AndyDefer\DomainStructures\Abstracts\AbstractValueObject;
 use AndyDefer\DomainStructures\Utils\StrictDataObject;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use InvalidArgumentException;
 
 final class ParameterVO extends AbstractValueObject

@@ -14,11 +14,12 @@ use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
-use AndyDefer\Directive\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 
 class DirectiveHydratorService
 {

@@ -10,7 +10,7 @@ use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\Directive\Services\PrimitiveTypeConverterService;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
