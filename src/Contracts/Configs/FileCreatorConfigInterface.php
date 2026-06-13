@@ -6,7 +6,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contracts\Configs;
 
-use AndyDefer\Directive\Enums\PermissionMode;
+use AndyDefer\PhpServices\Enums\PermissionMode;
 
 interface FileCreatorConfigInterface
 {
@@ -17,4 +17,6 @@ interface FileCreatorConfigInterface
     public function workingDirectory(): string;
 
     public function defaultForce(): bool;
+
+    public function fileExtension(): string;
 }

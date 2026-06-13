@@ -1,7 +1,5 @@
 <?php
 
-// src/Services/FileSystemService.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
@@ -17,11 +15,17 @@ use AndyDefer\Directive\Enums\PermissionMode;
  * framework being used.
  *
  * @author Andy Defer
+ * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService from php-services package instead.
+ *             This service will be removed in version 3.0.0.
+ * @see \AndyDefer\PhpServices\Services\FileSystemService
  */
 class FileSystemService implements FileSystemInterface
 {
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::exists() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::exists()
      */
     public function exists(string $path): bool
     {
@@ -30,6 +34,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::get() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::get()
      */
     public function get(string $path): string
     {
@@ -48,6 +55,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::put() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::put()
      */
     public function put(string $path, string $content): int|false
     {
@@ -57,6 +67,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::append() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::append()
      */
     public function append(string $path, string $content): int|false
     {
@@ -66,6 +79,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::isDirectory() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::isDirectory()
      */
     public function isDirectory(string $path): bool
     {
@@ -74,6 +90,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::isFile() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::isFile()
      */
     public function isFile(string $path): bool
     {
@@ -82,6 +101,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::isReadable() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::isReadable()
      */
     public function isReadable(string $path): bool
     {
@@ -90,6 +112,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::isWritable() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::isWritable()
      */
     public function isWritable(string $path): bool
     {
@@ -98,6 +123,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::makeDirectory() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::makeDirectory()
      */
     public function makeDirectory(string $path, PermissionMode $mode = PermissionMode::DIRECTORY, bool $recursive = true): bool
     {
@@ -110,6 +138,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::ensureDirectoryExists() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::ensureDirectoryExists()
      */
     public function ensureDirectoryExists(string $path): void
     {
@@ -122,6 +153,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::copy() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::copy()
      */
     public function copy(string $source, string $destination): bool
     {
@@ -131,6 +165,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::move() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::move()
      */
     public function move(string $source, string $destination): bool
     {
@@ -140,6 +177,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::glob() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::glob()
      */
     public function glob(string $pattern, int $flags = 0): array
     {
@@ -149,6 +189,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::delete() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::delete()
      */
     public function delete(string $path): bool
     {
@@ -165,6 +208,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::deleteDirectory() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::deleteDirectory()
      */
     public function deleteDirectory(string $directory): bool
     {
@@ -187,6 +233,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::size() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::size()
      */
     public function size(string $path): int
     {
@@ -205,6 +254,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::lastModified() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::lastModified()
      */
     public function lastModified(string $path): int
     {
@@ -223,6 +275,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::extension() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::extension()
      */
     public function extension(string $path): string
     {
@@ -231,6 +286,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::basename() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::basename()
      */
     public function basename(string $path): string
     {
@@ -239,6 +297,9 @@ class FileSystemService implements FileSystemInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService::dirname() instead
+     * @see \AndyDefer\PhpServices\Services\FileSystemService::dirname()
      */
     public function dirname(string $path): string
     {

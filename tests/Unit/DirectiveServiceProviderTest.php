@@ -24,7 +24,6 @@ use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\FileCreatorConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\SignatureValidationConfigInterface;
-use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
@@ -39,7 +38,6 @@ use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\FileCreatorService;
-use AndyDefer\Directive\Services\FileSystemService;
 use AndyDefer\Directive\Services\OptionParserService;
 use AndyDefer\Directive\Services\ParameterExtractorService;
 use AndyDefer\Directive\Services\ParameterOrderValidatorService;
@@ -56,6 +54,8 @@ use AndyDefer\Directive\Strategies\OptionStrategy;
 use AndyDefer\Directive\Strategies\RequiredArgumentStrategy;
 use AndyDefer\Directive\Strategies\VariadicArgumentStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\PhpServices\Contracts\FileSystemInterface;
+use AndyDefer\PhpServices\Services\FileSystemService;
 use Illuminate\Container\Container;
 
 final class DirectiveServiceProviderTest extends UnitTestCase
@@ -365,13 +365,6 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     {
         $this->provider->register();
         $this->assertTrue($this->container->bound(FileSystemInterface::class));
-    }
-
-    public function test_file_system_service_can_be_resolved(): void
-    {
-        $this->provider->register();
-        $service = $this->container->make(FileSystemInterface::class);
-        $this->assertInstanceOf(FileSystemService::class, $service);
     }
 
     public function test_file_creator_service_is_registered_as_singleton(): void

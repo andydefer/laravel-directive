@@ -7,8 +7,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Configs;
 
 use AndyDefer\Directive\Contracts\Configs\FileCreatorConfigInterface;
-use AndyDefer\Directive\Enums\PermissionMode;
 use AndyDefer\DomainStructures\Services\EnumService;
+use AndyDefer\PhpServices\Enums\PermissionMode;
 
 final class FileCreatorConfig implements FileCreatorConfigInterface
 {
@@ -41,5 +41,10 @@ final class FileCreatorConfig implements FileCreatorConfigInterface
     public function defaultForce(): bool
     {
         return getenv('FILE_CREATOR_DEFAULT_FORCE') === 'true';
+    }
+
+    public function fileExtension(): string
+    {
+        return getenv('FILE_CREATOR_FILE_EXTENSION') ?: '.php';
     }
 }

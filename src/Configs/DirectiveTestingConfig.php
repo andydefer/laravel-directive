@@ -8,7 +8,7 @@ namespace AndyDefer\Directive\Configs;
 
 use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
-use AndyDefer\Directive\Enums\PermissionMode;
+use AndyDefer\PhpServices\Enums\PermissionMode;
 
 /**
  * Configuration for directive testing.

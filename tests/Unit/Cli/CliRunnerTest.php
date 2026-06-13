@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Cli;
 
 use AndyDefer\Directive\Cli\CliRunner;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 
 final class CliRunnerTest extends UnitTestCase

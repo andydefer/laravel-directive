@@ -16,6 +16,9 @@ namespace AndyDefer\Directive\Enums;
  * - r=4 (read), w=2 (write), x=1 (execute)
  *
  * @example 755 = rwxr-xr-x (owner: read+write+execute, group/others: read+execute)
+ * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode from php-services package instead.
+ *             This enum will be removed in version 3.0.0.
+ * @see \AndyDefer\PhpServices\Enums\PermissionMode
  */
 enum PermissionMode: int
 {
@@ -25,6 +28,7 @@ enum PermissionMode: int
      * - Group: none
      * - Others: none
      * Use for: configuration files with sensitive data
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::PRIVATE instead
      */
     case PRIVATE = 0600;
 
@@ -34,6 +38,7 @@ enum PermissionMode: int
      * - Group: none
      * - Others: none
      * Use for: read-only configuration files
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::READ_ONLY instead
      */
     case READ_ONLY = 0400;
 
@@ -43,6 +48,7 @@ enum PermissionMode: int
      * - Group: read
      * - Others: none
      * Use for: shared configuration files in development
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::SHARED_CONFIG instead
      */
     case SHARED_CONFIG = 0640;
 
@@ -52,6 +58,7 @@ enum PermissionMode: int
      * - Group: read
      * - Others: read
      * Use for: public files, CSS, JS, images
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::PUBLIC_FILE instead
      */
     case PUBLIC_FILE = 0644;
 
@@ -61,6 +68,7 @@ enum PermissionMode: int
      * - Group: read + execute
      * - Others: read + execute
      * Use for: directories, executable scripts
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::DIRECTORY instead
      */
     case DIRECTORY = 0755;
 
@@ -70,6 +78,7 @@ enum PermissionMode: int
      * - Group: read + execute
      * - Others: none
      * Use for: team directories, shared scripts
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::TEAM_DIRECTORY instead
      */
     case TEAM_DIRECTORY = 0750;
 
@@ -79,6 +88,7 @@ enum PermissionMode: int
      * - Group: none
      * - Others: none
      * Use for: private directories, user home folders
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::PRIVATE_DIRECTORY instead
      */
     case PRIVATE_DIRECTORY = 0700;
 
@@ -88,11 +98,13 @@ enum PermissionMode: int
      * - Group: read + write + execute
      * - Others: read + write + execute
      * Use for: temporary directories only, never for production
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::WORLD_WRITABLE instead
      */
     case WORLD_WRITABLE = 0777;
 
     /**
      * Get the integer value for chmod() function
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::value() instead
      */
     public function value(): int
     {
@@ -101,6 +113,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows read access for owner
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::ownerCanRead() instead
      */
     public function ownerCanRead(): bool
     {
@@ -109,6 +122,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows write access for owner
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::ownerCanWrite() instead
      */
     public function ownerCanWrite(): bool
     {
@@ -117,6 +131,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows execute access for owner
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::ownerCanExecute() instead
      */
     public function ownerCanExecute(): bool
     {
@@ -125,6 +140,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows read access for group
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::groupCanRead() instead
      */
     public function groupCanRead(): bool
     {
@@ -133,6 +149,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows write access for group
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::groupCanWrite() instead
      */
     public function groupCanWrite(): bool
     {
@@ -141,6 +158,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows execute access for group
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::groupCanExecute() instead
      */
     public function groupCanExecute(): bool
     {
@@ -149,6 +167,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows read access for others
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::othersCanRead() instead
      */
     public function othersCanRead(): bool
     {
@@ -157,6 +176,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows write access for others
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::othersCanWrite() instead
      */
     public function othersCanWrite(): bool
     {
@@ -165,6 +185,7 @@ enum PermissionMode: int
 
     /**
      * Check if the permission allows execute access for others
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::othersCanExecute() instead
      */
     public function othersCanExecute(): bool
     {
@@ -176,16 +197,18 @@ enum PermissionMode: int
      *
      * @param  bool  $withLeadingZero  Include leading zero in output
      * @return string Formatted permission string (e.g., "755" or "0755")
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::toOctalString() instead
      */
     public function toOctalString(bool $withLeadingZero = true): string
     {
         $octal = decoct($this->value);
 
-        return $withLeadingZero ? '0'.$octal : $octal;
+        return $withLeadingZero ? '0' . $octal : $octal;
     }
 
     /**
      * Get symbolic notation (e.g., "rwxr-xr-x")
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::toSymbolicNotation() instead
      */
     public function toSymbolicNotation(): string
     {
@@ -214,6 +237,7 @@ enum PermissionMode: int
      *
      * @param  int  $value  Octal permission value (e.g., 0755)
      * @return self|null Returns null if no matching permission mode found
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::fromValue() instead
      */
     public static function fromValue(int $value): ?self
     {
@@ -225,6 +249,7 @@ enum PermissionMode: int
      *
      * @param  string  $notation  Symbolic notation (e.g., "rwxr-xr-x")
      * @return self|null Returns null if invalid notation
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::fromSymbolicNotation() instead
      */
     public static function fromSymbolicNotation(string $notation): ?self
     {
@@ -243,6 +268,7 @@ enum PermissionMode: int
 
     /**
      * Check if this permission mode is secure for files
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::isSecureForFile() instead
      */
     public function isSecureForFile(): bool
     {
@@ -251,6 +277,7 @@ enum PermissionMode: int
 
     /**
      * Check if this permission mode is secure for directories
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::isSecureForDirectory() instead
      */
     public function isSecureForDirectory(): bool
     {
@@ -259,6 +286,7 @@ enum PermissionMode: int
 
     /**
      * Get recommended permission for different use cases
+     * @deprecated Use AndyDefer\PhpServices\Enums\PermissionMode::getRecommended() instead
      */
     public static function getRecommended(string $useCase): self
     {

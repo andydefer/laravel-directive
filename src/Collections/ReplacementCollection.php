@@ -31,6 +31,23 @@ final class ReplacementCollection extends AbstractKeyValueCollection
     }
 
     /**
+     * Check if a placeholder exists in the collection.
+     *
+     * @param  string  $placeholder  The placeholder to check
+     * @return bool  True if the placeholder exists, false otherwise
+     */
+    public function hasPlaceholder(string $placeholder): bool
+    {
+        foreach ($this->items as $replacement) {
+            if ($replacement->placeholder === $placeholder) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Get all placeholders as a string collection.
      */
     public function getPlaceholders(): StringTypedCollection

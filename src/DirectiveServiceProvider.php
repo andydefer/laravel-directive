@@ -24,7 +24,6 @@ use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\FileCreatorConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\SignatureValidationConfigInterface;
-use AndyDefer\Directive\Contracts\Services\FileSystemInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
@@ -38,11 +37,13 @@ use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\FileCreatorService;
-use AndyDefer\Directive\Services\FileSystemService;
 use AndyDefer\Directive\Services\OptionParserService;
 use AndyDefer\Directive\Services\ParameterExtractorService;
 use AndyDefer\Directive\Services\ParameterOrderValidatorService;
+use AndyDefer\Directive\Services\PathBuilderService;
+use AndyDefer\Directive\Services\PathSegmentsParserService;
 use AndyDefer\Directive\Services\SignatureValidationService;
+use AndyDefer\Directive\Services\StringCaseConverterService;
 use AndyDefer\Directive\Steps\BootstrapLaravelStep;
 use AndyDefer\Directive\Steps\BuildContainerStep;
 use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
@@ -56,6 +57,8 @@ use AndyDefer\Directive\Strategies\RequiredArgumentStrategy;
 use AndyDefer\Directive\Strategies\VariadicArgumentStrategy;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Services\EnumService;
+use AndyDefer\PhpServices\Contracts\FileSystemInterface;
+use AndyDefer\PhpServices\Services\FileSystemService;
 use Illuminate\Support\ServiceProvider;
 
 final class DirectiveServiceProvider extends ServiceProvider
@@ -87,7 +90,7 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/config/directive.php' => config_path('directive.php'),
+            __DIR__ . '/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
@@ -237,9 +240,16 @@ final class DirectiveServiceProvider extends ServiceProvider
             return new FileCreatorService(
                 config: $app->make(FileCreatorConfigInterface::class),
                 filesystem: $app->make(FileSystemInterface::class),
+                pathParser: $app->make(PathSegmentsParserService::class),
+                pathBuilder: $app->make(PathBuilderService::class),
+                caseConverter: $app->make(StringCaseConverterService::class),
             );
         });
 
+        // Enregistrement des nouvelles dépendances si nécessaire
+        $this->app->singleton(StringCaseConverterService::class);
+        $this->app->singleton(PathSegmentsParserService::class);
+        $this->app->singleton(PathBuilderService::class);
         // SignatureValidationService
         $this->app->singleton(SignatureValidationService::class, function ($app) {
             return new SignatureValidationService($app->make(SignatureValidationConfigInterface::class));

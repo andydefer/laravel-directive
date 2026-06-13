@@ -49,6 +49,61 @@ final class ReplacementCollectionTest extends UnitTestCase
         $this->assertSame(2, $collection->count());
     }
 
+    public function test_has_placeholder_returns_true_when_placeholder_exists(): void
+    {
+        $collection = new ReplacementCollection;
+        $collection
+            ->addReplacement('{{name}}', 'John')
+            ->addReplacement('{{email}}', 'john@example.com');
+
+        $this->assertTrue($collection->hasPlaceholder('{{name}}'));
+        $this->assertTrue($collection->hasPlaceholder('{{email}}'));
+    }
+
+    public function test_has_placeholder_returns_false_when_placeholder_does_not_exist(): void
+    {
+        $collection = new ReplacementCollection;
+        $collection
+            ->addReplacement('{{name}}', 'John')
+            ->addReplacement('{{email}}', 'john@example.com');
+
+        $this->assertFalse($collection->hasPlaceholder('{{age}}'));
+        $this->assertFalse($collection->hasPlaceholder('{{nonexistent}}'));
+    }
+
+    public function test_has_placeholder_returns_false_for_empty_collection(): void
+    {
+        $collection = new ReplacementCollection;
+
+        $this->assertFalse($collection->hasPlaceholder('{{anything}}'));
+    }
+
+    public function test_has_placeholder_distinguishes_between_similar_placeholders(): void
+    {
+        $collection = new ReplacementCollection;
+        $collection->addReplacement('{{userName}}', 'John');
+
+        $this->assertTrue($collection->hasPlaceholder('{{userName}}'));
+        $this->assertFalse($collection->hasPlaceholder('{{username}}'));
+        $this->assertFalse($collection->hasPlaceholder('{{user}}'));
+        $this->assertFalse($collection->hasPlaceholder('name'));
+    }
+
+    public function test_has_placeholder_works_after_multiple_additions(): void
+    {
+        $collection = new ReplacementCollection;
+
+        $this->assertFalse($collection->hasPlaceholder('{{name}}'));
+
+        $collection->addReplacement('{{name}}', 'John');
+        $this->assertTrue($collection->hasPlaceholder('{{name}}'));
+
+        $collection->addReplacement('{{email}}', 'john@example.com');
+        $this->assertTrue($collection->hasPlaceholder('{{name}}'));
+        $this->assertTrue($collection->hasPlaceholder('{{email}}'));
+        $this->assertFalse($collection->hasPlaceholder('{{age}}'));
+    }
+
     public function test_get_placeholders_returns_string_typed_collection(): void
     {
         $collection = new ReplacementCollection;

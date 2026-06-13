@@ -6,7 +6,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contracts\Configs;
 
-use AndyDefer\Directive\Enums\PermissionMode;
+use AndyDefer\PhpServices\Enums\PermissionMode;
 
 /**
  * Interface for directive testing configuration.
