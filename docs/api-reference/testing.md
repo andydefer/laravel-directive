@@ -14,15 +14,13 @@ Ce guide vous apprend à tester vos directives CLI avec `DirectiveTestingService
 4. [Les deux modes de test](#les-deux-modes-de-test)
 5. [Tests en mode isolé (sans Laravel)](#tests-en-mode-isolé-sans-laravel)
 6. [Tests en mode intégré (avec Laravel)](#tests-en-mode-intégré-avec-laravel)
-7. [Les différentes méthodes d'enregistrement](#les-différentes-méthodes-denregistrement)
-8. [Créer des directives temporaires](#créer-des-directives-temporaires)
-9. [Tester les arguments et options](#tester-les-arguments-et-options)
-10. [Tester les arguments variadiques](#tester-les-arguments-variadiques)
-11. [Tester les interactions utilisateur](#tester-les-interactions-utilisateur)
-12. [Tester les codes de sortie](#tester-les-codes-de-sortie)
-13. [Tester avec la base de données](#tester-avec-la-base-de-données)
-14. [Bonnes pratiques](#bonnes-pratiques)
-15. [Exemple complet](#exemple-complet)
+7. [Tester les arguments et options](#tester-les-arguments-et-options)
+8. [Tester les arguments variadiques](#tester-les-arguments-variadiques)
+9. [Tester les interactions utilisateur (mocks)](#tester-les-interactions-utilisateur-mocks)
+10. [Tester les codes de sortie](#tester-les-codes-de-sortie)
+11. [Tester avec la base de données](#tester-avec-la-base-de-données)
+12. [Bonnes pratiques](#bonnes-pratiques)
+13. [Exemple complet](#exemple-complet)
 
 ---
 
@@ -72,7 +70,7 @@ $directive->execute(); // Crée des fichiers dans ./app/Directives/
 // ✅ Solution : fichiers isolés dans /tmp/directive_test_xxx/
 $service = new DirectiveTestingService();
 $service->run(MakeDirective::class, ['UserList']);
-// Les fichiers sont créés dans /tmp/directive_test_xxx/app/Directives/
+// Les fichiers sont créés dans /tmp/directive_test_xxx/
 ```
 
 ---
@@ -96,7 +94,6 @@ abstract class IntegrationTestCase extends Orchestra
     {
         return [
             DirectiveServiceProvider::class,
-            // Ajoutez vos providers ici
         ];
     }
 }
@@ -156,7 +153,7 @@ final class HelloDirectiveTest extends TestCase
     {
         $response = $this->service->run(HelloDirective::class, ['John']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello, John!', $response->output);
     }
 }
@@ -170,7 +167,11 @@ public function test_files_are_created_in_temp_directory(): void
     $service = new DirectiveTestingService();
     
     // Le répertoire temporaire est automatiquement créé
-    $tempDir = $service->getContext()->getTempDir();
+    // (accessible via réflexion si nécessaire)
+    $reflection = new \ReflectionClass($service);
+    $tempDirProperty = $reflection->getProperty('tempDir');
+    $tempDir = $tempDirProperty->getValue($service);
+    
     $this->assertNotNull($tempDir);
     $this->assertDirectoryExists($tempDir);
     $this->assertStringContainsString('/tmp/directive_test_', $tempDir);
@@ -220,7 +221,7 @@ public function test_greet_directive(): void
 {
     $response = $this->service->run(GreetDirective::class, ['Jane']);
 
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     $this->assertStringContainsString('Hello, Jane!', $response->output);
 }
 ```
@@ -229,9 +230,9 @@ public function test_greet_directive(): void
 
 ## Tests en mode intégré (avec Laravel)
 
-## ⚠️ Prérequis important : Enregistrement des directives dans le conteneur
+### ⚠️ Prérequis important : Enregistrement des directives dans le conteneur
 
-Pour que `DirectiveTestingService` puisse instancier automatiquement vos directives via `registerDirective(string $class)` ou `run(string $class)`, vos directives doivent être **enregistrées dans le conteneur de services**. En mode intégré (avec Laravel), le service utilise `$application->make($class)` qui nécessite que la directive soit bindée dans le conteneur. La meilleure pratique est de créer un **Service Provider** dédié où vous enregistrez toutes vos directives en tant que singletons ou liaisons. Sans cet enregistrement, l'instanciation échouera car le conteneur ne saura pas comment résoudre les dépendances du constructeur de votre directive. Si vous utilisez le mode isolé (sans Laravel), cette contrainte ne s'applique pas car le service utilise la réflexion pour créer les instances.
+Pour que `DirectiveTestingService` puisse instancier automatiquement vos directives via `run(string $class)`, vos directives doivent être **enregistrées dans le conteneur de services**. En mode intégré (avec Laravel), le service utilise `$application->make($class)` qui nécessite que la directive soit bindée dans le conteneur.
 
 **Exemple d'enregistrement dans un Service Provider :**
 
@@ -285,7 +286,7 @@ final class UserStatsDirectiveTest extends IntegrationTestCase
 
         $response = $this->service->run(UserStatsDirective::class);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Total users: 2', $response->output);
     }
 }
@@ -313,11 +314,6 @@ final class UserStatsDirective extends AbstractDirective
     public function getDescription(): string
     {
         return 'Display user statistics';
-    }
-
-    public function shouldBootLaravel(): bool
-    {
-        return true; // Important : active Laravel
     }
 
     public function execute(): ExitCode
@@ -351,116 +347,6 @@ protected function tearDown(): void
 
 ---
 
-## Les différentes méthodes d'enregistrement
-
-### Méthode 1 : `run()` - La plus simple
-
-```php
-// Enregistre et exécute en une ligne
-$response = $this->service->run(MyDirective::class, ['arg1', 'arg2']);
-```
-
-### Méthode 2 : `registerAndRun()`
-
-```php
-// Explicitement enregistrer puis exécuter
-$response = $this->service->registerAndRun(MyDirective::class, ['arg1', 'arg2']);
-```
-
-### Méthode 3 : Enregistrement séparé
-
-```php
-// Utile quand vous avez besoin de la directive pour autre chose
-$this->service->registerDirective(MyDirective::class);
-$response = $this->service->runDirective('my-signature', ['arg1']);
-```
-
-### Méthode 4 : Avec instance manuelle
-
-```php
-// Pour un contrôle total sur l'instance
-$context = new DirectiveContext(
-    laravelBootstrapper: new LaravelBootstrapperContext(),
-    blueprint: new DirectiveBlueprintRecord(MyDirective::class, 'my-cmd', 'Description'),
-    aliases: new StringTypedCollection,
-    shouldBootLaravel: false,
-);
-
-$directive = new MyDirective($context, $this->service->getInteraction());
-$this->service->registerDirectiveInstance($directive);
-$response = $this->service->runDirective('my-cmd', ['arg1']);
-```
-
----
-
-## Créer des directives temporaires
-
-### Pourquoi des directives temporaires ?
-
-- Tester rapidement une logique sans créer de classe dédiée
-- Isoler un comportement spécifique
-- Mock une partie de la logique
-
-### Syntaxe de base
-
-```php
-public function test_temporary_directive(): void
-{
-    $executed = false;
-    
-    $this->service->createTestDirective('test-calc', function ($d) use (&$executed) {
-        $executed = true;
-        $result = 5 + 3;
-        $d->line("Result: {$result}");
-        return ExitCode::SUCCESS;
-    });
-    
-    $response = $this->service->runDirective('test-calc');
-    
-    $this->assertTrue($executed);
-    $this->assertStringContainsString('Result: 8', $response->output);
-}
-```
-
-### Avec arguments
-
-```php
-public function test_temporary_directive_with_args(): void
-{
-    $this->service->createTestDirective('calc {a} {b}', function ($d) {
-        $a = (int) $d->argument('a');
-        $b = (int) $d->argument('b');
-        $result = $a + $b;
-        $d->line((string) $result);
-        return ExitCode::SUCCESS;
-    });
-    
-    $response = $this->service->runDirective('calc', ['10', '20']);
-    
-    $this->assertStringContainsString('30', $response->output);
-}
-```
-
-### Avec options
-
-```php
-public function test_temporary_directive_with_options(): void
-{
-    $this->service->createTestDirective('process {--verbose}', function ($d) {
-        if ($d->option('verbose')) {
-            $d->line('Verbose mode enabled');
-        }
-        return ExitCode::SUCCESS;
-    });
-    
-    $response = $this->service->runDirective('process', ['--verbose']);
-    
-    $this->assertStringContainsString('Verbose mode enabled', $response->output);
-}
-```
-
----
-
 ## Tester les arguments et options
 
 ### Directive avec arguments requis
@@ -477,7 +363,7 @@ public function test_required_arguments(): void
 {
     $response = $this->service->run(UserCreateDirective::class, ['John', 'john@example.com']);
     
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
@@ -494,14 +380,14 @@ public function getSignature(): string
 public function test_optional_argument_omitted(): void
 {
     $response = $this->service->run(UserListDirective::class, []);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 
 // Test - avec argument
 public function test_optional_argument_provided(): void
 {
     $response = $this->service->run(UserListDirective::class, ['10']);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
@@ -519,7 +405,7 @@ public function test_default_value(): void
 {
     $response = $this->service->run(UserListDirective::class, []);
     // $limit = 10 par défaut
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 
 // Test - valeur surchargée
@@ -527,7 +413,7 @@ public function test_default_value_overridden(): void
 {
     $response = $this->service->run(UserListDirective::class, ['25']);
     // $limit = 25
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
@@ -544,14 +430,14 @@ public function getSignature(): string
 public function test_option_absent(): void
 {
     $response = $this->service->run(CacheClearDirective::class, []);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 
 // Test - option présente
 public function test_option_present(): void
 {
     $response = $this->service->run(CacheClearDirective::class, ['--force']);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
@@ -568,7 +454,7 @@ public function getSignature(): string
 public function test_option_with_value(): void
 {
     $response = $this->service->run(UserCreateDirective::class, ['John', '--role=admin']);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
@@ -582,7 +468,7 @@ public function test_option_with_value(): void
 // Directive
 public function getSignature(): string
 {
-    return 'process {name} {files*}';
+    return 'process {name} {files*}'
 }
 
 public function execute(): ExitCode
@@ -598,43 +484,34 @@ public function execute(): ExitCode
     
     return ExitCode::SUCCESS;
 }
+```
 
+```php
 // Test
 public function test_variadic_arguments(): void
 {
-    $this->service->createTestDirective('process {name} {files*}', function ($d) {
-        $files = $d->getVariadicArguments();
-        $d->line("Count: " . $files->count());
-        return ExitCode::SUCCESS;
-    });
+    $response = $this->service->run(ProcessDirective::class, [
+        'John', 'file1.txt', 'file2.txt', 'file3.txt'
+    ]);
     
-    $response = $this->service->runDirective('process', ['John', 'file1.txt', 'file2.txt']);
-    
-    $this->assertStringContainsString('Count: 2', $response->output);
-}
-```
-
-### Syntaxe avec crochets (recommandée)
-
-```php
-public function test_variadic_with_brackets(): void
-{
-    $this->service->createTestDirective('process {files*}', function ($d) {
-        $files = $d->getVariadicArguments();
-        $d->line("Files: " . implode(', ', $files->toArray()));
-        return ExitCode::SUCCESS;
-    });
-    
-    // Syntaxe avec crochets pour plus de lisibilité
-    $response = $this->service->runDirective('process', ['[', 'file1.txt,', 'file2.txt,', 'file3.txt', ']']);
-    
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     $this->assertStringContainsString('file1.txt', $response->output);
+    $this->assertStringContainsString('file2.txt', $response->output);
+    $this->assertStringContainsString('file3.txt', $response->output);
+}
+
+public function test_variadic_with_no_files(): void
+{
+    $response = $this->service->run(ProcessDirective::class, ['John']);
+    
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+    $this->assertStringContainsString('Processing 0 files', $response->output);
 }
 ```
 
 ---
 
-## Tester les interactions utilisateur
+## Tester les interactions utilisateur (mocks)
 
 ### Problème : les méthodes `ask()` et `confirm()` bloquent les tests
 
@@ -647,10 +524,10 @@ public function test_interactive_directive(): void
 }
 ```
 
-### Solution : Mocker l'interaction
+### Solution 1 : Mocker l'interaction (recommandée)
 
 ```php
-public function test_interactive_directive(): void
+public function test_interactive_directive_with_mock(): void
 {
     // Créer un mock de l'interaction
     $interaction = $this->createMock(DirectiveInteractionService::class);
@@ -667,23 +544,30 @@ public function test_interactive_directive(): void
         ->willReturn(true);
     
     // Créer la directive avec le mock
-    $context = new DirectiveContext(
-        laravelBootstrapper: new LaravelBootstrapperContext(),
-        blueprint: new DirectiveBlueprintRecord(SetupDirective::class, 'setup', 'Setup wizard'),
-        aliases: new StringTypedCollection,
-        shouldBootLaravel: false,
+    // Note : Nous devons passer par réflexion car le constructeur
+    // de la directive attend un DirectiveContext et un DirectiveInteractionService
+    $context = $this->createMock(DirectiveContext::class);
+    $context->method('getBlueprint')->willReturn(
+        new DirectiveBlueprintRecord(SetupDirective::class, 'setup', 'Setup wizard')
     );
+    $context->method('getAliases')->willReturn(new StringTypedCollection());
     
     $directive = new SetupDirective($context, $interaction);
-    $this->service->registerDirectiveInstance($directive);
     
-    $response = $this->service->runDirective('setup');
+    // Nous devons utiliser la réflexion pour injecter la directive
+    // car run() ne permet pas d'injecter directement une instance
+    $reflection = new \ReflectionClass($this->service);
+    $createDirectiveMethod = $reflection->getMethod('createDirective');
+    $executeDirectiveMethod = $reflection->getMethod('executeDirective');
     
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    // Alternative plus simple : utiliser la réflexion pour exécuter directement
+    $response = $executeDirectiveMethod->invoke($this->service, $directive, []);
+    
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
-### Alternative : Rendre la directive non-interactive pour les tests
+### Solution 2 : Rendre la directive non-interactive pour les tests
 
 ```php
 // Dans votre directive, ajoutez un mode non-interactif
@@ -704,7 +588,62 @@ public function execute(): ExitCode
 public function test_non_interactive_mode(): void
 {
     $response = $this->service->run(SetupDirective::class, ['--no-interaction', '--name=John']);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+}
+```
+
+### Solution 3 : Étendre DirectiveTestingService pour supporter les mocks
+
+```php
+// Créer une classe de test personnalisée
+class TestableDirectiveTestingService extends DirectiveTestingService
+{
+    private ?DirectiveInteractionService $mockInteraction = null;
+    
+    public function setMockInteraction(DirectiveInteractionService $interaction): void
+    {
+        $this->mockInteraction = $interaction;
+    }
+    
+    private function createDirective(string $class): AbstractDirective
+    {
+        if ($this->mockInteraction !== null) {
+            // Injecter le mock à la place de l'interaction réelle
+            $reflection = new \ReflectionClass($class);
+            $constructor = $reflection->getConstructor();
+            
+            if ($constructor) {
+                $args = [];
+                foreach ($constructor->getParameters() as $param) {
+                    $paramName = $param->getType()?->getName();
+                    if ($paramName === DirectiveInteractionService::class) {
+                        $args[] = $this->mockInteraction;
+                    } elseif ($paramName === DirectiveContext::class) {
+                        $args[] = $this->createDirectiveContext($class);
+                    } else {
+                        $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
+                    }
+                }
+                return $reflection->newInstanceArgs($args);
+            }
+        }
+        
+        return parent::createDirective($class);
+    }
+}
+
+// Utilisation
+public function test_with_mock(): void
+{
+    $mockInteraction = $this->createMock(DirectiveInteractionService::class);
+    $mockInteraction->expects($this->once())->method('ask')->willReturn('Test');
+    
+    $service = new TestableDirectiveTestingService();
+    $service->setMockInteraction($mockInteraction);
+    
+    $response = $service->run(InteractiveDirective::class, []);
+    
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
@@ -727,7 +666,7 @@ public function test_non_interactive_mode(): void
 public function test_directive_success(): void
 {
     $response = $this->service->run(ValidDirective::class, []);
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 }
 ```
 
@@ -737,7 +676,7 @@ public function test_directive_success(): void
 public function test_directive_failure(): void
 {
     $response = $this->service->run(FailingDirective::class, []);
-    $this->assertSame(ExitCode::FAILURE, $response->exitCode);
+    $this->assertSame(ExitCode::FAILURE, $response->exit_code);
     $this->assertStringContainsString('Something went wrong', $response->output);
 }
 ```
@@ -748,18 +687,8 @@ public function test_directive_failure(): void
 public function test_invalid_argument(): void
 {
     $response = $this->service->run(CalculatorDirective::class, []);
-    $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
+    $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
     $this->assertStringContainsString('Not enough arguments', $response->output);
-}
-```
-
-### Tester une directive non trouvée
-
-```php
-public function test_directive_not_found(): void
-{
-    $response = $this->service->runDirective('non-existent-directive');
-    $this->assertSame(ExitCode::NOT_FOUND, $response->exitCode);
 }
 ```
 
@@ -819,7 +748,7 @@ public function test_user_creation_directive(): void
 {
     $response = $this->service->run(UserCreateDirective::class, ['John', 'john@example.com']);
     
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     $this->assertDatabaseHas('users', ['email' => 'john@example.com']);
 }
 ```
@@ -880,7 +809,7 @@ public function test_directive_behavior(): void
 {
     $response = $this->service->run(MyDirective::class, ['test']);
     
-    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     $this->assertStringContainsString('Expected output', $response->output);
 }
 ```
@@ -943,11 +872,6 @@ final class UserManagerDirective extends AbstractDirective
     public function getDescription(): string
     {
         return 'Manage users (create, list, delete)';
-    }
-
-    public function shouldBootLaravel(): bool
-    {
-        return true;
     }
 
     public function execute(): ExitCode
@@ -1073,7 +997,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
             ['create', 'John Doe', 'john@example.com', '--role=admin']
         );
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('created successfully', $response->output);
         $this->assertDatabaseHas('users', ['email' => 'john@example.com']);
     }
@@ -1085,7 +1009,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
             ['create', '--role=admin']
         );
 
-        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
         $this->assertStringContainsString('Name and email are required', $response->output);
     }
 
@@ -1096,7 +1020,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
             ['create', 'Jane Doe', 'jane@example.com']
         );
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         
         $user = User::where('email', 'jane@example.com')->first();
         $this->assertSame('user', $user->role);
@@ -1111,7 +1035,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
 
         $response = $this->service->run(UserManagerDirective::class, ['list']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('John', $response->output);
         $this->assertStringContainsString('Jane', $response->output);
     }
@@ -1120,7 +1044,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
     {
         $response = $this->service->run(UserManagerDirective::class, ['list']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('No users found', $response->output);
     }
 
@@ -1132,7 +1056,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
 
         $response = $this->service->run(UserManagerDirective::class, ['delete', 'John Doe']);
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('deleted successfully', $response->output);
         $this->assertDatabaseMissing('users', ['name' => 'John Doe']);
     }
@@ -1141,7 +1065,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
     {
         $response = $this->service->run(UserManagerDirective::class, ['delete', 'Nonexistent']);
 
-        $this->assertSame(ExitCode::FAILURE, $response->exitCode);
+        $this->assertSame(ExitCode::FAILURE, $response->exit_code);
         $this->assertStringContainsString('not found', $response->output);
     }
 
@@ -1149,7 +1073,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
     {
         $response = $this->service->run(UserManagerDirective::class, ['delete']);
 
-        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
         $this->assertStringContainsString('Name is required', $response->output);
     }
 
@@ -1159,7 +1083,7 @@ final class UserManagerDirectiveTest extends IntegrationTestCase
     {
         $response = $this->service->run(UserManagerDirective::class, ['invalid']);
 
-        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exitCode);
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
         $this->assertStringContainsString('Invalid action', $response->output);
     }
 }
@@ -1174,10 +1098,14 @@ Avec `DirectiveTestingService`, vous pouvez :
 - ✅ Tester vos directives dans un environnement totalement isolé
 - ✅ Éviter la pollution du projet réel
 - ✅ Tester avec ou sans Laravel
-- ✅ Simuler les interactions utilisateur
+- ✅ Simuler les interactions utilisateur via des mocks
 - ✅ Vérifier les codes de sortie et les sorties
 - ✅ Tester les cas d'erreur
-- ✅ Utiliser des directives temporaires pour des tests rapides
 
 **Rappel :** Toujours appeler `destroy()` dans `tearDown()` pour nettoyer le répertoire temporaire.
+
+**Important pour les mocks :** Le service utilise actuellement `$application->make($class)` pour instancier les directives. Pour injecter des mocks de `DirectiveInteractionService`, vous devrez soit :
+1. Enregistrer votre mock dans le conteneur Laravel avant d'instancier le service
+2. Étendre `DirectiveTestingService` pour permettre l'injection de mocks
+3. Utiliser la réflexion pour remplacer l'interaction après l'instanciation
 ---
