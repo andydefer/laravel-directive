@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e81f22f745b3a00f0d5effa45ed386eb",
+    "content-hash": "68a158efa7082b8689fa87456cc793c7",
     "packages": [
         {
             "name": "andydefer/domain-structures",
@@ -56,6 +56,66 @@
                 "source": "https://github.com/andydefer/domain-structures/tree/v1.18.1"
             },
             "time": "2026-06-09T10:58:02+00:00"
+        },
+        {
+            "name": "andydefer/php-services",
+            "version": "v0.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/andydefer/php-services.git",
+                "reference": "6d23126613e0f852515aca19437770d7aed32aa3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/andydefer/php-services/zipball/6d23126613e0f852515aca19437770d7aed32aa3",
+                "reference": "6d23126613e0f852515aca19437770d7aed32aa3",
+                "shasum": ""
+            },
+            "require": {
+                "andydefer/php-vo": "^0.8.1",
+                "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "barryvdh/laravel-ide-helper": "^3.6",
+                "composer/composer": "^2.0",
+                "larastan/larastan": "^3.8",
+                "laravel/pint": "^1.26",
+                "orchestra/testbench": "^10.8",
+                "phpunit/phpunit": "^12.5",
+                "rector/rector": "*",
+                "symfony/var-dumper": "^7.0",
+                "vimeo/psalm": "^6.14"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "AndyDefer\\PhpServices\\PhpServiceServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "AndyDefer\\PhpServices\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andy Kani",
+                    "email": "andykanidimbu@gmail.com"
+                }
+            ],
+            "description": "Collection of reusable services for PHP and Laravel applications including model transformation, caching, and common business logic",
+            "support": {
+                "issues": "https://github.com/andydefer/php-services/issues",
+                "source": "https://github.com/andydefer/php-services/tree/v0.4.0"
+            },
+            "time": "2026-06-13T04:21:18+00:00"
         },
         {
             "name": "andydefer/php-vo",
