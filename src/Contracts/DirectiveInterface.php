@@ -134,7 +134,7 @@ interface DirectiveInterface
      *
      * @return object The Laravel application instance
      */
-    public function getLaravel(): object;
+    public function getLaravel(): ?object;
 
     // ==================== Display Methods ====================
 

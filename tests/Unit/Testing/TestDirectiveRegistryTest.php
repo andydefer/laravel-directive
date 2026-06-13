@@ -6,9 +6,12 @@ namespace AndyDefer\Directive\Tests\Unit\Testing;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
+use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -17,23 +20,45 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 final class TestDirectiveRegistryTest extends UnitTestCase
 {
     private TestDirectiveRegistry $registry;
-
     private DirectiveInteractionService $interaction;
-
     private DirectiveContext $context;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->registry = new TestDirectiveRegistry;
-        $this->interaction = $this->createMock(DirectiveInteractionService::class);
-        $this->context = $this->createMock(DirectiveContext::class);
+        $this->registry = new TestDirectiveRegistry();
+
+        // Créer un vrai contexte (pas un mock)
+        $blueprint = new DirectiveBlueprintRecord('test', 'test-signature', 'Test description');
+        $aliases = new StringTypedCollection();
+
+        $this->context = new DirectiveContext(
+            blueprint: $blueprint,
+            aliases: $aliases,
+            laravelApplication: null,
+        );
+
+        // Créer une vraie interaction (pas un mock)
+        $this->interaction = new DirectiveInteractionService(
+            new \AndyDefer\Directive\Dispatchers\RenderDispatcher(),
+            new \AndyDefer\Directive\Dispatchers\InputDispatcher(),
+        );
     }
 
     private function createTestDirective(): TestCalculatorDirective
     {
         return new TestCalculatorDirective($this->context, $this->interaction);
+    }
+
+    private function createConcreteDirective(): TestConcreteDirective
+    {
+        return new TestConcreteDirective($this->context, $this->interaction);
+    }
+
+    private function createEchoDirective(): TestEchoDirective
+    {
+        return new TestEchoDirective($this->context, $this->interaction);
     }
 
     public function test_register_directive(): void
@@ -127,18 +152,14 @@ final class TestDirectiveRegistryTest extends UnitTestCase
     public function test_register_multiple_directives(): void
     {
         $directive1 = $this->createTestDirective();
-
-        // Créer une classe différente pour la deuxième directive
-        $directive2 = $this->createMock(TestCalculatorDirective::class);
-        $directive2->method('getSignature')->willReturn('other-cmd');
-        $directive2->method('getAliases')->willReturn(new StringTypedCollection);
-        $directive2->method('getDescription')->willReturn('Other command');
+        $directive2 = $this->createConcreteDirective();
 
         $this->registry->register($directive1);
         $this->registry->register($directive2);
 
         $this->assertSame($directive1, $this->registry->getDirective(TestCalculatorDirective::class));
-        // Pour la deuxième directive, on ne peut pas la récupérer par classe car c'est un mock
+        $this->assertSame($directive2, $this->registry->getDirective(TestConcreteDirective::class));
+
         $allDirectives = $this->registry->getAllDirectives();
         $this->assertCount(2, $allDirectives);
     }
@@ -158,16 +179,16 @@ final class TestDirectiveRegistryTest extends UnitTestCase
     public function test_register_directives_batch(): void
     {
         $directive1 = $this->createTestDirective();
+        $directive2 = $this->createConcreteDirective();
+        $directive3 = $this->createEchoDirective();
 
-        $directive2 = $this->createMock(TestCalculatorDirective::class);
-        $directive2->method('getSignature')->willReturn('other-cmd');
-        $directive2->method('getAliases')->willReturn(new StringTypedCollection);
-        $directive2->method('getDescription')->willReturn('Other command');
-
-        $this->registry->registerAll([$directive1, $directive2]);
+        $this->registry->registerAll([$directive1, $directive2, $directive3]);
 
         $this->assertSame($directive1, $this->registry->getDirective(TestCalculatorDirective::class));
+        $this->assertSame($directive2, $this->registry->getDirective(TestConcreteDirective::class));
+        $this->assertSame($directive3, $this->registry->getDirective(TestEchoDirective::class));
+
         $allDirectives = $this->registry->getAllDirectives();
-        $this->assertCount(2, $allDirectives);
+        $this->assertCount(3, $allDirectives);
     }
 }

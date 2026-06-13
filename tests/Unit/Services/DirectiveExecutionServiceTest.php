@@ -9,7 +9,6 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Collections\ParsedArgumentCollection;
 use AndyDefer\Directive\Collections\ParsedOptionCollection;
-use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
@@ -34,40 +33,30 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveExecutionServiceTest extends UnitTestCase
 {
     private DirectiveDiscoveryService&MockObject $discovery;
-
     private DirectiveParserService&MockObject $parser;
-
     private DirectiveHydratorService&MockObject $hydrator;
-
     private DirectiveRendererService&MockObject $renderer;
-
     private DirectiveExecutionService $service;
-
-    private LaravelBootstrapperContext $laravelBootstrapperContext;
-
     private HydrationService $hydration;
-
     private string|false $originalDebug;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->hydration = new HydrationService;
+        $this->hydration = new HydrationService();
 
         $this->discovery = $this->createMock(DirectiveDiscoveryService::class);
         $this->parser = $this->createMock(DirectiveParserService::class);
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->renderer = $this->createMock(DirectiveRendererService::class);
-        $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
 
-        // Injection du LaravelBootstrapperContext dans le constructeur
+        // ✅ Nouvelle signature : plus de LaravelBootstrapperContext
         $this->service = new DirectiveExecutionService(
             discovery: $this->discovery,
             parser: $this->parser,
             hydrator: $this->hydrator,
             renderer: $this->renderer,
-            laravelBootstrapperContext: $this->laravelBootstrapperContext,
         );
 
         $this->originalDebug = getenv('DIRECTIVE_DEBUG');
@@ -78,18 +67,17 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         if ($this->originalDebug === false) {
             putenv('DIRECTIVE_DEBUG');
         } else {
-            putenv('DIRECTIVE_DEBUG='.$this->originalDebug);
+            putenv('DIRECTIVE_DEBUG=' . $this->originalDebug);
         }
 
-        $this->laravelBootstrapperContext->reset();
         parent::tearDown();
     }
 
     private function createDirectivesCollection(): DirectiveMetadataCollection
     {
-        $collection = new DirectiveMetadataCollection;
+        $collection = new DirectiveMetadataCollection();
 
-        $aliases1 = new StringTypedCollection;
+        $aliases1 = new StringTypedCollection();
         $directive1 = new DirectiveMetadataRecord(
             signature: 'test-concrete',
             class: TestConcreteDirective::class,
@@ -98,7 +86,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive1);
 
-        $aliases2 = new StringTypedCollection;
+        $aliases2 = new StringTypedCollection();
         $aliases2->add('tpkg');
         $directive2 = new DirectiveMetadataRecord(
             signature: 'test-package',
@@ -108,7 +96,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive2);
 
-        $aliases3 = new StringTypedCollection;
+        $aliases3 = new StringTypedCollection();
         $directive3 = new DirectiveMetadataRecord(
             signature: 'test-laravel',
             class: TestLaravelDirective::class,
@@ -123,17 +111,22 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
     private function createEmptyParsedDirectiveRecord(): ParsedDirectiveRecord
     {
         return new ParsedDirectiveRecord(
-            arguments: new ParsedArgumentCollection,
-            options: new ParsedOptionCollection,
-            variadic_arguments: new StringTypedCollection,
+            arguments: new ParsedArgumentCollection(),
+            options: new ParsedOptionCollection(),
+            variadic_arguments: new StringTypedCollection(),
         );
     }
 
     private function createExecutionRecord(string $signature, array $arguments = []): DirectiveExecutionRecord
     {
+        $argumentCollection = new StringTypedCollection();
+        foreach ($arguments as $arg) {
+            $argumentCollection->add($arg);
+        }
+
         return $this->hydration->hydrate(DirectiveExecutionRecord::class, [
             'signature' => $signature,
-            'arguments' => $arguments,
+            'arguments' => $argumentCollection,
         ]);
     }
 
@@ -141,7 +134,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
     {
-        $directives = new DirectiveMetadataCollection;
+        $directives = new DirectiveMetadataCollection();
 
         $this->discovery->expects($this->once())
             ->method('discover')
@@ -418,9 +411,6 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
         $this->renderer->expects($this->once())
             ->method('renderSuccess');
-
-        // Le service utilise déjà le LaravelBootstrapperContext injecté dans le constructeur
-        // Pas besoin de setter supplémentaire
 
         $record = $this->createExecutionRecord('test-laravel', []);
 

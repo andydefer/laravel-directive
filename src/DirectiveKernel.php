@@ -10,6 +10,7 @@ use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\SignatureValidationService;
+use AndyDefer\DomainStructures\Services\HydrationService;
 
 /**
  * Core kernel that orchestrates directive execution from CLI.
@@ -30,6 +31,7 @@ final class DirectiveKernel
         private readonly DirectiveExecutionService $service,
         private readonly SignatureValidationService $signatureValidator,
         private readonly DirectiveRendererService $renderer,
+        private readonly HydrationService $hydration
     ) {}
 
     /**
@@ -90,7 +92,7 @@ final class DirectiveKernel
      */
     private function executeDirective(string $signature, array $arguments): ExitCode
     {
-        $record = DirectiveExecutionRecord::from([
+        $record = $this->hydration->hydrate(DirectiveExecutionRecord::class, [
             'signature' => $signature,
             'arguments' => $arguments,
         ]);

@@ -31,7 +31,7 @@ abstract class AbstractDirective implements DirectiveInterface
 
     public function shouldBootLaravel(): bool
     {
-        return $this->context->shouldBootLaravel();
+        return false;
     }
 
     final public function hasLaravel(): bool
@@ -39,7 +39,7 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->context->hasLaravel();
     }
 
-    final public function getLaravel(): object
+    final public function getLaravel(): ?object
     {
         return $this->context->getLaravel();
     }

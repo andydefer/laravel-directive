@@ -104,7 +104,7 @@ class LaravelBootstrapperContext implements LaravelBootstrapperInterface
 
     private function resolveBootstrapPath(): string
     {
-        return $this->customBootstrapPath ?? getcwd().'/bootstrap/app.php';
+        return $this->customBootstrapPath ?? getcwd() . '/bootstrap/app.php';
     }
 
     private function isValidBootstrapFile(string $path): bool
@@ -117,7 +117,7 @@ class LaravelBootstrapperContext implements LaravelBootstrapperInterface
         /** @var object $app */
         $app = require $bootstrapPath;
 
-        return $app;
+        return $app ?? $this->getApplication();
     }
 
     private function bootstrapConsoleKernel(): void

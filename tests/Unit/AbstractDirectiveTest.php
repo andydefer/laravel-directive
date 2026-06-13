@@ -7,17 +7,14 @@ namespace AndyDefer\Directive\Tests\Unit;
 use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Collections\RowCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
-use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-use AndyDefer\DomainStructures\Hydration\Hydrator;
-use AndyDefer\DomainStructures\Services\HydrationService;
 use AndyDefer\PhpServices\Enums\PrimitiveType;
-use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
+use Illuminate\Foundation\Application;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -25,18 +22,23 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class AbstractDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
-
-    private LaravelBootstrapperContext $laravelBootstrapperContext;
-
-    private HydrationService $hydration;
+    private ?Application $application;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
-        $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
-        $this->hydration = new HydrationService;
+        $this->application = null; // Pas besoin de Laravel pour ces tests
+    }
+
+    private function createDirectiveContext(): DirectiveContext
+    {
+        return new DirectiveContext(
+            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
+            aliases: new StringTypedCollection(),
+            laravelApplication: $this->application,
+        );
     }
 
     private function createDirectiveWithContext(DirectiveContext $context): TestConcreteDirective
@@ -48,22 +50,16 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_arguments_are_set_correctly_via_context(): void
     {
-        $arguments = new ParameterVOCollection;
+        $arguments = new ParameterVOCollection();
         $arguments->add(
             new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING),
             new ParameterVO(name: 'email', value: 'john@example.com', type: PrimitiveType::STRING),
         );
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setArguments($arguments);
 
         $directive = $this->createDirectiveWithContext($context);
-
 
         $this->assertSame('John Doe', $directive->argument('name'));
         $this->assertSame('john@example.com', $directive->argument('email'));
@@ -71,13 +67,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_argument_returns_null_for_unknown_key(): void
     {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
-
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
 
         $this->assertNull($directive->argument('unknown'));
@@ -85,15 +75,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_argument_returns_null_when_value_is_empty_string(): void
     {
-        $arguments = new ParameterVOCollection;
+        $arguments = new ParameterVOCollection();
         $arguments->add(new ParameterVO(name: 'comment', value: '', type: PrimitiveType::STRING));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setArguments($arguments);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -103,15 +88,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_true_when_argument_exists(): void
     {
-        $arguments = new ParameterVOCollection;
+        $arguments = new ParameterVOCollection();
         $arguments->add(new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setArguments($arguments);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -121,15 +101,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_false_when_argument_does_not_exist(): void
     {
-        $arguments = new ParameterVOCollection;
+        $arguments = new ParameterVOCollection();
         $arguments->add(new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setArguments($arguments);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -139,15 +114,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_false_for_empty_string_value(): void
     {
-        $arguments = new ParameterVOCollection;
+        $arguments = new ParameterVOCollection();
         $arguments->add(new ParameterVO(name: 'comment', value: '', type: PrimitiveType::STRING));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setArguments($arguments);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -159,19 +129,14 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_options_are_set_correctly_via_context(): void
     {
-        $options = new ParameterVOCollection;
+        $options = new ParameterVOCollection();
         $options->add(
             new ParameterVO(name: 'role', value: 'admin', type: PrimitiveType::STRING),
             new ParameterVO(name: 'active', value: true, type: PrimitiveType::BOOL),
             new ParameterVO(name: 'count', value: 10, type: PrimitiveType::INT),
         );
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setOptions($options);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -183,13 +148,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_option_returns_null_for_unknown_key(): void
     {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
-
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
 
         $this->assertNull($directive->option('unknown'));
@@ -197,15 +156,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_option_returns_null_for_empty_string_value(): void
     {
-        $options = new ParameterVOCollection;
+        $options = new ParameterVOCollection();
         $options->add(new ParameterVO(name: 'role', value: '', type: PrimitiveType::STRING));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setOptions($options);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -215,15 +169,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_true_when_option_exists(): void
     {
-        $options = new ParameterVOCollection;
+        $options = new ParameterVOCollection();
         $options->add(new ParameterVO(name: 'force', value: true, type: PrimitiveType::BOOL));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setOptions($options);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -233,15 +182,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_false_when_option_does_not_exist(): void
     {
-        $options = new ParameterVOCollection;
+        $options = new ParameterVOCollection();
         $options->add(new ParameterVO(name: 'force', value: true, type: PrimitiveType::BOOL));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setOptions($options);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -251,15 +195,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_false_for_empty_string_value(): void
     {
-        $options = new ParameterVOCollection;
+        $options = new ParameterVOCollection();
         $options->add(new ParameterVO(name: 'role', value: '', type: PrimitiveType::STRING));
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setOptions($options);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -274,12 +213,7 @@ final class AbstractDirectiveTest extends UnitTestCase
         $expectedMessage = 'Test message';
         $this->interaction->expects($this->once())->method('line')->with($expectedMessage);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->line($expectedMessage);
     }
@@ -289,12 +223,7 @@ final class AbstractDirectiveTest extends UnitTestCase
         $expectedMessage = 'Test message';
         $this->interaction->expects($this->once())->method('info')->with($expectedMessage);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->info($expectedMessage);
     }
@@ -304,12 +233,7 @@ final class AbstractDirectiveTest extends UnitTestCase
         $expectedMessage = 'Test message';
         $this->interaction->expects($this->once())->method('error')->with($expectedMessage);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->error($expectedMessage);
     }
@@ -319,12 +243,7 @@ final class AbstractDirectiveTest extends UnitTestCase
         $expectedMessage = 'Test message';
         $this->interaction->expects($this->once())->method('warn')->with($expectedMessage);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->warn($expectedMessage);
     }
@@ -341,12 +260,7 @@ final class AbstractDirectiveTest extends UnitTestCase
             ->with($expectedQuestion)
             ->willReturn($expectedAnswer);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $result = $directive->ask($expectedQuestion);
 
@@ -363,12 +277,7 @@ final class AbstractDirectiveTest extends UnitTestCase
             ->with($expectedQuestion)
             ->willReturn($expectedAnswer);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $result = $directive->confirm($expectedQuestion);
 
@@ -379,11 +288,11 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_table_delegates_to_interaction(): void
     {
-        $headers = new StringTypedCollection;
+        $headers = new StringTypedCollection();
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection;
-        $row = new RowCollection;
+        $rows = new RowCollection();
+        $row = new RowCollection();
         $row->add('John', 'john@example.com');
         $rows->add($row);
 
@@ -391,12 +300,7 @@ final class AbstractDirectiveTest extends UnitTestCase
             ->method('table')
             ->with($headers, $rows);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->table($headers, $rows);
     }
@@ -405,12 +309,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_get_aliases_returns_empty_collection_by_default(): void
     {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
 
         $aliases = $directive->getAliases();
@@ -421,12 +320,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_get_blueprint_returns_correct_blueprint(): void
     {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
 
         $blueprint = $directive->getBlueprint();
@@ -437,12 +331,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_arguments_are_empty_by_default(): void
     {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
 
         $this->assertNull($directive->argument('anything'));
@@ -451,12 +340,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_options_are_empty_by_default(): void
     {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
 
         $this->assertNull($directive->option('anything'));
@@ -467,15 +351,10 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_variadic_arguments_are_set_correctly(): void
     {
-        $variadicArguments = new StringTypedCollection;
+        $variadicArguments = new StringTypedCollection();
         $variadicArguments->add('file1.txt', 'file2.txt', 'file3.txt');
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $context->setVariadicArguments($variadicArguments);
 
         $directive = $this->createDirectiveWithContext($context);
@@ -487,12 +366,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_variadic_arguments_are_empty_by_default(): void
     {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
 
         $this->assertFalse($directive->hasVariadicArguments());
@@ -505,12 +379,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     {
         $this->interaction->expects($this->once())->method('newLine');
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->newLine();
     }
@@ -519,12 +388,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     {
         $this->interaction->expects($this->once())->method('separator')->with('-', 80);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->separator();
     }
@@ -533,12 +397,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     {
         $this->interaction->expects($this->once())->method('separator')->with('=', 80);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->separator('=');
     }
@@ -547,12 +406,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     {
         $this->interaction->expects($this->once())->method('separator')->with('-', 50);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->separator(length: 50);
     }
@@ -561,12 +415,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     {
         $this->interaction->expects($this->once())->method('separator')->with('*', 100);
 
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
+        $context = $this->createDirectiveContext();
         $directive = $this->createDirectiveWithContext($context);
         $directive->separator('*', 100);
     }

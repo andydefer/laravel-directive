@@ -1,7 +1,5 @@
 <?php
 
-// src/Contexts/DirectiveTestingContext.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contexts;
@@ -30,181 +28,130 @@ use PDO;
 final class DirectiveTestingContext
 {
     // Directory state
-    private ?string $temp_dir = null;
-
-    private ?string $original_cwd = null;
-
-    private bool $in_temp_directory = false;
+    private ?string $tempDir = null;
+    private ?string $originalCwd = null;
+    private bool $inTempDirectory = false;
 
     // Laravel state
-    private ?Application $laravel_app = null;
-
-    private bool $boot_laravel = false;
+    private ?Application $laravelApp = null;
+    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
+    private bool $bootLaravel = false;
 
     // Service container state
     private ?Container $container = null;
-
     private ?DirectiveKernel $kernel = null;
-
     private ?DirectiveInteractionService $interaction = null;
 
     // Registry state
     private TestDirectiveRegistry $registry;
-
-    private ClosureDirectiveRegistry $closure_registry;
+    private ClosureDirectiveRegistry $closureRegistry;
 
     // Configuration
     private DirectiveTestingConfigInterface $config;
 
     // Execution tracking
-    private StringTypedCollection $executed_directives;
-
-    private ExecutionResultCollection $execution_results;
-
-    private CreatedPathCollection $created_paths;
-
-    private StepResultCollection $step_results;
-
-    // Sub-contexts
-    private LaravelContext $laravel_context;
-
-    private FileSystemContext $file_system_context;
+    private StringTypedCollection $executedDirectives;
+    private ExecutionResultCollection $executionResults;
+    private CreatedPathCollection $createdPaths;
+    private StepResultCollection $stepResults;
 
     // Database state
-    private ?PDO $database_connection = null;
-
-    private ?DatabaseConnectionRecord $database_connection_record = null;
+    private ?PDO $databaseConnection = null;
+    private ?DatabaseConnectionRecord $databaseConnectionRecord = null;
 
     // Mode flags
-    private bool $integrated_mode = false;
-
+    private bool $integratedMode = false;
     private bool $initialized = false;
 
-    public function __construct(bool $boot_laravel = false)
+    public function __construct(bool $bootLaravel = false)
     {
-        $this->boot_laravel = $boot_laravel;
-        $this->registry = new TestDirectiveRegistry;
-        $this->closure_registry = new ClosureDirectiveRegistry;
-        $this->executed_directives = new StringTypedCollection;
-        $this->execution_results = new ExecutionResultCollection;
-        $this->created_paths = new CreatedPathCollection;
-        $this->step_results = new StepResultCollection;
-        $this->laravel_context = new LaravelContext;
-        $this->file_system_context = new FileSystemContext;
+        $this->bootLaravel = $bootLaravel;
+        $this->registry = new TestDirectiveRegistry();
+        $this->closureRegistry = new ClosureDirectiveRegistry();
+        $this->executedDirectives = new StringTypedCollection();
+        $this->executionResults = new ExecutionResultCollection();
+        $this->createdPaths = new CreatedPathCollection();
+        $this->stepResults = new StepResultCollection();
     }
 
     // ========== Getters ==========
 
     public function getTempDir(): ?string
     {
-        return $this->temp_dir;
+        return $this->tempDir;
     }
-
     public function getOriginalCwd(): ?string
     {
-        return $this->original_cwd;
+        return $this->originalCwd;
     }
-
     public function isInTempDirectory(): bool
     {
-        return $this->in_temp_directory;
+        return $this->inTempDirectory;
     }
-
     public function getLaravelApp(): ?Application
     {
-        return $this->laravel_app;
+        return $this->laravelApp;
     }
-
+    public function getLaravelBootstrapperContext(): ?LaravelBootstrapperContext
+    {
+        return $this->laravelBootstrapperContext;
+    }
     public function shouldBootLaravel(): bool
     {
-        return $this->boot_laravel;
+        return $this->bootLaravel;
     }
-
     public function getContainer(): ?Container
     {
         return $this->container;
     }
-
     public function getKernel(): ?DirectiveKernel
     {
         return $this->kernel;
     }
-
     public function getInteraction(): ?DirectiveInteractionService
     {
         return $this->interaction;
     }
-
     public function getRegistry(): TestDirectiveRegistry
     {
         return $this->registry;
     }
-
     public function getClosureRegistry(): ClosureDirectiveRegistry
     {
-        return $this->closure_registry;
+        return $this->closureRegistry;
     }
-
     public function getConfig(): DirectiveTestingConfigInterface
     {
         return $this->config;
     }
-
     public function getExecutedDirectives(): StringTypedCollection
     {
-        return $this->executed_directives;
+        return $this->executedDirectives;
     }
-
     public function getExecutionResults(): ExecutionResultCollection
     {
-        return $this->execution_results;
+        return $this->executionResults;
     }
-
-    public function getExecutionResult(string $directive_class): ?ExecutionResultRecord
-    {
-        return $this->execution_results->getByDirectiveClass($directive_class);
-    }
-
     public function getCreatedPaths(): CreatedPathCollection
     {
-        return $this->created_paths;
+        return $this->createdPaths;
     }
-
     public function getStepResults(): StepResultCollection
     {
-        return $this->step_results;
+        return $this->stepResults;
     }
-
-    public function getStepResult(TestingStep $step_name): ?StepResultRecord
-    {
-        return $this->step_results->getByStepName($step_name);
-    }
-
-    public function getLaravelContext(): LaravelContext
-    {
-        return $this->laravel_context;
-    }
-
-    public function getFileSystemContext(): FileSystemContext
-    {
-        return $this->file_system_context;
-    }
-
     public function getDatabaseConnection(): ?PDO
     {
-        return $this->database_connection;
+        return $this->databaseConnection;
     }
-
     public function getDatabaseConnectionRecord(): ?DatabaseConnectionRecord
     {
-        return $this->database_connection_record;
+        return $this->databaseConnectionRecord;
     }
-
     public function isIntegratedMode(): bool
     {
-        return $this->integrated_mode;
+        return $this->integratedMode;
     }
-
     public function isInitialized(): bool
     {
         return $this->initialized;
@@ -212,72 +159,59 @@ final class DirectiveTestingContext
 
     // ========== Setters ==========
 
-    public function setTempDir(?string $temp_dir): void
+    public function setTempDir(?string $tempDir): void
     {
-        $this->temp_dir = $temp_dir;
-        $this->in_temp_directory = $temp_dir !== null;
+        $this->tempDir = $tempDir;
+        $this->inTempDirectory = $tempDir !== null;
     }
-
-    public function setOriginalCwd(string $original_cwd): void
+    public function setOriginalCwd(string $originalCwd): void
     {
-        $this->original_cwd = $original_cwd;
+        $this->originalCwd = $originalCwd;
     }
-
-    public function setInTempDirectory(bool $in_temp_directory): void
+    public function setInTempDirectory(bool $inTempDirectory): void
     {
-        $this->in_temp_directory = $in_temp_directory;
+        $this->inTempDirectory = $inTempDirectory;
     }
-
     public function setLaravelApp(Application $app): void
     {
-        $this->laravel_app = $app;
+        $this->laravelApp = $app;
     }
-
-    public function setBootLaravel(bool $boot_laravel): void
+    public function setLaravelBootstrapperContext(LaravelBootstrapperContext $context): void
     {
-        $this->boot_laravel = $boot_laravel;
+        $this->laravelBootstrapperContext = $context;
     }
-
+    public function setBootLaravel(bool $bootLaravel): void
+    {
+        $this->bootLaravel = $bootLaravel;
+    }
     public function setContainer(Container $container): void
     {
         $this->container = $container;
     }
-
     public function setKernel(DirectiveKernel $kernel): void
     {
         $this->kernel = $kernel;
     }
-
     public function setInteraction(DirectiveInteractionService $interaction): void
     {
         $this->interaction = $interaction;
     }
-
-    public function setRegistry(TestDirectiveRegistry $registry): void
-    {
-        $this->registry = $registry;
-    }
-
     public function setConfig(DirectiveTestingConfigInterface $config): void
     {
         $this->config = $config;
     }
-
     public function setDatabaseConnection(PDO $connection): void
     {
-        $this->database_connection = $connection;
+        $this->databaseConnection = $connection;
     }
-
     public function setDatabaseConnectionRecord(DatabaseConnectionRecord $record): void
     {
-        $this->database_connection_record = $record;
+        $this->databaseConnectionRecord = $record;
     }
-
-    public function setIntegratedMode(bool $integrated_mode): void
+    public function setIntegratedMode(bool $integratedMode): void
     {
-        $this->integrated_mode = $integrated_mode;
+        $this->integratedMode = $integratedMode;
     }
-
     public function setInitialized(bool $initialized): void
     {
         $this->initialized = $initialized;
@@ -285,147 +219,125 @@ final class DirectiveTestingContext
 
     // ========== Adders ==========
 
-    public function addExecutedDirective(string $directive_class): void
+    public function addExecutedDirective(string $directiveClass): void
     {
-        $this->executed_directives->add($directive_class);
+        $this->executedDirectives->add($directiveClass);
     }
 
-    public function addExecutionResult(string $directive_class, mixed $result, ?DateTimeVO $executed_at = null): void
+    public function addExecutionResult(string $directiveClass, mixed $result, ?DateTimeVO $executedAt = null): void
     {
-        $record = new ExecutionResultRecord(
-            directive_class: $directive_class,
+        $this->executionResults->add(new ExecutionResultRecord(
+            directive_class: $directiveClass,
             result: $result,
-            executed_at: $executed_at ?? new DateTimeVO(null),
-        );
-        $this->execution_results->add($record);
+            executed_at: $executedAt ?? new DateTimeVO(),
+        ));
     }
 
-    public function addCreatedPath(string $path, PathType $type, ?DateTimeVO $created_at = null): void
+    public function addCreatedPath(string $path, PathType $type, ?DateTimeVO $createdAt = null): void
     {
-        $record = new CreatedPathRecord(
+        $this->createdPaths->add(new CreatedPathRecord(
             path: $path,
             type: $type,
-            created_at: $created_at ?? new DateTimeVO(null),
-        );
-        $this->created_paths->add($record);
+            created_at: $createdAt ?? new DateTimeVO(),
+        ));
     }
 
-    public function addStepResult(TestingStep $step_name, StepResultStatus $status, string $message, ?DateTimeVO $executed_at = null): void
+    public function addStepResult(TestingStep $stepName, StepResultStatus $status, string $message, ?DateTimeVO $executedAt = null): void
     {
-        $record = new StepResultRecord(
-            step_name: $step_name,
+        $this->stepResults->add(new StepResultRecord(
+            step_name: $stepName,
             status: $status,
             message: $message,
-            executed_at: $executed_at ?? new DateTimeVO(null),
-        );
-        $this->step_results->add($record);
+            executed_at: $executedAt ?? new DateTimeVO(),
+        ));
     }
 
     // ========== Question Methods ==========
 
     public function hasTempDir(): bool
     {
-        return $this->temp_dir !== null && is_dir($this->temp_dir);
+        return $this->tempDir !== null && is_dir($this->tempDir);
     }
-
     public function hasLaravelApp(): bool
     {
-        return $this->laravel_app !== null;
+        return $this->laravelApp !== null;
     }
-
-    public function hasLaravelStructure(): bool
+    public function hasLaravelBootstrapperContext(): bool
     {
-        if ($this->temp_dir === null) {
-            return false;
-        }
-
-        return is_dir($this->temp_dir.'/bootstrap')
-            && is_dir($this->temp_dir.'/config')
-            && is_dir($this->temp_dir.'/storage')
-            && file_exists($this->temp_dir.'/bootstrap/app.php');
+        return $this->laravelBootstrapperContext !== null;
     }
-
     public function hasContainer(): bool
     {
         return $this->container !== null;
     }
-
     public function hasKernel(): bool
     {
         return $this->kernel !== null;
     }
-
     public function hasInteraction(): bool
     {
         return $this->interaction !== null;
     }
-
     public function hasDatabaseConnection(): bool
     {
-        return $this->database_connection !== null;
+        return $this->databaseConnection !== null;
     }
-
-    public function hasBeenExecuted(string $directive_class): bool
+    public function hasBeenExecuted(string $directiveClass): bool
     {
-        return $this->executed_directives->contains($directive_class);
+        return $this->executedDirectives->contains($directiveClass);
     }
-
     public function hasCreatedPaths(): bool
     {
-        return $this->created_paths->isNotEmpty();
+        return $this->createdPaths->isNotEmpty();
     }
-
-    public function hasStepResult(TestingStep $step_name): bool
+    public function hasStepResult(TestingStep $stepName): bool
     {
-        return $this->step_results->getByStepName($step_name) !== null;
+        return $this->stepResults->getByStepName($stepName) !== null;
     }
 
     // ========== Counters ==========
 
     public function getCreatedPathsCount(): int
     {
-        return $this->created_paths->count();
+        return $this->createdPaths->count();
     }
-
     public function getExecutedDirectivesCount(): int
     {
-        return $this->executed_directives->count();
+        return $this->executedDirectives->count();
     }
-
     public function getStepsExecutedCount(): int
     {
-        return $this->step_results->count();
+        return $this->stepResults->count();
     }
 
     // ========== Reset ==========
 
     public function reset(): void
     {
-        $this->temp_dir = null;
-        $this->original_cwd = null;
-        $this->in_temp_directory = false;
-        $this->laravel_app = null;
+        $this->tempDir = null;
+        $this->originalCwd = null;
+        $this->inTempDirectory = false;
+        $this->laravelApp = null;
+        $this->laravelBootstrapperContext = null;
         $this->container = null;
         $this->kernel = null;
         $this->interaction = null;
         $this->registry->clear();
-        $this->closure_registry->clear();
-        $this->executed_directives = new StringTypedCollection;
-        $this->execution_results = new ExecutionResultCollection;
-        $this->created_paths = new CreatedPathCollection;
-        $this->step_results = new StepResultCollection;
-        $this->laravel_context->reset();
-        $this->file_system_context->reset();
-        $this->database_connection = null;
-        $this->database_connection_record = null;
-        $this->integrated_mode = false;
+        $this->closureRegistry->clear();
+        $this->executedDirectives = new StringTypedCollection();
+        $this->executionResults = new ExecutionResultCollection();
+        $this->createdPaths = new CreatedPathCollection();
+        $this->stepResults = new StepResultCollection();
+        $this->databaseConnection = null;
+        $this->databaseConnectionRecord = null;
+        $this->integratedMode = false;
         $this->initialized = false;
     }
 
     public function fullReset(): void
     {
         $this->reset();
-        $this->registry = new TestDirectiveRegistry;
-        $this->closure_registry = new ClosureDirectiveRegistry;
+        $this->registry = new TestDirectiveRegistry();
+        $this->closureRegistry = new ClosureDirectiveRegistry();
     }
 }

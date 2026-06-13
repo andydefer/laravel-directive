@@ -13,6 +13,10 @@ final class TestConcreteDirective extends AbstractDirective
     {
         return 'test-concrete';
     }
+    public function shouldBootLaravel(): bool
+    {
+        return true;
+    }
 
     public function getDescription(): string
     {

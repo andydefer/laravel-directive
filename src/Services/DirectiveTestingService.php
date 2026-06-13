@@ -1,424 +1,83 @@
 <?php
 
-// src/Services/DirectiveTestingService.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\ParameterVOCollection;
-use AndyDefer\Directive\Configs\DirectiveTestingConfig;
 use AndyDefer\Directive\Contexts\DirectiveContext;
-use AndyDefer\Directive\Contexts\DirectiveTestingContext;
-use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
-use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
-use AndyDefer\Directive\Contracts\DirectiveTestingServiceInterface;
-use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\PhpServices\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
-use AndyDefer\Directive\Steps\BootstrapLaravelStep;
-use AndyDefer\Directive\Steps\BuildContainerStep;
-use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
-use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
-use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
-use AndyDefer\Directive\Steps\StartDatabaseStep;
-use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
+use Illuminate\Foundation\Application;
 use InvalidArgumentException;
+use Throwable;
 
-class DirectiveTestingService implements DirectiveTestingServiceInterface
+final class DirectiveTestingService
 {
-    private DirectiveTestingContext $context;
-
-    private ?LaravelBootstrapperContext $laravelBootstrapperContext = null;
-
-    private ?DirectiveInteractionService $interaction = null;
-
     private PrimitiveTypeConverterService $typeConverter;
+    private DirectiveInteractionService $interaction;
+    private string $tempDir;
+    private array $directives = [];
+    private ?Application $application;
+    private string $originalCwd;
 
-    public function __construct(
-        ?object $application = null,
-        ?DirectiveTestingContext $context = null,
-        ?DirectiveTestingConfigInterface $config = null,
-    ) {
-        $this->context = $context ?? new DirectiveTestingContext;
-        $this->context->setConfig($config ?? new DirectiveTestingConfig);
+    /**
+     * @param Application|null $application L'application Laravel (null si mode isolé)
+     */
+    public function __construct(?Application $application = null)
+    {
+        $this->application = $application;
         $this->typeConverter = new PrimitiveTypeConverterService();
+        $this->interaction = new DirectiveInteractionService(new RenderDispatcher(), new InputDispatcher());
 
-        $this->initializeInteraction();
+        // Sauvegarder le répertoire original AVANT de créer le temporaire
+        $this->originalCwd = getcwd();
 
-        // TOUJOURS créer un répertoire temporaire
         $this->setupTempDirectory();
-
-        if ($application !== null) {
-            $this->context->setIntegratedMode(true);
-            $this->context->setLaravelApp($application);
-            $this->context->setBootLaravel(true);
-
-            // Mettre à jour les chemins dans l'application
-            $this->updateApplicationPaths($application);
-
-            $kernel = $application->make(DirectiveKernel::class);
-            $this->context->setKernel($kernel);
-
-            $this->laravelBootstrapperContext = $application->make(LaravelBootstrapperContext::class);
-
-            return;
-        }
-
-        $this->initializeMinimalEnvironment();
     }
 
-    private function setupTempDirectory(): void
-    {
-        // Sauvegarder le répertoire original
-        $originalCwd = getcwd();
-        $this->context->setOriginalCwd($originalCwd);
-
-        // Créer un répertoire temporaire
-        $tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
-        mkdir($tempDir, 0777, true);
-        $this->context->setTempDir($tempDir);
-
-        // Changer le répertoire de travail vers le temporaire
-        chdir($tempDir);
-        $this->context->setInTempDirectory(true);
-
-        // Configurer les variables d'environnement
-        putenv('FILE_CREATOR_WORKING_DIR=' . $tempDir);
-        putenv('DIRECTIVE_PATH=' . $tempDir . '/app/Directives');
-        putenv('DIRECTIVE_TEST_TEMP_DIR=' . $tempDir);
-
-        // Créer la structure de répertoires
-        $this->createTempDirectories($tempDir);
-    }
-
-    private function createTempDirectories(string $tempDir): void
-    {
-        $directories = [
-            $tempDir . '/app/Directives',
-            $tempDir . '/src/Directives',
-            $tempDir . '/app/Actions',
-            $tempDir . '/app/Tasks',
-            $tempDir . '/app/Repositories',
-            $tempDir . '/app/Records',
-            $tempDir . '/app/Collections',
-            $tempDir . '/app/Services',
-            $tempDir . '/app/Http/Requests',
-            $tempDir . '/app/ValueObjects',
-            $tempDir . '/app/Configs',
-            $tempDir . '/app/Data',
-            $tempDir . '/bootstrap',
-            $tempDir . '/config',
-            $tempDir . '/storage',
-        ];
-
-        foreach ($directories as $directory) {
-            if (! is_dir($directory)) {
-                mkdir($directory, 0777, true);
-            }
-        }
-    }
-
-    private function updateApplicationPaths(object $application): void
-    {
-        $tempDir = $this->context->getTempDir();
-        if ($tempDir === null) {
-            return;
-        }
-
-        $directivesPath = $tempDir . '/app/Directives';
-
-        // La variable d'environnement DIRECTIVE_PATH est déjà définie dans setupTempDirectory()
-        // EnvDirectiveConfig la lira automatiquement
-
-        // Mettre à jour la config array si disponible
-        if (method_exists($application, 'make') && $application->bound('config')) {
-            try {
-                $config = $application->make('config');
-                if (method_exists($config, 'set')) {
-                    $config->set('directive.path', $directivesPath);
-                }
-            } catch (\Exception $e) {
-                // Ignorer si config n'est pas disponible
-            }
-        }
-    }
-
-    private function initializeInteraction(): void
-    {
-        $renderDispatcher = new RenderDispatcher;
-        $inputDispatcher = new InputDispatcher;
-
-        $this->interaction = new DirectiveInteractionService($renderDispatcher, $inputDispatcher);
-        $this->context->setInteraction($this->interaction);
-    }
-
-    private function initializeMinimalEnvironment(): void
-    {
-        $step = new BuildContainerStep;
-        $step->execute($this->context, fn($c) => $c);
-
-        $container = $this->context->getContainer();
-        if ($container !== null && $container->has(LaravelBootstrapperContext::class)) {
-            $this->laravelBootstrapperContext = $container->make(LaravelBootstrapperContext::class);
-        }
-
-        if ($this->laravelBootstrapperContext === null) {
-            $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
-        }
-    }
-
-    private function initializeIsolatedEnvironment(): void
-    {
-        if ($this->context->isInitialized()) {
-            return;
-        }
-
-        $steps = [
-            new CreateTempDirectoryStep,
-            new ChangeToTempDirectoryStep,
-            new CreateLaravelStructureStep,
-            new BootstrapLaravelStep,
-            new BuildContainerStep,
-            new StartDatabaseStep,
-        ];
-
-        $this->executeSteps($steps);
-        $this->context->setInitialized(true);
-
-        $container = $this->context->getContainer();
-        if ($container !== null && $container->has(LaravelBootstrapperContext::class)) {
-            $this->laravelBootstrapperContext = $container->make(LaravelBootstrapperContext::class);
-        }
-
-        if ($this->laravelBootstrapperContext === null) {
-            $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
-        }
-    }
-
-    private function executeSteps(array $steps): void
-    {
-        $chain = $this->buildChain($steps);
-        $chain($this->context);
-    }
-
-    private function buildChain(array $steps): callable
-    {
-        $next = function (DirectiveTestingContext $context) {
-            return $context;
-        };
-
-        for ($i = count($steps) - 1; $i >= 0; $i--) {
-            $step = $steps[$i];
-            $currentNext = $next;
-            $next = function (DirectiveTestingContext $context) use ($step, $currentNext) {
-                if ($step->supports($context)) {
-                    return $step->execute($context, $currentNext);
-                }
-
-                return $currentNext($context);
-            };
-        }
-
-        return $next;
-    }
-
-    // ==================== Enregistrement par classe ====================
-
-    public function registerDirective(string $class): void
-    {
-        if (! class_exists($class)) {
-            throw new InvalidArgumentException("Directive class {$class} does not exist");
-        }
-
-        if ($this->context->isIntegratedMode() && $this->context->getLaravelApp() !== null) {
-            $directive = $this->context->getLaravelApp()->make($class);
-        } else {
-            $directive = $this->createDirectiveInstance($class);
-        }
-
-        $this->context->getRegistry()->register($directive);
-    }
-
-    public function registerDirectives(array $classes): void
-    {
-        foreach ($classes as $class) {
-            $this->registerDirective($class);
-        }
-    }
-
-    // ==================== Enregistrement par instance ====================
-
-    public function registerDirectiveInstance(AbstractDirective $directive): void
-    {
-        $this->context->getRegistry()->register($directive);
-    }
-
-    public function registerDirectiveInstances(array $directives): void
-    {
-        foreach ($directives as $directive) {
-            $this->registerDirectiveInstance($directive);
-        }
-    }
-
-    // ==================== Enregistrement + Exécution ====================
-
-    public function registerAndRun(string $class, array $arguments = []): DirectiveResponseRecord
-    {
-        $this->registerDirective($class);
-        $signature = $this->extractSignatureFromClass($class);
-
-        return $this->runDirective($signature, $arguments);
-    }
-
-    public function registerAndRunInstance(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
-    {
-        $this->registerDirectiveInstance($directive);
-
-        return $this->runDirective($directive->getSignature(), $arguments);
-    }
-
-    // ==================== Exécution ====================
-
+    /**
+     * Exécute une directive par sa classe.
+     */
     public function run(string $class, array $arguments = []): DirectiveResponseRecord
     {
-        return $this->registerAndRun($class, $arguments);
+        $directive = $this->createDirective($class);
+        return $this->executeDirective($directive, $arguments);
     }
 
-    public function runDirective(string $signature, array $arguments = []): DirectiveResponseRecord
-    {
-        // Vérifier d'abord dans ClosureRegistry
-        $directive = $this->context->getClosureRegistry()->get($signature);
-        if ($directive !== null) {
-            if ($directive->shouldBootLaravel() && ! $this->context->isIntegratedMode() && ! $this->context->isInitialized()) {
-                $this->initializeIsolatedEnvironment();
-            }
-
-            return $this->executeDirectly($directive, $arguments);
-        }
-
-        // Vérifier dans Registry
-        $directive = $this->context->getRegistry()->getDirective($signature);
-        if ($directive !== null) {
-            if ($directive->shouldBootLaravel() && ! $this->context->isIntegratedMode() && ! $this->context->isInitialized()) {
-                $this->initializeIsolatedEnvironment();
-            }
-
-            return $this->executeDirectly($directive, $arguments);
-        }
-
-        // Fallback via Kernel
-        $kernel = $this->context->getKernel();
-
-        if ($kernel === null) {
-            return new DirectiveResponseRecord(
-                exit_code: ExitCode::NOT_FOUND,
-                output: "Kernel not available. Cannot execute directive: {$signature}",
-            );
-        }
-
-        $argv = array_merge(['directive', $signature], $arguments);
-
-        ob_start();
-        $exit_code = $kernel->run($argv);
-        $output = ob_get_clean();
-
-        $this->context->addExecutedDirective($signature);
-
-        return new DirectiveResponseRecord(
-            exit_code: $exit_code,
-            output: $output,
-        );
-    }
-
-    // ==================== Méthodes utilitaires ====================
-
-    public function createTestDirective(string $signature, callable $execute): ClosureDirective
-    {
-        $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext ?? new LaravelBootstrapperContext,
-            blueprint: new DirectiveBlueprintRecord(ClosureDirective::class, $signature, 'Test directive created from closure'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
-        );
-
-        $directive = new ClosureDirective(
-            context: $context,
-            interaction: $this->interaction,
-            signature: $signature,
-            execute: $execute,
-        );
-
-        $this->context->getClosureRegistry()->register($directive);
-
-        return $directive;
-    }
-
-    public function clearRegisteredDirectives(): void
-    {
-        $this->context->getRegistry()->clear();
-        $this->context->getClosureRegistry()->clear();
-    }
-
+    /**
+     * Nettoie l'environnement de test.
+     */
     public function destroy(): void
     {
-        $this->clearRegisteredDirectives();
-        $this->context->getClosureRegistry()->clear();
-
-        // Restaurer le répertoire original seulement s'il existe
-        $originalCwd = $this->context->getOriginalCwd();
-        if ($originalCwd !== null && is_dir($originalCwd) && $this->context->isInTempDirectory()) {
-            chdir($originalCwd);
+        // Restaurer le répertoire original AVANT de supprimer le temporaire
+        if ($this->originalCwd !== '' && is_dir($this->originalCwd)) {
+            chdir($this->originalCwd);
         }
 
-        $tempDir = $this->context->getTempDir();
-        if ($tempDir !== null && is_dir($tempDir) && $this->context->getConfig()->cleanupAfterTest()) {
-            $this->removeDirectory($tempDir);
+        if (is_dir($this->tempDir)) {
+            $this->removeDirectory($this->tempDir);
         }
-
-        $this->context->reset();
     }
 
     public function getInteraction(): DirectiveInteractionService
     {
-        return $this->context->getInteraction();
+        return $this->interaction;
     }
 
-    public function getContext(): DirectiveTestingContext
+    private function createDirective(string $class): AbstractDirective
     {
-        return $this->context;
-    }
-
-    // ==================== Méthodes privées ====================
-
-    private function extractSignatureFromClass(string $class): string
-    {
-        if ($this->context->isIntegratedMode() && $this->context->getLaravelApp() !== null) {
-            $directive = $this->context->getLaravelApp()->make($class);
-
-            return $directive->getSignature();
+        if (!class_exists($class)) {
+            throw new InvalidArgumentException("Directive class {$class} does not exist");
         }
 
-        $reflection = new \ReflectionClass($class);
-        $directive = $reflection->newInstanceWithoutConstructor();
-
-        if (! method_exists($directive, 'getSignature')) {
-            throw new \RuntimeException("Class {$class} does not have a getSignature method");
-        }
-
-        return $directive->getSignature();
-    }
-
-    private function createDirectiveInstance(string $class): AbstractDirective
-    {
         $reflection = new \ReflectionClass($class);
         $constructor = $reflection->getConstructor();
 
@@ -426,214 +85,131 @@ class DirectiveTestingService implements DirectiveTestingServiceInterface
             return $reflection->newInstance();
         }
 
-        $parameters = $constructor->getParameters();
         $args = [];
-
-        foreach ($parameters as $param) {
+        foreach ($constructor->getParameters() as $param) {
             $paramType = $param->getType();
-            if ($paramType === null || $paramType->isBuiltin()) {
-                $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
-            } else {
-                $paramName = $paramType->getName();
-                if ($paramName === DirectiveContext::class) {
-                    $args[] = new DirectiveContext(
-                        laravelBootstrapper: $this->laravelBootstrapperContext ?? new LaravelBootstrapperContext,
-                        blueprint: new DirectiveBlueprintRecord($class, '', ''),
-                        aliases: new StringTypedCollection,
-                        shouldBootLaravel: false,
-                    );
-                } elseif ($paramName === DirectiveInteractionService::class) {
-                    $args[] = $this->interaction;
-                } else {
-                    $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
-                }
-            }
+            $paramName = $paramType?->getName();
+
+            $args[] = match (true) {
+                $paramName === DirectiveContext::class => $this->createDirectiveContext($class),
+                $paramName === DirectiveInteractionService::class => $this->interaction,
+                $this->application !== null && $paramType?->isBuiltin() === false && class_exists($paramName) => $this->application->make($paramName),
+                default => $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null,
+            };
         }
 
         return $reflection->newInstanceArgs($args);
     }
 
-    private function executeDirectly(AbstractDirective $directive, array $arguments = []): DirectiveResponseRecord
+    private function createDirectiveContext(string $class): DirectiveContext
     {
-        $fullSignature = $directive->getSignature();
-        $parser = new DirectiveParserService;
+        $blueprint = new DirectiveBlueprintRecord($class, '', '');
+        $aliases = new StringTypedCollection();
 
-        $argumentCollection = new StringTypedCollection;
-        foreach ($arguments as $argument) {
-            $argumentCollection->add($argument);
-        }
+        return new DirectiveContext(
+            blueprint: $blueprint,
+            aliases: $aliases,
+            laravelApplication: $this->application,
+        );
+    }
 
-        $bufferStarted = false;
+    private function executeDirective(AbstractDirective $directive, array $arguments): DirectiveResponseRecord
+    {
+        $context = $this->createDirectiveContext(get_class($directive));
+        $parsed = $this->parseArguments($directive->getSignature(), $arguments);
 
+        $context->setArguments($parsed['arguments']);
+        $context->setOptions($parsed['options']);
+        $context->setVariadicArguments($parsed['variadic']);
+
+        $hydratedDirective = $this->hydrateDirective($directive, $context);
+
+        ob_start();
         try {
-            $parsed = $parser->parse($fullSignature, $argumentCollection);
-
-            $context = new DirectiveContext(
-                laravelBootstrapper: $this->laravelBootstrapperContext ?? new LaravelBootstrapperContext,
-                blueprint: $directive->getBlueprint(),
-                aliases: $directive->getAliases(),
-                shouldBootLaravel: $directive->shouldBootLaravel(),
-            );
-
-            // Convertir les arguments parsés en ParameterVOCollection
-            $argumentsVO = new ParameterVOCollection;
-            foreach ($parsed->arguments as $argument) {
-                $value = $argument->value;
-                $detectedType = $this->detectTypeFromString($value);
-                $convertedValue = $this->typeConverter->convert($value, $detectedType);
-                $argumentsVO->add(new ParameterVO($argument->name, $convertedValue, $detectedType));
-            }
-
-            // Convertir les options parsées en ParameterVOCollection
-            $optionsVO = new ParameterVOCollection;
-            foreach ($parsed->options as $option) {
-                $value = $option->value;
-                if ($value === 'true') {
-                    $value = true;
-                } elseif ($value === 'false') {
-                    $value = false;
-                }
-                $detectedType = $this->typeConverter->detectType($value);
-                $optionsVO->add(new ParameterVO($option->name, $value, $detectedType));
-            }
-
-            $context->setArguments($argumentsVO);
-            $context->setOptions($optionsVO);
-            $context->setVariadicArguments($parsed->variadic_arguments);
-
-            $reflection = new \ReflectionClass($directive);
-            $constructor = $reflection->getConstructor();
-
-            if ($constructor === null) {
-                return new DirectiveResponseRecord(
-                    exit_code: ExitCode::FAILURE,
-                    output: 'Directive has no constructor',
-                );
-            }
-
-            $parameters = $constructor->getParameters();
-            $args = [];
-
-            foreach ($parameters as $param) {
-                $paramType = $param->getType();
-
-                if ($paramType === null) {
-                    if ($param->getName() === 'execute') {
-                        $executeProperty = $reflection->getProperty('execute');
-                        $args[] = $executeProperty->getValue($directive);
-                    } else {
-                        $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
-                    }
-
-                    continue;
-                }
-
-                $paramName = $paramType->getName();
-
-                if ($paramName === DirectiveContext::class) {
-                    $args[] = $context;
-                } elseif ($paramName === DirectiveInteractionService::class) {
-                    $args[] = $this->interaction;
-                } elseif ($paramName === 'string') {
-                    if ($param->getName() === 'signature') {
-                        $args[] = $fullSignature;
-                    } else {
-                        $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
-                    }
-                } elseif ($paramName === 'Closure' || $paramName === 'callable' || $paramName === '\\Closure') {
-                    $executeProperty = $reflection->getProperty('execute');
-                    $args[] = $executeProperty->getValue($directive);
-                } elseif ($paramType->isBuiltin()) {
-                    $args[] = $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null;
-                } else {
-                    try {
-                        if ($this->context->isIntegratedMode() && $this->context->getLaravelApp() !== null) {
-                            $args[] = $this->context->getLaravelApp()->make($paramName);
-                        } else {
-                            $objClass = new \ReflectionClass($paramName);
-                            if ($objClass->isInstantiable()) {
-                                $args[] = $objClass->newInstance();
-                            } else {
-                                $args[] = null;
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        $args[] = null;
-                    }
-                }
-            }
-
-            $hydratedDirective = $reflection->newInstanceArgs($args);
-
-            ob_start();
-            $bufferStarted = true;
-            $exit_code = $hydratedDirective->execute();
+            $exitCode = $hydratedDirective->execute();
             $output = ob_get_clean();
-
-            $directiveName = explode(' ', $fullSignature)[0];
-            $this->context->addExecutedDirective($directiveName);
-
-            return new DirectiveResponseRecord(
-                exit_code: $exit_code,
-                output: $output,
-            );
-        } catch (InvalidArgumentException $e) {
-            if ($bufferStarted) {
-                ob_end_clean();
-            }
-
-            return new DirectiveResponseRecord(
-                exit_code: ExitCode::INVALID_ARGUMENT,
-                output: $e->getMessage(),
-            );
-        } catch (\Throwable $e) {
-            if ($bufferStarted) {
-                ob_end_clean();
-            }
-
-            return new DirectiveResponseRecord(
-                exit_code: ExitCode::FAILURE,
-                output: $e->getMessage(),
-            );
+            return new DirectiveResponseRecord($exitCode, $output);
+        } catch (Throwable $e) {
+            ob_end_clean();
+            return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
         }
     }
 
-    private function detectTypeFromString(string $value): PrimitiveType
+    private function parseArguments(string $signature, array $arguments): array
     {
-        $lowerValue = strtolower($value);
+        $parser = new DirectiveParserService();
+        $argumentCollection = new StringTypedCollection();
 
-        if ($lowerValue === 'null') {
-            return PrimitiveType::NULL;
+        foreach ($arguments as $arg) {
+            $argumentCollection->add((string) $arg);
         }
 
-        if ($lowerValue === 'true' || $lowerValue === 'false') {
-            return PrimitiveType::BOOL;
+        $parsed = $parser->parse($signature, $argumentCollection);
+
+        $argumentsVO = new ParameterVOCollection();
+        foreach ($parsed->arguments as $arg) {
+            $type = $this->typeConverter->detectType($arg->value);
+            $value = $this->typeConverter->convert($arg->value, $type);
+            $argumentsVO->add(new ParameterVO($arg->name, $value, $type));
         }
 
-        if (is_numeric($value)) {
-            if (str_contains($value, '.') || str_contains($value, 'e')) {
-                return PrimitiveType::FLOAT;
-            }
-            return PrimitiveType::INT;
+        $optionsVO = new ParameterVOCollection();
+        foreach ($parsed->options as $opt) {
+            $value = match ($opt->value) {
+                'true' => true,
+                'false' => false,
+                default => $opt->value,
+            };
+            $type = $this->typeConverter->detectType($value);
+            $optionsVO->add(new ParameterVO($opt->name, $value, $type));
         }
 
-        return PrimitiveType::STRING;
+        return [
+            'arguments' => $argumentsVO,
+            'options' => $optionsVO,
+            'variadic' => $parsed->variadic_arguments,
+        ];
+    }
+
+    private function hydrateDirective(AbstractDirective $directive, DirectiveContext $context): AbstractDirective
+    {
+        $reflection = new \ReflectionClass($directive);
+        $constructor = $reflection->getConstructor();
+
+        if ($constructor === null) {
+            return $directive;
+        }
+
+        $args = [];
+        foreach ($constructor->getParameters() as $param) {
+            $paramName = $param->getType()?->getName();
+
+            $args[] = match (true) {
+                $paramName === DirectiveContext::class => $context,
+                $paramName === DirectiveInteractionService::class => $this->interaction,
+                default => $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null,
+            };
+        }
+
+        return $reflection->newInstanceArgs($args);
+    }
+
+    private function setupTempDirectory(): void
+    {
+        $this->tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        mkdir($this->tempDir, 0777, true);
+        chdir($this->tempDir);
     }
 
     private function removeDirectory(string $dir): void
     {
-        if (! is_dir($dir)) {
+        if (!is_dir($dir)) {
             return;
         }
 
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            if (is_dir($path)) {
-                $this->removeDirectory($path);
-            } else {
-                unlink($path);
-            }
+        foreach (array_diff(scandir($dir), ['.', '..']) as $file) {
+            $path = $dir . DIRECTORY_SEPARATOR . $file;
+            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
         }
         rmdir($dir);
     }

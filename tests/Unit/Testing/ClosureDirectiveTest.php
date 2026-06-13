@@ -6,15 +6,14 @@ namespace AndyDefer\Directive\Tests\Unit\Testing;
 
 use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
-use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
-use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use AndyDefer\Directive\Testing\ClosureDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -22,26 +21,21 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class ClosureDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
-
-    private LaravelBootstrapperContext $laravelBootstrapperContext;
-
     private PrimitiveTypeConverterService $converter;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->interaction = $this->createMock(DirectiveInteractionService::class);
-        $this->laravelBootstrapperContext = new LaravelBootstrapperContext;
         $this->converter = new PrimitiveTypeConverterService();
     }
 
     private function createDirective(string $signature, callable $execute): ClosureDirective
     {
         $context = new DirectiveContext(
-            laravelBootstrapper: $this->laravelBootstrapperContext,
             blueprint: new DirectiveBlueprintRecord(ClosureDirective::class, $signature, 'Test directive created from closure'),
-            aliases: new StringTypedCollection,
-            shouldBootLaravel: false,
+            aliases: new StringTypedCollection(),
+            laravelApplication: null,
         );
 
         return new ClosureDirective(
@@ -73,7 +67,6 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) use (&$executed) {
             $executed = true;
-
             return ExitCode::SUCCESS;
         });
 
@@ -89,7 +82,6 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) use (&$receivedDirective) {
             $receivedDirective = $d;
-
             return ExitCode::SUCCESS;
         });
 
@@ -118,7 +110,6 @@ final class ClosureDirectiveTest extends UnitTestCase
     {
         $directive = $this->createDirective('test {name}', function ($d) {
             $name = $d->argument('name');
-
             return $name === 'John' ? ExitCode::SUCCESS : ExitCode::FAILURE;
         });
 
@@ -150,7 +141,6 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) {
             $d->line('Hello World');
-
             return ExitCode::SUCCESS;
         });
 
@@ -165,7 +155,6 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) {
             $d->info('Information message');
-
             return ExitCode::SUCCESS;
         });
 
@@ -180,7 +169,6 @@ final class ClosureDirectiveTest extends UnitTestCase
 
         $directive = $this->createDirective('test', function ($d) {
             $d->error('Error message');
-
             return ExitCode::SUCCESS;
         });
 
@@ -198,7 +186,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
     private function setArguments(ClosureDirective $directive, array $arguments): void
     {
-        $collection = new ParameterVOCollection;
+        $collection = new ParameterVOCollection();
 
         foreach ($arguments as $name => $value) {
             $type = $this->converter->detectType($value);
@@ -213,7 +201,7 @@ final class ClosureDirectiveTest extends UnitTestCase
 
     private function setOptions(ClosureDirective $directive, array $options): void
     {
-        $collection = new ParameterVOCollection;
+        $collection = new ParameterVOCollection();
 
         foreach ($options as $name => $value) {
             $type = $this->converter->detectType($value);

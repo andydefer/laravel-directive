@@ -9,6 +9,7 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveTestingService;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDatabaseDirective;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestPost;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestUser;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
@@ -112,7 +113,8 @@ final class DirectiveTestingServiceDatabaseTest extends IntegrationTestCase
     {
         $this->seedTestData();
 
-        $response = $this->service->runDirective('test-laravel-db');
+        //  $response = $this->service->runDirective('test-laravel-db');
+        $response = $this->service->run(TestLaravelDatabaseDirective::class);
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Testing Laravel database integration', $response->output);

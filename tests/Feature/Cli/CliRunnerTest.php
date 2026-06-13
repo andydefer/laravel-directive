@@ -4,16 +4,16 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tests\Unit\Cli;
+namespace AndyDefer\Directive\Tests\Feature\Cli;
 
 use AndyDefer\Directive\Cli\CliRunner;
-use AndyDefer\Directive\Tests\Fixtures\Directives\TestDirective;
+use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class CliRunnerTest extends UnitTestCase
+final class CliRunnerTest extends IntegrationTestCase
 {
     private static ?string $appRoot = null;
-
     private string $originalCwd;
 
     public static function setUpBeforeClass(): void
@@ -49,13 +49,6 @@ final class CliRunnerTest extends UnitTestCase
         parent::tearDown();
     }
 
-    /**
-     * Exécute une directive et retourne le code de sortie et la sortie capturée
-     *
-     * @param  CliRunner  $runner  L'instance du runner
-     * @param  array<string>  $argv  Les arguments de la ligne de commande
-     * @return array{exit_code: int, output: string}
-     */
     private function runDirective(CliRunner $runner, array $argv): array
     {
         ob_start();
@@ -68,13 +61,6 @@ final class CliRunnerTest extends UnitTestCase
         ];
     }
 
-    /**
-     * Exécute une directive et retourne uniquement le code de sortie (supprime la sortie)
-     *
-     * @param  CliRunner  $runner  L'instance du runner
-     * @param  array<string>  $argv  Les arguments de la ligne de commande
-     * @return int Le code de sortie
-     */
     private function runDirectiveSilent(CliRunner $runner, array $argv): int
     {
         ob_start();
@@ -93,7 +79,7 @@ final class CliRunnerTest extends UnitTestCase
         ];
 
         foreach ($directories as $dir) {
-            if (! is_dir($appRoot . $dir)) {
+            if (!is_dir($appRoot . $dir)) {
                 mkdir($appRoot . $dir, 0777, true);
             }
         }
@@ -168,7 +154,6 @@ PHP;
 
     private static function createAppDirectives(string $appRoot): void
     {
-        // Directive UserCreateDirective
         $content1 = <<<'PHP'
 <?php
 
@@ -205,7 +190,6 @@ final class UserCreateDirective extends AbstractDirective
 PHP;
         file_put_contents($appRoot . '/app/Directives/UserCreateDirective.php', $content1);
 
-        // Directive CacheClearDirective
         $content2 = <<<'PHP'
 <?php
 
@@ -257,7 +241,7 @@ PHP;
 
     private static function removeDirectory(string $dir): void
     {
-        if (! is_dir($dir)) {
+        if (!is_dir($dir)) {
             return;
         }
 
@@ -277,7 +261,7 @@ PHP;
 
     public function test_runner_finds_app_directive(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', 'user-create', 'John Doe', 'john@example.com']);
 
@@ -287,7 +271,7 @@ PHP;
 
     public function test_runner_finds_app_directive_with_option(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', 'user-create', 'Jane Doe', 'jane@example.com', '--admin']);
 
@@ -297,7 +281,7 @@ PHP;
 
     public function test_runner_finds_another_app_directive(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', 'cache-clear']);
 
@@ -307,7 +291,7 @@ PHP;
 
     public function test_runner_handles_force_option(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', 'cache-clear', '--force']);
 
@@ -317,7 +301,7 @@ PHP;
 
     public function test_runner_displays_all_directives(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', '--list']);
 
@@ -328,16 +312,16 @@ PHP;
 
     public function test_runner_returns_not_found_for_unknown(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
-        $exit_code = $this->runDirectiveSilent($runner, ['directive', 'unknown-command']);
+        $exitCode = $this->runDirectiveSilent($runner, ['directive', 'unknown-command']);
 
-        $this->assertSame(3, $exit_code);
+        $this->assertSame(3, $exitCode);
     }
 
     public function test_runner_shows_help(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', '--help']);
 
@@ -347,7 +331,7 @@ PHP;
 
     public function test_runner_shows_version(): void
     {
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', '--version']);
 
@@ -357,8 +341,6 @@ PHP;
 
     public function test_runner_finds_directive_with_alias(): void
     {
-        $appRoot = self::$appRoot;
-
         $content = <<<'PHP'
 <?php
 
@@ -395,13 +377,10 @@ final class AliasTestDirective extends AbstractDirective
 }
 PHP;
 
-        file_put_contents($appRoot . '/app/Directives/AliasTestDirective.php', $content);
+        file_put_contents(self::$appRoot . '/app/Directives/AliasTestDirective.php', $content);
+        require_once self::$appRoot . '/app/Directives/AliasTestDirective.php';
 
-        if (! class_exists('App\\Directives\\AliasTestDirective', false)) {
-            require_once $appRoot . '/app/Directives/AliasTestDirective.php';
-        }
-
-        $runner = new CliRunner;
+        $runner = new CliRunner($this->app);
 
         $result = $this->runDirective($runner, ['directive', 'alias']);
 

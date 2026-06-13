@@ -5,39 +5,30 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Contexts;
 
 use AndyDefer\Directive\Collections\ParameterVOCollection;
-use AndyDefer\PhpServices\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use Illuminate\Foundation\Application;
 
-class DirectiveContext
+final class DirectiveContext
 {
     private ParameterVOCollection $arguments;
-
     private ParameterVOCollection $options;
-
     private StringTypedCollection $variadicArguments;
-
-    private LaravelBootstrapperContext $laravelBootstrapper;
-
     private DirectiveBlueprintRecord $blueprint;
-
     private StringTypedCollection $aliases;
-
-    private bool $shouldBootLaravel;
+    private ?Application $laravelApplication;
 
     public function __construct(
-        LaravelBootstrapperContext $laravelBootstrapper,
         DirectiveBlueprintRecord $blueprint,
         StringTypedCollection $aliases,
-        bool $shouldBootLaravel,
+        ?Application $laravelApplication = null,
     ) {
-        $this->laravelBootstrapper = $laravelBootstrapper;
         $this->blueprint = $blueprint;
         $this->aliases = $aliases;
-        $this->shouldBootLaravel = $shouldBootLaravel;
-        $this->arguments = new ParameterVOCollection;
-        $this->options = new ParameterVOCollection;
-        $this->variadicArguments = new StringTypedCollection;
+        $this->laravelApplication = $laravelApplication;
+        $this->arguments = new ParameterVOCollection();
+        $this->options = new ParameterVOCollection();
+        $this->variadicArguments = new StringTypedCollection();
     }
 
     public function getBlueprint(): DirectiveBlueprintRecord
@@ -50,41 +41,20 @@ class DirectiveContext
         return $this->aliases;
     }
 
-    public function shouldBootLaravel(): bool
-    {
-        return $this->shouldBootLaravel;
-    }
-
     public function getArguments(): ParameterVOCollection
     {
         return $this->arguments;
     }
 
-    public function setArguments(ParameterVOCollection $arguments): self
-    {
-        $this->arguments = $arguments;
-
-        return $this;
-    }
-
     public function getArgument(string $key): mixed
     {
         $value = $this->arguments->get($key);
-
-        // Retourner null si la valeur est une chaîne vide
-        if ($value === '') {
-            return null;
-        }
-
-        // La valeur est déjà convertie par ParameterVOCollection::get()
-        return $value;
+        return $value === '' ? null : $value;
     }
 
     public function hasArgument(string $key): bool
     {
         $value = $this->arguments->get($key);
-
-        // Un argument existe si la valeur n'est pas null et n'est pas une chaîne vide
         return $value !== null && $value !== '';
     }
 
@@ -93,40 +63,27 @@ class DirectiveContext
         return $this->options;
     }
 
-    public function setOptions(ParameterVOCollection $options): self
-    {
-        $this->options = $options;
-
-        return $this;
-    }
-
     public function getOption(string $key): mixed
     {
         $value = $this->options->get($key);
-
-        // Retourner null si la valeur est null ou une chaîne vide
         if ($value === null || $value === '') {
             return null;
         }
-
-        // La valeur est déjà convertie par ParameterVOCollection::get()
+        if (is_bool($value)) {
+            return $value;
+        }
         return $value;
     }
 
     public function hasOption(string $key): bool
     {
         $value = $this->options->get($key);
-
         if ($value === null) {
             return false;
         }
-
-        // Pour les booléens, on vérifie si c'est true
         if (is_bool($value)) {
             return $value === true;
         }
-
-        // Pour les autres types, on vérifie que ce n'est pas une chaîne vide
         return $value !== '';
     }
 
@@ -135,37 +92,45 @@ class DirectiveContext
         return $this->variadicArguments;
     }
 
-    public function setVariadicArguments(StringTypedCollection $variadicArguments): self
-    {
-        $this->variadicArguments = $variadicArguments;
-
-        return $this;
-    }
-
     public function hasVariadicArguments(): bool
     {
         return $this->variadicArguments->isNotEmpty();
     }
 
-    public function getLaravelBootstrapper(): LaravelBootstrapperContext
+    public function getLaravel(): Application
     {
-        return $this->laravelBootstrapper;
+        if ($this->laravelApplication === null) {
+            throw new \RuntimeException('Laravel application is not available. Make sure to pass it in the constructor.');
+        }
+        return $this->laravelApplication;
     }
 
     public function hasLaravel(): bool
     {
-        return $this->laravelBootstrapper->isBootstrapped();
+        return $this->laravelApplication !== null;
     }
 
-    public function getLaravel(): object
+    public function setArguments(ParameterVOCollection $arguments): self
     {
-        return $this->laravelBootstrapper->getApplication();
+        $this->arguments = $arguments;
+        return $this;
     }
 
-    public function reset(): void
+    public function setOptions(ParameterVOCollection $options): self
     {
-        $this->arguments = new ParameterVOCollection;
-        $this->options = new ParameterVOCollection;
-        $this->variadicArguments = new StringTypedCollection;
+        $this->options = $options;
+        return $this;
+    }
+
+    public function setVariadicArguments(StringTypedCollection $variadicArguments): self
+    {
+        $this->variadicArguments = $variadicArguments;
+        return $this;
+    }
+
+    public function setLaravelApplication(?Application $application): self
+    {
+        $this->laravelApplication = $application;
+        return $this;
     }
 }

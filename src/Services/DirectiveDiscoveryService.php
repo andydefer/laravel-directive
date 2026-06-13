@@ -1,5 +1,7 @@
 <?php
 
+// src/Services/DirectiveDiscoveryService.php
+
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
@@ -7,11 +9,11 @@ namespace AndyDefer\Directive\Services;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
-use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Contracts\DirectiveLoaderInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
+use Illuminate\Foundation\Application;
 
 /**
  * Service responsible for discovering directives from the filesystem and vendor packages.
@@ -22,7 +24,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         private readonly DirectiveConfigInterface $config,
         private readonly DirectiveHydratorService $hydrator,
         private readonly DirectiveDiscoveryContext $context,
-        private readonly LaravelBootstrapperContext $laravelBootstrapperContext,
+        private readonly ?Application $application = null,
         ?DirectiveLoaderInterface $loader = null,
     ) {
         $this->context->setLoader($loader ?? $this);
@@ -35,7 +37,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     public function load(): DirectiveMetadataCollection
     {
-        $results = new DirectiveMetadataCollection;
+        $results = new DirectiveMetadataCollection();
         $path = $this->config->directivesPath();
 
         if ($path !== '' && is_dir($path)) {
@@ -49,9 +51,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     private function discoverFromVendorPackages(DirectiveMetadataCollection $results): void
     {
-        $composerFile = $this->context->getProjectRoot().'/composer.json';
+        $composerFile = $this->context->getProjectRoot() . '/composer.json';
 
-        if (! file_exists($composerFile)) {
+        if (!file_exists($composerFile)) {
             return;
         }
 
@@ -78,9 +80,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
             return;
         }
 
-        $packagePath = $this->context->getVendorDir().'/'.$packageName;
+        $packagePath = $this->context->getVendorDir() . '/' . $packageName;
 
-        if (! is_dir($packagePath)) {
+        if (!is_dir($packagePath)) {
             return;
         }
 
@@ -94,9 +96,9 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     private function scanPackageDependencies(DirectiveMetadataCollection $results, string $packagePath, int $currentDepth): void
     {
-        $composerFile = $packagePath.'/composer.json';
+        $composerFile = $packagePath . '/composer.json';
 
-        if (! file_exists($composerFile)) {
+        if (!file_exists($composerFile)) {
             return;
         }
 
@@ -118,10 +120,10 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
     private function scanPackageDirectories(DirectiveMetadataCollection $results, string $packagePath): void
     {
         $possiblePaths = [
-            $packagePath.'/src/Directives',
-            $packagePath.'/Directives',
-            $packagePath.'/src/Directive',
-            $packagePath.'/Directive',
+            $packagePath . '/src/Directives',
+            $packagePath . '/Directives',
+            $packagePath . '/src/Directive',
+            $packagePath . '/Directive',
         ];
 
         foreach ($possiblePaths as $directivesPath) {
@@ -133,7 +135,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
     private function scanDirectoryForDirectives(DirectiveMetadataCollection $results, string $directory): void
     {
-        $files = glob($directory.'/*.php');
+        $files = glob($directory . '/*.php');
 
         if ($files === false) {
             return;
@@ -141,7 +143,7 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
         foreach ($files as $file) {
             $metadata = $this->extractMetadataFromFile($file);
-            if ($metadata !== null && ! $this->isAlreadyRegistered($results, $metadata->signature)) {
+            if ($metadata !== null && !$this->isAlreadyRegistered($results, $metadata->signature)) {
                 $results->add($metadata);
             }
         }
@@ -171,18 +173,10 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
 
         if (
             $reflection->isAbstract() ||
-            ! is_subclass_of($class, AbstractDirective::class) ||
-            ! is_subclass_of($class, DirectiveInterface::class)
+            !is_subclass_of($class, AbstractDirective::class) ||
+            !is_subclass_of($class, DirectiveInterface::class)
         ) {
             return null;
-        }
-
-        if (
-            $this->checkIfNeedsLaravel($class) &&
-            ! $this->context->isBootstrapped()
-        ) {
-            $this->laravelBootstrapperContext->bootstrap();
-            $this->context->setBootstrapped(true);
         }
 
         try {
@@ -200,21 +194,6 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         }
     }
 
-    private function checkIfNeedsLaravel(string $class): bool
-    {
-        try {
-            $reflection = new \ReflectionClass($class);
-            if (! $reflection->hasMethod('shouldBootLaravel')) {
-                return false;
-            }
-            $tempInstance = $reflection->newInstanceWithoutConstructor();
-
-            return $tempInstance->shouldBootLaravel();
-        } catch (\Throwable $e) {
-            return false;
-        }
-    }
-
     private function getClassFromFile(string $file): string
     {
         $content = file_get_contents($file);
@@ -226,6 +205,6 @@ class DirectiveDiscoveryService implements DirectiveLoaderInterface
         $namespace = $match[1] ?? '';
         $class = basename($file, '.php');
 
-        return $namespace === '' ? $class : $namespace.'\\'.$class;
+        return $namespace === '' ? $class : $namespace . '\\' . $class;
     }
 }

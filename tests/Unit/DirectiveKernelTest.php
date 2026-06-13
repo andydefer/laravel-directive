@@ -12,6 +12,7 @@ use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\DomainStructures\Services\HydrationService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -40,6 +41,7 @@ final class DirectiveKernelTest extends UnitTestCase
             $this->executionService,
             $this->signatureValidator,
             $this->renderer,
+            new HydrationService
         );
     }
 

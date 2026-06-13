@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tests\Unit;
+namespace AndyDefer\Directive\Tests\Feature;
 
 use AndyDefer\Directive\Configs\DirectiveParserConfig;
 use AndyDefer\Directive\Configs\DirectiveTestingConfig;
@@ -14,7 +14,6 @@ use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contexts\FileCreationContext;
 use AndyDefer\Directive\Contexts\FileSystemContext;
-use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
 use AndyDefer\Directive\Contexts\LaravelContext;
 use AndyDefer\Directive\Contexts\ParameterParserContext;
 use AndyDefer\Directive\Contracts\Configs\DatabaseTestingConfigInterface;
@@ -43,11 +42,9 @@ use AndyDefer\Directive\Services\ParameterExtractorService;
 use AndyDefer\Directive\Services\ParameterOrderValidatorService;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Steps\BootstrapLaravelStep;
-use AndyDefer\Directive\Steps\BuildContainerStep;
 use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
 use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
 use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
-use AndyDefer\Directive\Steps\StartDatabaseStep;
 use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;
 use AndyDefer\Directive\Strategies\OptionalArgumentStrategy;
 use AndyDefer\Directive\Strategies\OptionStrategy;
@@ -56,34 +53,27 @@ use AndyDefer\Directive\Strategies\VariadicArgumentStrategy;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpServices\Services\FileSystemService;
-use Illuminate\Container\Container;
+use Illuminate\Foundation\Application;
+use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
-final class DirectiveServiceProviderTest extends UnitTestCase
+// ⚠️ Ce test doit hériter de OrchestraTestCase pour avoir une vraie application Laravel
+final class DirectiveServiceProviderTest extends OrchestraTestCase
 {
-    private Container $container;
-
     private DirectiveServiceProvider $provider;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->container = new Container;
+        // Utiliser l'application Laravel réelle fournie par Orchestra
+        $this->provider = new DirectiveServiceProvider($this->app);
+    }
 
-        $this->container->instance('config', new class
-        {
-            public function get($key, $default = null)
-            {
-                return $default;
-            }
-
-            public function has($key)
-            {
-                return false;
-            }
-        });
-
-        $this->provider = new DirectiveServiceProvider($this->container);
+    protected function getPackageProviders($app)
+    {
+        return [
+            DirectiveServiceProvider::class,
+        ];
     }
 
     public function test_register_does_not_throw_exception(): void
@@ -97,185 +87,172 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveConfigInterface::class));
+        $this->assertTrue($this->app->bound(DirectiveConfigInterface::class));
     }
 
     public function test_config_can_be_resolved(): void
     {
         $this->provider->register();
-        $config = $this->container->make(DirectiveConfigInterface::class);
+        $config = $this->app->make(DirectiveConfigInterface::class);
         $this->assertInstanceOf(EnvDirectiveConfig::class, $config);
     }
 
     public function test_naming_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveNamingConfigInterface::class));
+        $this->assertTrue($this->app->bound(DirectiveNamingConfigInterface::class));
     }
 
     public function test_naming_config_can_be_resolved(): void
     {
         $this->provider->register();
-        $config = $this->container->make(DirectiveNamingConfigInterface::class);
+        $config = $this->app->make(DirectiveNamingConfigInterface::class);
         $this->assertInstanceOf(EnvDirectiveNamingConfig::class, $config);
     }
 
     public function test_signature_validation_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(SignatureValidationConfigInterface::class));
+        $this->assertTrue($this->app->bound(SignatureValidationConfigInterface::class));
     }
 
     public function test_signature_validation_config_can_be_resolved(): void
     {
         $this->provider->register();
-        $config = $this->container->make(SignatureValidationConfigInterface::class);
+        $config = $this->app->make(SignatureValidationConfigInterface::class);
         $this->assertInstanceOf(EnvSignatureValidationConfig::class, $config);
     }
 
     public function test_parser_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveParserConfigInterface::class));
+        $this->assertTrue($this->app->bound(DirectiveParserConfigInterface::class));
     }
 
     public function test_parser_config_can_be_resolved(): void
     {
         $this->provider->register();
-        $config = $this->container->make(DirectiveParserConfigInterface::class);
+        $config = $this->app->make(DirectiveParserConfigInterface::class);
         $this->assertInstanceOf(DirectiveParserConfig::class, $config);
     }
 
     public function test_file_creator_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(FileCreatorConfigInterface::class));
+        $this->assertTrue($this->app->bound(FileCreatorConfigInterface::class));
     }
 
     public function test_file_creator_config_can_be_resolved(): void
     {
         $this->provider->register();
-        $config = $this->container->make(FileCreatorConfigInterface::class);
+        $config = $this->app->make(FileCreatorConfigInterface::class);
         $this->assertInstanceOf(FileCreatorConfig::class, $config);
     }
 
     public function test_testing_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveTestingConfigInterface::class));
+        $this->assertTrue($this->app->bound(DirectiveTestingConfigInterface::class));
     }
 
     public function test_testing_config_can_be_resolved(): void
     {
         $this->provider->register();
-        $config = $this->container->make(DirectiveTestingConfigInterface::class);
+        $config = $this->app->make(DirectiveTestingConfigInterface::class);
         $this->assertInstanceOf(DirectiveTestingConfig::class, $config);
     }
 
     public function test_database_testing_config_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DatabaseTestingConfigInterface::class));
+        $this->assertTrue($this->app->bound(DatabaseTestingConfigInterface::class));
     }
 
     public function test_database_testing_config_is_same_as_testing_config(): void
     {
         $this->provider->register();
-        $testingConfig = $this->container->make(DirectiveTestingConfigInterface::class);
-        $databaseConfig = $this->container->make(DatabaseTestingConfigInterface::class);
+        $testingConfig = $this->app->make(DirectiveTestingConfigInterface::class);
+        $databaseConfig = $this->app->make(DatabaseTestingConfigInterface::class);
         $this->assertSame($testingConfig, $databaseConfig);
     }
 
     // ==================== Context Tests ====================
 
-    public function test_laravel_bootstrapper_context_is_registered_as_singleton(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->container->bound(LaravelBootstrapperContext::class));
-    }
-
-    public function test_laravel_bootstrapper_context_can_be_resolved(): void
-    {
-        $this->provider->register();
-        $context = $this->container->make(LaravelBootstrapperContext::class);
-        $this->assertInstanceOf(LaravelBootstrapperContext::class, $context);
-    }
-
     public function test_directive_discovery_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveDiscoveryContext::class));
+        $this->assertTrue($this->app->bound(DirectiveDiscoveryContext::class));
     }
 
     public function test_directive_discovery_context_can_be_resolved(): void
     {
         $this->provider->register();
-        $context = $this->container->make(DirectiveDiscoveryContext::class);
+        $context = $this->app->make(DirectiveDiscoveryContext::class);
         $this->assertInstanceOf(DirectiveDiscoveryContext::class, $context);
     }
 
     public function test_directive_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveContext::class));
+        $this->assertTrue($this->app->bound(DirectiveContext::class));
     }
 
     public function test_directive_context_can_be_resolved(): void
     {
         $this->provider->register();
-        $context = $this->container->make(DirectiveContext::class);
+        $context = $this->app->make(DirectiveContext::class);
         $this->assertInstanceOf(DirectiveContext::class, $context);
     }
 
     public function test_laravel_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(LaravelContext::class));
+        $this->assertTrue($this->app->bound(LaravelContext::class));
     }
 
     public function test_laravel_context_can_be_resolved(): void
     {
         $this->provider->register();
-        $context = $this->container->make(LaravelContext::class);
+        $context = $this->app->make(LaravelContext::class);
         $this->assertInstanceOf(LaravelContext::class, $context);
     }
 
     public function test_file_system_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(FileSystemContext::class));
+        $this->assertTrue($this->app->bound(FileSystemContext::class));
     }
 
     public function test_file_system_context_can_be_resolved(): void
     {
         $this->provider->register();
-        $context = $this->container->make(FileSystemContext::class);
+        $context = $this->app->make(FileSystemContext::class);
         $this->assertInstanceOf(FileSystemContext::class, $context);
     }
 
     public function test_file_creation_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(FileCreationContext::class));
+        $this->assertTrue($this->app->bound(FileCreationContext::class));
     }
 
     public function test_file_creation_context_can_be_resolved(): void
     {
         $this->provider->register();
-        $context = $this->container->make(FileCreationContext::class);
+        $context = $this->app->make(FileCreationContext::class);
         $this->assertInstanceOf(FileCreationContext::class, $context);
     }
 
     public function test_parameter_parser_context_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(ParameterParserContext::class));
+        $this->assertTrue($this->app->bound(ParameterParserContext::class));
     }
 
     public function test_parameter_parser_context_can_be_resolved(): void
     {
         $this->provider->register();
-        $context = $this->container->make(ParameterParserContext::class);
+        $context = $this->app->make(ParameterParserContext::class);
         $this->assertInstanceOf(ParameterParserContext::class, $context);
     }
 
@@ -284,78 +261,78 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_parameter_order_validator_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(ParameterOrderValidatorService::class));
+        $this->assertTrue($this->app->bound(ParameterOrderValidatorService::class));
     }
 
     public function test_parameter_order_validator_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(ParameterOrderValidatorService::class);
+        $service = $this->app->make(ParameterOrderValidatorService::class);
         $this->assertInstanceOf(ParameterOrderValidatorService::class, $service);
     }
 
     public function test_parameter_extractor_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(ParameterExtractorService::class));
+        $this->assertTrue($this->app->bound(ParameterExtractorService::class));
     }
 
     public function test_parameter_extractor_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(ParameterExtractorService::class);
+        $service = $this->app->make(ParameterExtractorService::class);
         $this->assertInstanceOf(ParameterExtractorService::class, $service);
     }
 
     public function test_option_parser_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(OptionParserService::class));
+        $this->assertTrue($this->app->bound(OptionParserService::class));
     }
 
     public function test_option_parser_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(OptionParserService::class);
+        $service = $this->app->make(OptionParserService::class);
         $this->assertInstanceOf(OptionParserService::class, $service);
     }
 
     public function test_argument_splitter_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(ArgumentSplitterService::class));
+        $this->assertTrue($this->app->bound(ArgumentSplitterService::class));
     }
 
     public function test_argument_splitter_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(ArgumentSplitterService::class);
+        $service = $this->app->make(ArgumentSplitterService::class);
         $this->assertInstanceOf(ArgumentSplitterService::class, $service);
     }
 
     public function test_argument_applier_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(ArgumentApplierService::class));
+        $this->assertTrue($this->app->bound(ArgumentApplierService::class));
     }
 
     public function test_argument_applier_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(ArgumentApplierService::class);
+        $service = $this->app->make(ArgumentApplierService::class);
         $this->assertInstanceOf(ArgumentApplierService::class, $service);
     }
 
     public function test_parser_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveParserService::class));
+        $this->assertTrue($this->app->bound(DirectiveParserService::class));
     }
 
     public function test_parser_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(DirectiveParserService::class);
+        $service = $this->app->make(DirectiveParserService::class);
         $this->assertInstanceOf(DirectiveParserService::class, $service);
     }
 
@@ -364,110 +341,110 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_file_system_interface_is_bound(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(FileSystemInterface::class));
+        $this->assertTrue($this->app->bound(FileSystemInterface::class));
     }
 
     public function test_file_creator_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(FileCreatorService::class));
+        $this->assertTrue($this->app->bound(FileCreatorService::class));
     }
 
     public function test_file_creator_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(FileCreatorService::class);
+        $service = $this->app->make(FileCreatorService::class);
         $this->assertInstanceOf(FileCreatorService::class, $service);
     }
 
     public function test_signature_validation_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(SignatureValidationService::class));
+        $this->assertTrue($this->app->bound(SignatureValidationService::class));
     }
 
     public function test_signature_validation_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(SignatureValidationService::class);
+        $service = $this->app->make(SignatureValidationService::class);
         $this->assertInstanceOf(SignatureValidationService::class, $service);
     }
 
     public function test_naming_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveNamingService::class));
+        $this->assertTrue($this->app->bound(DirectiveNamingService::class));
     }
 
     public function test_naming_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(DirectiveNamingService::class);
+        $service = $this->app->make(DirectiveNamingService::class);
         $this->assertInstanceOf(DirectiveNamingService::class, $service);
     }
 
     public function test_interaction_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveInteractionService::class));
+        $this->assertTrue($this->app->bound(DirectiveInteractionService::class));
     }
 
     public function test_interaction_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(DirectiveInteractionService::class);
+        $service = $this->app->make(DirectiveInteractionService::class);
         $this->assertInstanceOf(DirectiveInteractionService::class, $service);
     }
 
     public function test_hydrator_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveHydratorService::class));
+        $this->assertTrue($this->app->bound(DirectiveHydratorService::class));
     }
 
     public function test_hydrator_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(DirectiveHydratorService::class);
+        $service = $this->app->make(DirectiveHydratorService::class);
         $this->assertInstanceOf(DirectiveHydratorService::class, $service);
     }
 
     public function test_discovery_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveDiscoveryService::class));
+        $this->assertTrue($this->app->bound(DirectiveDiscoveryService::class));
     }
 
     public function test_discovery_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(DirectiveDiscoveryService::class);
+        $service = $this->app->make(DirectiveDiscoveryService::class);
         $this->assertInstanceOf(DirectiveDiscoveryService::class, $service);
     }
 
     public function test_renderer_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveRendererService::class));
+        $this->assertTrue($this->app->bound(DirectiveRendererService::class));
     }
 
     public function test_renderer_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(DirectiveRendererService::class);
+        $service = $this->app->make(DirectiveRendererService::class);
         $this->assertInstanceOf(DirectiveRendererService::class, $service);
     }
 
     public function test_execution_service_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(DirectiveExecutionService::class));
+        $this->assertTrue($this->app->bound(DirectiveExecutionService::class));
     }
 
     public function test_execution_service_can_be_resolved(): void
     {
         $this->provider->register();
-        $service = $this->container->make(DirectiveExecutionService::class);
+        $service = $this->app->make(DirectiveExecutionService::class);
         $this->assertInstanceOf(DirectiveExecutionService::class, $service);
     }
 
@@ -476,26 +453,26 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_render_dispatcher_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(RenderDispatcher::class));
+        $this->assertTrue($this->app->bound(RenderDispatcher::class));
     }
 
     public function test_render_dispatcher_can_be_resolved(): void
     {
         $this->provider->register();
-        $dispatcher = $this->container->make(RenderDispatcher::class);
+        $dispatcher = $this->app->make(RenderDispatcher::class);
         $this->assertInstanceOf(RenderDispatcher::class, $dispatcher);
     }
 
     public function test_input_dispatcher_is_registered_as_singleton(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(InputDispatcher::class));
+        $this->assertTrue($this->app->bound(InputDispatcher::class));
     }
 
     public function test_input_dispatcher_can_be_resolved(): void
     {
         $this->provider->register();
-        $dispatcher = $this->container->make(InputDispatcher::class);
+        $dispatcher = $this->app->make(InputDispatcher::class);
         $this->assertInstanceOf(InputDispatcher::class, $dispatcher);
     }
 
@@ -504,7 +481,7 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_required_argument_strategy_is_registered(): void
     {
         $this->provider->register();
-        $context = $this->container->make(ParameterParserContext::class);
+        $context = $this->app->make(ParameterParserContext::class);
         $strategies = $context->getStrategies();
 
         $hasStrategy = false;
@@ -520,7 +497,7 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_default_value_argument_strategy_is_registered(): void
     {
         $this->provider->register();
-        $context = $this->container->make(ParameterParserContext::class);
+        $context = $this->app->make(ParameterParserContext::class);
         $strategies = $context->getStrategies();
 
         $hasStrategy = false;
@@ -536,7 +513,7 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_optional_argument_strategy_is_registered(): void
     {
         $this->provider->register();
-        $context = $this->container->make(ParameterParserContext::class);
+        $context = $this->app->make(ParameterParserContext::class);
         $strategies = $context->getStrategies();
 
         $hasStrategy = false;
@@ -552,7 +529,7 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_variadic_argument_strategy_is_registered(): void
     {
         $this->provider->register();
-        $context = $this->container->make(ParameterParserContext::class);
+        $context = $this->app->make(ParameterParserContext::class);
         $strategies = $context->getStrategies();
 
         $hasStrategy = false;
@@ -568,7 +545,7 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_option_strategy_is_registered(): void
     {
         $this->provider->register();
-        $context = $this->container->make(ParameterParserContext::class);
+        $context = $this->app->make(ParameterParserContext::class);
         $strategies = $context->getStrategies();
 
         $hasStrategy = false;
@@ -586,37 +563,25 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_create_temp_directory_step_is_registered(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(CreateTempDirectoryStep::class));
+        $this->assertTrue($this->app->bound(CreateTempDirectoryStep::class));
     }
 
     public function test_change_to_temp_directory_step_is_registered(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(ChangeToTempDirectoryStep::class));
+        $this->assertTrue($this->app->bound(ChangeToTempDirectoryStep::class));
     }
 
     public function test_create_laravel_structure_step_is_registered(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(CreateLaravelStructureStep::class));
+        $this->assertTrue($this->app->bound(CreateLaravelStructureStep::class));
     }
 
     public function test_bootstrap_laravel_step_is_registered(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->container->bound(BootstrapLaravelStep::class));
-    }
-
-    public function test_build_container_step_is_registered(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->container->bound(BuildContainerStep::class));
-    }
-
-    public function test_start_database_step_is_registered(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->container->bound(StartDatabaseStep::class));
+        $this->assertTrue($this->app->bound(BootstrapLaravelStep::class));
     }
 
     // ==================== Kernel Tests ====================
@@ -624,39 +589,30 @@ final class DirectiveServiceProviderTest extends UnitTestCase
     public function test_kernel_can_be_resolved(): void
     {
         $this->provider->register();
-        $kernel = $this->container->make(DirectiveKernel::class);
+        $kernel = $this->app->make(DirectiveKernel::class);
         $this->assertInstanceOf(DirectiveKernel::class, $kernel);
     }
 
-    // ==================== Resolution Tests ====================
-
     // ==================== Additional Context Resolution Tests ====================
-
-    public function test_laravel_bootstrapper_context_resolution(): void
-    {
-        $this->provider->register();
-        $context = $this->container->make(LaravelBootstrapperContext::class);
-        $this->assertInstanceOf(LaravelBootstrapperContext::class, $context);
-    }
 
     public function test_directive_discovery_context_resolution(): void
     {
         $this->provider->register();
-        $context = $this->container->make(DirectiveDiscoveryContext::class);
+        $context = $this->app->make(DirectiveDiscoveryContext::class);
         $this->assertInstanceOf(DirectiveDiscoveryContext::class, $context);
     }
 
     public function test_directive_context_resolution(): void
     {
         $this->provider->register();
-        $context = $this->container->make(DirectiveContext::class);
+        $context = $this->app->make(DirectiveContext::class);
         $this->assertInstanceOf(DirectiveContext::class, $context);
     }
 
     public function test_config_resolution_returns_env_directive_config(): void
     {
         $this->provider->register();
-        $config = $this->container->make(DirectiveConfigInterface::class);
+        $config = $this->app->make(DirectiveConfigInterface::class);
         $this->assertInstanceOf(EnvDirectiveConfig::class, $config);
     }
 }
