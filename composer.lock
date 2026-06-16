@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "03f420a3d0f5778c2f054d5528c09c38",
+    "content-hash": "47240cb1bf9128f8ea2a68c3496c90d5",
     "packages": [
         {
             "name": "andydefer/domain-structures",
@@ -59,16 +59,16 @@
         },
         {
             "name": "andydefer/php-services",
-            "version": "1.0.0",
+            "version": "v0.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/php-services.git",
-                "reference": "e2a8cb755f25c0144b23cbe2c73836584a22f4fa"
+                "reference": "7bd58858bcf13522f16640eee58980589f2bb370"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/php-services/zipball/e2a8cb755f25c0144b23cbe2c73836584a22f4fa",
-                "reference": "e2a8cb755f25c0144b23cbe2c73836584a22f4fa",
+                "url": "https://api.github.com/repos/andydefer/php-services/zipball/7bd58858bcf13522f16640eee58980589f2bb370",
+                "reference": "7bd58858bcf13522f16640eee58980589f2bb370",
                 "shasum": ""
             },
             "require": {
@@ -77,6 +77,8 @@
             },
             "require-dev": {
                 "composer/composer": "^2.0",
+                "laravel/pint": "^1.29",
+                "mockery/mockery": "^1.6",
                 "phpunit/phpunit": "^12.5",
                 "rector/rector": "*",
                 "vimeo/psalm": "^6.14"
@@ -100,9 +102,9 @@
             "description": "Collection of reusable services for PHP and Laravel applications including model transformation, caching, and common business logic",
             "support": {
                 "issues": "https://github.com/andydefer/php-services/issues",
-                "source": "https://github.com/andydefer/php-services/tree/1.0.0"
+                "source": "https://github.com/andydefer/php-services/tree/v0.6.0"
             },
-            "time": "2026-06-15T13:19:34+00:00"
+            "time": "2026-06-16T00:30:31+00:00"
         },
         {
             "name": "andydefer/php-vo",
