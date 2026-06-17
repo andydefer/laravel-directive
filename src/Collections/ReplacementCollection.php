@@ -34,7 +34,7 @@ final class ReplacementCollection extends AbstractKeyValueCollection
      * Check if a placeholder exists in the collection.
      *
      * @param  string  $placeholder  The placeholder to check
-     * @return bool  True if the placeholder exists, false otherwise
+     * @return bool True if the placeholder exists, false otherwise
      */
     public function hasPlaceholder(string $placeholder): bool
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Services\DirectiveTestingService;
@@ -13,7 +14,6 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestGreetingDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestVariadicDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
@@ -25,7 +25,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveTestingService();
+        $this->service = new DirectiveTestingService;
     }
 
     protected function tearDown(): void
@@ -209,8 +209,8 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
     public function test_multiple_services_have_different_temp_directories(): void
     {
-        $service1 = new DirectiveTestingService();
-        $service2 = new DirectiveTestingService();
+        $service1 = new DirectiveTestingService;
+        $service2 = new DirectiveTestingService;
 
         $reflection = new \ReflectionClass(DirectiveTestingService::class);
         $tempDirProperty = $reflection->getProperty('tempDir');
@@ -228,8 +228,8 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
     public function test_services_are_independent(): void
     {
-        $service1 = new DirectiveTestingService();
-        $service2 = new DirectiveTestingService();
+        $service1 = new DirectiveTestingService;
+        $service2 = new DirectiveTestingService;
 
         $response1 = $service1->run(TestGreetingDirective::class, ['Service1']);
         $response2 = $service2->run(TestGreetingDirective::class, ['Service2']);
@@ -366,7 +366,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $this->service->destroy();
 
-        $newService = new DirectiveTestingService();
+        $newService = new DirectiveTestingService;
         $response = $newService->run(TestGreetingDirective::class, ['recreated']);
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
@@ -420,7 +420,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $context = $createContextMethod->invoke($this->service, TestConcreteDirective::class);
 
-        $this->assertInstanceOf(\AndyDefer\Directive\Contexts\DirectiveContext::class, $context);
+        $this->assertInstanceOf(DirectiveContext::class, $context);
         $this->assertNotNull($context->getBlueprint());
         $this->assertNotNull($context->getAliases());
     }
@@ -460,7 +460,7 @@ final class DirectiveTestingServiceTest extends UnitTestCase
     {
         $originalCwd = getcwd();
 
-        $newService = new DirectiveTestingService();
+        $newService = new DirectiveTestingService;
 
         $reflection = new \ReflectionClass($newService);
         $tempDirProperty = $reflection->getProperty('tempDir');

@@ -10,7 +10,6 @@ use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 
 /**
@@ -29,17 +28,20 @@ class DirectiveExecutionService
     {
         if ($this->isHelpCommand($record->signature)) {
             $this->renderer->renderHelp();
+
             return ExitCode::SUCCESS;
         }
 
         if ($this->isListCommand($record->signature)) {
             $directives = $this->discovery->discover();
             $this->renderer->renderList($directives);
+
             return ExitCode::SUCCESS;
         }
 
         if ($this->isVersionCommand($record->signature)) {
             $this->renderer->renderVersion();
+
             return ExitCode::SUCCESS;
         }
 
@@ -48,6 +50,7 @@ class DirectiveExecutionService
 
         if ($directiveMetadata === null) {
             $this->renderer->renderNotFound($record->signature);
+
             return ExitCode::NOT_FOUND;
         }
 
@@ -64,9 +67,11 @@ class DirectiveExecutionService
             return $exitCode;
         } catch (InvalidArgumentException $e) {
             $this->renderer->renderError($e->getMessage());
+
             return ExitCode::INVALID_ARGUMENT;
         } catch (\Throwable $e) {
             $this->renderer->renderError($e->getMessage());
+
             return ExitCode::FAILURE;
         }
     }
@@ -110,6 +115,7 @@ class DirectiveExecutionService
     {
         $baseSignature = explode(' ', $fullSignature)[0];
         $baseSignature = explode('{', $baseSignature)[0];
+
         return rtrim($baseSignature, '-');
     }
 
@@ -117,6 +123,7 @@ class DirectiveExecutionService
     {
         $parsed = $this->parser->parse($metadata->signature, $record->arguments);
         $directive = $this->hydrator->hydrate($metadata->class, $parsed);
+
         return $directive->execute();
     }
 }

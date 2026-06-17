@@ -26,9 +26,9 @@ class PathBuilderService
     /**
      * Build an absolute file path from a base directory and path segments.
      *
-     * @param string $baseDirectory Base directory relative to working directory
-     * @param PathSegmentsRecord $segments Path segments record
-     * @param string|null $extension File extension (defaults to '.php')
+     * @param  string  $baseDirectory  Base directory relative to working directory
+     * @param  PathSegmentsRecord  $segments  Path segments record
+     * @param  string|null  $extension  File extension (defaults to '.php')
      * @return string Absolute file path
      *
      * @example
@@ -41,23 +41,23 @@ class PathBuilderService
         ?string $extension = null
     ): string {
         $workingDir = rtrim($this->config->workingDirectory(), '/');
-        $directory = rtrim($workingDir . $baseDirectory, '/');
+        $directory = rtrim($workingDir.$baseDirectory, '/');
 
         if ($segments->subPath !== '') {
-            $directory .= '/' . $segments->subPath;
+            $directory .= '/'.$segments->subPath;
         }
 
         $ext = $extension ?? $this->config->fileExtension() ?? '.php';
-        $ext = str_starts_with($ext, '.') ? $ext : '.' . $ext;
+        $ext = str_starts_with($ext, '.') ? $ext : '.'.$ext;
 
-        return $directory . '/' . $segments->className . $ext;
+        return $directory.'/'.$segments->className.$ext;
     }
 
     /**
      * Build a PHP namespace from a base namespace and path segments.
      *
-     * @param string $baseNamespace Base namespace (e.g., "App\\Tasks")
-     * @param PathSegmentsRecord $segments Path segments record
+     * @param  string  $baseNamespace  Base namespace (e.g., "App\\Tasks")
+     * @param  PathSegmentsRecord  $segments  Path segments record
      * @return string Complete namespace with subpaths
      *
      * @example
@@ -72,15 +72,15 @@ class PathBuilderService
             return $baseNamespace;
         }
 
-        return $baseNamespace . '\\' . str_replace('/', '\\', $segments->subPath);
+        return $baseNamespace.'\\'.str_replace('/', '\\', $segments->subPath);
     }
 
     /**
      * Build a relative path from base directory and segments.
      *
-     * @param string $baseDirectory Base directory
-     * @param PathSegmentsRecord $segments Path segments record
-     * @param string|null $extension File extension
+     * @param  string  $baseDirectory  Base directory
+     * @param  PathSegmentsRecord  $segments  Path segments record
+     * @param  string|null  $extension  File extension
      * @return string Relative file path
      */
     public function buildRelativePath(
@@ -91,20 +91,20 @@ class PathBuilderService
         $directory = rtrim($baseDirectory, '/');
 
         if ($segments->subPath !== '') {
-            $directory .= '/' . $segments->subPath;
+            $directory .= '/'.$segments->subPath;
         }
 
         $ext = $extension ?? $this->config->fileExtension() ?? '.php';
-        $ext = str_starts_with($ext, '.') ? $ext : '.' . $ext;
+        $ext = str_starts_with($ext, '.') ? $ext : '.'.$ext;
 
-        return $directory . '/' . $segments->className . $ext;
+        return $directory.'/'.$segments->className.$ext;
     }
 
     /**
      * Build a directory path (without filename).
      *
-     * @param string $baseDirectory Base directory
-     * @param PathSegmentsRecord $segments Path segments record
+     * @param  string  $baseDirectory  Base directory
+     * @param  PathSegmentsRecord  $segments  Path segments record
      * @return string Directory path
      */
     public function buildDirectoryPath(
@@ -112,10 +112,10 @@ class PathBuilderService
         PathSegmentsRecord $segments
     ): string {
         $workingDir = rtrim($this->config->workingDirectory(), '/');
-        $directory = rtrim($workingDir . $baseDirectory, '/');
+        $directory = rtrim($workingDir.$baseDirectory, '/');
 
         if ($segments->subPath !== '') {
-            $directory .= '/' . $segments->subPath;
+            $directory .= '/'.$segments->subPath;
         }
 
         return $directory;
@@ -124,8 +124,8 @@ class PathBuilderService
     /**
      * Get the fully qualified class name (with namespace).
      *
-     * @param string $baseNamespace Base namespace
-     * @param PathSegmentsRecord $segments Path segments record
+     * @param  string  $baseNamespace  Base namespace
+     * @param  PathSegmentsRecord  $segments  Path segments record
      * @return string Fully qualified class name
      */
     public function buildFullyQualifiedClassName(
@@ -133,6 +133,7 @@ class PathBuilderService
         PathSegmentsRecord $segments
     ): string {
         $namespace = $this->buildNamespace($baseNamespace, $segments);
-        return $namespace . '\\' . $segments->className;
+
+        return $namespace.'\\'.$segments->className;
     }
 }

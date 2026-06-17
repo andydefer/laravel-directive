@@ -14,7 +14,7 @@ final class StringCaseConverterServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->converter = new StringCaseConverterService();
+        $this->converter = new StringCaseConverterService;
     }
 
     // ============================================================================

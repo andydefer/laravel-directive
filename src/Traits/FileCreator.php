@@ -85,8 +85,8 @@ trait FileCreator
     {
         @trigger_error(
             sprintf(
-                '%s::initFileCreator() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::initFileCreator() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Inject FileCreatorService in your constructor instead.',
                 static::class
             ),
@@ -115,8 +115,8 @@ trait FileCreator
     ): bool {
         @trigger_error(
             sprintf(
-                '%s::createFile() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::createFile() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::createFile() instead.',
                 static::class
             ),
@@ -183,8 +183,8 @@ trait FileCreator
     {
         @trigger_error(
             sprintf(
-                '%s::toPascalCase() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::toPascalCase() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::toPascalCase() instead.',
                 static::class
             ),
@@ -209,8 +209,8 @@ trait FileCreator
     {
         @trigger_error(
             sprintf(
-                '%s::toKebabCase() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::toKebabCase() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::toKebabCase() instead.',
                 static::class
             ),
@@ -232,8 +232,8 @@ trait FileCreator
     {
         @trigger_error(
             sprintf(
-                '%s::extractPathSegments() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::extractPathSegments() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::extractPathSegments() instead.',
                 static::class
             ),
@@ -248,7 +248,7 @@ trait FileCreator
             'segments' => $segments,
             'className' => $className,
             'subPath' => $subPath,
-            'fullPath' => $subPath ? $subPath . '/' . $className : $className,
+            'fullPath' => $subPath ? $subPath.'/'.$className : $className,
         ];
     }
 
@@ -265,8 +265,8 @@ trait FileCreator
     {
         @trigger_error(
             sprintf(
-                '%s::buildNamespace() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::buildNamespace() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::buildNamespace() instead.',
                 static::class
             ),
@@ -277,7 +277,7 @@ trait FileCreator
             return $baseNamespace;
         }
 
-        return $baseNamespace . '\\' . str_replace('/', '\\', $subPath);
+        return $baseNamespace.'\\'.str_replace('/', '\\', $subPath);
     }
 
     /**
@@ -294,20 +294,20 @@ trait FileCreator
     {
         @trigger_error(
             sprintf(
-                '%s::getAppPath() is deprecated since version 2.0.0. ' .
-                    'This method will be removed in 3.0.0. ' .
+                '%s::getAppPath() is deprecated since version 2.0.0. '.
+                    'This method will be removed in 3.0.0. '.
                     'Use FileCreatorService::getAppPath() instead.',
                 static::class
             ),
             E_USER_DEPRECATED
         );
 
-        $directory = getcwd() . $baseDir;
+        $directory = getcwd().$baseDir;
         if ($subPath) {
-            $directory .= $subPath . '/';
+            $directory .= $subPath.'/';
         }
 
-        return $directory . $className . '.php';
+        return $directory.$className.'.php';
     }
 
     /**

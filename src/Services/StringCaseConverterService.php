@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
-use AndyDefer\Directive\Contexts\FileCreationContext;
-
 /**
  * Service for converting string case formats.
  *
@@ -21,7 +19,7 @@ class StringCaseConverterService
     /**
      * Convert a string from kebab-case or snake_case to PascalCase.
      *
-     * @param string $string Input string in kebab-case or snake_case
+     * @param  string  $string  Input string in kebab-case or snake_case
      * @return string Converted string in PascalCase
      *
      * @example
@@ -33,13 +31,14 @@ class StringCaseConverterService
     {
         $result = str_replace(['-', '_'], ' ', $string);
         $result = ucwords($result);
+
         return str_replace(' ', '', $result);
     }
 
     /**
      * Convert a string from PascalCase to kebab-case.
      *
-     * @param string $string Input string in PascalCase
+     * @param  string  $string  Input string in PascalCase
      * @return string Converted string in kebab-case
      *
      * @example
@@ -54,7 +53,7 @@ class StringCaseConverterService
     /**
      * Convert a string from PascalCase to snake_case.
      *
-     * @param string $string Input string in PascalCase
+     * @param  string  $string  Input string in PascalCase
      * @return string Converted string in snake_case
      *
      * @example
@@ -69,7 +68,7 @@ class StringCaseConverterService
     /**
      * Convert a string from kebab-case to snake_case.
      *
-     * @param string $string Input string in kebab-case
+     * @param  string  $string  Input string in kebab-case
      * @return string Converted string in snake_case
      */
     public function kebabToSnake(string $string): string
@@ -80,7 +79,7 @@ class StringCaseConverterService
     /**
      * Convert a string from snake_case to kebab-case.
      *
-     * @param string $string Input string in snake_case
+     * @param  string  $string  Input string in snake_case
      * @return string Converted string in kebab-case
      */
     public function snakeToKebab(string $string): string

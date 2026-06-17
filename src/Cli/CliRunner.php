@@ -26,12 +26,14 @@ use Illuminate\Foundation\Application;
 final class CliRunner
 {
     private Container $container;
+
     private string $directivesPath;
+
     private ?Application $application;
 
     public function __construct(?Application $application = null)
     {
-        $this->container = new Container();
+        $this->container = new Container;
         $this->application = $application;
         $this->directivesPath = $this->resolveDirectivesPath();
         putenv("DIRECTIVE_PATH={$this->directivesPath}");
@@ -48,9 +50,9 @@ final class CliRunner
     private function resolveDirectivesPath(): string
     {
         $candidates = [
-            getcwd() . '/app/Directives',
-            getcwd() . '/directives',
-            getcwd() . '/src/Directives',
+            getcwd().'/app/Directives',
+            getcwd().'/directives',
+            getcwd().'/src/Directives',
         ];
 
         foreach ($candidates as $candidate) {
@@ -64,16 +66,16 @@ final class CliRunner
 
     private function registerBaseServices(): void
     {
-        $this->container->singleton(RenderDispatcher::class, fn() => new RenderDispatcher());
-        $this->container->singleton(InputDispatcher::class, fn() => new InputDispatcher());
-        $this->container->singleton(DirectiveDiscoveryContext::class, fn() => new DirectiveDiscoveryContext());
+        $this->container->singleton(RenderDispatcher::class, fn () => new RenderDispatcher);
+        $this->container->singleton(InputDispatcher::class, fn () => new InputDispatcher);
+        $this->container->singleton(DirectiveDiscoveryContext::class, fn () => new DirectiveDiscoveryContext);
         $this->container->singleton(
             SignatureValidationService::class,
-            fn() => new SignatureValidationService(new EnvSignatureValidationConfig())
+            fn () => new SignatureValidationService(new EnvSignatureValidationConfig)
         );
         $this->container->singleton(
             DirectiveInteractionService::class,
-            fn($c) => new DirectiveInteractionService(
+            fn ($c) => new DirectiveInteractionService(
                 $c->make(RenderDispatcher::class),
                 $c->make(InputDispatcher::class),
             )
@@ -82,8 +84,8 @@ final class CliRunner
 
     private function buildKernel(): DirectiveKernel
     {
-        $config = new EnvDirectiveConfig();
-        $parser = new DirectiveParserService();
+        $config = new EnvDirectiveConfig;
+        $parser = new DirectiveParserService;
         $discoveryContext = $this->container->make(DirectiveDiscoveryContext::class);
         $interaction = $this->container->make(DirectiveInteractionService::class);
         $hydrator = new DirectiveHydratorService(

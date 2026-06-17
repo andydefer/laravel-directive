@@ -20,7 +20,7 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        $fixturesPath = realpath(__DIR__ . '/../Fixtures/Directives');
+        $fixturesPath = realpath(__DIR__.'/../Fixtures/Directives');
         $config = new TestDirectiveConfig($fixturesPath);
         $this->app->instance(DirectiveConfigInterface::class, $config);
 
@@ -120,7 +120,7 @@ final class LaravelDatabaseDirectiveTest extends IntegrationTestCase
 
         $response = $this->runDirective('test-laravel-db');
 
-        $this->assertSame(ExitCode::SUCCESS, $response['exit_code'], 'Output: ' . $response['output']);
+        $this->assertSame(ExitCode::SUCCESS, $response['exit_code'], 'Output: '.$response['output']);
         $this->assertStringContainsString('Testing Laravel database integration', $response['output']);
         $this->assertStringContainsString('Laravel is available', $response['output']);
         $this->assertStringContainsString('Found 3 users in database', $response['output']);

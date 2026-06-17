@@ -16,6 +16,7 @@ use AndyDefer\Directive\Enums\PermissionMode;
  * implementation.
  *
  * @author Andy Defer
+ *
  * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface from php-services package instead.
  *             This interface will be removed in version 3.0.0.
  * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface
@@ -25,8 +26,9 @@ interface FileSystemInterface
     /**
      * Determine if a file or directory exists at the given path.
      *
-     * @param string $path The path to check
+     * @param  string  $path  The path to check
      * @return bool True if the path exists, false otherwise
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::exists() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::exists()
      */
@@ -35,9 +37,11 @@ interface FileSystemInterface
     /**
      * Get the contents of a file.
      *
-     * @param string $path Path to the file
+     * @param  string  $path  Path to the file
      * @return string The file contents
+     *
      * @throws \RuntimeException If the file cannot be read or does not exist
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::get() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::get()
      */
@@ -46,9 +50,10 @@ interface FileSystemInterface
     /**
      * Write the contents to a file.
      *
-     * @param string $path Destination path where the file should be created
-     * @param string $content Content to write to the file
+     * @param  string  $path  Destination path where the file should be created
+     * @param  string  $content  Content to write to the file
      * @return int|false Number of bytes written, or false on failure
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::put() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::put()
      */
@@ -57,9 +62,10 @@ interface FileSystemInterface
     /**
      * Append content to a file.
      *
-     * @param string $path Path to the file
-     * @param string $content Content to append
+     * @param  string  $path  Path to the file
+     * @param  string  $content  Content to append
      * @return int|false Number of bytes written, or false on failure
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::append() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::append()
      */
@@ -68,8 +74,9 @@ interface FileSystemInterface
     /**
      * Determine if the given path is a directory.
      *
-     * @param string $path Path to check
+     * @param  string  $path  Path to check
      * @return bool True if the path is a directory, false otherwise
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::isDirectory() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::isDirectory()
      */
@@ -78,8 +85,9 @@ interface FileSystemInterface
     /**
      * Determine if the given path is a file.
      *
-     * @param string $path Path to check
+     * @param  string  $path  Path to check
      * @return bool True if the path is a file, false otherwise
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::isFile() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::isFile()
      */
@@ -88,8 +96,9 @@ interface FileSystemInterface
     /**
      * Determine if the given path is readable.
      *
-     * @param string $path Path to check
+     * @param  string  $path  Path to check
      * @return bool True if the path is readable, false otherwise
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::isReadable() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::isReadable()
      */
@@ -98,8 +107,9 @@ interface FileSystemInterface
     /**
      * Determine if the given path is writable.
      *
-     * @param string $path Path to check
+     * @param  string  $path  Path to check
      * @return bool True if the path is writable, false otherwise
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::isWritable() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::isWritable()
      */
@@ -108,10 +118,11 @@ interface FileSystemInterface
     /**
      * Create a directory.
      *
-     * @param string $path Directory path to create
-     * @param PermissionMode $mode Directory permissions (default: PermissionMode::DIRECTORY)
-     * @param bool $recursive Create parent directories if needed (default: true)
+     * @param  string  $path  Directory path to create
+     * @param  PermissionMode  $mode  Directory permissions (default: PermissionMode::DIRECTORY)
+     * @param  bool  $recursive  Create parent directories if needed (default: true)
      * @return bool True on success, false on failure
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::makeDirectory() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::makeDirectory()
      */
@@ -120,8 +131,10 @@ interface FileSystemInterface
     /**
      * Ensure a directory exists, creating it if necessary.
      *
-     * @param string $path Directory path to check/create
+     * @param  string  $path  Directory path to check/create
+     *
      * @throws \RuntimeException If directory cannot be created
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::ensureDirectoryExists() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::ensureDirectoryExists()
      */
@@ -130,9 +143,10 @@ interface FileSystemInterface
     /**
      * Copy a file from source to destination.
      *
-     * @param string $source Source file path
-     * @param string $destination Destination file path
+     * @param  string  $source  Source file path
+     * @param  string  $destination  Destination file path
      * @return bool True on success, false on failure
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::copy() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::copy()
      */
@@ -141,9 +155,10 @@ interface FileSystemInterface
     /**
      * Move/Rename a file or directory.
      *
-     * @param string $source Source path
-     * @param string $destination Destination path
+     * @param  string  $source  Source path
+     * @param  string  $destination  Destination path
      * @return bool True on success, false on failure
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::move() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::move()
      */
@@ -152,9 +167,10 @@ interface FileSystemInterface
     /**
      * Find pathnames matching a pattern.
      *
-     * @param string $pattern The pattern to match (glob syntax)
-     * @param int $flags Optional flags (GLOB_MARK, GLOB_NOSORT, etc.)
+     * @param  string  $pattern  The pattern to match (glob syntax)
+     * @param  int  $flags  Optional flags (GLOB_MARK, GLOB_NOSORT, etc.)
      * @return array<int, string> Array of matching pathnames, empty array if no matches
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::glob() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::glob()
      */
@@ -163,8 +179,9 @@ interface FileSystemInterface
     /**
      * Delete a file or directory.
      *
-     * @param string $path Path to the file or directory to delete
+     * @param  string  $path  Path to the file or directory to delete
      * @return bool True on success, false on failure
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::delete() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::delete()
      */
@@ -173,8 +190,9 @@ interface FileSystemInterface
     /**
      * Recursively delete a directory and all its contents.
      *
-     * @param string $directory Path to the directory to delete
+     * @param  string  $directory  Path to the directory to delete
      * @return bool True on success, false on failure
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::deleteDirectory() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::deleteDirectory()
      */
@@ -183,9 +201,11 @@ interface FileSystemInterface
     /**
      * Get the size of a file in bytes.
      *
-     * @param string $path Path to the file
+     * @param  string  $path  Path to the file
      * @return int File size in bytes
+     *
      * @throws \RuntimeException If file does not exist or cannot be read
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::size() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::size()
      */
@@ -194,9 +214,11 @@ interface FileSystemInterface
     /**
      * Get the last modified time of a file.
      *
-     * @param string $path Path to the file
+     * @param  string  $path  Path to the file
      * @return int Unix timestamp of last modification
+     *
      * @throws \RuntimeException If file does not exist
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::lastModified() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::lastModified()
      */
@@ -205,8 +227,9 @@ interface FileSystemInterface
     /**
      * Get the file extension.
      *
-     * @param string $path Path to the file
+     * @param  string  $path  Path to the file
      * @return string File extension (without dot), empty string if none
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::extension() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::extension()
      */
@@ -215,8 +238,9 @@ interface FileSystemInterface
     /**
      * Get the basename of a path.
      *
-     * @param string $path Path to the file
+     * @param  string  $path  Path to the file
      * @return string Basename of the path
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::basename() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::basename()
      */
@@ -225,8 +249,9 @@ interface FileSystemInterface
     /**
      * Get the directory name of a path.
      *
-     * @param string $path Path to the file
+     * @param  string  $path  Path to the file
      * @return string Directory name
+     *
      * @deprecated Use AndyDefer\PhpServices\Contracts\FileSystemInterface::dirname() instead
      * @see \AndyDefer\PhpServices\Contracts\FileSystemInterface::dirname()
      */

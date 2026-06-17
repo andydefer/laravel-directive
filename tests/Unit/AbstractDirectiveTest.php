@@ -22,6 +22,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class AbstractDirectiveTest extends UnitTestCase
 {
     private DirectiveInteractionService&MockObject $interaction;
+
     private ?Application $application;
 
     protected function setUp(): void
@@ -36,7 +37,7 @@ final class AbstractDirectiveTest extends UnitTestCase
     {
         return new DirectiveContext(
             blueprint: new DirectiveBlueprintRecord(TestConcreteDirective::class, 'test-concrete', 'Test directive'),
-            aliases: new StringTypedCollection(),
+            aliases: new StringTypedCollection,
             laravelApplication: $this->application,
         );
     }
@@ -50,7 +51,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_arguments_are_set_correctly_via_context(): void
     {
-        $arguments = new ParameterVOCollection();
+        $arguments = new ParameterVOCollection;
         $arguments->add(
             new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING),
             new ParameterVO(name: 'email', value: 'john@example.com', type: PrimitiveType::STRING),
@@ -75,7 +76,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_argument_returns_null_when_value_is_empty_string(): void
     {
-        $arguments = new ParameterVOCollection();
+        $arguments = new ParameterVOCollection;
         $arguments->add(new ParameterVO(name: 'comment', value: '', type: PrimitiveType::STRING));
 
         $context = $this->createDirectiveContext();
@@ -88,7 +89,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_true_when_argument_exists(): void
     {
-        $arguments = new ParameterVOCollection();
+        $arguments = new ParameterVOCollection;
         $arguments->add(new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING));
 
         $context = $this->createDirectiveContext();
@@ -101,7 +102,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_false_when_argument_does_not_exist(): void
     {
-        $arguments = new ParameterVOCollection();
+        $arguments = new ParameterVOCollection;
         $arguments->add(new ParameterVO(name: 'name', value: 'John Doe', type: PrimitiveType::STRING));
 
         $context = $this->createDirectiveContext();
@@ -114,7 +115,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_argument_returns_false_for_empty_string_value(): void
     {
-        $arguments = new ParameterVOCollection();
+        $arguments = new ParameterVOCollection;
         $arguments->add(new ParameterVO(name: 'comment', value: '', type: PrimitiveType::STRING));
 
         $context = $this->createDirectiveContext();
@@ -129,7 +130,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_options_are_set_correctly_via_context(): void
     {
-        $options = new ParameterVOCollection();
+        $options = new ParameterVOCollection;
         $options->add(
             new ParameterVO(name: 'role', value: 'admin', type: PrimitiveType::STRING),
             new ParameterVO(name: 'active', value: true, type: PrimitiveType::BOOL),
@@ -156,7 +157,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_option_returns_null_for_empty_string_value(): void
     {
-        $options = new ParameterVOCollection();
+        $options = new ParameterVOCollection;
         $options->add(new ParameterVO(name: 'role', value: '', type: PrimitiveType::STRING));
 
         $context = $this->createDirectiveContext();
@@ -169,7 +170,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_true_when_option_exists(): void
     {
-        $options = new ParameterVOCollection();
+        $options = new ParameterVOCollection;
         $options->add(new ParameterVO(name: 'force', value: true, type: PrimitiveType::BOOL));
 
         $context = $this->createDirectiveContext();
@@ -182,7 +183,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_false_when_option_does_not_exist(): void
     {
-        $options = new ParameterVOCollection();
+        $options = new ParameterVOCollection;
         $options->add(new ParameterVO(name: 'force', value: true, type: PrimitiveType::BOOL));
 
         $context = $this->createDirectiveContext();
@@ -195,7 +196,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_has_option_returns_false_for_empty_string_value(): void
     {
-        $options = new ParameterVOCollection();
+        $options = new ParameterVOCollection;
         $options->add(new ParameterVO(name: 'role', value: '', type: PrimitiveType::STRING));
 
         $context = $this->createDirectiveContext();
@@ -288,11 +289,11 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_table_delegates_to_interaction(): void
     {
-        $headers = new StringTypedCollection();
+        $headers = new StringTypedCollection;
         $headers->add('Name', 'Email');
 
-        $rows = new RowCollection();
-        $row = new RowCollection();
+        $rows = new RowCollection;
+        $row = new RowCollection;
         $row->add('John', 'john@example.com');
         $rows->add($row);
 
@@ -351,7 +352,7 @@ final class AbstractDirectiveTest extends UnitTestCase
 
     public function test_variadic_arguments_are_set_correctly(): void
     {
-        $variadicArguments = new StringTypedCollection();
+        $variadicArguments = new StringTypedCollection;
         $variadicArguments->add('file1.txt', 'file2.txt', 'file3.txt');
 
         $context = $this->createDirectiveContext();

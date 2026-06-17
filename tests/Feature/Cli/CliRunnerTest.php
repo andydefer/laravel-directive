@@ -8,12 +8,11 @@ namespace AndyDefer\Directive\Tests\Feature\Cli;
 
 use AndyDefer\Directive\Cli\CliRunner;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
-use AndyDefer\Directive\Tests\UnitTestCase;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class CliRunnerTest extends IntegrationTestCase
 {
     private static ?string $appRoot = null;
+
     private string $originalCwd;
 
     public static function setUpBeforeClass(): void
@@ -21,7 +20,7 @@ final class CliRunnerTest extends IntegrationTestCase
         parent::setUpBeforeClass();
 
         if (self::$appRoot === null) {
-            self::$appRoot = sys_get_temp_dir() . '/laravel_app_' . uniqid();
+            self::$appRoot = sys_get_temp_dir().'/laravel_app_'.uniqid();
             self::createRealisticLaravelStructure(self::$appRoot);
             self::includeDirectiveFiles(self::$appRoot);
         }
@@ -79,8 +78,8 @@ final class CliRunnerTest extends IntegrationTestCase
         ];
 
         foreach ($directories as $dir) {
-            if (!is_dir($appRoot . $dir)) {
-                mkdir($appRoot . $dir, 0777, true);
+            if (! is_dir($appRoot.$dir)) {
+                mkdir($appRoot.$dir, 0777, true);
             }
         }
 
@@ -124,7 +123,7 @@ Facade::setFacadeApplication($app);
 return $app;
 PHP;
 
-        file_put_contents($appRoot . '/bootstrap/app.php', $content);
+        file_put_contents($appRoot.'/bootstrap/app.php', $content);
     }
 
     private static function createConfigApp(string $appRoot): void
@@ -149,7 +148,7 @@ return [
 ];
 PHP;
 
-        file_put_contents($appRoot . '/config/app.php', $content);
+        file_put_contents($appRoot.'/config/app.php', $content);
     }
 
     private static function createAppDirectives(string $appRoot): void
@@ -188,7 +187,7 @@ final class UserCreateDirective extends AbstractDirective
     }
 }
 PHP;
-        file_put_contents($appRoot . '/app/Directives/UserCreateDirective.php', $content1);
+        file_put_contents($appRoot.'/app/Directives/UserCreateDirective.php', $content1);
 
         $content2 = <<<'PHP'
 <?php
@@ -222,14 +221,14 @@ final class CacheClearDirective extends AbstractDirective
     }
 }
 PHP;
-        file_put_contents($appRoot . '/app/Directives/CacheClearDirective.php', $content2);
+        file_put_contents($appRoot.'/app/Directives/CacheClearDirective.php', $content2);
     }
 
     private static function includeDirectiveFiles(string $appRoot): void
     {
         $files = [
-            $appRoot . '/app/Directives/UserCreateDirective.php',
-            $appRoot . '/app/Directives/CacheClearDirective.php',
+            $appRoot.'/app/Directives/UserCreateDirective.php',
+            $appRoot.'/app/Directives/CacheClearDirective.php',
         ];
 
         foreach ($files as $file) {
@@ -241,13 +240,13 @@ PHP;
 
     private static function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             if (is_dir($path)) {
                 self::removeDirectory($path);
             } else {
@@ -377,8 +376,8 @@ final class AliasTestDirective extends AbstractDirective
 }
 PHP;
 
-        file_put_contents(self::$appRoot . '/app/Directives/AliasTestDirective.php', $content);
-        require_once self::$appRoot . '/app/Directives/AliasTestDirective.php';
+        file_put_contents(self::$appRoot.'/app/Directives/AliasTestDirective.php', $content);
+        require_once self::$appRoot.'/app/Directives/AliasTestDirective.php';
 
         $runner = new CliRunner($this->app);
 

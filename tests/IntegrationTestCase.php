@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests;
 
 use AndyDefer\Directive\DirectiveServiceProvider;
-use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use Carbon\Carbon;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -36,13 +35,13 @@ abstract class IntegrationTestCase extends Orchestra
         ]);
 
         $app['config']->set('cache.default', 'array');
-        $app['config']->set('view.compiled', __DIR__ . '/storage/framework/views');
-        $app['config']->set('directive.path', __DIR__ . '/Fixtures/Directives');
+        $app['config']->set('view.compiled', __DIR__.'/storage/framework/views');
+        $app['config']->set('directive.path', __DIR__.'/Fixtures/Directives');
     }
 
     protected function defineEnvironment($app): void
     {
-        $app['config']->set('view.paths', [__DIR__ . '/Fixtures/views']);
+        $app['config']->set('view.paths', [__DIR__.'/Fixtures/views']);
     }
 
     protected function getPackageProviders($app)
@@ -54,7 +53,7 @@ abstract class IntegrationTestCase extends Orchestra
 
     protected function runDatabaseMigrations(): void
     {
-        $migrationPath = __DIR__ . '/database/migrations';
+        $migrationPath = __DIR__.'/database/migrations';
 
         if (is_dir($migrationPath)) {
             $this->loadMigrationsFrom($migrationPath);

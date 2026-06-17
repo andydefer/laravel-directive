@@ -6,20 +6,20 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
-use AndyDefer\Directive\Enums\PermissionMode;
 use AndyDefer\Directive\Services\FileSystemService;
 use PHPUnit\Framework\TestCase;
 
 final class FileSystemServiceTest extends TestCase
 {
     private FileSystemService $filesystem;
+
     private string $tempDir;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->filesystem = new FileSystemService();
-        $this->tempDir = sys_get_temp_dir() . '/filesystem_test_' . uniqid();
+        $this->filesystem = new FileSystemService;
+        $this->tempDir = sys_get_temp_dir().'/filesystem_test_'.uniqid();
         mkdir($this->tempDir, 0777, true);
     }
 
@@ -31,13 +31,13 @@ final class FileSystemServiceTest extends TestCase
 
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             if (is_dir($path)) {
                 $this->removeDirectory($path);
             } else {
@@ -49,8 +49,9 @@ final class FileSystemServiceTest extends TestCase
 
     private function createTempFile(string $filename, string $content = 'test content'): string
     {
-        $path = $this->tempDir . '/' . $filename;
+        $path = $this->tempDir.'/'.$filename;
         file_put_contents($path, $content);
+
         return $path;
     }
 
@@ -67,7 +68,7 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_exists_returns_false_for_nonexistent_file(): void
     {
-        $result = $this->filesystem->exists($this->tempDir . '/nonexistent.txt');
+        $result = $this->filesystem->exists($this->tempDir.'/nonexistent.txt');
         $this->assertFalse($result);
     }
 
@@ -86,7 +87,7 @@ final class FileSystemServiceTest extends TestCase
     public function test_get_throws_exception_for_nonexistent_file(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->filesystem->get($this->tempDir . '/nonexistent.txt');
+        $this->filesystem->get($this->tempDir.'/nonexistent.txt');
     }
 
     // ============================================================================
@@ -95,7 +96,7 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_put_creates_file_with_content(): void
     {
-        $path = $this->tempDir . '/new_file.txt';
+        $path = $this->tempDir.'/new_file.txt';
         $content = 'New file content';
         $result = $this->filesystem->put($path, $content);
         $this->assertNotFalse($result);
@@ -179,7 +180,7 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_make_directory_creates_directory(): void
     {
-        $newDir = $this->tempDir . '/new_directory';
+        $newDir = $this->tempDir.'/new_directory';
         $result = $this->filesystem->makeDirectory($newDir);
         $this->assertTrue($result);
         $this->assertDirectoryExists($newDir);
@@ -191,7 +192,7 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_ensure_directory_exists_creates_missing_directory(): void
     {
-        $newDir = $this->tempDir . '/missing_dir';
+        $newDir = $this->tempDir.'/missing_dir';
         $this->filesystem->ensureDirectoryExists($newDir);
         $this->assertDirectoryExists($newDir);
     }
@@ -203,7 +204,7 @@ final class FileSystemServiceTest extends TestCase
     public function test_copy_copies_file(): void
     {
         $source = $this->createTempFile('source.txt', 'Source content');
-        $destination = $this->tempDir . '/destination.txt';
+        $destination = $this->tempDir.'/destination.txt';
         $result = $this->filesystem->copy($source, $destination);
         $this->assertTrue($result);
         $this->assertFileExists($destination);
@@ -217,7 +218,7 @@ final class FileSystemServiceTest extends TestCase
     public function test_move_moves_file(): void
     {
         $source = $this->createTempFile('move_source.txt', 'Move content');
-        $destination = $this->tempDir . '/move_destination.txt';
+        $destination = $this->tempDir.'/move_destination.txt';
         $result = $this->filesystem->move($source, $destination);
         $this->assertTrue($result);
         $this->assertFileDoesNotExist($source);
@@ -234,7 +235,7 @@ final class FileSystemServiceTest extends TestCase
         $this->createTempFile('file1.txt');
         $this->createTempFile('file2.txt');
         $this->createTempFile('file3.log');
-        $result = $this->filesystem->glob($this->tempDir . '/*.txt');
+        $result = $this->filesystem->glob($this->tempDir.'/*.txt');
         $this->assertCount(2, $result);
     }
 
@@ -256,7 +257,7 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_delete_directory_removes_non_empty_directory(): void
     {
-        $dir = $this->tempDir . '/non_empty_dir';
+        $dir = $this->tempDir.'/non_empty_dir';
         mkdir($dir);
         $this->createTempFile('non_empty_dir/file1.txt');
         $result = $this->filesystem->deleteDirectory($dir);
@@ -294,14 +295,14 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_extension_returns_file_extension(): void
     {
-        $path = $this->tempDir . '/file.txt';
+        $path = $this->tempDir.'/file.txt';
         $result = $this->filesystem->extension($path);
         $this->assertSame('txt', $result);
     }
 
     public function test_extension_returns_empty_string_for_no_extension(): void
     {
-        $path = $this->tempDir . '/file_without_extension';
+        $path = $this->tempDir.'/file_without_extension';
         $result = $this->filesystem->extension($path);
         $this->assertSame('', $result);
     }
@@ -312,7 +313,7 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_basename_returns_basename(): void
     {
-        $path = $this->tempDir . '/subdir/file.txt';
+        $path = $this->tempDir.'/subdir/file.txt';
         $result = $this->filesystem->basename($path);
         $this->assertSame('file.txt', $result);
     }
@@ -323,7 +324,7 @@ final class FileSystemServiceTest extends TestCase
 
     public function test_dirname_returns_directory_name(): void
     {
-        $path = $this->tempDir . '/subdir/file.txt';
+        $path = $this->tempDir.'/subdir/file.txt';
         $result = $this->filesystem->dirname($path);
         $this->assertStringContainsString('subdir', $result);
     }

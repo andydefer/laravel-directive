@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Collections;
 
 use AndyDefer\Directive\Collections\ParameterVOCollection;
-use AndyDefer\PhpServices\Enums\PrimitiveType;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
+use AndyDefer\PhpServices\Enums\PrimitiveType;
 
 final class AbstractKeyValueCollectionTest extends UnitTestCase
 {

@@ -9,9 +9,9 @@ use AndyDefer\PhpSearch\Records\SearchResultRecord;
 
 /**
  * Collection typée pour les résultats de recherche.
- * 
+ *
  * @extends AbstractTypedCollection<SearchResultRecord>
- * 
+ *
  * @author Andy Defer
  */
 final class SearchResultCollection extends AbstractTypedCollection
@@ -29,7 +29,7 @@ final class SearchResultCollection extends AbstractTypedCollection
             return $b->score <=> $a->score;
         });
 
-        $collection = new self();
+        $collection = new self;
         foreach ($items as $item) {
             $collection->add($item);
         }
@@ -45,7 +45,7 @@ final class SearchResultCollection extends AbstractTypedCollection
             return $b->percentage <=> $a->percentage;
         });
 
-        $collection = new self();
+        $collection = new self;
         $collection->add(...$items);
 
         return $collection;
@@ -55,7 +55,7 @@ final class SearchResultCollection extends AbstractTypedCollection
     {
         $items = array_slice($this->items, 0, $limit);
 
-        $collection = new self();
+        $collection = new self;
         foreach ($items as $item) {
             $collection->add($item);
         }
@@ -69,6 +69,7 @@ final class SearchResultCollection extends AbstractTypedCollection
         foreach ($this->items as $item) {
             $files[] = $item->file_path;
         }
+
         return array_unique($files);
     }
 }

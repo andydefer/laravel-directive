@@ -4,38 +4,37 @@ namespace AndyDefer\Directive\Enums;
 
 /**
  * @deprecated Cet enum est déprécié. Utilisez celui du package andydefer/php-services à la place.
- * 
+ *
  * Cet enum sera supprimé dans la version 2.0.0 de ce package.
- * 
+ *
  * ❌ À NE PLUS UTILISER :
  * - AndyDefer\Directive\Enums\PrimitiveType
- * 
+ *
  * ✅ RECOMMANDATION :
  * Utilisez l'enum du package andydefer/php-services qui offre les mêmes fonctionnalités
  * avec une meilleure intégration et plus de stabilité.
- * 
+ *
  * Installer d'abord le package :
  * composer require andydefer/php-services
- * 
+ *
  * Ensuite, utilisez l'enum :
- * 
+ *
  * use AndyDefer\PhpServices\Enums\PrimitiveType;
- * 
+ *
  * // Créer à partir d'une valeur
  * $type = PrimitiveType::fromValue($value);
- * 
+ *
  * // Vérifier si une valeur correspond
  * if ($type->matches($value)) { ... }
- * 
+ *
  * // Obtenir le label formaté
  * $label = $type->getLabel(); // 'bool', 'string', 'int', 'null', 'float'
- * 
+ *
  * // Obtenir tous les types acceptés
  * $types = PrimitiveType::getAcceptedTypes();
- * 
+ *
  * // Obtenir les labels des types acceptés
  * $labels = PrimitiveType::getAcceptedLabels(); // 'bool|string|int|null|float'
- * 
  * @see \AndyDefer\PhpServices\Enums\PrimitiveType
  * @deprecated
  */
@@ -49,7 +48,7 @@ enum PrimitiveType: string
 
     /**
      * @deprecated Utilisez AndyDefer\PhpServices\Enums\PrimitiveType::fromValue()
-     * 
+     *
      * ✅ NOUVELLE APPROCHE :
      * $type = PrimitiveType::fromValue($value);
      */
@@ -69,7 +68,7 @@ enum PrimitiveType: string
 
     /**
      * @deprecated Utilisez AndyDefer\PhpServices\Enums\PrimitiveType::matches()
-     * 
+     *
      * ✅ NOUVELLE APPROCHE :
      * if ($type->matches($value)) { ... }
      */
@@ -89,7 +88,7 @@ enum PrimitiveType: string
 
     /**
      * @deprecated Utilisez AndyDefer\PhpServices\Enums\PrimitiveType::getLabel()
-     * 
+     *
      * ✅ NOUVELLE APPROCHE :
      * $label = $type->getLabel();
      */
@@ -115,7 +114,7 @@ enum PrimitiveType: string
 
     /**
      * @deprecated Utilisez AndyDefer\PhpServices\Enums\PrimitiveType::getAcceptedTypes()
-     * 
+     *
      * ✅ NOUVELLE APPROCHE :
      * $types = PrimitiveType::getAcceptedTypes();
      */
@@ -141,7 +140,7 @@ enum PrimitiveType: string
 
     /**
      * @deprecated Utilisez AndyDefer\PhpServices\Enums\PrimitiveType::getAcceptedLabels()
-     * 
+     *
      * ✅ NOUVELLE APPROCHE :
      * $labels = PrimitiveType::getAcceptedLabels();
      */

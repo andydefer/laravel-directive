@@ -9,7 +9,7 @@ use InvalidArgumentException;
 
 /**
  * Value Object pour la limite de résultats de recherche.
- * 
+ *
  * @author Andy Defer
  */
 final class SearchLimitVO extends AbstractValueObject
@@ -28,7 +28,6 @@ final class SearchLimitVO extends AbstractValueObject
 
         $this->value = $value;
     }
-
 
     public function getValue(): int
     {

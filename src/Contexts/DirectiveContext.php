@@ -12,10 +12,15 @@ use Illuminate\Foundation\Application;
 final class DirectiveContext
 {
     private ParameterVOCollection $arguments;
+
     private ParameterVOCollection $options;
+
     private StringTypedCollection $variadicArguments;
+
     private DirectiveBlueprintRecord $blueprint;
+
     private StringTypedCollection $aliases;
+
     private ?Application $laravelApplication;
 
     public function __construct(
@@ -26,9 +31,9 @@ final class DirectiveContext
         $this->blueprint = $blueprint;
         $this->aliases = $aliases;
         $this->laravelApplication = $laravelApplication;
-        $this->arguments = new ParameterVOCollection();
-        $this->options = new ParameterVOCollection();
-        $this->variadicArguments = new StringTypedCollection();
+        $this->arguments = new ParameterVOCollection;
+        $this->options = new ParameterVOCollection;
+        $this->variadicArguments = new StringTypedCollection;
     }
 
     public function getBlueprint(): DirectiveBlueprintRecord
@@ -49,12 +54,14 @@ final class DirectiveContext
     public function getArgument(string $key): mixed
     {
         $value = $this->arguments->get($key);
+
         return $value === '' ? null : $value;
     }
 
     public function hasArgument(string $key): bool
     {
         $value = $this->arguments->get($key);
+
         return $value !== null && $value !== '';
     }
 
@@ -72,6 +79,7 @@ final class DirectiveContext
         if (is_bool($value)) {
             return $value;
         }
+
         return $value;
     }
 
@@ -84,6 +92,7 @@ final class DirectiveContext
         if (is_bool($value)) {
             return $value === true;
         }
+
         return $value !== '';
     }
 
@@ -102,6 +111,7 @@ final class DirectiveContext
         if ($this->laravelApplication === null) {
             throw new \RuntimeException('Laravel application is not available. Make sure to pass it in the constructor.');
         }
+
         return $this->laravelApplication;
     }
 
@@ -113,24 +123,28 @@ final class DirectiveContext
     public function setArguments(ParameterVOCollection $arguments): self
     {
         $this->arguments = $arguments;
+
         return $this;
     }
 
     public function setOptions(ParameterVOCollection $options): self
     {
         $this->options = $options;
+
         return $this;
     }
 
     public function setVariadicArguments(StringTypedCollection $variadicArguments): self
     {
         $this->variadicArguments = $variadicArguments;
+
         return $this;
     }
 
     public function setLaravelApplication(?Application $application): self
     {
         $this->laravelApplication = $application;
+
         return $this;
     }
 }

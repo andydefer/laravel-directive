@@ -23,7 +23,7 @@ final class DirectiveTestingServiceDatabaseTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        $fixturesPath = realpath(__DIR__ . '/../../Fixtures/Directives');
+        $fixturesPath = realpath(__DIR__.'/../../Fixtures/Directives');
         $config = new TestDirectiveConfig($fixturesPath);
         $this->app->instance(DirectiveConfigInterface::class, $config);
 

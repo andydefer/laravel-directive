@@ -17,7 +17,6 @@ use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\PhpServices\Enums\PrimitiveType;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -79,9 +78,9 @@ trait InteractsWithDirectives
             return;
         }
 
-        $this->typeConverter = new PrimitiveTypeConverterService();
+        $this->typeConverter = new PrimitiveTypeConverterService;
         $this->bootLaravelEnabled = $bootLaravel;
-        $this->directiveTempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        $this->directiveTempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
         mkdir($this->directiveTempDir, 0777, true);
 
         $this->originalCwd = getcwd();
@@ -120,7 +119,7 @@ trait InteractsWithDirectives
             $bootstrapperContext = new LaravelBootstrapperContext;
 
             if ($this->laravelApp !== null) {
-                $bootstrapPath = $this->directiveTempDir . '/bootstrap/app.php';
+                $bootstrapPath = $this->directiveTempDir.'/bootstrap/app.php';
                 $bootstrapperContext->setCustomBootstrapPath($bootstrapPath);
             }
 
@@ -178,7 +177,7 @@ trait InteractsWithDirectives
 
     private function createLaravelStructure(): void
     {
-        $bootstrapDir = $this->directiveTempDir . '/bootstrap';
+        $bootstrapDir = $this->directiveTempDir.'/bootstrap';
         mkdir($bootstrapDir, 0777, true);
 
         $appPhp = <<<'PHP'
@@ -213,9 +212,9 @@ Facade::setFacadeApplication($app);
 
 return $app;
 PHP;
-        file_put_contents($bootstrapDir . '/app.php', $appPhp);
+        file_put_contents($bootstrapDir.'/app.php', $appPhp);
 
-        $configDir = $this->directiveTempDir . '/config';
+        $configDir = $this->directiveTempDir.'/config';
         mkdir($configDir, 0777, true);
 
         $configApp = <<<'PHP'
@@ -259,26 +258,26 @@ return [
     ],
 ];
 PHP;
-        file_put_contents($configDir . '/app.php', $configApp);
+        file_put_contents($configDir.'/app.php', $configApp);
 
-        $storageDir = $this->directiveTempDir . '/storage';
+        $storageDir = $this->directiveTempDir.'/storage';
         mkdir($storageDir, 0777, true);
-        mkdir($storageDir . '/framework', 0777, true);
-        mkdir($storageDir . '/framework/views', 0777, true);
-        mkdir($storageDir . '/framework/cache', 0777, true);
-        mkdir($storageDir . '/logs', 0777, true);
+        mkdir($storageDir.'/framework', 0777, true);
+        mkdir($storageDir.'/framework/views', 0777, true);
+        mkdir($storageDir.'/framework/cache', 0777, true);
+        mkdir($storageDir.'/logs', 0777, true);
 
-        mkdir($this->directiveTempDir . '/app', 0777, true);
-        mkdir($this->directiveTempDir . '/app/Http', 0777, true);
-        mkdir($this->directiveTempDir . '/app/Models', 0777, true);
+        mkdir($this->directiveTempDir.'/app', 0777, true);
+        mkdir($this->directiveTempDir.'/app/Http', 0777, true);
+        mkdir($this->directiveTempDir.'/app/Models', 0777, true);
     }
 
     public function createApplication(): Application
     {
-        $app = require $this->directiveTempDir . '/bootstrap/app.php';
+        $app = require $this->directiveTempDir.'/bootstrap/app.php';
 
-        $app->useStoragePath($this->directiveTempDir . '/storage');
-        $app->instance('path.config', $this->directiveTempDir . '/config');
+        $app->useStoragePath($this->directiveTempDir.'/storage');
+        $app->instance('path.config', $this->directiveTempDir.'/config');
 
         return $app;
     }
@@ -525,7 +524,7 @@ PHP;
 
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $path = $dir . '/' . $file;
+            $path = $dir.'/'.$file;
             if (is_dir($path)) {
                 $this->removeDirectory($path);
             } else {

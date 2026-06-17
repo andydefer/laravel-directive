@@ -9,7 +9,7 @@ use InvalidArgumentException;
 
 /**
  * Value Object pour l'identifiant d'une session de recherche.
- * 
+ *
  * @author Andy Defer
  */
 final class SearchSessionVO extends AbstractValueObject
@@ -26,7 +26,6 @@ final class SearchSessionVO extends AbstractValueObject
 
         $this->value = $value;
     }
-
 
     public function getValue(): string
     {

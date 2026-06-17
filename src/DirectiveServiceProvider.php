@@ -75,57 +75,58 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/config/directive.php' => config_path('directive.php'),
+            __DIR__.'/config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
     }
 
     private function registerConfigs(): void
     {
-        $this->app->singleton(DirectiveConfigInterface::class, fn() => new EnvDirectiveConfig());
-        $this->app->singleton(DirectiveNamingConfigInterface::class, fn() => new EnvDirectiveNamingConfig());
-        $this->app->singleton(SignatureValidationConfigInterface::class, fn() => new EnvSignatureValidationConfig());
-        $this->app->singleton(DirectiveParserConfigInterface::class, fn() => new DirectiveParserConfig());
-        $this->app->singleton(FileCreatorConfigInterface::class, fn($app) => new FileCreatorConfig($app->make(EnumService::class)));
-        $this->app->singleton(DirectiveTestingConfigInterface::class, fn() => new DirectiveTestingConfig());
-        $this->app->singleton(DatabaseTestingConfigInterface::class, fn($app) => $app->make(DirectiveTestingConfigInterface::class));
+        $this->app->singleton(DirectiveConfigInterface::class, fn () => new EnvDirectiveConfig);
+        $this->app->singleton(DirectiveNamingConfigInterface::class, fn () => new EnvDirectiveNamingConfig);
+        $this->app->singleton(SignatureValidationConfigInterface::class, fn () => new EnvSignatureValidationConfig);
+        $this->app->singleton(DirectiveParserConfigInterface::class, fn () => new DirectiveParserConfig);
+        $this->app->singleton(FileCreatorConfigInterface::class, fn ($app) => new FileCreatorConfig($app->make(EnumService::class)));
+        $this->app->singleton(DirectiveTestingConfigInterface::class, fn () => new DirectiveTestingConfig);
+        $this->app->singleton(DatabaseTestingConfigInterface::class, fn ($app) => $app->make(DirectiveTestingConfigInterface::class));
     }
 
     private function registerContexts(): void
     {
-        $this->app->singleton(DirectiveDiscoveryContext::class, fn() => new DirectiveDiscoveryContext());
-        $this->app->singleton(DirectiveContext::class, fn() => new DirectiveContext(
+        $this->app->singleton(DirectiveDiscoveryContext::class, fn () => new DirectiveDiscoveryContext);
+        $this->app->singleton(DirectiveContext::class, fn () => new DirectiveContext(
             blueprint: new DirectiveBlueprintRecord('', '', ''),
-            aliases: new StringTypedCollection(),
+            aliases: new StringTypedCollection,
             laravelApplication: null,
         ));
-        $this->app->singleton(LaravelContext::class, fn() => new LaravelContext());
-        $this->app->singleton(FileSystemContext::class, fn() => new FileSystemContext());
-        $this->app->singleton(FileCreationContext::class, fn() => new FileCreationContext());
+        $this->app->singleton(LaravelContext::class, fn () => new LaravelContext);
+        $this->app->singleton(FileSystemContext::class, fn () => new FileSystemContext);
+        $this->app->singleton(FileCreationContext::class, fn () => new FileCreationContext);
     }
 
     private function registerParserComponents(): void
     {
         $this->app->singleton(ParameterParserContext::class, function () {
-            $context = new ParameterParserContext();
-            $context->addStrategy(new RequiredArgumentStrategy());
-            $context->addStrategy(new DefaultValueArgumentStrategy());
-            $context->addStrategy(new OptionalArgumentStrategy());
-            $context->addStrategy(new VariadicArgumentStrategy());
-            $context->addStrategy(new OptionStrategy());
+            $context = new ParameterParserContext;
+            $context->addStrategy(new RequiredArgumentStrategy);
+            $context->addStrategy(new DefaultValueArgumentStrategy);
+            $context->addStrategy(new OptionalArgumentStrategy);
+            $context->addStrategy(new VariadicArgumentStrategy);
+            $context->addStrategy(new OptionStrategy);
+
             return $context;
         });
 
-        $this->app->singleton(ParameterOrderValidatorService::class, fn($app) => new ParameterOrderValidatorService($app->make(ParameterParserContext::class)));
-        $this->app->singleton(ParameterExtractorService::class, fn($app) => new ParameterExtractorService($app->make(ParameterParserContext::class)));
-        $this->app->singleton(OptionParserService::class, fn($app) => new OptionParserService($app->make(DirectiveParserConfigInterface::class)));
-        $this->app->singleton(ArgumentSplitterService::class, fn($app) => new ArgumentSplitterService($app->make(DirectiveParserConfigInterface::class)));
-        $this->app->singleton(ArgumentApplierService::class, fn() => new ArgumentApplierService());
-        $this->app->singleton(DirectiveParserService::class, fn($app) => new DirectiveParserService($app->make(DirectiveParserConfigInterface::class)));
+        $this->app->singleton(ParameterOrderValidatorService::class, fn ($app) => new ParameterOrderValidatorService($app->make(ParameterParserContext::class)));
+        $this->app->singleton(ParameterExtractorService::class, fn ($app) => new ParameterExtractorService($app->make(ParameterParserContext::class)));
+        $this->app->singleton(OptionParserService::class, fn ($app) => new OptionParserService($app->make(DirectiveParserConfigInterface::class)));
+        $this->app->singleton(ArgumentSplitterService::class, fn ($app) => new ArgumentSplitterService($app->make(DirectiveParserConfigInterface::class)));
+        $this->app->singleton(ArgumentApplierService::class, fn () => new ArgumentApplierService);
+        $this->app->singleton(DirectiveParserService::class, fn ($app) => new DirectiveParserService($app->make(DirectiveParserConfigInterface::class)));
     }
 
     private function registerCoreServices(): void
     {
-        $this->app->bind(FileSystemInterface::class, fn() => new FileSystemService());
+        $this->app->bind(FileSystemInterface::class, fn () => new FileSystemService);
 
         $this->app->singleton(FileCreatorService::class, function ($app) {
             return new FileCreatorService(
@@ -140,9 +141,9 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->singleton(StringCaseConverterService::class);
         $this->app->singleton(PathSegmentsParserService::class);
         $this->app->singleton(PathBuilderService::class);
-        $this->app->singleton(SignatureValidationService::class, fn($app) => new SignatureValidationService($app->make(SignatureValidationConfigInterface::class)));
-        $this->app->singleton(DirectiveNamingService::class, fn($app) => new DirectiveNamingService($app->make(DirectiveNamingConfigInterface::class)));
-        $this->app->singleton(DirectiveInteractionService::class, fn($app) => new DirectiveInteractionService(
+        $this->app->singleton(SignatureValidationService::class, fn ($app) => new SignatureValidationService($app->make(SignatureValidationConfigInterface::class)));
+        $this->app->singleton(DirectiveNamingService::class, fn ($app) => new DirectiveNamingService($app->make(DirectiveNamingConfigInterface::class)));
+        $this->app->singleton(DirectiveInteractionService::class, fn ($app) => new DirectiveInteractionService(
             renderDispatcher: $app->make(RenderDispatcher::class),
             inputDispatcher: $app->make(InputDispatcher::class),
         ));
@@ -165,7 +166,7 @@ final class DirectiveServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(DirectiveRendererService::class, fn($app) => new DirectiveRendererService($app->make(RenderDispatcher::class)));
+        $this->app->singleton(DirectiveRendererService::class, fn ($app) => new DirectiveRendererService($app->make(RenderDispatcher::class)));
 
         // ✅ CORRECTION : Passer l'application réelle
         $this->app->singleton(DirectiveExecutionService::class, function ($app) {
@@ -177,7 +178,7 @@ final class DirectiveServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(DirectiveKernel::class, fn($app) => new DirectiveKernel(
+        $this->app->singleton(DirectiveKernel::class, fn ($app) => new DirectiveKernel(
             service: $app->make(DirectiveExecutionService::class),
             signatureValidator: $app->make(SignatureValidationService::class),
             renderer: $app->make(DirectiveRendererService::class),
@@ -187,8 +188,8 @@ final class DirectiveServiceProvider extends ServiceProvider
 
     private function registerDispatchers(): void
     {
-        $this->app->singleton(RenderDispatcher::class, fn() => new RenderDispatcher());
-        $this->app->singleton(InputDispatcher::class, fn() => new InputDispatcher());
+        $this->app->singleton(RenderDispatcher::class, fn () => new RenderDispatcher);
+        $this->app->singleton(InputDispatcher::class, fn () => new InputDispatcher);
     }
 
     private function registerStrategies(): void
@@ -198,9 +199,9 @@ final class DirectiveServiceProvider extends ServiceProvider
 
     private function registerTestingSteps(): void
     {
-        $this->app->singleton(CreateTempDirectoryStep::class, fn() => new CreateTempDirectoryStep());
-        $this->app->singleton(ChangeToTempDirectoryStep::class, fn() => new ChangeToTempDirectoryStep());
-        $this->app->singleton(CreateLaravelStructureStep::class, fn() => new CreateLaravelStructureStep());
-        $this->app->singleton(BootstrapLaravelStep::class, fn() => new BootstrapLaravelStep());
+        $this->app->singleton(CreateTempDirectoryStep::class, fn () => new CreateTempDirectoryStep);
+        $this->app->singleton(ChangeToTempDirectoryStep::class, fn () => new ChangeToTempDirectoryStep);
+        $this->app->singleton(CreateLaravelStructureStep::class, fn () => new CreateLaravelStructureStep);
+        $this->app->singleton(BootstrapLaravelStep::class, fn () => new BootstrapLaravelStep);
     }
 }

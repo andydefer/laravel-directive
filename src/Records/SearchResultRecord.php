@@ -9,7 +9,7 @@ use AndyDefer\DomainStructures\Utils\StrictDataObject;
 
 /**
  * Record pour stocker les résultats de recherche.
- * 
+ *
  * @author Andy Defer
  */
 final class SearchResultRecord extends AbstractRecord

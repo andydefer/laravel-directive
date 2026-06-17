@@ -33,18 +33,24 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class DirectiveExecutionServiceTest extends UnitTestCase
 {
     private DirectiveDiscoveryService&MockObject $discovery;
+
     private DirectiveParserService&MockObject $parser;
+
     private DirectiveHydratorService&MockObject $hydrator;
+
     private DirectiveRendererService&MockObject $renderer;
+
     private DirectiveExecutionService $service;
+
     private HydrationService $hydration;
+
     private string|false $originalDebug;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->hydration = new HydrationService();
+        $this->hydration = new HydrationService;
 
         $this->discovery = $this->createMock(DirectiveDiscoveryService::class);
         $this->parser = $this->createMock(DirectiveParserService::class);
@@ -67,7 +73,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         if ($this->originalDebug === false) {
             putenv('DIRECTIVE_DEBUG');
         } else {
-            putenv('DIRECTIVE_DEBUG=' . $this->originalDebug);
+            putenv('DIRECTIVE_DEBUG='.$this->originalDebug);
         }
 
         parent::tearDown();
@@ -75,9 +81,9 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     private function createDirectivesCollection(): DirectiveMetadataCollection
     {
-        $collection = new DirectiveMetadataCollection();
+        $collection = new DirectiveMetadataCollection;
 
-        $aliases1 = new StringTypedCollection();
+        $aliases1 = new StringTypedCollection;
         $directive1 = new DirectiveMetadataRecord(
             signature: 'test-concrete',
             class: TestConcreteDirective::class,
@@ -86,7 +92,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive1);
 
-        $aliases2 = new StringTypedCollection();
+        $aliases2 = new StringTypedCollection;
         $aliases2->add('tpkg');
         $directive2 = new DirectiveMetadataRecord(
             signature: 'test-package',
@@ -96,7 +102,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive2);
 
-        $aliases3 = new StringTypedCollection();
+        $aliases3 = new StringTypedCollection;
         $directive3 = new DirectiveMetadataRecord(
             signature: 'test-laravel',
             class: TestLaravelDirective::class,
@@ -111,15 +117,15 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
     private function createEmptyParsedDirectiveRecord(): ParsedDirectiveRecord
     {
         return new ParsedDirectiveRecord(
-            arguments: new ParsedArgumentCollection(),
-            options: new ParsedOptionCollection(),
-            variadic_arguments: new StringTypedCollection(),
+            arguments: new ParsedArgumentCollection,
+            options: new ParsedOptionCollection,
+            variadic_arguments: new StringTypedCollection,
         );
     }
 
     private function createExecutionRecord(string $signature, array $arguments = []): DirectiveExecutionRecord
     {
-        $argumentCollection = new StringTypedCollection();
+        $argumentCollection = new StringTypedCollection;
         foreach ($arguments as $arg) {
             $argumentCollection->add($arg);
         }
@@ -134,7 +140,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     public function test_execute_returns_not_found_when_directive_does_not_exist(): void
     {
-        $directives = new DirectiveMetadataCollection();
+        $directives = new DirectiveMetadataCollection;
 
         $this->discovery->expects($this->once())
             ->method('discover')

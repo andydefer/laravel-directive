@@ -28,7 +28,7 @@ class PathSegmentsParserService
     /**
      * Extract path segments from a name string.
      *
-     * @param string $name Path string with segments separated by slashes
+     * @param  string  $name  Path string with segments separated by slashes
      * @return PathSegmentsRecord Record containing all extracted path information
      *
      * @example
@@ -49,7 +49,7 @@ class PathSegmentsParserService
         $pascalSegments = $this->createPascalCaseSegments($segments);
 
         $subPath = $pascalSegments->isNotEmpty() ? $pascalSegments->join(DIRECTORY_SEPARATOR) : '';
-        $fullPath = $subPath ? $subPath . DIRECTORY_SEPARATOR . $className : $className;
+        $fullPath = $subPath ? $subPath.DIRECTORY_SEPARATOR.$className : $className;
 
         return new PathSegmentsRecord(
             segments: $segmentsCollection,
@@ -63,7 +63,7 @@ class PathSegmentsParserService
     /**
      * Validate if a path string has valid format.
      *
-     * @param string $name Path string to validate
+     * @param  string  $name  Path string to validate
      * @return bool True if format is valid
      */
     public function isValid(string $name): bool
@@ -72,65 +72,69 @@ class PathSegmentsParserService
             return false;
         }
 
-        $doubleSeparator = DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR;
+        $doubleSeparator = DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR;
 
-        return !str_contains($name, $doubleSeparator) &&
-            !str_starts_with($name, DIRECTORY_SEPARATOR) &&
-            !str_ends_with($name, DIRECTORY_SEPARATOR);
+        return ! str_contains($name, $doubleSeparator) &&
+            ! str_starts_with($name, DIRECTORY_SEPARATOR) &&
+            ! str_ends_with($name, DIRECTORY_SEPARATOR);
     }
 
     /**
      * Get the class name from a path string.
      *
-     * @param string $name Path string
+     * @param  string  $name  Path string
      * @return string Last segment as class name
      */
     public function extractClassName(string $name): string
     {
         $segments = explode(DIRECTORY_SEPARATOR, $name);
+
         return array_pop($segments);
     }
 
     /**
      * Get directory segments from a path string.
      *
-     * @param string $name Path string
+     * @param  string  $name  Path string
      * @return array<int, string> Directory segments (all except last)
      */
     public function extractDirectorySegments(string $name): array
     {
         $segments = explode(DIRECTORY_SEPARATOR, $name);
         array_pop($segments);
+
         return $segments;
     }
 
     /**
      * Create a StringTypedCollection from an array of strings.
      *
-     * @param array<string> $items Items to add to the collection
+     * @param  array<string>  $items  Items to add to the collection
      * @return StringTypedCollection Collection containing the items
      */
     private function createStringCollection(array $items): StringTypedCollection
     {
-        $collection = new StringTypedCollection();
+        $collection = new StringTypedCollection;
         foreach ($items as $item) {
             $collection->add($item);
         }
+
         return $collection;
     }
 
     /**
      * Create a collection of PascalCase converted path segments.
      *
-     * @param array<string> $segments Original path segments
+     * @param  array<string>  $segments  Original path segments
      * @return StringTypedCollection Collection of PascalCase segments
      */
     private function createPascalCaseSegments(array $segments): StringTypedCollection
     {
-        $pascalSegments = new StringTypedCollection();
+        $pascalSegments = new StringTypedCollection;
         foreach ($segments as $segment) {
             $pascalSegments->add($this->caseConverter->toPascalCase($segment));
         }
+
         return $pascalSegments;
     }
 }

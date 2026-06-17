@@ -55,11 +55,11 @@ final class ExecutionResultCollection extends AbstractTypedCollection
 
     public function getWithOutput(): self
     {
-        return $this->filter(fn(ExecutionResultRecord $record) => ! empty($record->result->output ?? ''));
+        return $this->filter(fn (ExecutionResultRecord $record) => ! empty($record->result->output ?? ''));
     }
 
     public function getWithoutOutput(): self
     {
-        return $this->filter(fn(ExecutionResultRecord $record) => empty($record->result->output ?? ''));
+        return $this->filter(fn (ExecutionResultRecord $record) => empty($record->result->output ?? ''));
     }
 }

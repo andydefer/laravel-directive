@@ -22,20 +22,23 @@ use Throwable;
 final class DirectiveTestingService
 {
     private PrimitiveTypeConverterService $typeConverter;
+
     private DirectiveInteractionService $interaction;
+
     private string $tempDir;
-    private array $directives = [];
+
     private ?Application $application;
+
     private string $originalCwd;
 
     /**
-     * @param Application|null $application L'application Laravel (null si mode isolé)
+     * @param  Application|null  $application  L'application Laravel (null si mode isolé)
      */
     public function __construct(?Application $application = null)
     {
         $this->application = $application;
-        $this->typeConverter = new PrimitiveTypeConverterService();
-        $this->interaction = new DirectiveInteractionService(new RenderDispatcher(), new InputDispatcher());
+        $this->typeConverter = new PrimitiveTypeConverterService;
+        $this->interaction = new DirectiveInteractionService(new RenderDispatcher, new InputDispatcher);
 
         // Sauvegarder le répertoire original AVANT de créer le temporaire
         $this->originalCwd = getcwd();
@@ -49,6 +52,7 @@ final class DirectiveTestingService
     public function run(string $class, array $arguments = []): DirectiveResponseRecord
     {
         $directive = $this->createDirective($class);
+
         return $this->executeDirective($directive, $arguments);
     }
 
@@ -72,9 +76,14 @@ final class DirectiveTestingService
         return $this->interaction;
     }
 
+    public function getTempDir(): string
+    {
+        return $this->tempDir;
+    }
+
     private function createDirective(string $class): AbstractDirective
     {
-        if (!class_exists($class)) {
+        if (! class_exists($class)) {
             throw new InvalidArgumentException("Directive class {$class} does not exist");
         }
 
@@ -104,7 +113,7 @@ final class DirectiveTestingService
     private function createDirectiveContext(string $class): DirectiveContext
     {
         $blueprint = new DirectiveBlueprintRecord($class, '', '');
-        $aliases = new StringTypedCollection();
+        $aliases = new StringTypedCollection;
 
         return new DirectiveContext(
             blueprint: $blueprint,
@@ -128,17 +137,19 @@ final class DirectiveTestingService
         try {
             $exitCode = $hydratedDirective->execute();
             $output = ob_get_clean();
+
             return new DirectiveResponseRecord($exitCode, $output);
         } catch (Throwable $e) {
             ob_end_clean();
+
             return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
         }
     }
 
     private function parseArguments(string $signature, array $arguments): array
     {
-        $parser = new DirectiveParserService();
-        $argumentCollection = new StringTypedCollection();
+        $parser = new DirectiveParserService;
+        $argumentCollection = new StringTypedCollection;
 
         foreach ($arguments as $arg) {
             $argumentCollection->add((string) $arg);
@@ -146,14 +157,14 @@ final class DirectiveTestingService
 
         $parsed = $parser->parse($signature, $argumentCollection);
 
-        $argumentsVO = new ParameterVOCollection();
+        $argumentsVO = new ParameterVOCollection;
         foreach ($parsed->arguments as $arg) {
             $type = $this->typeConverter->detectType($arg->value);
             $value = $this->typeConverter->convert($arg->value, $type);
             $argumentsVO->add(new ParameterVO($arg->name, $value, $type));
         }
 
-        $optionsVO = new ParameterVOCollection();
+        $optionsVO = new ParameterVOCollection;
         foreach ($parsed->options as $opt) {
             $value = match ($opt->value) {
                 'true' => true,
@@ -196,19 +207,19 @@ final class DirectiveTestingService
 
     private function setupTempDirectory(): void
     {
-        $this->tempDir = sys_get_temp_dir() . '/directive_test_' . uniqid();
+        $this->tempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
         mkdir($this->tempDir, 0777, true);
         chdir($this->tempDir);
     }
 
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         foreach (array_diff(scandir($dir), ['.', '..']) as $file) {
-            $path = $dir . DIRECTORY_SEPARATOR . $file;
+            $path = $dir.DIRECTORY_SEPARATOR.$file;
             is_dir($path) ? $this->removeDirectory($path) : unlink($path);
         }
         rmdir($dir);

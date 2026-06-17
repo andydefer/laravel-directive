@@ -17,14 +17,15 @@ use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-use AndyDefer\PhpServices\Enums\PrimitiveType;
 use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use Illuminate\Foundation\Application;
 
 class DirectiveHydratorService
 {
     private DirectiveInteractionService $interaction;
+
     private PrimitiveTypeConverterService $typeConverter;
+
     private ?Application $application;
 
     public function __construct(
@@ -34,10 +35,10 @@ class DirectiveHydratorService
     ) {
         $this->application = $application;
         $this->interaction = $interaction ?? new DirectiveInteractionService(
-            new RenderDispatcher(),
-            new InputDispatcher(),
+            new RenderDispatcher,
+            new InputDispatcher,
         );
-        $this->typeConverter = $typeConverter ?? new PrimitiveTypeConverterService();
+        $this->typeConverter = $typeConverter ?? new PrimitiveTypeConverterService;
     }
 
     public function hydrate(string $class, ParsedDirectiveRecord $parsed): DirectiveInterface
@@ -46,7 +47,7 @@ class DirectiveHydratorService
 
         $tempContext = new DirectiveContext(
             blueprint: new DirectiveBlueprintRecord($class, '', ''),
-            aliases: new StringTypedCollection(),
+            aliases: new StringTypedCollection,
             laravelApplication: $this->application,
         );
 
@@ -89,7 +90,7 @@ class DirectiveHydratorService
 
         $tempContext = new DirectiveContext(
             blueprint: new DirectiveBlueprintRecord($class, '', ''),
-            aliases: new StringTypedCollection(),
+            aliases: new StringTypedCollection,
             laravelApplication: $this->application,
         );
 
@@ -109,7 +110,7 @@ class DirectiveHydratorService
 
     private function normalizeArguments(ParsedArgumentCollection $arguments): ParameterVOCollection
     {
-        $normalizedArguments = new ParameterVOCollection();
+        $normalizedArguments = new ParameterVOCollection;
 
         foreach ($arguments as $argument) {
             $detectedType = $this->typeConverter->detectType($argument->value);
@@ -127,7 +128,7 @@ class DirectiveHydratorService
 
     private function normalizeOptions(ParsedOptionCollection $options): ParameterVOCollection
     {
-        $normalizedOptions = new ParameterVOCollection();
+        $normalizedOptions = new ParameterVOCollection;
 
         foreach ($options as $option) {
             $value = $option->value;

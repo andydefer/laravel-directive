@@ -6,6 +6,8 @@ namespace AndyDefer\Directive\Tests\Unit\Testing;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contexts\DirectiveContext;
+use AndyDefer\Directive\Dispatchers\InputDispatcher;
+use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\Directive\Testing\TestDirectiveRegistry;
@@ -20,18 +22,20 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 final class TestDirectiveRegistryTest extends UnitTestCase
 {
     private TestDirectiveRegistry $registry;
+
     private DirectiveInteractionService $interaction;
+
     private DirectiveContext $context;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->registry = new TestDirectiveRegistry();
+        $this->registry = new TestDirectiveRegistry;
 
         // Créer un vrai contexte (pas un mock)
         $blueprint = new DirectiveBlueprintRecord('test', 'test-signature', 'Test description');
-        $aliases = new StringTypedCollection();
+        $aliases = new StringTypedCollection;
 
         $this->context = new DirectiveContext(
             blueprint: $blueprint,
@@ -41,8 +45,8 @@ final class TestDirectiveRegistryTest extends UnitTestCase
 
         // Créer une vraie interaction (pas un mock)
         $this->interaction = new DirectiveInteractionService(
-            new \AndyDefer\Directive\Dispatchers\RenderDispatcher(),
-            new \AndyDefer\Directive\Dispatchers\InputDispatcher(),
+            new RenderDispatcher,
+            new InputDispatcher,
         );
     }
 

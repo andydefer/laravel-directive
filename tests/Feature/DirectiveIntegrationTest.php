@@ -21,7 +21,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        $this->fixturesDirectivesPath = realpath(__DIR__ . '/../Fixtures/Directives');
+        $this->fixturesDirectivesPath = realpath(__DIR__.'/../Fixtures/Directives');
 
         $config = new TestDirectiveConfig($this->fixturesDirectivesPath);
         $this->app->instance(DirectiveConfigInterface::class, $config);
@@ -238,7 +238,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_kernel_ignores_invalid_directive_files(): void
     {
-        $invalidDir = sys_get_temp_dir() . '/invalid_directives_' . uniqid();
+        $invalidDir = sys_get_temp_dir().'/invalid_directives_'.uniqid();
         mkdir($invalidDir, 0777, true);
 
         $invalidContent = <<<'PHP'
@@ -254,7 +254,7 @@ final class InvalidDirective implements DirectiveInterface
 }
 PHP;
 
-        file_put_contents($invalidDir . '/InvalidDirective.php', $invalidContent);
+        file_put_contents($invalidDir.'/InvalidDirective.php', $invalidContent);
 
         $config = new TestDirectiveConfig($invalidDir);
         $this->app->instance(DirectiveConfigInterface::class, $config);
@@ -265,7 +265,7 @@ PHP;
         $this->assertStringNotContainsString('InvalidDirective', $response['output']);
         $this->assertStringNotContainsString('invalid', $response['output']);
 
-        unlink($invalidDir . '/InvalidDirective.php');
+        unlink($invalidDir.'/InvalidDirective.php');
         rmdir($invalidDir);
     }
 

@@ -40,10 +40,10 @@ class FileCreatorService
     /**
      * Create a file from a stub template with variable replacement.
      *
-     * @param string $stubPath Path to the stub template file
-     * @param string $destinationPath Absolute path where the file should be created
-     * @param ReplacementCollection $replacements Collection of placeholder-value pairs
-     * @param FileCreationContext $context Context tracking the creation state
+     * @param  string  $stubPath  Path to the stub template file
+     * @param  string  $destinationPath  Absolute path where the file should be created
+     * @param  ReplacementCollection  $replacements  Collection of placeholder-value pairs
+     * @param  FileCreationContext  $context  Context tracking the creation state
      * @return FileCreationResultRecord Result containing success status and details
      */
     public function createFile(
@@ -57,7 +57,7 @@ class FileCreatorService
         $context->setDestinationPath($destinationPath);
 
         // Check if file already exists and force mode is disabled
-        if ($this->filesystem->exists($destinationPath) && !$context->shouldForce()) {
+        if ($this->filesystem->exists($destinationPath) && ! $context->shouldForce()) {
             $context->setCurrentStep(FileCreationStep::FAILED);
             $context->setErrorMessage("File already exists: {$destinationPath}");
 
@@ -66,7 +66,7 @@ class FileCreatorService
 
         // Create directory
         $context->setCurrentStep(FileCreationStep::CREATING_DIRECTORY);
-        if (!$this->ensureDirectoryExists(dirname($destinationPath), $context)) {
+        if (! $this->ensureDirectoryExists(dirname($destinationPath), $context)) {
             return $this->createFailureResult($destinationPath, $context->getErrorMessage());
         }
 
@@ -84,7 +84,7 @@ class FileCreatorService
 
         // Write file
         $context->setCurrentStep(FileCreationStep::WRITING_FILE);
-        if (!$this->writeFile($destinationPath, $content, $context)) {
+        if (! $this->writeFile($destinationPath, $content, $context)) {
             return $this->createFailureResult($destinationPath, "Cannot create file: {$destinationPath}");
         }
 
@@ -101,11 +101,11 @@ class FileCreatorService
     /**
      * Create a file from a stub using a name to automatically build the destination path.
      *
-     * @param string $stubPath Path to the stub template file
-     * @param string $name Name used to build the destination path (supports subdirectories like "Admin/UserTask")
-     * @param string $baseDirectory Base directory where the file should be created
-     * @param ReplacementCollection $replacements Collection of placeholder-value pairs
-     * @param FileCreationContext $context Context tracking the creation state
+     * @param  string  $stubPath  Path to the stub template file
+     * @param  string  $name  Name used to build the destination path (supports subdirectories like "Admin/UserTask")
+     * @param  string  $baseDirectory  Base directory where the file should be created
+     * @param  ReplacementCollection  $replacements  Collection of placeholder-value pairs
+     * @param  FileCreationContext  $context  Context tracking the creation state
      * @return FileCreationResultRecord Result containing success status and details
      */
     public function createFileFromName(
@@ -155,8 +155,8 @@ class FileCreatorService
     /**
      * Ensure a directory exists, creating it if necessary.
      *
-     * @param string $path Directory path to check/create
-     * @param FileCreationContext $context Context to track directory creation
+     * @param  string  $path  Directory path to check/create
+     * @param  FileCreationContext  $context  Context to track directory creation
      * @return bool True if directory exists or was created, false on error
      */
     private function ensureDirectoryExists(string $path, FileCreationContext $context): bool
@@ -172,36 +172,41 @@ class FileCreatorService
 
         if ($success) {
             $context->addCreatedDirectory($path);
+
             return true;
         }
 
         $context->setCurrentStep(FileCreationStep::FAILED);
         $context->setErrorMessage("Cannot create directory: {$path}");
+
         return false;
     }
 
     /**
      * Read and return the content of a stub file.
      *
-     * @param string $stubPath Path to the stub file
-     * @param FileCreationContext $context Context to store the content or error
+     * @param  string  $stubPath  Path to the stub file
+     * @param  FileCreationContext  $context  Context to store the content or error
      * @return string Stub file content, empty string on error
      */
     private function getStubContent(string $stubPath, FileCreationContext $context): string
     {
-        if (!$this->filesystem->exists($stubPath)) {
+        if (! $this->filesystem->exists($stubPath)) {
             $context->setCurrentStep(FileCreationStep::FAILED);
             $context->setErrorMessage("Stub template not found at: {$stubPath}");
+
             return '';
         }
 
         try {
             $content = $this->filesystem->get($stubPath);
             $context->setStubContent($content);
+
             return $content;
         } catch (\RuntimeException $e) {
             $context->setCurrentStep(FileCreationStep::FAILED);
             $context->setErrorMessage("Cannot read stub template: {$stubPath}");
+
             return '';
         }
     }
@@ -210,8 +215,8 @@ class FileCreatorService
      * Replace all placeholders in content with their corresponding values.
      * Handles placeholders with or without spaces (e.g., {{name}} or {{ name }}).
      *
-     * @param string $content Original content with placeholders
-     * @param ReplacementCollection $replacements Collection of placeholder-value pairs
+     * @param  string  $content  Original content with placeholders
+     * @param  ReplacementCollection  $replacements  Collection of placeholder-value pairs
      * @return string Content with all placeholders replaced
      */
     private function replaceVariables(string $content, ReplacementCollection $replacements): string
@@ -227,10 +232,10 @@ class FileCreatorService
             // Replace all possible variants (with/without spaces)
             $content = str_replace(
                 [
-                    '{{' . $clean . '}}',
-                    '{{ ' . $clean . ' }}',
-                    '{{' . $clean . ' }}',
-                    '{{ ' . $clean . '}}',
+                    '{{'.$clean.'}}',
+                    '{{ '.$clean.' }}',
+                    '{{'.$clean.' }}',
+                    '{{ '.$clean.'}}',
                 ],
                 $values[$index],
                 $content
@@ -243,9 +248,9 @@ class FileCreatorService
     /**
      * Write content to a file.
      *
-     * @param string $destinationPath Path where the file should be created
-     * @param string $content Content to write to the file
-     * @param FileCreationContext $context Context to track any errors
+     * @param  string  $destinationPath  Path where the file should be created
+     * @param  string  $content  Content to write to the file
+     * @param  FileCreationContext  $context  Context to track any errors
      * @return bool True on success, false on failure
      */
     private function writeFile(string $destinationPath, string $content, FileCreationContext $context): bool
@@ -255,6 +260,7 @@ class FileCreatorService
         if ($result === false) {
             $context->setCurrentStep(FileCreationStep::FAILED);
             $context->setErrorMessage("Cannot write file: {$destinationPath}");
+
             return false;
         }
 
@@ -264,9 +270,9 @@ class FileCreatorService
     /**
      * Add automatic replacements based on parsed segments.
      *
-     * @param ReplacementCollection $replacements Original replacements
-     * @param PathSegmentsRecord $segments Parsed path segments
-     * @param string $baseDirectory Base directory for the file
+     * @param  ReplacementCollection  $replacements  Original replacements
+     * @param  PathSegmentsRecord  $segments  Parsed path segments
+     * @param  string  $baseDirectory  Base directory for the file
      * @return ReplacementCollection Enhanced replacements
      */
     private function addAutomaticReplacements(
@@ -284,7 +290,7 @@ class FileCreatorService
         ];
 
         foreach ($autoReplacements as $placeholder => $value) {
-            if (!$replacements->hasPlaceholder($placeholder)) {
+            if (! $replacements->hasPlaceholder($placeholder)) {
                 $replacements->add(new ReplacementRecord($placeholder, $value));
             }
         }
@@ -295,14 +301,14 @@ class FileCreatorService
     /**
      * Log the variable replacement operation in the context.
      *
-     * @param ReplacementCollection $replacements Collection of replacements
-     * @param FileCreationContext $context Context to add the log entry
+     * @param  ReplacementCollection  $replacements  Collection of replacements
+     * @param  FileCreationContext  $context  Context to add the log entry
      */
     private function logVariableReplacement(ReplacementCollection $replacements, FileCreationContext $context): void
     {
         $context->addTransformationLog(
             'replaceVariables',
-            'replacing ' . $replacements->getPlaceholders()->count() . ' placeholders',
+            'replacing '.$replacements->getPlaceholders()->count().' placeholders',
             'done'
         );
     }
@@ -310,8 +316,8 @@ class FileCreatorService
     /**
      * Create a failure result record.
      *
-     * @param string $destinationPath Destination file path
-     * @param string $message Error message
+     * @param  string  $destinationPath  Destination file path
+     * @param  string  $message  Error message
      * @return FileCreationResultRecord Failure result record
      */
     private function createFailureResult(string $destinationPath, string $message): FileCreationResultRecord

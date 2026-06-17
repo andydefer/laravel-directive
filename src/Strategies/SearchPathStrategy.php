@@ -21,10 +21,10 @@ final class SearchPathStrategy implements JsonlPathStrategyInterface
     {
         // Pour l'écriture des résultats de recherche
         if ($entity instanceof SearchResultRecord) {
-            return $this->basePath . '/search_results/' . $entity->sessionId . '.jsonl';
+            return $this->basePath.'/search_results/'.$entity->sessionId.'.jsonl';
         }
 
-        return $this->basePath . '/default.jsonl';
+        return $this->basePath.'/default.jsonl';
     }
 
     public function getFilesToScan(AbstractRecord $query): array

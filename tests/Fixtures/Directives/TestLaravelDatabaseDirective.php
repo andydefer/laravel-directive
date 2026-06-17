@@ -48,7 +48,7 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
             $this->info("✓ Found {$userCount} users in database");
 
             $activeUsers = TestUser::active()->get();
-            $this->info('✓ Found ' . $activeUsers->count() . ' active users');
+            $this->info('✓ Found '.$activeUsers->count().' active users');
 
             $verifiedUsers = TestUser::verified()->with('posts')->get();
 
@@ -74,13 +74,13 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
             }
 
             $publishedPosts = TestPost::published()->with('user')->get();
-            $this->info('✓ Found ' . $publishedPosts->count() . ' published posts');
+            $this->info('✓ Found '.$publishedPosts->count().' published posts');
 
             $this->info('Database query successful');
 
             return ExitCode::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Database error: ' . $e->getMessage());
+            $this->error('Database error: '.$e->getMessage());
 
             return ExitCode::FAILURE;
         }

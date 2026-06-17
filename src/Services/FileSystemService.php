@@ -15,6 +15,7 @@ use AndyDefer\Directive\Enums\PermissionMode;
  * framework being used.
  *
  * @author Andy Defer
+ *
  * @deprecated Use AndyDefer\PhpServices\Services\FileSystemService from php-services package instead.
  *             This service will be removed in version 3.0.0.
  * @see \AndyDefer\PhpServices\Services\FileSystemService
@@ -40,7 +41,7 @@ class FileSystemService implements FileSystemInterface
      */
     public function get(string $path): string
     {
-        if (!$this->exists($path)) {
+        if (! $this->exists($path)) {
             throw new \RuntimeException(sprintf('File does not exist at path: %s', $path));
         }
 
@@ -62,6 +63,7 @@ class FileSystemService implements FileSystemInterface
     public function put(string $path, string $content): int|false
     {
         $this->ensureDirectoryExists(dirname($path));
+
         return file_put_contents($path, $content);
     }
 
@@ -74,6 +76,7 @@ class FileSystemService implements FileSystemInterface
     public function append(string $path, string $content): int|false
     {
         $this->ensureDirectoryExists(dirname($path));
+
         return file_put_contents($path, $content, FILE_APPEND | LOCK_EX);
     }
 
@@ -144,8 +147,8 @@ class FileSystemService implements FileSystemInterface
      */
     public function ensureDirectoryExists(string $path): void
     {
-        if (!$this->isDirectory($path)) {
-            if (!$this->makeDirectory($path, PermissionMode::DIRECTORY, true)) {
+        if (! $this->isDirectory($path)) {
+            if (! $this->makeDirectory($path, PermissionMode::DIRECTORY, true)) {
                 throw new \RuntimeException(sprintf('Cannot create directory: %s', $path));
             }
         }
@@ -160,6 +163,7 @@ class FileSystemService implements FileSystemInterface
     public function copy(string $source, string $destination): bool
     {
         $this->ensureDirectoryExists(dirname($destination));
+
         return copy($source, $destination);
     }
 
@@ -172,6 +176,7 @@ class FileSystemService implements FileSystemInterface
     public function move(string $source, string $destination): bool
     {
         $this->ensureDirectoryExists(dirname($destination));
+
         return rename($source, $destination);
     }
 
@@ -184,6 +189,7 @@ class FileSystemService implements FileSystemInterface
     public function glob(string $pattern, int $flags = 0): array
     {
         $result = glob($pattern, $flags);
+
         return $result === false ? [] : $result;
     }
 
@@ -195,7 +201,7 @@ class FileSystemService implements FileSystemInterface
      */
     public function delete(string $path): bool
     {
-        if (!$this->exists($path)) {
+        if (! $this->exists($path)) {
             return true;
         }
 
@@ -214,11 +220,11 @@ class FileSystemService implements FileSystemInterface
      */
     public function deleteDirectory(string $directory): bool
     {
-        if (!$this->isDirectory($directory)) {
+        if (! $this->isDirectory($directory)) {
             return false;
         }
 
-        $files = $this->glob($directory . '/*');
+        $files = $this->glob($directory.'/*');
 
         foreach ($files as $file) {
             if ($this->isDirectory($file)) {
@@ -239,7 +245,7 @@ class FileSystemService implements FileSystemInterface
      */
     public function size(string $path): int
     {
-        if (!$this->exists($path)) {
+        if (! $this->exists($path)) {
             throw new \RuntimeException(sprintf('File does not exist: %s', $path));
         }
 
@@ -260,7 +266,7 @@ class FileSystemService implements FileSystemInterface
      */
     public function lastModified(string $path): int
     {
-        if (!$this->exists($path)) {
+        if (! $this->exists($path)) {
             throw new \RuntimeException(sprintf('File does not exist: %s', $path));
         }
 

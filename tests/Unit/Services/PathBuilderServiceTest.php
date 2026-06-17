@@ -16,7 +16,9 @@ use PHPUnit\Framework\MockObject\MockObject;
 final class PathBuilderServiceTest extends UnitTestCase
 {
     private PathBuilderService $builder;
+
     private PathSegmentsParserService $parser;
+
     private FileCreatorConfigInterface&MockObject $config;
 
     protected function setUp(): void
@@ -29,7 +31,7 @@ final class PathBuilderServiceTest extends UnitTestCase
 
         $this->builder = new PathBuilderService($this->config);
 
-        $caseConverter = new StringCaseConverterService();
+        $caseConverter = new StringCaseConverterService;
         $this->parser = new PathSegmentsParserService($caseConverter);
     }
 
