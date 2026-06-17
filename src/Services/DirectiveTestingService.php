@@ -31,37 +31,32 @@ final class DirectiveTestingService
 
     private string $originalCwd;
 
-    /**
-     * @param  Application|null  $application  L'application Laravel (null si mode isolé)
-     */
     public function __construct(?Application $application = null)
     {
         $this->application = $application;
         $this->typeConverter = new PrimitiveTypeConverterService;
         $this->interaction = new DirectiveInteractionService(new RenderDispatcher, new InputDispatcher);
 
-        // Sauvegarder le répertoire original AVANT de créer le temporaire
         $this->originalCwd = getcwd();
 
         $this->setupTempDirectory();
     }
 
-    /**
-     * Exécute une directive par sa classe.
-     */
     public function run(string $class, array $arguments = []): DirectiveResponseRecord
     {
-        $directive = $this->createDirective($class);
+        try {
+            $directive = $this->createDirective($class);
+        } catch (InvalidArgumentException $e) {
+            return new DirectiveResponseRecord(ExitCode::NOT_FOUND, $e->getMessage());
+        } catch (Throwable $e) {
+            return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
+        }
 
         return $this->executeDirective($directive, $arguments);
     }
 
-    /**
-     * Nettoie l'environnement de test.
-     */
     public function destroy(): void
     {
-        // Restaurer le répertoire original AVANT de supprimer le temporaire
         if ($this->originalCwd !== '' && is_dir($this->originalCwd)) {
             chdir($this->originalCwd);
         }
@@ -125,7 +120,14 @@ final class DirectiveTestingService
     private function executeDirective(AbstractDirective $directive, array $arguments): DirectiveResponseRecord
     {
         $context = $this->createDirectiveContext(get_class($directive));
-        $parsed = $this->parseArguments($directive->getSignature(), $arguments);
+
+        try {
+            $parsed = $this->parseArguments($directive->getSignature(), $arguments);
+        } catch (InvalidArgumentException $e) {
+            return new DirectiveResponseRecord(ExitCode::INVALID_ARGUMENT, $e->getMessage());
+        } catch (Throwable $e) {
+            return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
+        }
 
         $context->setArguments($parsed['arguments']);
         $context->setOptions($parsed['options']);

@@ -7,7 +7,7 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 
-final class TestConcreteDirective extends AbstractDirective
+class TestConcreteDirective extends AbstractDirective
 {
     public function getSignature(): string
     {

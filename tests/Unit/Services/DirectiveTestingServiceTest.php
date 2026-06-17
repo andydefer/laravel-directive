@@ -14,7 +14,6 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestGreetingDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestVariadicDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -33,8 +32,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->service->destroy();
         parent::tearDown();
     }
-
-    // ==================== run() Method Tests ====================
 
     public function test_run_returns_success_for_concrete_directive(): void
     {
@@ -134,15 +131,34 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertStringContainsString('Unknown operation: invalid_op', $response->output);
     }
 
-    public function test_run_throws_exception_for_nonexistent_class(): void
+    public function test_run_returns_not_found_for_nonexistent_class(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Directive class NonExistentDirectiveClass does not exist');
+        $response = $this->service->run('NonExistentDirectiveClass');
 
-        $this->service->run('NonExistentDirectiveClass');
+        $this->assertSame(ExitCode::NOT_FOUND, $response->exit_code);
+        $this->assertStringContainsString('Directive class NonExistentDirectiveClass does not exist', $response->output);
     }
 
-    // ==================== destroy() Method Tests ====================
+    public function test_run_returns_invalid_argument_when_parse_arguments_fails(): void
+    {
+        $response = $this->service->run(TestGreetingDirective::class, ['too', 'many', 'arguments']);
+
+        $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
+    }
+
+    public function test_run_returns_failure_on_unexpected_exception_during_parse(): void
+    {
+        $mockDirective = $this->createMock(TestConcreteDirective::class);
+        $mockDirective->method('getSignature')->willThrowException(new \RuntimeException('Unexpected error'));
+
+        $reflection = new \ReflectionClass($this->service);
+        $executeDirectiveMethod = $reflection->getMethod('executeDirective');
+
+        $response = $executeDirectiveMethod->invoke($this->service, $mockDirective, []);
+
+        $this->assertSame(ExitCode::FAILURE, $response->exit_code);
+        $this->assertStringContainsString('Unexpected error', $response->output);
+    }
 
     public function test_destroy_cleans_up_temp_directory(): void
     {
@@ -166,8 +182,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->addToAssertionCount(1);
     }
 
-    // ==================== getInteraction() Method Tests ====================
-
     public function test_get_interaction_returns_interaction_service(): void
     {
         $interaction = $this->service->getInteraction();
@@ -182,8 +196,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $this->assertSame($interaction1, $interaction2);
     }
-
-    // ==================== Temp Directory Tests ====================
 
     public function test_temp_directory_is_created(): void
     {
@@ -204,8 +216,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $currentDir = getcwd();
         $this->assertSame($tempDir, $currentDir);
     }
-
-    // ==================== Multiple Services Tests ====================
 
     public function test_multiple_services_have_different_temp_directories(): void
     {
@@ -243,8 +253,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $service2->destroy();
     }
 
-    // ==================== Response Content Tests ====================
-
     public function test_response_output_contains_expected_value(): void
     {
         $response = $this->service->run(TestEchoDirective::class, ['Expected Output']);
@@ -279,8 +287,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertIsString($response->output);
     }
 
-    // ==================== Edge Cases Tests ====================
-
     public function test_run_with_empty_arguments_array_returns_success(): void
     {
         $response = $this->service->run(TestGreetingDirective::class, []);
@@ -313,8 +319,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertStringContainsString('hello-world', $response->output);
     }
 
-    // ==================== Variadic Arguments Tests ====================
-
     public function test_variadic_directive_with_multiple_files(): void
     {
         $arguments = ['John', 'file1.txt', 'file2.txt', 'file3.txt'];
@@ -333,8 +337,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Name: John', $response->output);
     }
-
-    // ==================== Calculator Edge Cases Tests ====================
 
     public function test_calculator_add_operation_without_optional_b(): void
     {
@@ -360,8 +362,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertStringContainsString('8', $response->output);
     }
 
-    // ==================== Service Recreation Tests ====================
-
     public function test_service_can_be_recreated_after_destroy(): void
     {
         $this->service->destroy();
@@ -375,8 +375,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $newService->destroy();
     }
 
-    // ==================== Performance Tests ====================
-
     public function test_multiple_executions_with_same_service(): void
     {
         for ($i = 0; $i < 10; $i++) {
@@ -385,8 +383,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
             $this->assertStringContainsString("Execution {$i}", $response->output);
         }
     }
-
-    // ==================== Alias Tests ====================
 
     public function test_echo_directive_has_alias(): void
     {
@@ -411,8 +407,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertTrue($aliases->contains('math'));
     }
 
-    // ==================== Context Creation Tests ====================
-
     public function test_directive_context_is_created_correctly(): void
     {
         $reflection = new \ReflectionClass($this->service);
@@ -424,8 +418,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertNotNull($context->getBlueprint());
         $this->assertNotNull($context->getAliases());
     }
-
-    // ==================== Parse Arguments Tests ====================
 
     public function test_parse_arguments_handles_key_value_pairs(): void
     {
@@ -439,8 +431,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
         $this->assertArrayHasKey('variadic', $result);
     }
 
-    // ==================== Temp Directory Cleanup Tests ====================
-
     public function test_temp_directory_is_removed_after_destroy(): void
     {
         $reflection = new \ReflectionClass($this->service);
@@ -453,8 +443,6 @@ final class DirectiveTestingServiceTest extends UnitTestCase
 
         $this->assertDirectoryDoesNotExist($tempDir);
     }
-
-    // ==================== Working Directory Restoration Tests ====================
 
     public function test_working_directory_is_restored_after_destroy(): void
     {
