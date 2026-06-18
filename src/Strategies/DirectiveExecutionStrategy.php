@@ -15,6 +15,7 @@ use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
 use InvalidArgumentException;
 
 final class DirectiveExecutionStrategy implements ExecutionStrategyInterface
@@ -28,11 +29,12 @@ final class DirectiveExecutionStrategy implements ExecutionStrategyInterface
 
     public function supports(DirectiveExecutionRecord $record): bool
     {
-        return true; // Fallback pour toutes les autres commandes
+        return true;
     }
 
-    public function execute(DirectiveExecutionRecord $record): ExitCode
+    public function execute(DirectiveExecutionRecord $record, $fromCall = false): ExitCode
     {
+
         $directives = $this->discovery->discover();
         $directiveMetadata = $this->findDirective($directives, $record->signature);
 
@@ -43,12 +45,13 @@ final class DirectiveExecutionStrategy implements ExecutionStrategyInterface
         }
 
         try {
-            return $this->executeDirective($directiveMetadata, $record);
+            return $this->executeDirective($directiveMetadata, $record, $fromCall);
         } catch (InvalidArgumentException $e) {
             $this->renderer->renderError($e->getMessage());
 
             return ExitCode::INVALID_ARGUMENT;
         } catch (\Throwable $e) {
+
             $this->renderer->renderError($e->getMessage());
 
             return ExitCode::FAILURE;
@@ -57,22 +60,30 @@ final class DirectiveExecutionStrategy implements ExecutionStrategyInterface
 
     public function getPriority(): int
     {
-        return 0; // Priorité la plus basse
+        return 0;
     }
 
     private function findDirective(DirectiveMetadataCollection $directives, string $signature): ?DirectiveMetadataRecord
     {
+
         foreach ($directives as $directive) {
-            if ($directive->signature === $signature) {
+
+            $directiveSignature = new SignatureStructureVO($directive->signature);
+            $requiredSignature = new SignatureStructureVO($signature);
+
+            if ($directiveSignature->getSource() === $requiredSignature->getSource()) {
+
                 return $directive;
             }
 
             if ($directive->aliases->contains($signature)) {
+
                 return $directive;
             }
 
             $baseSignature = $this->extractBaseSignature($directive->signature);
             if ($baseSignature === $signature) {
+
                 return $directive;
             }
         }
@@ -88,7 +99,7 @@ final class DirectiveExecutionStrategy implements ExecutionStrategyInterface
         return rtrim($baseSignature, '-');
     }
 
-    private function executeDirective(DirectiveMetadataRecord $metadata, DirectiveExecutionRecord $record): ExitCode
+    private function executeDirective(DirectiveMetadataRecord $metadata, DirectiveExecutionRecord $record, $fromCall): ExitCode
     {
         $parsed = $this->parser->parse($metadata->signature, $record->arguments);
         $directive = $this->hydrator->hydrate($metadata->class, $parsed);
@@ -96,16 +107,40 @@ final class DirectiveExecutionStrategy implements ExecutionStrategyInterface
         $result = $directive->run();
 
         $calls = $directive->getCalls();
+        $hasError = false;
+        $count = 0;
+        $maxCalls = $this->getMaxCall();
+
         foreach ($calls as $call) {
-            $this->execute($call);
+            if ($count >= $maxCalls) {
+                $this->renderer->renderWarning('⚠️ Maximum calls limit reached');
+                break;
+            }
+
+            $res = $this->execute($call, true);
+
+            if ($res !== ExitCode::SUCCESS) {
+                $this->renderer->renderError("Child directive '{$call->signature}' failed");
+                $hasError = true;
+                // ❌ Ne pas break, continuer avec les autres calls
+            }
+
+            $count++;
         }
 
-        if ($result === ExitCode::SUCCESS) {
-            $this->renderer->renderSuccess('Directive executed successfully');
-        } else {
-            $this->renderer->renderError('Directive execution failed');
+        if (! $fromCall) {
+            if ($result === ExitCode::SUCCESS && ! $hasError) {
+                $this->renderer->renderSuccess('Directive executed successfully');
+            } else {
+                $this->renderer->renderError('Directive execution failed');
+            }
         }
 
-        return $result;
+        return $hasError ? ExitCode::FAILURE : $result;
+    }
+
+    private function getMaxCall(): int
+    {
+        return 50;
     }
 }

@@ -21,8 +21,13 @@ use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestFailingDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestGreetingDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestLaravelDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestNestedDirective;
 use AndyDefer\Directive\Tests\Fixtures\RegisteredDirectives\TestPackageDirective;
 use AndyDefer\Directive\Tests\UnitTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
@@ -89,6 +94,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
     {
         $collection = new DirectiveMetadataCollection;
 
+        // Directive parente
         $aliases1 = new StringTypedCollection;
         $directive1 = new DirectiveMetadataRecord(
             signature: 'test-concrete',
@@ -98,6 +104,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive1);
 
+        // Directive package
         $aliases2 = new StringTypedCollection;
         $aliases2->add('tpkg');
         $directive2 = new DirectiveMetadataRecord(
@@ -108,6 +115,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         );
         $collection->add($directive2);
 
+        // Directive Laravel
         $aliases3 = new StringTypedCollection;
         $directive3 = new DirectiveMetadataRecord(
             signature: 'test-laravel',
@@ -116,6 +124,57 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
             aliases: $aliases3,
         );
         $collection->add($directive3);
+
+        $aliases4 = new StringTypedCollection;
+        $directive4 = new DirectiveMetadataRecord(
+            signature: 'test-echo {message=} {extra=}',
+            class: TestEchoDirective::class,
+            description: 'Test Laravel directive',
+            aliases: $aliases4,
+        );
+        $collection->add($directive4);
+
+        // Directive Calculator (appelée par 'calc')
+        $aliasesCalc = new StringTypedCollection;
+        $aliasesCalc->add('calc');
+        $aliasesCalc->add('math');
+        $directiveCalc = new DirectiveMetadataRecord(
+            signature: 'calculator {operation} {a} {b?}',
+            class: TestCalculatorDirective::class,
+            description: 'Test calculator directive',
+            aliases: $aliasesCalc,
+        );
+        $collection->add($directiveCalc);
+
+        // Directive Greeting (appelée par 'greeting')
+        $aliasesGreeting = new StringTypedCollection;
+        $directiveGreeting = new DirectiveMetadataRecord(
+            signature: 'greeting {name?}',
+            class: TestGreetingDirective::class,
+            description: 'Test greeting directive',
+            aliases: $aliasesGreeting,
+        );
+        $collection->add($directiveGreeting);
+
+        // ✅ Directive Nested (appelée par 'nested')
+        $aliasesNested = new StringTypedCollection;
+        $directiveNested = new DirectiveMetadataRecord(
+            signature: 'nested',
+            class: TestNestedDirective::class,  // ← Doit exister
+            description: 'Test nested directive',
+            aliases: $aliasesNested,
+        );
+        $collection->add($directiveNested);
+
+        // ✅ Directive Failing (appelée par 'failing')
+        $aliasesFailing = new StringTypedCollection;
+        $directiveFailing = new DirectiveMetadataRecord(
+            signature: 'failing',
+            class: TestFailingDirective::class,  // ← Doit exister
+            description: 'Test failing directive',
+            aliases: $aliasesFailing,
+        );
+        $collection->add($directiveFailing);
 
         return $collection;
     }
@@ -533,6 +592,280 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $record = $this->createExecutionRecord('test-concrete', ['John']);
 
         $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::FAILURE, $result);
+    }
+
+    // ==================== Call System Tests ====================
+
+    public function test_execute_executes_calls_recursively(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->atLeastOnce())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $parsedRecord = $this->createEmptyParsedDirectiveRecord();
+        $this->parser->expects($this->atLeastOnce())
+            ->method('parse')
+            ->willReturn($parsedRecord);
+
+        $parentDirective = $this->createMock(DirectiveInterface::class);
+        $parentDirective->expects($this->once())
+            ->method('run')
+            ->willReturn(ExitCode::SUCCESS);
+
+        $args1 = new StringTypedCollection;
+        $args1->add('add', '10', '5');
+        $args2 = new StringTypedCollection;
+        $args2->add('pow', '2', '3');
+        $args3 = new StringTypedCollection;
+        $args3->add('John');
+
+        $calls = [
+            new DirectiveExecutionRecord('calc', $args1),
+            new DirectiveExecutionRecord('calc', $args2),
+            new DirectiveExecutionRecord('greeting', $args3),
+        ];
+        $parentDirective->method('getCalls')->willReturn($calls);
+
+        $childDirective = $this->createMock(DirectiveInterface::class);
+        $childDirective->expects($this->atLeastOnce())
+            ->method('run')
+            ->willReturn(ExitCode::SUCCESS);
+        $childDirective->method('getCalls')->willReturn([]);
+
+        $this->hydrator->method('hydrate')
+            ->willReturnCallback(function ($class, $parsed) use ($parentDirective, $childDirective) {
+                if ($class === TestConcreteDirective::class) {
+                    return $parentDirective;
+                }
+
+                return $childDirective;
+            });
+
+        // ✅ Le test doit s'attendre à ce que renderSuccess soit appelée plusieurs fois
+        // (une fois pour la directive parente + une fois pour chaque enfant)
+        $this->renderer->expects($this->atLeastOnce())
+            ->method('renderSuccess')
+            ->with('Directive executed successfully');
+
+        $record = $this->createExecutionRecord('test-concrete', []);
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_execute_executes_calls_in_correct_order(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->any())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $parsed = $this->createEmptyParsedDirectiveRecord();
+        $this->parser->expects($this->any())
+            ->method('parse')
+            ->willReturn($parsed);
+
+        $callOrder = [];
+
+        $parentDirective = $this->createMock(DirectiveInterface::class);
+        $parentDirective->expects($this->once())
+            ->method('run')
+            ->willReturnCallback(function () use (&$callOrder) {
+                $callOrder[] = 'parent';
+
+                return ExitCode::SUCCESS;
+            });
+
+        $args1 = new StringTypedCollection;
+        $args1->add('add');
+        $args2 = new StringTypedCollection;
+        $args2->add('pow');
+        $args3 = new StringTypedCollection;
+        $args3->add('John');
+
+        $calls = [
+            new DirectiveExecutionRecord('calc', $args1),
+            new DirectiveExecutionRecord('calc', $args2),
+            new DirectiveExecutionRecord('greeting', $args3),
+        ];
+        $parentDirective->method('getCalls')->willReturn($calls);
+
+        $childCounter = 0;
+        $childDirective = $this->createMock(DirectiveInterface::class);
+        $childDirective->method('run')->willReturnCallback(function () use (&$callOrder, &$childCounter) {
+            $callOrder[] = 'child_'.$childCounter;
+            $childCounter++;
+
+            return ExitCode::SUCCESS;
+        });
+        $childDirective->method('getCalls')->willReturn([]);
+
+        $this->hydrator->method('hydrate')
+            ->willReturnCallback(function ($class, $parsed) use ($parentDirective, $childDirective) {
+                if ($class === TestConcreteDirective::class) {
+                    return $parentDirective;
+                }
+
+                return $childDirective;
+            });
+
+        $record = $this->createExecutionRecord('test-concrete', []);
+        $this->service->execute($record);
+
+        $this->assertSame('parent', $callOrder[0]);
+        $this->assertArrayHasKey(1, $callOrder);
+        $this->assertStringStartsWith('child_', (string) $callOrder[1]);
+        $this->assertArrayHasKey(2, $callOrder);
+        $this->assertStringStartsWith('child_', (string) $callOrder[2]);
+        $this->assertArrayHasKey(3, $callOrder);
+        $this->assertStringStartsWith('child_', (string) $callOrder[3]);
+    }
+
+    public function test_execute_with_nested_calls(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->any())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $parsed = $this->createEmptyParsedDirectiveRecord();
+        $this->parser->expects($this->any())
+            ->method('parse')
+            ->willReturn($parsed);
+
+        // ✅ Parent directive
+        $parentDirective = $this->createMock(DirectiveInterface::class);
+        $parentDirective->expects($this->once())  // ← Une seule fois !
+            ->method('run')
+            ->willReturn(ExitCode::SUCCESS);
+
+        $argsChild1 = new StringTypedCollection;
+        $argsChild2 = new StringTypedCollection;
+        $argsChild3 = new StringTypedCollection;
+
+        // ✅ Parent appelle des enfants (1er niveau uniquement)
+        // ✅ Ne pas s'appeler soi-même
+        $parentDirective->method('getCalls')->willReturn([
+            new DirectiveExecutionRecord('greeting', $argsChild1),
+            new DirectiveExecutionRecord('test-echo', $argsChild2),
+            new DirectiveExecutionRecord('calculator', $argsChild3), // ← 'calculator' au lieu de 'test-concrete'
+        ]);
+
+        // ✅ Les enfants ne font PAS d'appels
+        $childDirective = $this->createMock(DirectiveInterface::class);
+        $childDirective->expects($this->atLeastOnce())
+            ->method('run')
+            ->willReturn(ExitCode::SUCCESS);
+        $childDirective->method('getCalls')->willReturn([]);
+
+        $this->hydrator->method('hydrate')
+            ->willReturnCallback(function ($class, $parsed) use ($parentDirective, $childDirective) {
+                if ($class === TestConcreteDirective::class) {
+                    return $parentDirective;
+                }
+
+                return $childDirective;
+            });
+
+        $this->renderer->expects($this->atLeastOnce())
+            ->method('renderSuccess')
+            ->with('Directive executed successfully');
+
+        $record = $this->createExecutionRecord('test-concrete', []);
+        $result = $this->service->execute($record);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_execute_stops_on_failed_call(): void
+    {
+        $directives = $this->createDirectivesCollection();
+
+        $this->discovery->expects($this->any())
+            ->method('discover')
+            ->willReturn($directives);
+
+        $parsed = $this->createEmptyParsedDirectiveRecord();
+        $this->parser->expects($this->any())
+            ->method('parse')
+            ->willReturn($parsed);
+
+        $parentDirective = $this->createMock(DirectiveInterface::class);
+        $parentDirective->expects($this->once())
+            ->method('run')
+            ->willReturn(ExitCode::SUCCESS);
+
+        $args1 = new StringTypedCollection;
+        $args1->add('add', '10', '5');
+
+        $args2 = new StringTypedCollection;
+        $args3 = new StringTypedCollection;
+        $args3->add('John');
+
+        $calls = [
+            new DirectiveExecutionRecord('calc', $args1),
+            new DirectiveExecutionRecord('failing', $args2),
+            new DirectiveExecutionRecord('greeting', $args3),
+        ];
+        $parentDirective->method('getCalls')->willReturn($calls);
+
+        $calcDirective = $this->createMock(DirectiveInterface::class);
+        $calcDirective->expects($this->once())
+            ->method('run')
+            ->willReturn(ExitCode::SUCCESS);
+        $calcDirective->method('getCalls')->willReturn([]);
+
+        $failingDirective = $this->createMock(DirectiveInterface::class);
+        $failingDirective->expects($this->once())
+            ->method('run')
+            ->willReturn(ExitCode::FAILURE);
+        $failingDirective->method('getCalls')->willReturn([]);
+
+        $greetingDirective = $this->createMock(DirectiveInterface::class);
+        $greetingDirective->expects($this->once())
+            ->method('run')
+            ->willReturn(ExitCode::SUCCESS);
+        $greetingDirective->method('getCalls')->willReturn([]);
+
+        $this->hydrator->method('hydrate')
+            ->willReturnCallback(function ($class, $parsed) use ($parentDirective, $calcDirective, $failingDirective, $greetingDirective) {
+                if ($class === TestConcreteDirective::class) {
+                    return $parentDirective;
+                }
+                if ($class === TestCalculatorDirective::class) {
+                    return $calcDirective;
+                }
+                if ($class === TestFailingDirective::class) {
+                    return $failingDirective;
+                }
+                if ($class === TestGreetingDirective::class) {
+                    return $greetingDirective;
+                }
+
+                return $calcDirective;
+            });
+
+        // ✅ Collecter les messages d'erreur
+        $errorMessages = [];
+        $this->renderer->expects($this->exactly(2))
+            ->method('renderError')
+            ->willReturnCallback(function ($message) use (&$errorMessages) {
+                $errorMessages[] = $message;
+            });
+
+        $record = $this->createExecutionRecord('test-concrete', []);
+        $result = $this->service->execute($record);
+
+        // ✅ Vérifier les messages
+        $this->assertCount(2, $errorMessages);
+        $this->assertSame("Child directive 'failing' failed", $errorMessages[0]);
+        $this->assertSame('Directive execution failed', $errorMessages[1]);
 
         $this->assertSame(ExitCode::FAILURE, $result);
     }

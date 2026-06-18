@@ -12,7 +12,7 @@ final class TestEchoDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-echo {message?} {extra?}';
+        return 'test-echo {message=} {extra=}';
     }
 
     public function getDescription(): string

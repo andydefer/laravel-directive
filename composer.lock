@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a1c8f99b5c83e2c18fa585424c8b909d",
+    "content-hash": "ad42a70b80da2668e1245ae125a55cc3",
     "packages": [
         {
             "name": "andydefer/domain-structures",
@@ -105,6 +105,53 @@
                 "source": "https://github.com/andydefer/php-services/tree/v1.1.0"
             },
             "time": "2026-06-17T09:24:33+00:00"
+        },
+        {
+            "name": "andydefer/php-signature-parser",
+            "version": "v0.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/andydefer/andydefer-php-signature-parser.git",
+                "reference": "7c2cf4653a37a8c67a1ec670808540c24b077f3a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/andydefer/andydefer-php-signature-parser/zipball/7c2cf4653a37a8c67a1ec670808540c24b077f3a",
+                "reference": "7c2cf4653a37a8c67a1ec670808540c24b077f3a",
+                "shasum": ""
+            },
+            "require": {
+                "andydefer/domain-structures": "^1.19",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.29",
+                "phpunit/phpunit": "^13.2",
+                "rector/rector": "^2.4",
+                "symfony/var-dumper": "^8.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "AndyDefer\\SignatureParser\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andy Defer",
+                    "email": "andykanidimbu@gmail.com"
+                }
+            ],
+            "description": "A flexible signature parser for CLI commands",
+            "support": {
+                "issues": "https://github.com/andydefer/andydefer-php-signature-parser/issues",
+                "source": "https://github.com/andydefer/andydefer-php-signature-parser/tree/v0.2.0"
+            },
+            "time": "2026-06-18T13:16:19+00:00"
         },
         {
             "name": "andydefer/php-vo",
