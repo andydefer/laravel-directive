@@ -12,13 +12,22 @@ use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
+use AndyDefer\Directive\Services\ContainerService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\DirectiveMetadataExtractorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
 use AndyDefer\Directive\Services\SignatureValidationService;
+use AndyDefer\Directive\Sources\CompositeDiscoverySource;
+use AndyDefer\Directive\Sources\ProjectDiscoverySource;
+use AndyDefer\Directive\Sources\VendorDiscoverySource;
+use AndyDefer\Directive\Strategies\DirectiveExecutionStrategy;
+use AndyDefer\Directive\Strategies\HelpExecutionStrategy;
+use AndyDefer\Directive\Strategies\ListExecutionStrategy;
+use AndyDefer\Directive\Strategies\VersionExecutionStrategy;
 use AndyDefer\DomainStructures\Services\HydrationService;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
@@ -88,25 +97,59 @@ final class CliRunner
         $parser = new DirectiveParserService;
         $discoveryContext = $this->container->make(DirectiveDiscoveryContext::class);
         $interaction = $this->container->make(DirectiveInteractionService::class);
+        $renderDispatcher = $this->container->make(RenderDispatcher::class);
+
+        // Hydrator
         $hydrator = new DirectiveHydratorService(
             application: $this->application,
             interaction: $interaction,
         );
-        $discovery = new DirectiveDiscoveryService(
-            config: $config,
-            hydrator: $hydrator,
-            context: $discoveryContext,
-            application: $this->application,
-        );
-        $renderer = new DirectiveRendererService($this->container->make(RenderDispatcher::class));
-        $hydration = new HydrationService;
-        $validator = $this->container->make(SignatureValidationService::class);
+
+        // Extractor
+        $extractor = new DirectiveMetadataExtractorService($hydrator);
+
+        // Discovery Sources
+        $projectSource = new ProjectDiscoverySource($config, $extractor);
+        $vendorSource = new VendorDiscoverySource(getcwd(), $extractor);
+
+        $compositeSource = new CompositeDiscoverySource;
+        $compositeSource->addSource($projectSource);
+        $compositeSource->addSource($vendorSource);
+
+        // Discovery Service
+        $discovery = new DirectiveDiscoveryService($compositeSource);
+
+        // Renderer
+        $renderer = new DirectiveRendererService($renderDispatcher);
+
+        // Container Service pour les stratégies
+        $containerService = new ContainerService;
+
+        // Ajouter les stratégies
+        $containerService->add(HelpExecutionStrategy::class, new HelpExecutionStrategy($renderer));
+        $containerService->add(ListExecutionStrategy::class, new ListExecutionStrategy($discovery, $renderer));
+        $containerService->add(VersionExecutionStrategy::class, new VersionExecutionStrategy($renderer));
+        $containerService->add(DirectiveExecutionStrategy::class, new DirectiveExecutionStrategy(
+            $discovery,
+            $parser,
+            $hydrator,
+            $renderer
+        ));
+
+        // Execution Service avec le container
         $execution = new DirectiveExecutionService(
             discovery: $discovery,
             parser: $parser,
             hydrator: $hydrator,
             renderer: $renderer,
+            container: $containerService,
         );
+
+        // Validator
+        $validator = $this->container->make(SignatureValidationService::class);
+
+        // Hydration
+        $hydration = new HydrationService;
 
         return new DirectiveKernel($execution, $validator, $renderer, $hydration);
     }

@@ -23,15 +23,18 @@ use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\DirectiveTestingConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\FileCreatorConfigInterface;
 use AndyDefer\Directive\Contracts\Configs\SignatureValidationConfigInterface;
+use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
 use AndyDefer\Directive\Services\ArgumentApplierService;
 use AndyDefer\Directive\Services\ArgumentSplitterService;
+use AndyDefer\Directive\Services\ContainerService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\DirectiveMetadataExtractorService;
 use AndyDefer\Directive\Services\DirectiveNamingService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
@@ -43,15 +46,22 @@ use AndyDefer\Directive\Services\PathBuilderService;
 use AndyDefer\Directive\Services\PathSegmentsParserService;
 use AndyDefer\Directive\Services\SignatureValidationService;
 use AndyDefer\Directive\Services\StringCaseConverterService;
+use AndyDefer\Directive\Sources\CompositeDiscoverySource;
+use AndyDefer\Directive\Sources\ProjectDiscoverySource;
+use AndyDefer\Directive\Sources\VendorDiscoverySource;
 use AndyDefer\Directive\Steps\BootstrapLaravelStep;
 use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
 use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
 use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
 use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;
+use AndyDefer\Directive\Strategies\DirectiveExecutionStrategy;
+use AndyDefer\Directive\Strategies\HelpExecutionStrategy;
+use AndyDefer\Directive\Strategies\ListExecutionStrategy;
 use AndyDefer\Directive\Strategies\OptionalArgumentStrategy;
 use AndyDefer\Directive\Strategies\OptionStrategy;
 use AndyDefer\Directive\Strategies\RequiredArgumentStrategy;
 use AndyDefer\Directive\Strategies\VariadicArgumentStrategy;
+use AndyDefer\Directive\Strategies\VersionExecutionStrategy;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Services\EnumService;
 use AndyDefer\DomainStructures\Services\HydrationService;
@@ -66,9 +76,10 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerConfigs();
         $this->registerContexts();
         $this->registerParserComponents();
+        $this->registerDiscoveryServices();
+        $this->registerExecutionServices();
         $this->registerCoreServices();
         $this->registerDispatchers();
-        $this->registerStrategies();
         $this->registerTestingSteps();
     }
 
@@ -124,6 +135,103 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->singleton(DirectiveParserService::class, fn ($app) => new DirectiveParserService($app->make(DirectiveParserConfigInterface::class)));
     }
 
+    private function registerDiscoveryServices(): void
+    {
+        // 1. Metadata Extractor
+        $this->app->singleton(DirectiveMetadataExtractorService::class, function ($app) {
+            return new DirectiveMetadataExtractorService(
+                $app->make(DirectiveHydratorService::class),
+            );
+        });
+
+        // 2. Project Source
+        $this->app->singleton(ProjectDiscoverySource::class, function ($app) {
+            return new ProjectDiscoverySource(
+                $app->make(DirectiveConfigInterface::class),
+                $app->make(DirectiveMetadataExtractorService::class),
+            );
+        });
+
+        // 3. Vendor Source
+        $this->app->singleton(VendorDiscoverySource::class, function ($app) {
+            return new VendorDiscoverySource(
+                getcwd(),
+                $app->make(DirectiveMetadataExtractorService::class),
+            );
+        });
+
+        // 4. Composite Source
+        $this->app->singleton(CompositeDiscoverySource::class, function ($app) {
+            $composite = new CompositeDiscoverySource;
+            $composite->addSource($app->make(ProjectDiscoverySource::class));
+            $composite->addSource($app->make(VendorDiscoverySource::class));
+
+            return $composite;
+        });
+
+        // 5. Discovery Service
+        $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
+            return new DirectiveDiscoveryService(
+                $app->make(CompositeDiscoverySource::class),
+            );
+        });
+    }
+
+    private function registerExecutionServices(): void
+    {
+        // 1. Container Service pour les stratégies
+        $this->app->singleton(ContainerInterface::class, function ($app) {
+            return new ContainerService;
+        });
+
+        // 2. Stratégies d'exécution
+        $this->app->singleton(HelpExecutionStrategy::class, function ($app) {
+            return new HelpExecutionStrategy(
+                $app->make(DirectiveRendererService::class),
+            );
+        });
+
+        $this->app->singleton(ListExecutionStrategy::class, function ($app) {
+            return new ListExecutionStrategy(
+                $app->make(DirectiveDiscoveryService::class),
+                $app->make(DirectiveRendererService::class),
+            );
+        });
+
+        $this->app->singleton(VersionExecutionStrategy::class, function ($app) {
+            return new VersionExecutionStrategy(
+                $app->make(DirectiveRendererService::class),
+            );
+        });
+
+        $this->app->singleton(DirectiveExecutionStrategy::class, function ($app) {
+            return new DirectiveExecutionStrategy(
+                $app->make(DirectiveDiscoveryService::class),
+                $app->make(DirectiveParserService::class),
+                $app->make(DirectiveHydratorService::class),
+                $app->make(DirectiveRendererService::class),
+            );
+        });
+
+        // 3. Execution Service avec injection du ContainerService
+        $this->app->singleton(DirectiveExecutionService::class, function ($app) {
+            $container = $app->make(ContainerInterface::class);
+
+            $container->add(HelpExecutionStrategy::class, $app->make(HelpExecutionStrategy::class));
+            $container->add(ListExecutionStrategy::class, $app->make(ListExecutionStrategy::class));
+            $container->add(VersionExecutionStrategy::class, $app->make(VersionExecutionStrategy::class));
+            $container->add(DirectiveExecutionStrategy::class, $app->make(DirectiveExecutionStrategy::class));
+
+            return new DirectiveExecutionService(
+                discovery: $app->make(DirectiveDiscoveryService::class),
+                parser: $app->make(DirectiveParserService::class),
+                hydrator: $app->make(DirectiveHydratorService::class),
+                renderer: $app->make(DirectiveRendererService::class),
+                container: $container,
+            );
+        });
+    }
+
     private function registerCoreServices(): void
     {
         $this->app->bind(FileSystemInterface::class, fn () => new FileSystemService);
@@ -148,35 +256,14 @@ final class DirectiveServiceProvider extends ServiceProvider
             inputDispatcher: $app->make(InputDispatcher::class),
         ));
 
-        // ✅ CORRECTION : Passer l'application réelle
         $this->app->singleton(DirectiveHydratorService::class, function ($app) {
             return new DirectiveHydratorService(
-                application: $app,  // ← Passer l'application réelle, pas null
+                application: $app,
                 interaction: $app->make(DirectiveInteractionService::class),
             );
         });
 
-        // ✅ CORRECTION : Passer l'application réelle
-        $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
-            return new DirectiveDiscoveryService(
-                config: $app->make(DirectiveConfigInterface::class),
-                hydrator: $app->make(DirectiveHydratorService::class),
-                context: $app->make(DirectiveDiscoveryContext::class),
-                application: $app,  // ← Passer l'application réelle
-            );
-        });
-
         $this->app->singleton(DirectiveRendererService::class, fn ($app) => new DirectiveRendererService($app->make(RenderDispatcher::class)));
-
-        // ✅ CORRECTION : Passer l'application réelle
-        $this->app->singleton(DirectiveExecutionService::class, function ($app) {
-            return new DirectiveExecutionService(
-                discovery: $app->make(DirectiveDiscoveryService::class),
-                parser: $app->make(DirectiveParserService::class),
-                hydrator: $app->make(DirectiveHydratorService::class),
-                renderer: $app->make(DirectiveRendererService::class),
-            );
-        });
 
         $this->app->singleton(DirectiveKernel::class, fn ($app) => new DirectiveKernel(
             service: $app->make(DirectiveExecutionService::class),
@@ -190,11 +277,6 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(RenderDispatcher::class, fn () => new RenderDispatcher);
         $this->app->singleton(InputDispatcher::class, fn () => new InputDispatcher);
-    }
-
-    private function registerStrategies(): void
-    {
-        // Les stratégies sont enregistrées directement dans ParameterParserContext
     }
 
     private function registerTestingSteps(): void

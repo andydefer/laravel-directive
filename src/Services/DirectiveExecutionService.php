@@ -6,7 +6,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
-use AndyDefer\Directive\Contracts\ExecutionStrategyInterface;
+use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Strategies\DirectiveExecutionStrategy;
@@ -16,28 +16,29 @@ use AndyDefer\Directive\Strategies\VersionExecutionStrategy;
 
 class DirectiveExecutionService
 {
-    /**
-     * @var array<class-string<ExecutionStrategyInterface>>
-     */
-    private array $strategyClasses = [
-        HelpExecutionStrategy::class,
-        ListExecutionStrategy::class,
-        VersionExecutionStrategy::class,
-        DirectiveExecutionStrategy::class,
-    ];
-
     public function __construct(
         private readonly DirectiveDiscoveryService $discovery,
         private readonly DirectiveParserService $parser,
         private readonly DirectiveHydratorService $hydrator,
         private readonly DirectiveRendererService $renderer,
-    ) {}
+        private readonly ContainerInterface $container,
+    ) {
+        $this->container->add(HelpExecutionStrategy::class, new HelpExecutionStrategy($this->renderer));
+        $this->container->add(ListExecutionStrategy::class, new ListExecutionStrategy($this->discovery, $this->renderer));
+        $this->container->add(VersionExecutionStrategy::class, new VersionExecutionStrategy($this->renderer));
+        $this->container->add(DirectiveExecutionStrategy::class, new DirectiveExecutionStrategy(
+            $this->discovery,
+            $this->parser,
+            $this->hydrator,
+            $this->renderer
+        ));
+    }
 
     public function execute(DirectiveExecutionRecord $record): ExitCode
     {
-        foreach ($this->strategyClasses as $strategyClass) {
-            $strategy = $this->resolveStrategy($strategyClass);
+        $strategies = $this->container->getAll();
 
+        foreach ($strategies as $strategy) {
             if ($strategy->supports($record)) {
                 return $strategy->execute($record);
             }
@@ -46,19 +47,8 @@ class DirectiveExecutionService
         return ExitCode::FAILURE;
     }
 
-    private function resolveStrategy(string $class): ExecutionStrategyInterface
+    public function getContainer(): ContainerInterface
     {
-        return match ($class) {
-            HelpExecutionStrategy::class => new HelpExecutionStrategy($this->renderer),
-            ListExecutionStrategy::class => new ListExecutionStrategy($this->discovery, $this->renderer),
-            VersionExecutionStrategy::class => new VersionExecutionStrategy($this->renderer),
-            DirectiveExecutionStrategy::class => new DirectiveExecutionStrategy(
-                $this->discovery,
-                $this->parser,
-                $this->hydrator,
-                $this->renderer
-            ),
-            default => throw new \RuntimeException("Unknown strategy: {$class}"),
-        };
+        return $this->container;
     }
 }

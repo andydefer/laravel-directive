@@ -6,7 +6,6 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
-use AndyDefer\Directive\Contexts\DirectiveDiscoveryContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
@@ -14,6 +13,10 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Services\DirectiveMetadataExtractorService;
+use AndyDefer\Directive\Sources\CompositeDiscoverySource;
+use AndyDefer\Directive\Sources\ProjectDiscoverySource;
+use AndyDefer\Directive\Sources\VendorDiscoverySource;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\TestDirectiveConfig;
 use AndyDefer\Directive\Tests\UnitTestCase;
@@ -31,9 +34,9 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
 
     private Container $container;
 
-    private DirectiveDiscoveryContext $context;
-
     private DirectiveInteractionService $interaction;
+
+    private DirectiveMetadataExtractorService $extractor;
 
     protected function setUp(): void
     {
@@ -56,21 +59,24 @@ final class DirectiveDiscoveryServiceTest extends UnitTestCase
 
         $this->interaction = $this->container->make(DirectiveInteractionService::class);
 
-        // ✅ Nouvelle signature du constructeur
         $hydrator = new DirectiveHydratorService(
             application: null,
             interaction: $this->interaction,
         );
 
-        $this->context = new DirectiveDiscoveryContext;
+        $this->extractor = new DirectiveMetadataExtractorService($hydrator);
 
-        $this->service = new DirectiveDiscoveryService(
-            config: $config,
-            hydrator: $hydrator,
-            context: $this->context,
-            application: null,
-            loader: null,
-        );
+        // ✅ Créer les sources
+        $projectSource = new ProjectDiscoverySource($config, $this->extractor);
+        $vendorSource = new VendorDiscoverySource(getcwd(), $this->extractor);
+
+        // ✅ Composite source
+        $composite = new CompositeDiscoverySource;
+        $composite->addSource($projectSource);
+        $composite->addSource($vendorSource);
+
+        // ✅ Discovery service avec le composite
+        $this->service = new DirectiveDiscoveryService($composite);
     }
 
     public function test_discover_returns_typed_records_of_directive_metadata(): void
@@ -147,8 +153,13 @@ PHP;
             application: null,
             interaction: $tempInteraction,
         );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
+        $extractor = new DirectiveMetadataExtractorService($hydrator);
+
+        $projectSource = new ProjectDiscoverySource($config, $extractor);
+        $composite = new CompositeDiscoverySource;
+        $composite->addSource($projectSource);
+
+        $service = new DirectiveDiscoveryService($composite);
 
         $result = $service->discover();
 
@@ -242,8 +253,13 @@ PHP;
             application: null,
             interaction: $tempInteraction,
         );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
+        $extractor = new DirectiveMetadataExtractorService($hydrator);
+
+        $projectSource = new ProjectDiscoverySource($config, $extractor);
+        $composite = new CompositeDiscoverySource;
+        $composite->addSource($projectSource);
+
+        $service = new DirectiveDiscoveryService($composite);
 
         $result = $service->discover();
 
@@ -265,8 +281,13 @@ PHP;
             application: null,
             interaction: $tempInteraction,
         );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
+        $extractor = new DirectiveMetadataExtractorService($hydrator);
+
+        $projectSource = new ProjectDiscoverySource($config, $extractor);
+        $composite = new CompositeDiscoverySource;
+        $composite->addSource($projectSource);
+
+        $service = new DirectiveDiscoveryService($composite);
 
         $result = $service->discover();
 
@@ -293,154 +314,9 @@ PHP;
 
     public function test_discover_from_vendor_packages_does_not_throw_exception(): void
     {
-        $config = new TestDirectiveConfig($this->fixturesPath);
-        $tempInteraction = new DirectiveInteractionService(
-            new RenderDispatcher,
-            new InputDispatcher,
-        );
-        $hydrator = new DirectiveHydratorService(
-            application: null,
-            interaction: $tempInteraction,
-        );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
+        $result = $this->service->discover();
 
-        $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('discoverFromVendorPackages');
-
-        $results = new DirectiveMetadataCollection;
-
-        $method->invoke($service, $results);
-
-        $this->assertInstanceOf(DirectiveMetadataCollection::class, $results);
-    }
-
-    public function test_scan_package_at_depth_1(): void
-    {
-        $config = new TestDirectiveConfig($this->fixturesPath);
-        $tempInteraction = new DirectiveInteractionService(
-            new RenderDispatcher,
-            new InputDispatcher,
-        );
-        $hydrator = new DirectiveHydratorService(
-            application: null,
-            interaction: $tempInteraction,
-        );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
-
-        $reflection = new ReflectionClass($service);
-        $scanPackageMethod = $reflection->getMethod('scanPackage');
-
-        $results = new DirectiveMetadataCollection;
-
-        $scanPackageMethod->invoke($service, $results, 'andydefer/laravel-directive', 1);
-
-        $this->assertInstanceOf(DirectiveMetadataCollection::class, $results);
-    }
-
-    public function test_scan_package_ignores_php_internal_packages(): void
-    {
-        $config = new TestDirectiveConfig($this->fixturesPath);
-        $tempInteraction = new DirectiveInteractionService(
-            new RenderDispatcher,
-            new InputDispatcher,
-        );
-        $hydrator = new DirectiveHydratorService(
-            application: null,
-            interaction: $tempInteraction,
-        );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
-
-        $reflectionContext = new ReflectionClass($tempContext);
-        $scannedPackagesProperty = $reflectionContext->getProperty('scannedPackages');
-        $scannedPackagesProperty->setValue($tempContext, []);
-
-        $reflectionService = new ReflectionClass($service);
-        $scanPackageMethod = $reflectionService->getMethod('scanPackage');
-
-        $results = new DirectiveMetadataCollection;
-
-        $scanPackageMethod->invoke($service, $results, 'php', 1);
-
-        $scannedPackages = $scannedPackagesProperty->getValue($tempContext);
-        $this->assertArrayNotHasKey('php', $scannedPackages);
-    }
-
-    public function test_scan_package_limits_depth_to_2(): void
-    {
-        $config = new TestDirectiveConfig($this->fixturesPath);
-        $tempInteraction = new DirectiveInteractionService(
-            new RenderDispatcher,
-            new InputDispatcher,
-        );
-        $hydrator = new DirectiveHydratorService(
-            application: null,
-            interaction: $tempInteraction,
-        );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
-
-        $reflection = new ReflectionClass($service);
-        $scanPackageMethod = $reflection->getMethod('scanPackage');
-
-        $scanPackageMethod->invoke($service, new DirectiveMetadataCollection, 'test-package', 3);
-
-        $this->assertTrue(true);
-    }
-
-    public function test_scan_package_does_not_scan_same_package_twice(): void
-    {
-        $config = new TestDirectiveConfig($this->fixturesPath);
-        $tempInteraction = new DirectiveInteractionService(
-            new RenderDispatcher,
-            new InputDispatcher,
-        );
-        $hydrator = new DirectiveHydratorService(
-            application: null,
-            interaction: $tempInteraction,
-        );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
-
-        $reflectionContext = new ReflectionClass($tempContext);
-        $scannedPackagesProperty = $reflectionContext->getProperty('scannedPackages');
-
-        $scannedPackagesProperty->setValue($tempContext, []);
-        $scannedPackages = $scannedPackagesProperty->getValue($tempContext);
-
-        $this->assertIsArray($scannedPackages);
-        $this->assertEmpty($scannedPackages);
-
-        $scannedPackagesProperty->setValue($tempContext, ['test-package' => true]);
-        $scannedPackagesAfter = $scannedPackagesProperty->getValue($tempContext);
-
-        $this->assertArrayHasKey('test-package', $scannedPackagesAfter);
-        $this->assertCount(1, $scannedPackagesAfter);
-    }
-
-    public function test_scan_package_directories_scans_multiple_paths(): void
-    {
-        $config = new TestDirectiveConfig($this->fixturesPath);
-        $tempInteraction = new DirectiveInteractionService(
-            new RenderDispatcher,
-            new InputDispatcher,
-        );
-        $hydrator = new DirectiveHydratorService(
-            application: null,
-            interaction: $tempInteraction,
-        );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
-
-        $result = $service->discover();
-
-        $this->assertGreaterThanOrEqual(
-            1,
-            $result->count(),
-            'No directives discovered in fixtures path: '.$this->fixturesPath
-        );
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
     }
 
     public function test_only_classes_extending_abstract_directive_are_discovered(): void
@@ -479,8 +355,13 @@ PHP;
             application: null,
             interaction: $tempInteraction,
         );
-        $tempContext = new DirectiveDiscoveryContext;
-        $service = new DirectiveDiscoveryService($config, $hydrator, $tempContext, null, null);
+        $extractor = new DirectiveMetadataExtractorService($hydrator);
+
+        $projectSource = new ProjectDiscoverySource($config, $extractor);
+        $composite = new CompositeDiscoverySource;
+        $composite->addSource($projectSource);
+
+        $service = new DirectiveDiscoveryService($composite);
 
         $result = $service->discover();
 

@@ -9,11 +9,13 @@ namespace AndyDefer\Directive\Tests\Unit\Services;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Collections\ParsedArgumentCollection;
 use AndyDefer\Directive\Collections\ParsedOptionCollection;
+use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\ParsedDirectiveRecord;
+use AndyDefer\Directive\Services\ContainerService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
@@ -46,6 +48,8 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
     private string|false $originalDebug;
 
+    private ContainerInterface $container;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -57,11 +61,14 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->renderer = $this->createMock(DirectiveRendererService::class);
 
+        $this->container = new ContainerService;
+
         $this->service = new DirectiveExecutionService(
             discovery: $this->discovery,
             parser: $this->parser,
             hydrator: $this->hydrator,
             renderer: $this->renderer,
+            container: $this->container,
         );
 
         $this->originalDebug = getenv('DIRECTIVE_DEBUG');
