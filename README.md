@@ -546,16 +546,6 @@ final class UserOrchestratorDirective extends AbstractDirective
 }
 ```
 
-### Avantages du système de call
-
-| Avantage | Description |
-|----------|-------------|
-| **Réutilisabilité** | Composer des fonctionnalités sans duplication de code |
-| **Orchestration** | Créer des workflows complexes et séquentiels |
-| **Modularité** | Chaque directive reste simple et focalisée |
-| **Testabilité** | Les appels peuvent être inspectés via `getCalls()` |
-| **Lisibilité** | Le flux d'exécution est clair et explicite |
-
 ### Cycle de vie des appels
 
 ```
@@ -568,6 +558,32 @@ final class UserOrchestratorDirective extends AbstractDirective
 3. Exécution récursive
    └── Chaque appel peut lui-même appeler d'autres directives
 ```
+
+### Gestion des erreurs
+
+Le système gère les erreurs de manière robuste :
+
+- ✅ Chaque appel est indépendant : un échec n'arrête pas les autres appels
+- ✅ L'erreur spécifique de l'enfant est affichée
+- ✅ L'erreur globale du parent est également affichée
+- ✅ Le code de retour final est `FAILURE` si au moins un appel a échoué
+
+```php
+// Exemple de sortie en cas d'erreur
+❌ Child directive 'failing' failed
+❌ Directive execution failed
+```
+
+### Avantages du système de call
+
+| Avantage | Description |
+|----------|-------------|
+| **Réutilisabilité** | Composer des fonctionnalités sans duplication de code |
+| **Orchestration** | Créer des workflows complexes et séquentiels |
+| **Modularité** | Chaque directive reste simple et focalisée |
+| **Testabilité** | Les appels peuvent être inspectés via `getCalls()` |
+| **Lisibilité** | Le flux d'exécution est clair et explicite |
+| **Robustesse** | Les erreurs sont gérées proprement |
 
 ---
 
@@ -1018,4 +1034,3 @@ final class SetupDirective extends AbstractDirective
 
 MIT © [Andy Defer](https://github.com/andydefer)
 ```
----
