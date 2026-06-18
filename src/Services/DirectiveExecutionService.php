@@ -12,9 +12,6 @@ use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use InvalidArgumentException;
 
-/**
- * Service responsible for executing directives.
- */
 class DirectiveExecutionService
 {
     public function __construct(
@@ -55,16 +52,7 @@ class DirectiveExecutionService
         }
 
         try {
-            $exitCode = $this->executeDirective($directiveMetadata, $record);
-
-            // ✅ Ajouter le rendu du résultat
-            if ($exitCode === ExitCode::SUCCESS) {
-                $this->renderer->renderSuccess('Directive executed successfully');
-            } else {
-                $this->renderer->renderError('Directive execution failed');
-            }
-
-            return $exitCode;
+            return $this->executeDirective($directiveMetadata, $record);
         } catch (InvalidArgumentException $e) {
             $this->renderer->renderError($e->getMessage());
 
@@ -124,6 +112,19 @@ class DirectiveExecutionService
         $parsed = $this->parser->parse($metadata->signature, $record->arguments);
         $directive = $this->hydrator->hydrate($metadata->class, $parsed);
 
-        return $directive->execute();
+        $result = $directive->run();
+
+        $calls = $directive->getCalls();
+        foreach ($calls as $call) {
+            $this->execute($call);
+        }
+
+        if ($result === ExitCode::SUCCESS) {
+            $this->renderer->renderSuccess('Directive executed successfully');
+        } else {
+            $this->renderer->renderError('Directive execution failed');
+        }
+
+        return $result;
     }
 }

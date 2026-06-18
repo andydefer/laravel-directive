@@ -1,5 +1,7 @@
 <?php
 
+// src/Services/DirectiveTestingService.php
+
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
@@ -11,6 +13,7 @@ use AndyDefer\Directive\Dispatchers\InputDispatcher;
 use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
+use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\Directive\ValueObjects\ParameterVO;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
@@ -31,6 +34,10 @@ final class DirectiveTestingService
 
     private string $originalCwd;
 
+    private array $calls = [];
+
+    private array $registeredDirectives = [];
+
     public function __construct(?Application $application = null)
     {
         $this->application = $application;
@@ -40,6 +47,15 @@ final class DirectiveTestingService
         $this->originalCwd = getcwd();
 
         $this->setupTempDirectory();
+    }
+
+    public function registerDirective(string $class): self
+    {
+        if (! in_array($class, $this->registeredDirectives)) {
+            $this->registeredDirectives[] = $class;
+        }
+
+        return $this;
     }
 
     public function run(string $class, array $arguments = []): DirectiveResponseRecord
@@ -74,6 +90,16 @@ final class DirectiveTestingService
     public function getTempDir(): string
     {
         return $this->tempDir;
+    }
+
+    public function getCalls(): array
+    {
+        return $this->calls;
+    }
+
+    public function clearCalls(): void
+    {
+        $this->calls = [];
     }
 
     private function createDirective(string $class): AbstractDirective
@@ -111,9 +137,10 @@ final class DirectiveTestingService
         $aliases = new StringTypedCollection;
 
         return new DirectiveContext(
-            blueprint: $blueprint,
-            aliases: $aliases,
-            laravelApplication: $this->application,
+            $blueprint,
+            $aliases,
+            $this->application,
+            $this->registeredDirectives
         );
     }
 
@@ -135,17 +162,93 @@ final class DirectiveTestingService
 
         $hydratedDirective = $this->hydrateDirective($directive, $context);
 
+        $this->calls = [];
+
         ob_start();
         try {
-            $exitCode = $hydratedDirective->execute();
-            $output = ob_get_clean();
+            $exitCode = $hydratedDirective->run();
+            $parentOutput = ob_get_clean();
 
-            return new DirectiveResponseRecord($exitCode, $output);
+            $this->calls = $hydratedDirective->getCalls();
+
+            $childOutput = '';
+            $calls = $this->calls;
+            foreach ($calls as $call) {
+                $childOutput .= $this->executeCall($call);
+            }
+
+            return new DirectiveResponseRecord($exitCode, $parentOutput.$childOutput);
         } catch (Throwable $e) {
             ob_end_clean();
 
             return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
         }
+    }
+
+    private function executeCall(DirectiveExecutionRecord $record): string
+    {
+        $class = $this->findDirectiveClass($record->signature);
+        if ($class === null) {
+            return '';
+        }
+
+        $reflection = new \ReflectionClass($class);
+        $tempInstance = $reflection->newInstanceWithoutConstructor();
+
+        $context = $this->createDirectiveContext($class);
+
+        try {
+            $parsed = $this->parseArguments(
+                $tempInstance->getSignature(),
+                $record->arguments->toArray()
+            );
+        } catch (Throwable $e) {
+            return '';
+        }
+
+        $context->setArguments($parsed['arguments']);
+        $context->setOptions($parsed['options']);
+        $context->setVariadicArguments($parsed['variadic']);
+
+        $directive = $this->hydrateDirective($tempInstance, $context);
+
+        try {
+            ob_start();
+            $directive->run();
+            $output = ob_get_clean();
+
+            $childCalls = $directive->getCalls();
+            foreach ($childCalls as $childCall) {
+                $output .= $this->executeCall($childCall);
+            }
+
+            return $output;
+        } catch (Throwable $e) {
+            return '';
+        }
+    }
+
+    private function findDirectiveClass(string $signature): ?string
+    {
+        foreach ($this->registeredDirectives as $class) {
+            $reflection = new \ReflectionClass($class);
+            $instance = $reflection->newInstanceWithoutConstructor();
+
+            $fullSignature = $instance->getSignature();
+            $baseSignature = explode(' ', $fullSignature)[0];
+            $baseSignature = explode('{', $baseSignature)[0];
+            $baseSignature = rtrim($baseSignature, '-');
+
+            if ($baseSignature === $signature) {
+                return $class;
+            }
+
+            if ($instance->getAliases()->contains($signature)) {
+                return $class;
+            }
+        }
+
+        return null;
     }
 
     private function parseArguments(string $signature, array $arguments): array

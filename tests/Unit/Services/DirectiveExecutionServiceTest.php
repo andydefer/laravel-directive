@@ -57,7 +57,6 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
         $this->hydrator = $this->createMock(DirectiveHydratorService::class);
         $this->renderer = $this->createMock(DirectiveRendererService::class);
 
-        // ✅ Nouvelle signature : plus de LaravelBootstrapperContext
         $this->service = new DirectiveExecutionService(
             discovery: $this->discovery,
             parser: $this->parser,
@@ -176,7 +175,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
         $directive = $this->createMock(DirectiveInterface::class);
         $directive->expects($this->once())
-            ->method('execute')
+            ->method('run')
             ->willReturn(ExitCode::SUCCESS);
 
         $this->hydrator->expects($this->once())
@@ -212,7 +211,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
         $directive = $this->createMock(DirectiveInterface::class);
         $directive->expects($this->once())
-            ->method('execute')
+            ->method('run')
             ->willReturn(ExitCode::FAILURE);
 
         $this->hydrator->expects($this->once())
@@ -248,7 +247,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
         $directive = $this->createMock(DirectiveInterface::class);
         $directive->expects($this->once())
-            ->method('execute')
+            ->method('run')
             ->willReturn(ExitCode::SUCCESS);
 
         $this->hydrator->expects($this->once())
@@ -372,7 +371,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
         $directive = $this->createMock(DirectiveInterface::class);
         $directive->expects($this->once())
-            ->method('execute')
+            ->method('run')
             ->willReturn(ExitCode::SUCCESS);
 
         $this->hydrator->expects($this->once())
@@ -407,7 +406,7 @@ final class DirectiveExecutionServiceTest extends UnitTestCase
 
         $directive = $this->createMock(DirectiveInterface::class);
         $directive->expects($this->once())
-            ->method('execute')
+            ->method('run')
             ->willReturn(ExitCode::SUCCESS);
 
         $this->hydrator->expects($this->once())

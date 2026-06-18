@@ -1,11 +1,14 @@
 <?php
 
+// src/Contexts/DirectiveContext.php
+
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Contexts;
 
 use AndyDefer\Directive\Collections\ParameterVOCollection;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use Illuminate\Foundation\Application;
 
@@ -23,14 +26,22 @@ final class DirectiveContext
 
     private ?Application $laravelApplication;
 
+    private array $registeredDirectives = [];
+
+    private ?DirectiveDiscoveryService $discoveryService = null;
+
     public function __construct(
         DirectiveBlueprintRecord $blueprint,
         StringTypedCollection $aliases,
         ?Application $laravelApplication = null,
+        array $registeredDirectives = [],
+        ?DirectiveDiscoveryService $discoveryService = null
     ) {
         $this->blueprint = $blueprint;
         $this->aliases = $aliases;
         $this->laravelApplication = $laravelApplication;
+        $this->registeredDirectives = $registeredDirectives;
+        $this->discoveryService = $discoveryService;
         $this->arguments = new ParameterVOCollection;
         $this->options = new ParameterVOCollection;
         $this->variadicArguments = new StringTypedCollection;
@@ -120,6 +131,16 @@ final class DirectiveContext
         return $this->laravelApplication !== null;
     }
 
+    public function getRegisteredDirectives(): array
+    {
+        return $this->registeredDirectives;
+    }
+
+    public function getDiscoveryService(): ?DirectiveDiscoveryService
+    {
+        return $this->discoveryService;
+    }
+
     public function setArguments(ParameterVOCollection $arguments): self
     {
         $this->arguments = $arguments;
@@ -144,6 +165,20 @@ final class DirectiveContext
     public function setLaravelApplication(?Application $application): self
     {
         $this->laravelApplication = $application;
+
+        return $this;
+    }
+
+    public function setRegisteredDirectives(array $registeredDirectives): self
+    {
+        $this->registeredDirectives = $registeredDirectives;
+
+        return $this;
+    }
+
+    public function setDiscoveryService(?DirectiveDiscoveryService $discoveryService): self
+    {
+        $this->discoveryService = $discoveryService;
 
         return $this;
     }

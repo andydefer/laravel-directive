@@ -1,5 +1,7 @@
 <?php
 
+// src/AbstractDirective.php
+
 declare(strict_types=1);
 
 namespace AndyDefer\Directive;
@@ -9,11 +11,14 @@ use AndyDefer\Directive\Contexts\DirectiveContext;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
+use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Services\DirectiveInteractionService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 abstract class AbstractDirective implements DirectiveInterface
 {
+    private array $calls = [];
+
     public function __construct(
         protected DirectiveContext $context,
         protected DirectiveInteractionService $interaction
@@ -119,5 +124,20 @@ abstract class AbstractDirective implements DirectiveInterface
         $this->interaction->table($headers, $rows);
     }
 
-    abstract public function execute(): ExitCode;
+    final protected function call(DirectiveExecutionRecord $record): void
+    {
+        $this->calls[] = $record;
+    }
+
+    final public function getCalls(): array
+    {
+        return $this->calls;
+    }
+
+    final public function run(): ExitCode
+    {
+        return $this->execute();
+    }
+
+    abstract protected function execute(): ExitCode;
 }
