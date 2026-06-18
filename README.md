@@ -19,6 +19,7 @@
 - [Arguments et options](#arguments-et-options)
 - [Interaction utilisateur](#interaction-utilisateur)
 - [Charger Laravel optionnellement](#charger-laravel-optionnellement)
+- [Système de composition (Call System)](#système-de-composition-call-system)
 - [Commandes intégrées](#commandes-integrees)
 - [Codes de sortie](#codes-de-sortie)
 - [Tester vos directives](#tester-vos-directives)
@@ -99,7 +100,7 @@ final class HelloDirective extends AbstractDirective
         return 'Say hello to someone';
     }
 
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         $name = $this->argument('name') ?? 'World';
         $this->line("Hello, {$name}!");
@@ -200,7 +201,7 @@ final class ProcessFilesDirective extends AbstractDirective
         return 'process {name} {files*} {--verbose}';
     }
 
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         $name = $this->argument('name');
         $files = $this->getVariadicArguments();
@@ -254,8 +255,10 @@ public function getDescription(): string
 
 ### `execute()`
 
+> ⚠️ **Important :** `execute()` est maintenant **protégée**. Elle ne doit être appelée que via `run()`.
+
 ```php
-public function execute(): ExitCode
+protected function execute(): ExitCode
 {
     $this->info('User created!');
     return ExitCode::SUCCESS;
@@ -276,6 +279,17 @@ public function getAliases(): StringTypedCollection
 }
 ```
 
+### `run()`
+
+Point d'entrée public de la directive. Appelle `execute()` et gère les appels en cascade.
+
+```php
+final public function run(): ExitCode
+{
+    return $this->execute();
+}
+```
+
 ---
 
 ## Arguments et options
@@ -283,7 +297,7 @@ public function getAliases(): StringTypedCollection
 ### Accès aux arguments
 
 ```php
-public function execute(): ExitCode
+protected function execute(): ExitCode
 {
     $name = $this->argument('name');   // string ou null
     $email = $this->argument('email');
@@ -301,7 +315,7 @@ public function execute(): ExitCode
 ### Accès aux arguments variadiques
 
 ```php
-public function execute(): ExitCode
+protected function execute(): ExitCode
 {
     $files = $this->getVariadicArguments();
     
@@ -330,7 +344,7 @@ if ($this->hasOption('verbose')) {
 ### Accès aux options
 
 ```php
-public function execute(): ExitCode
+protected function execute(): ExitCode
 {
     $force = $this->option('force');   // bool
     $role = $this->option('role');     // string ou null
@@ -412,7 +426,7 @@ final class UserListDirective extends AbstractDirective
         return true;
     }
     
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         $users = User::all(); // Eloquent fonctionne !
         
@@ -428,7 +442,7 @@ final class UserListDirective extends AbstractDirective
 ### Vérifier la disponibilité
 
 ```php
-public function execute(): ExitCode
+protected function execute(): ExitCode
 {
     if (!$this->hasLaravel()) {
         $this->error('Laravel not available!');
@@ -448,6 +462,147 @@ $version = $app->version();
 ```
 
 > Le bootstrap de Laravel se fait **une seule fois** par exécution.
+
+---
+
+## Système de composition (Call System)
+
+Le système de composition permet à une directive d'appeler d'autres directives, créant ainsi des **directives orchestres** capables de composer des fonctionnalités complexes.
+
+### Principe de fonctionnement
+
+Une directive peut enregistrer des appels vers d'autres directives via la méthode `call()`. Ces appels sont exécutés **après** la fin de la directive parente, dans l'ordre d'enregistrement.
+
+```php
+protected function execute(): ExitCode
+{
+    // Appel avec un tableau (conversion automatique)
+    $this->call(['fetch-user', [$userId]]);
+
+    // Appel avec un objet DirectiveExecutionRecord
+    $args = new StringTypedCollection();
+    $args->add($userId);
+    $this->call(new DirectiveExecutionRecord('process-user', $args));
+
+    return ExitCode::SUCCESS;
+}
+```
+
+### Méthodes du système de call
+
+| Méthode | Description |
+|---------|-------------|
+| `call(array|DirectiveExecutionRecord $record)` | Enregistre un appel vers une directive (tableau ou objet) |
+| `getCalls(): array` | Retourne la liste des appels enregistrés |
+
+### Syntaxe des appels
+
+**Avec un tableau :**
+```php
+// [signature, [arguments]]
+$this->call(['user-list', ['--role=admin']]);
+$this->call(['send-email', ['john@example.com', 'welcome']]);
+```
+
+**Avec un objet DirectiveExecutionRecord :**
+```php
+$args = new StringTypedCollection();
+$args->add('--role=admin');
+$record = new DirectiveExecutionRecord('user-list', $args);
+$this->call($record);
+```
+
+### Exemple de directive orchestratrice
+
+```php
+final class UserOrchestratorDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'user-orchestrate {user-id}';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Orchestrate multiple user operations';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $userId = $this->argument('user-id');
+
+        $this->info("🚀 Starting orchestration for user {$userId}");
+
+        // Chaîne d'opérations
+        $this->call(['fetch-user', [$userId]]);
+        $this->call(['process-user', [$userId]]);
+        $this->call(['send-notification', [$userId]]);
+        $this->call(['log-activity', ['user_processed', $userId]]);
+
+        $this->info("✅ Orchestration completed");
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### Avantages du système de call
+
+| Avantage | Description |
+|----------|-------------|
+| **Réutilisabilité** | Composer des fonctionnalités sans duplication de code |
+| **Orchestration** | Créer des workflows complexes et séquentiels |
+| **Modularité** | Chaque directive reste simple et focalisée |
+| **Testabilité** | Les appels peuvent être inspectés via `getCalls()` |
+| **Lisibilité** | Le flux d'exécution est clair et explicite |
+
+### Cycle de vie des appels
+
+```
+1. Exécution de la directive parente
+   └── execute() s'exécute et enregistre les appels via call()
+
+2. Fin de la directive parente
+   └── Tous les appels sont exécutés dans l'ordre
+
+3. Exécution récursive
+   └── Chaque appel peut lui-même appeler d'autres directives
+```
+
+---
+
+## ⚠️ Important : Constructeur final
+
+Le constructeur de `AbstractDirective` est **final**. Vous ne pouvez pas le surcharger.
+
+```php
+final public function __construct(
+    protected DirectiveContext $context,
+    protected DirectiveInteractionService $interaction
+) {}
+```
+
+**Pourquoi ?**
+
+- Empêche l'utilisateur de modifier l'injection de dépendances
+- Garantit que le contexte et l'interaction sont correctement initialisés
+- Force l'utilisation de `getLaravel()` pour accéder aux services
+
+**Comment injecter des dépendances ?**
+
+Utilisez `getLaravel()` pour accéder au conteneur :
+
+```php
+protected function execute(): ExitCode
+{
+    $app = $this->getLaravel();
+    $service = $app->make(MyService::class);
+    $config = $app->make('config');
+    
+    // Utiliser le service...
+    return ExitCode::SUCCESS;
+}
+```
 
 ---
 
@@ -471,7 +626,7 @@ $version = $app->version();
 | 4 | `ExitCode::INVALID_ARGUMENT` | Argument invalide |
 
 ```php
-public function execute(): ExitCode
+protected function execute(): ExitCode
 {
     if ($this->argument('name') === null) {
         $this->error('Name is required');
@@ -527,7 +682,6 @@ final class HelloDirectiveTest extends TestCase
 
     public function test_directive_returns_success(): void
     {
-        // Créer le contexte pour la directive
         $context = new DirectiveContext(
             laravelBootstrapper: new LaravelBootstrapperContext(),
             blueprint: new DirectiveBlueprintRecord(HelloDirective::class, 'hello', 'Say hello'),
@@ -543,6 +697,25 @@ final class HelloDirectiveTest extends TestCase
         $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
         $this->assertStringContainsString('Hello, John!', $response->output);
     }
+}
+```
+
+### Tester une directive avec appels
+
+```php
+public function test_orchestrator_calls_child_directives(): void
+{
+    $service = new DirectiveTestingService();
+    $service->registerDirective(FetchUserDirective::class);
+    $service->registerDirective(ProcessUserDirective::class);
+    
+    $response = $service->runDirective('user-orchestrate', ['123']);
+    
+    $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+    $this->assertStringContainsString('Starting orchestration', $response->output);
+    
+    $calls = $service->getCalls();
+    $this->assertCount(3, $calls);
 }
 ```
 
@@ -586,8 +759,9 @@ protected function setUp(): void
 | `registerDirective(AbstractDirective $directive)` | Enregistre une directive |
 | `registerDirectives(array $directives)` | Enregistre plusieurs directives |
 | `clearRegisteredDirectives()` | Supprime toutes les directives |
-| `createTestDirective(string $signature, callable $execute)` | Crée une directive temporaire (gère le contexte automatiquement) |
+| `createTestDirective(string $signature, callable $execute)` | Crée une directive temporaire |
 | `runDirective(string $signature, array $arguments = [])` | Exécute une directive |
+| `getCalls(): array` | Récupère les appels enregistrés |
 
 > `createTestDirective()` crée automatiquement le `DirectiveContext` nécessaire, vous n'avez pas à le gérer manuellement.
 
@@ -616,7 +790,7 @@ final class BackupDirective extends AbstractDirective
         return 'Backup files and directories';
     }
 
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         $source = $this->argument('source');
         $destination = $this->argument('destination');
@@ -672,7 +846,7 @@ final class UserStatsDirective extends AbstractDirective
         return true;
     }
 
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         if (!$this->hasLaravel()) {
             return ExitCode::FAILURE;
@@ -703,6 +877,72 @@ final class UserStatsDirective extends AbstractDirective
 }
 ```
 
+### Directive orchestratrice (Call System)
+
+```php
+<?php
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Records\DirectiveExecutionRecord;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+
+final class UserOrchestratorDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'user-orchestrate {user-id} {--notify}';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Orchestrate complete user workflow';
+    }
+
+    public function shouldBootLaravel(): bool
+    {
+        return true;
+    }
+
+    protected function execute(): ExitCode
+    {
+        $userId = $this->argument('user-id');
+        $notify = $this->option('notify');
+
+        $this->info("🚀 Starting user orchestration for ID: {$userId}");
+        $this->separator('=', 50);
+
+        // Vérifier l'utilisateur via Laravel
+        $app = $this->getLaravel();
+        $user = $app->make(UserRepository::class)->find($userId);
+        
+        if (!$user) {
+            $this->error("❌ User {$userId} not found");
+            return ExitCode::FAILURE;
+        }
+
+        $this->info("✅ User found: {$user->name}");
+
+        // Chaîne d'opérations
+        $this->call(['fetch-user-details', [$userId]]);
+        $this->call(['process-user-data', [$userId]]);
+        $this->call(['update-user-stats', [$userId]]);
+
+        if ($notify) {
+            $this->call(['send-user-notification', [$userId, 'processed']]);
+        }
+
+        $this->call(['log-activity', ['user_orchestrated', $userId]]);
+
+        $this->separator('=', 50);
+        $this->info('✅ Orchestration completed successfully!');
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
 ### Directive interactive
 
 ```php
@@ -724,7 +964,7 @@ final class SetupDirective extends AbstractDirective
         return 'Interactive setup wizard';
     }
 
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         $this->info('Welcome to the setup wizard!');
         
@@ -756,6 +996,7 @@ final class SetupDirective extends AbstractDirective
 | Pas d'extensibilité pour les packages | Découverte automatique |
 | Arguments non typés | Accès typé |
 | **Pas d'arguments variadiques** | **Support des variadiques** |
+| **Pas de composition** | **Système de call pour orchestrer** |
 | Couplage fort | Architecture propre |
 
 ### Avantages
@@ -767,6 +1008,8 @@ final class SetupDirective extends AbstractDirective
 - ✅ **Validation stricte** : Format et ordre des signatures
 - ✅ **Typage fort** : Arguments et options typés
 - ✅ **Arguments variadiques** : Capture avec `{files*}`
+- ✅ **Système de composition** : Appel d'autres directives via `call()`
+- ✅ **Constructeur final** : Injection sécurisée via `getLaravel()`
 - ✅ **Découverte automatique** : Aucune configuration requise
 
 ---
@@ -774,4 +1017,5 @@ final class SetupDirective extends AbstractDirective
 ## Licence
 
 MIT © [Andy Defer](https://github.com/andydefer)
+```
 ---

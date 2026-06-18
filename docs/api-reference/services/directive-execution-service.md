@@ -2,7 +2,7 @@
 
 ## Description
 
-Service central responsable de l'exécution complète des directives CLI. Orchestre la découverte, la recherche, le parsing, l'hydratation et l'exécution des directives.
+Service central responsable de l'exécution complète des directives CLI. Orchestre la découverte, la recherche, le parsing, l'hydratation et l'exécution des directives. Gère également le **système de composition (Call System)** en exécutant récursivement les appels enregistrés par les directives.
 
 ## Hiérarchie
 
@@ -16,7 +16,7 @@ DirectiveExecutionService (final)
 
 ## Rôle principal
 
-Exécuter une directive à partir d'un enregistrement d'exécution. Gère les commandes globales (`--help`, `--list`, `--version`), trouve la directive cible par signature, alias ou nom de base, parse les arguments, bootstrappe Laravel si nécessaire, hydrate l'instance et exécute la directive.
+Exécuter une directive à partir d'un enregistrement d'exécution. Gère les commandes globales (`--help`, `--list`, `--version`), trouve la directive cible par signature, alias ou nom de base, parse les arguments, hydrate l'instance, exécute la directive et traite récursivement les appels enregistrés.
 
 ## Installation
 
@@ -28,7 +28,7 @@ composer require andydefer/laravel-directive
 
 ### `execute(DirectiveExecutionRecord $record): ExitCode`
 
-Exécute une directive à partir de l'enregistrement d'exécution.
+Exécute une directive à partir de l'enregistrement d'exécution. Cette méthode est récursive : elle exécute également tous les appels enregistrés par la directive.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
@@ -50,14 +50,6 @@ $record = new DirectiveExecutionRecord(
 
 $exitCode = $service->execute($record);
 ```
-
-### `setLaravelBootstrapper(?LaravelBootstrapper $bootstrapper): void`
-
-Définit le bootstrapper Laravel pour les directives qui en ont besoin.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$bootstrapper` | `LaravelBootstrapper|null` | Instance du bootstrapper |
 
 ## Cas d'utilisation
 
@@ -98,23 +90,54 @@ $record = new DirectiveExecutionRecord(
 $exitCode = $service->execute($record);
 ```
 
-### Cas 4 : Directive nécessitant Laravel
+### Cas 4 : Exécution d'une directive orchestratrice (Call System)
 
 ```php
-$bootstrapper = new LaravelBootstrapper();
-$service->setLaravelBootstrapper($bootstrapper);
+$arguments = new StringTypedCollection();
+$arguments->add('123');
 
 $record = new DirectiveExecutionRecord(
-    signature: 'db-migrate',
-    arguments: new StringTypedCollection()
+    signature: 'user-orchestrate',
+    arguments: $arguments
 );
 
+// La directive parente s'exécute, puis les appels sont exécutés récursivement
 $exitCode = $service->execute($record);
-// Laravel est bootstrappé automatiquement avant l'exécution
 ```
 
-## Flux d'exécution
-<img src="../graphics/directive_execution_run_flow.png" />
+## Flux d'exécution avec Call System
+
+```
+1. Appel de execute($record)
+   ↓
+2. Vérification des commandes globales (--help, --list, --version)
+   ↓
+3. Découverte et recherche de la directive
+   ↓
+4. Parsing des arguments
+   ↓
+5. Hydratation de la directive
+   ↓
+6. Exécution de la directive parente
+   ├── execute() → exécute la logique
+   ├── Enregistrement des appels via call()
+   └── Retour du résultat
+   ↓
+7. Récupération des appels via getCalls()
+   ↓
+8. Exécution récursive de chaque appel
+   ├── Pour chaque call : execute($call)
+   │   ├── Recherche de la directive enfant
+   │   ├── Parsing des arguments
+   │   ├── Hydratation
+   │   ├── Exécution de l'enfant
+   │   └── Traitement des appels de l'enfant
+   └── Fin de la boucle
+   ↓
+9. Rendu du résultat (succès/échec)
+   ↓
+10. Retour du code de sortie final
+```
 
 ## Gestion des erreurs
 
@@ -125,6 +148,7 @@ $exitCode = $service->execute($record);
 | Signature invalide | `InvalidArgumentException` | `ExitCode::INVALID_ARGUMENT` (4) |
 | Erreur générale | `\Throwable` | `ExitCode::FAILURE` (1) |
 | Échec de la directive | - | `ExitCode::FAILURE` (1) |
+| Appel vers directive inexistante | Ignoré (pas de rupture) | Continue l'exécution |
 
 ## Intégration
 
@@ -134,8 +158,8 @@ $exitCode = $service->execute($record);
 - **`DirectiveParserService`** : Parsing des arguments
 - **`DirectiveHydratorService`** : Hydratation des instances
 - **`DirectiveRendererService`** : Rendu des messages
-- **`LaravelBootstrapper`** : Bootstrap optionnel de Laravel
 - **`DirectiveExecutionRecord`** : Enregistrement d'entrée
+- **`AbstractDirective`** : Récupération des appels via `getCalls()`
 
 ## Performance
 
@@ -145,7 +169,7 @@ $exitCode = $service->execute($record);
 | Recherche de directive | O(n) avec n = nombre de directives |
 | Parsing | O(m) avec m = nombre d'arguments |
 | Hydratation | O(k) avec k = arguments + options |
-| Bootstrap Laravel | Une seule fois (si nécessaire) |
+| Exécution des appels | Récursive, dépend du nombre de calls |
 
 ## Compatibilité
 
@@ -156,7 +180,7 @@ $exitCode = $service->execute($record);
 | PHP 8.3+ | ✅ Complet |
 | Laravel 10+ | ✅ Optionnel |
 
-## Exemple complet
+## Exemple complet avec Call System
 
 ```php
 <?php
@@ -169,7 +193,6 @@ use AndyDefer\Directive\Services\DirectiveExecutionService;
 use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\LaravelBootstrapper;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 // 1. Créer les dépendances
@@ -177,7 +200,6 @@ $discovery = new DirectiveDiscoveryService($config, $hydrator);
 $parser = new DirectiveParserService();
 $hydrator = new DirectiveHydratorService($factory);
 $renderer = new DirectiveRendererService($renderDispatcher);
-$bootstrapper = new LaravelBootstrapper();
 
 // 2. Créer le service
 $service = new DirectiveExecutionService(
@@ -186,25 +208,57 @@ $service = new DirectiveExecutionService(
     hydrator: $hydrator,
     renderer: $renderer,
 );
-$service->setLaravelBootstrapper($bootstrapper);
 
-// 3. Préparer l'enregistrement d'exécution
+// 3. Exécuter une directive orchestratrice
 $arguments = new StringTypedCollection();
-$arguments->add('John Doe', '--role=admin', '--notify');
+$arguments->add('123');
 
 $record = new DirectiveExecutionRecord(
-    signature: 'user-create',
+    signature: 'user-orchestrate',
     arguments: $arguments,
 );
 
-// 4. Exécuter
+// 4. Exécution
+// La directive parente s'exécute, puis tous ses appels sont exécutés récursivement
 $exitCode = $service->execute($record);
 
 // 5. Vérifier le résultat
 if ($exitCode === ExitCode::SUCCESS) {
-    echo "Directive executed successfully\n";
+    echo "Orchestration completed successfully\n";
 } else {
-    echo "Directive failed with code: " . $exitCode->value . "\n";
+    echo "Orchestration failed with code: " . $exitCode->value . "\n";
+}
+```
+
+## Récursivité des appels
+
+`DirectiveExecutionService` gère la récursivité des appels de manière automatique :
+
+```php
+// Dans executeDirective()
+private function executeDirective(DirectiveMetadataRecord $metadata, DirectiveExecutionRecord $record): ExitCode
+{
+    // 1. Parser et hydrater la directive
+    $parsed = $this->parser->parse($metadata->signature, $record->arguments);
+    $directive = $this->hydrator->hydrate($metadata->class, $parsed);
+
+    // 2. Exécuter la directive parente
+    $result = $directive->run();
+
+    // 3. Récupérer et exécuter les appels enregistrés
+    $calls = $directive->getCalls();
+    foreach ($calls as $call) {
+        $this->execute($call); // ← Appel récursif
+    }
+
+    // 4. Rendre le résultat
+    if ($result === ExitCode::SUCCESS) {
+        $this->renderer->renderSuccess('Directive executed successfully');
+    } else {
+        $this->renderer->renderError('Directive execution failed');
+    }
+
+    return $result;
 }
 ```
 ---
