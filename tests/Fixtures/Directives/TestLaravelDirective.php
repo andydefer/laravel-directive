@@ -19,11 +19,6 @@ final class TestLaravelDirective extends AbstractDirective
         return 'Test directive that needs Laravel';
     }
 
-    public function shouldBootLaravel(): bool
-    {
-        return true;
-    }
-
     public function execute(): ExitCode
     {
         $this->info('Test Laravel directive executed');

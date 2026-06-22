@@ -41,10 +41,6 @@ use AndyDefer\Directive\Services\OptionParserService;
 use AndyDefer\Directive\Services\ParameterExtractorService;
 use AndyDefer\Directive\Services\ParameterOrderValidatorService;
 use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\Directive\Steps\BootstrapLaravelStep;
-use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
-use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
-use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
 use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;
 use AndyDefer\Directive\Strategies\OptionalArgumentStrategy;
 use AndyDefer\Directive\Strategies\OptionStrategy;
@@ -554,32 +550,6 @@ final class DirectiveServiceProviderTest extends OrchestraTestCase
             }
         }
         $this->assertTrue($hasStrategy, 'OptionStrategy not found in ParameterParserContext');
-    }
-
-    // ==================== Testing Steps Tests ====================
-
-    public function test_create_temp_directory_step_is_registered(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->app->bound(CreateTempDirectoryStep::class));
-    }
-
-    public function test_change_to_temp_directory_step_is_registered(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->app->bound(ChangeToTempDirectoryStep::class));
-    }
-
-    public function test_create_laravel_structure_step_is_registered(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->app->bound(CreateLaravelStructureStep::class));
-    }
-
-    public function test_bootstrap_laravel_step_is_registered(): void
-    {
-        $this->provider->register();
-        $this->assertTrue($this->app->bound(BootstrapLaravelStep::class));
     }
 
     // ==================== Kernel Tests ====================

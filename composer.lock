@@ -4,11 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ad42a70b80da2668e1245ae125a55cc3",
+    "content-hash": "c8f30a8c7a09ce426b858ed029260164",
     "packages": [
         {
             "name": "andydefer/domain-structures",
-            "version": "v1.19.0",
+            "version": "v1.19.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/domain-structures.git",
@@ -53,22 +53,22 @@
             "description": "A complete domain structures package for PHP: Records, Value Objects, Data DTOs, and TypedCollections. Brings type safety and clean architecture to your application.",
             "support": {
                 "issues": "https://github.com/andydefer/domain-structures/issues",
-                "source": "https://github.com/andydefer/domain-structures/tree/v1.19.0"
+                "source": "https://github.com/andydefer/domain-structures/tree/v1.19.1"
             },
             "time": "2026-06-16T14:37:01+00:00"
         },
         {
             "name": "andydefer/php-services",
-            "version": "v1.1.0",
+            "version": "v1.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/php-services.git",
-                "reference": "1688d8dd998b5d6a04b00ae457601c972e9ed325"
+                "reference": "a8d73e8fcad39b2487da778799bed5950fbb4d5b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/php-services/zipball/1688d8dd998b5d6a04b00ae457601c972e9ed325",
-                "reference": "1688d8dd998b5d6a04b00ae457601c972e9ed325",
+                "url": "https://api.github.com/repos/andydefer/php-services/zipball/a8d73e8fcad39b2487da778799bed5950fbb4d5b",
+                "reference": "a8d73e8fcad39b2487da778799bed5950fbb4d5b",
                 "shasum": ""
             },
             "require": {
@@ -102,22 +102,22 @@
             "description": "Collection of reusable services for PHP and Laravel applications including model transformation, caching, and common business logic",
             "support": {
                 "issues": "https://github.com/andydefer/php-services/issues",
-                "source": "https://github.com/andydefer/php-services/tree/v1.1.0"
+                "source": "https://github.com/andydefer/php-services/tree/v1.1.1"
             },
-            "time": "2026-06-17T09:24:33+00:00"
+            "time": "2026-06-17T12:59:40+00:00"
         },
         {
             "name": "andydefer/php-signature-parser",
-            "version": "v0.2.0",
+            "version": "v0.2.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/andydefer/andydefer-php-signature-parser.git",
-                "reference": "7c2cf4653a37a8c67a1ec670808540c24b077f3a"
+                "url": "https://github.com/andydefer/php-signature-parser.git",
+                "reference": "9e99c918e5b6ed03fa207d01a76f6ae445dc6a9a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/andydefer-php-signature-parser/zipball/7c2cf4653a37a8c67a1ec670808540c24b077f3a",
-                "reference": "7c2cf4653a37a8c67a1ec670808540c24b077f3a",
+                "url": "https://api.github.com/repos/andydefer/php-signature-parser/zipball/9e99c918e5b6ed03fa207d01a76f6ae445dc6a9a",
+                "reference": "9e99c918e5b6ed03fa207d01a76f6ae445dc6a9a",
                 "shasum": ""
             },
             "require": {
@@ -149,9 +149,9 @@
             "description": "A flexible signature parser for CLI commands",
             "support": {
                 "issues": "https://github.com/andydefer/andydefer-php-signature-parser/issues",
-                "source": "https://github.com/andydefer/andydefer-php-signature-parser/tree/v0.2.0"
+                "source": "https://github.com/andydefer/andydefer-php-signature-parser/tree/v0.2.1"
             },
-            "time": "2026-06-18T13:16:19+00:00"
+            "time": "2026-06-18T13:29:35+00:00"
         },
         {
             "name": "andydefer/php-vo",

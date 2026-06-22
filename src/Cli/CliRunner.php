@@ -29,28 +29,22 @@ use AndyDefer\Directive\Strategies\HelpExecutionStrategy;
 use AndyDefer\Directive\Strategies\ListExecutionStrategy;
 use AndyDefer\Directive\Strategies\VersionExecutionStrategy;
 use AndyDefer\DomainStructures\Services\HydrationService;
-use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
 
 final class CliRunner
 {
-    private Container $container;
-
     private string $directivesPath;
 
-    private ?Application $application;
-
-    public function __construct(?Application $application = null)
-    {
-        $this->container = new Container;
-        $this->application = $application;
-        $this->directivesPath = $this->resolveDirectivesPath();
+    public function __construct(
+        private readonly Application $application,
+        ?string $directivesPath = null,
+    ) {
+        $this->directivesPath = $directivesPath ?? $this->resolveDirectivesPath();
         putenv("DIRECTIVE_PATH={$this->directivesPath}");
     }
 
     public function run(array $argv): int
     {
-        $this->registerBaseServices();
         $kernel = $this->buildKernel();
 
         return $kernel->run($argv)->value;
@@ -73,31 +67,21 @@ final class CliRunner
         return $candidates[0];
     }
 
-    private function registerBaseServices(): void
-    {
-        $this->container->singleton(RenderDispatcher::class, fn () => new RenderDispatcher);
-        $this->container->singleton(InputDispatcher::class, fn () => new InputDispatcher);
-        $this->container->singleton(DirectiveDiscoveryContext::class, fn () => new DirectiveDiscoveryContext);
-        $this->container->singleton(
-            SignatureValidationService::class,
-            fn () => new SignatureValidationService(new EnvSignatureValidationConfig)
-        );
-        $this->container->singleton(
-            DirectiveInteractionService::class,
-            fn ($c) => new DirectiveInteractionService(
-                $c->make(RenderDispatcher::class),
-                $c->make(InputDispatcher::class),
-            )
-        );
-    }
-
     private function buildKernel(): DirectiveKernel
     {
         $config = new EnvDirectiveConfig;
         $parser = new DirectiveParserService;
-        $discoveryContext = $this->container->make(DirectiveDiscoveryContext::class);
-        $interaction = $this->container->make(DirectiveInteractionService::class);
-        $renderDispatcher = $this->container->make(RenderDispatcher::class);
+        $renderDispatcher = new RenderDispatcher;
+        $inputDispatcher = new InputDispatcher;
+
+        // Interaction
+        $interaction = new DirectiveInteractionService(
+            renderDispatcher: $renderDispatcher,
+            inputDispatcher: $inputDispatcher,
+        );
+
+        // Discovery Context
+        $discoveryContext = new DirectiveDiscoveryContext;
 
         // Hydrator
         $hydrator = new DirectiveHydratorService(
@@ -122,6 +106,9 @@ final class CliRunner
         // Renderer
         $renderer = new DirectiveRendererService($renderDispatcher);
 
+        // Validator
+        $validator = new SignatureValidationService(new EnvSignatureValidationConfig);
+
         // Container Service pour les stratégies
         $containerService = new ContainerService;
 
@@ -144,9 +131,6 @@ final class CliRunner
             renderer: $renderer,
             container: $containerService,
         );
-
-        // Validator
-        $validator = $this->container->make(SignatureValidationService::class);
 
         // Hydration
         $hydration = new HydrationService;

@@ -134,7 +134,6 @@ final class InvalidDirective implements DirectiveInterface
     public function setOptions($options) { return $this; }
     public function option(string $key): bool|string|null { return null; }
     public function hasOption(string $key): bool { return false; }
-    public function shouldBootLaravel(): bool { return false; }
     public function hasLaravel(): bool { return false; }
     public function getLaravel(): ?object { return null; }
     public function setLaravelBootstrapper($bootstrapper) { return $this; }

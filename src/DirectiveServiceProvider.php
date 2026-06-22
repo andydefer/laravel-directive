@@ -49,10 +49,6 @@ use AndyDefer\Directive\Services\StringCaseConverterService;
 use AndyDefer\Directive\Sources\CompositeDiscoverySource;
 use AndyDefer\Directive\Sources\ProjectDiscoverySource;
 use AndyDefer\Directive\Sources\VendorDiscoverySource;
-use AndyDefer\Directive\Steps\BootstrapLaravelStep;
-use AndyDefer\Directive\Steps\ChangeToTempDirectoryStep;
-use AndyDefer\Directive\Steps\CreateLaravelStructureStep;
-use AndyDefer\Directive\Steps\CreateTempDirectoryStep;
 use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;
 use AndyDefer\Directive\Strategies\DirectiveExecutionStrategy;
 use AndyDefer\Directive\Strategies\HelpExecutionStrategy;
@@ -80,7 +76,6 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->registerExecutionServices();
         $this->registerCoreServices();
         $this->registerDispatchers();
-        $this->registerTestingSteps();
     }
 
     public function boot(): void
@@ -277,13 +272,5 @@ final class DirectiveServiceProvider extends ServiceProvider
     {
         $this->app->singleton(RenderDispatcher::class, fn () => new RenderDispatcher);
         $this->app->singleton(InputDispatcher::class, fn () => new InputDispatcher);
-    }
-
-    private function registerTestingSteps(): void
-    {
-        $this->app->singleton(CreateTempDirectoryStep::class, fn () => new CreateTempDirectoryStep);
-        $this->app->singleton(ChangeToTempDirectoryStep::class, fn () => new ChangeToTempDirectoryStep);
-        $this->app->singleton(CreateLaravelStructureStep::class, fn () => new CreateLaravelStructureStep);
-        $this->app->singleton(BootstrapLaravelStep::class, fn () => new BootstrapLaravelStep);
     }
 }

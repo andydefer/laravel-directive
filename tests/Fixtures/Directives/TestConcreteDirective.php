@@ -14,11 +14,6 @@ class TestConcreteDirective extends AbstractDirective
         return 'test-concrete';
     }
 
-    public function shouldBootLaravel(): bool
-    {
-        return true;
-    }
-
     public function getDescription(): string
     {
         return 'Test concrete directive for AbstractDirective tests';

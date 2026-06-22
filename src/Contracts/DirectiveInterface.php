@@ -33,8 +33,6 @@ interface DirectiveInterface
 
     public function hasVariadicArguments(): bool;
 
-    public function shouldBootLaravel(): bool;
-
     public function hasLaravel(): bool;
 
     public function getLaravel(): ?object;

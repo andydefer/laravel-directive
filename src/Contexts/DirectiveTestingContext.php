@@ -113,11 +113,6 @@ final class DirectiveTestingContext
         return $this->laravelBootstrapperContext;
     }
 
-    public function shouldBootLaravel(): bool
-    {
-        return $this->bootLaravel;
-    }
-
     public function getContainer(): ?Container
     {
         return $this->container;

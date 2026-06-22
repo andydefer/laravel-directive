@@ -34,11 +34,6 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->context->getAliases();
     }
 
-    public function shouldBootLaravel(): bool
-    {
-        return false;
-    }
-
     final public function hasLaravel(): bool
     {
         return $this->context->hasLaravel();

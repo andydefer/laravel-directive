@@ -25,12 +25,6 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
         return 'Test directive that requires Laravel and database access';
     }
 
-    // Réactiver le bootstrap
-    public function shouldBootLaravel(): bool
-    {
-        return true;  // ← Remis à true
-    }
-
     public function execute(): ExitCode
     {
         $this->info('Testing Laravel database integration...');

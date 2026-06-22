@@ -3,36 +3,17 @@
 
 declare(strict_types=1);
 
-// ==================== Environment Loading ====================
+use AndyDefer\Directive\Bootstrap\CliBootstrap;
+use AndyDefer\Directive\Exceptions\BootstrapException;
 
-$envFile = getcwd() . '/.env';
-if (file_exists($envFile)) {
-    $lines = file($envFile);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if ($line !== '' && !str_starts_with($line, '#')) {
-            putenv($line);
-        }
-    }
+try {
+    $bootstrap = CliBootstrap::create();
+    exit($bootstrap->run($argv));
+} catch (BootstrapException $e) {
+    fwrite(STDERR, "ERROR: {$e->getMessage()}\n");
+    exit(2);
+} catch (\Throwable $e) {
+    fwrite(STDERR, "FATAL: {$e->getMessage()}\n");
+    fwrite(STDERR, $e->getTraceAsString() . "\n");
+    exit(255);
 }
-
-// ==================== Autoloader Loading ====================
-
-$projectAutoload = getcwd() . '/vendor/autoload.php';
-if (!file_exists($projectAutoload)) {
-    fwrite(STDERR, "ERROR: Autoloader not found. Run 'composer install' first.\n");
-    exit(1);
-}
-require_once $projectAutoload;
-
-$packageAutoload = __DIR__ . '/../vendor/autoload.php';
-if (file_exists($packageAutoload) && $packageAutoload !== $projectAutoload) {
-    require_once $packageAutoload;
-}
-
-// ==================== Run ====================
-
-use AndyDefer\Directive\Cli\CliRunner;
-
-$runner = new CliRunner();
-exit($runner->run($argv));
