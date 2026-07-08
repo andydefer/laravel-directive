@@ -6,10 +6,21 @@ namespace AndyDefer\Directive\Contracts\Configs;
 
 interface DirectiveConfigInterface
 {
-    /**
-     * Get the path where directive classes are located.
-     *
-     * @return string Absolute path to the directives directory
-     */
-    public function directivesPath(): string;
+    public function basePath(): string;
+
+    public function getDirectories(): array;
+
+    public function getReservedSignatures(): array;
+
+    public function getVendorDir(): string;
+
+    public function getComposerPath(): string;
+
+    public function isDebug(): bool;
+
+    public function getMaxDepth(): int;
+
+    public function getCustomSources(): array;
+
+    public function setReservedSignatures(array $signatures): void;
 }

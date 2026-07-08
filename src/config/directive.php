@@ -1,16 +1,33 @@
 <?php
 
-declare(strict_types=1);
-
 return [
     /*
     |--------------------------------------------------------------------------
-    | Directives Path
+    | Debug Mode
     |--------------------------------------------------------------------------
     |
-    | This option defines where your directive classes are located. The directive
-    | system will automatically discover all directives in this directory.
+    | When enabled, shows debug information in the console.
     |
     */
-    'path' => getcwd().'/app/Directives',
+    'debug' => env('DIRECTIVE_DEBUG', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Max Depth
+    |--------------------------------------------------------------------------
+    |
+    | Maximum depth for recursive directory scanning.
+    |
+    */
+    'max_depth' => env('DIRECTIVE_MAX_DEPTH', 3),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom Sources
+    |--------------------------------------------------------------------------
+    |
+    | Additional directories to scan for directives.
+    |
+    */
+    'custom_sources' => [],
 ];

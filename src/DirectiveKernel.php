@@ -5,108 +5,58 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Enums\ShortOption;
-use AndyDefer\Directive\Records\DirectiveExecutionRecord;
-use AndyDefer\Directive\Services\DirectiveExecutionService;
-use AndyDefer\Directive\Services\DirectiveRendererService;
-use AndyDefer\Directive\Services\SignatureValidationService;
-use AndyDefer\DomainStructures\Services\HydrationService;
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Services\DirectiveHydratorService;
 
-/**
- * Core kernel that orchestrates directive execution from CLI.
- *
- * The DirectiveKernel is the main entry point for the CLI application.
- * It parses raw command-line arguments, validates directive signatures,
- * and delegates execution to the DirectiveExecutionService.
- *
- * @example
- * $kernel = new DirectiveKernel($executionService, $validator, $renderer);
- * $exit_code = $kernel->run(['directive', 'user:create', 'John']);
- *
- * @author Andy Defer
- */
 final class DirectiveKernel
 {
     public function __construct(
-        private readonly DirectiveExecutionService $service,
-        private readonly SignatureValidationService $signatureValidator,
-        private readonly DirectiveRendererService $renderer,
-        private readonly HydrationService $hydration
+        private readonly DirectiveDiscoveryService $discovery,
+        private readonly DirectiveHydratorService $hydrator,
     ) {}
 
-    /**
-     * Runs the kernel with the given command-line arguments.
-     *
-     * This method parses the arguments, determines which directive to execute,
-     * and returns the appropriate exit code.
-     *
-     * @param  array<int, string>  $argv  Command-line arguments (e.g., ['directive', 'user:create', 'John'])
-     * @return ExitCode The exit code indicating success or failure
-     */
     public function run(array $argv): ExitCode
     {
         if (count($argv) < 2) {
-            return $this->showDefaultHelp();
+            return $this->executeDirective('help', 'help');
         }
 
-        $signature = $argv[1];
+        $query = implode(' ', array_slice($argv, 1));
 
-        if ($this->isGlobalOption($signature)) {
-            return $this->executeDirective($signature, []);
+        $parts = explode(' ', $query);
+        $commandName = $parts[0];
+
+        return $this->executeDirective($commandName, $query);
+    }
+
+    private function executeDirective(string $commandName, string $query): ExitCode
+    {
+        $directives = $this->discovery->discover();
+
+        $directive = null;
+        foreach ($directives as $d) {
+            $signatureParts = explode(' ', $d->signature);
+            $directiveName = $signatureParts[0];
+
+            if ($directiveName === $commandName) {
+                $directive = $d;
+                break;
+            }
+
+            foreach ($d->aliases as $alias) {
+                if ($alias === $commandName) {
+                    $directive = $d;
+                    break 2;
+                }
+            }
         }
 
-        $validation = $this->signatureValidator->validate($signature);
-
-        if (! $validation->isValid) {
-            $this->renderer->renderValidationError($validation);
-
-            return ExitCode::INVALID_ARGUMENT;
+        if ($directive === null) {
+            return ExitCode::NOT_FOUND;
         }
 
-        $arguments = array_slice($argv, 2);
+        $instance = $this->hydrator->hydrate($directive->class, $query);
 
-        return $this->executeDirective($signature, $arguments);
-    }
-
-    /**
-     * Checks if the signature is a global CLI option.
-     *
-     * Global options include:
-     * - Long options starting with '--' (--help, --list, --version)
-     * - Short options (-h, -l, -v)
-     *
-     * @param  string  $signature  The directive signature or option
-     * @return bool True if the signature is a global option
-     */
-    private function isGlobalOption(string $signature): bool
-    {
-        return str_starts_with($signature, '--') || ShortOption::isValid($signature);
-    }
-
-    /**
-     * Executes a directive with the given signature and arguments.
-     *
-     * @param  string  $signature  The directive signature (e.g., 'user:create')
-     * @param  array<int, string>  $arguments  The list of arguments to pass to the directive
-     * @return ExitCode The exit code from the directive execution
-     */
-    private function executeDirective(string $signature, array $arguments): ExitCode
-    {
-        $record = $this->hydration->hydrate(DirectiveExecutionRecord::class, [
-            'signature' => $signature,
-            'arguments' => $arguments,
-        ]);
-
-        return $this->service->execute($record);
-    }
-
-    /**
-     * Shows the default help screen when no arguments are provided.
-     *
-     * @return ExitCode Always returns SUCCESS after showing help
-     */
-    private function showDefaultHelp(): ExitCode
-    {
-        return $this->executeDirective('--help', []);
+        return $instance->run();
     }
 }

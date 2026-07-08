@@ -11,15 +11,15 @@ class TestConcreteDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-concrete';
+        return 'test-concrete {name} {email} {format=zip} {files*} {--force} {--verbose}';
     }
 
     public function getDescription(): string
     {
-        return 'Test concrete directive for AbstractDirective tests';
+        return 'Test concrete directive for testing purposes';
     }
 
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         return ExitCode::SUCCESS;
     }

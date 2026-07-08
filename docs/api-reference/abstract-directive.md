@@ -2,53 +2,28 @@
 
 ## Description
 
-Classe abstraite de base pour toutes les directives CLI. Fournit la gestion des arguments et options, les méthodes d'interaction utilisateur, l'affichage de tableaux, le bootstrap optionnel de Laravel et un **système de composition permettant d'appeler d'autres directives**.
+Classe abstraite de base pour toutes les directives CLI. Fournit l'accès aux arguments parsés, aux options, aux variadiques, à la console et aux hooks d'exécution.
 
-## Hiérarchie
+## Hiérarchie / Implémentations
 
 ```
 DirectiveInterface
-    └── AbstractDirective (abstract)
-            └── Toutes les directives concrètes
+    └── AbstractDirective
+            ├── HelpDirective
+            ├── ListDirective
+            ├── VersionDirective
+            └── [Vos directives personnalisées]
 ```
 
 ## Rôle principal
 
-Servir de fondation pour toutes les directives CLI. Encapsule la logique commune de gestion des arguments, des options, des interactions utilisateur et du bootstrap Laravel. Chaque directive concrète doit implémenter `getSignature()`, `getDescription()` et `execute()`.
+`AbstractDirective` est le socle de toutes les directives. Il :
 
-## Système de composition (Call System)
-
-Le système de composition permet à une directive d'appeler d'autres directives, créant ainsi des **directives orchestres** capables de composer des fonctionnalités complexes.
-
-### Fonctionnement
-
-```php
-protected function execute(): ExitCode
-{
-    // Appel avec un tableau (conversion automatique vers DirectiveExecutionRecord)
-    $this->call(['calc', ['add', '10', '5']]);
-
-    // Appel avec un objet DirectiveExecutionRecord
-    $args = new StringTypedCollection();
-    $args->add('John');
-    $this->call(new DirectiveExecutionRecord('greeting', $args));
-
-    return ExitCode::SUCCESS;
-}
-```
-
-### Cycle de vie des appels
-
-1. **Enregistrement** : `call()` enregistre l'appel dans le tableau `$calls`
-2. **Exécution parente** : La directive parente s'exécute complètement
-3. **Exécution enfants** : Les appels enregistrés sont exécutés récursivement après la fin du parent
-
-### Avantages
-
-- **Réutilisabilité** : Composer des fonctionnalités sans duplication de code
-- **Orchestration** : Créer des workflows complexes
-- **Modularité** : Chaque directive reste simple et focalisée
-- **Testabilité** : Les appels peuvent être inspectés via `getCalls()`
+- Parse automatiquement la signature et la requête via `DirectiveParserService`
+- Fournit des méthodes d'accès aux arguments et options
+- Gère les appels à d'autres directives (`call()`)
+- Propose des hooks d'exécution (`beforeExecute()`, `afterExecute()`)
+- Délègue les sorties console à `Console`
 
 ## Installation
 
@@ -56,267 +31,237 @@ protected function execute(): ExitCode
 composer require andydefer/laravel-directive
 ```
 
+### Prérequis
+
+- Laravel 10.x, 11.x, 12.x
+- PHP 8.1+
+
 ## API / Méthodes publiques
 
-### `__construct(DirectiveContext $context, DirectiveInteractionService $interaction): void`
-
-> **⚠️ NOTE : Ce constructeur est `final`.** Vous ne pouvez pas le surcharger. Pour injecter des dépendances, utilisez `getLaravel()` et le conteneur.
+### `__construct(Application $app, string $query)`
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$context` | `DirectiveContext` | Contexte de la directive contenant blueprint, aliases, arguments, options |
-| `$interaction` | `DirectiveInteractionService` | Service d'interaction pour les sorties utilisateur |
+| `$app` | `Application` | Instance de l'application Laravel |
+| `$query` | `string` | La commande complète (ex: `user:create John john@example.com`) |
 
-Constructeur final de la directive. Reçoit le contexte et le service d'interaction.
+**Retourne :** `void`
 
-**Exemple :**
-```php
-class MyDirective extends AbstractDirective
-{
-    // Le constructeur est final, ne pas le surcharger
-    // Utiliser getLaravel() pour accéder aux services
-
-    protected function execute(): ExitCode
-    {
-        $app = $this->getLaravel();
-        $service = $app->make(MyService::class);
-        // ...
-    }
-}
-```
-
-### `getBlueprint(): DirectiveBlueprintRecord`
-
-Retourne l'enregistrement blueprint contenant les métadonnées de la directive.
-
-**Retourne :** `DirectiveBlueprintRecord` - Enregistrement avec classe, signature et description
+**Exceptions :** Aucune
 
 **Exemple :**
 ```php
-$blueprint = $directive->getBlueprint();
-// $blueprint->class = 'App\Directives\UserListDirective'
-// $blueprint->signature = 'user-list'
-// $blueprint->description = 'List all users'
+$directive = new MyDirective($app, 'user:create John john@example.com');
 ```
 
-### `getAliases(): StringTypedCollection`
+---
 
-Retourne les alias de la directive (noms alternatifs pour l'invoquer).
+### `getLaravel(): Application`
 
-**Retourne :** `StringTypedCollection` - Collection des alias
+Retourne l'instance de l'application Laravel.
+
+**Retourne :** `Application`
 
 **Exemple :**
 ```php
-public function getAliases(): StringTypedCollection
-{
-    $aliases = new StringTypedCollection();
-    $aliases->add('users');
-    $aliases->add('list-users');
-    return $aliases;
-}
+$app = $directive->getLaravel();
+$config = $app->make(Config::class);
 ```
 
-### `shouldBootLaravel(): bool`
+---
 
-Détermine si Laravel doit être bootstrapé avant l'exécution.
+### `getConsole(): Console`
 
-**Retourne :** `bool` - `true` si Laravel est requis, `false` par défaut
+Retourne l'instance de la console pour les sorties.
+
+**Retourne :** `Console`
 
 **Exemple :**
 ```php
-public function shouldBootLaravel(): bool
-{
-    return true; // Besoin des services Laravel
-}
+$console = $directive->getConsole();
+$console->info('Message');
 ```
 
-### `hasLaravel(): bool`
+---
 
-Vérifie si Laravel a été bootstrapé et est disponible.
+### `getParsed(): ParsedSignatureRecord`
 
-**Retourne :** `bool` - `true` si Laravel est disponible
+Retourne la structure parsée de la signature et de la requête.
+
+**Retourne :** `ParsedSignatureRecord`
 
 **Exemple :**
 ```php
-if (!$this->hasLaravel()) {
-    $this->error('Laravel is not available!');
-    return ExitCode::FAILURE;
-}
+$parsed = $directive->getParsed();
+$source = $parsed->source; // 'user:create'
 ```
 
-### `getLaravel(): object`
+---
 
-Retourne l'instance de l'application Laravel. Utilisez cette méthode pour accéder aux services.
+### `argument(string $key): mixed`
 
-**Retourne :** `object` - L'application Laravel
-
-**Exemple :**
-```php
-$app = $this->getLaravel();
-$service = $app->make(MyService::class);
-$config = $app->make('config');
-```
-
-### `argument(string $key): ?string`
-
-Retourne la valeur d'un argument par sa clé. Retourne `null` si l'argument n'existe pas, est vide ou est un booléen.
+Retourne la valeur d'un argument (requis ou par défaut).
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$key` | `string` | Nom de l'argument |
 
-**Retourne :** `string|null` - Valeur de l'argument ou `null`
+**Retourne :** `mixed` - La valeur de l'argument ou `null`
 
 **Exemple :**
 ```php
-$name = $this->argument('name'); // 'John Doe'
+$name = $directive->argument('name'); // 'John'
+$format = $directive->argument('format'); // 'zip' (valeur par défaut)
 ```
+
+---
 
 ### `hasArgument(string $key): bool`
 
-Vérifie si un argument existe et a une valeur non vide.
+Vérifie si un argument existe (requis ou par défaut).
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$key` | `string` | Nom de l'argument |
 
-**Retourne :** `bool` - `true` si l'argument existe et a une valeur non vide
+**Retourne :** `bool`
 
-### `option(string $key): bool|string|null`
+**Exemple :**
+```php
+if ($directive->hasArgument('name')) {
+    $name = $directive->argument('name');
+}
+```
 
-Retourne la valeur d'une option par sa clé. Retourne `bool` pour les flags (`--force`), `string` pour les options avec valeur (`--role=admin`), `null` si non fournie.
+---
+
+### `option(string $key): bool`
+
+Retourne la valeur d'une option (flag).
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$key` | `string` | Nom de l'option |
 
-**Retourne :** `bool|string|null` - Valeur de l'option
+**Retourne :** `bool` - `true` si l'option est active
 
 **Exemple :**
 ```php
-$force = $this->option('force');   // true si --force présent
-$role = $this->option('role');     // 'admin' si --role=admin
+if ($directive->option('force')) {
+    echo "Force mode enabled";
+}
 ```
+
+---
 
 ### `hasOption(string $key): bool`
 
-Vérifie si une option existe et a une valeur non vide.
+Vérifie si une option est active.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$key` | `string` | Nom de l'option |
 
-**Retourne :** `bool` - `true` si l'option existe et a une valeur non vide
+**Retourne :** `bool`
+
+**Exemple :**
+```php
+if ($directive->hasOption('verbose')) {
+    $this->info('Verbose mode');
+}
+```
+
+---
 
 ### `getVariadicArguments(): StringTypedCollection`
 
-Retourne la collection des arguments variadiques.
+Retourne tous les arguments variadiques.
 
-**Retourne :** `StringTypedCollection` - Arguments variadiques
+**Retourne :** `StringTypedCollection`
 
 **Exemple :**
 ```php
-foreach ($this->getVariadicArguments() as $file) {
-    $this->line("Processing: {$file}");
+$files = $directive->getVariadicArguments();
+foreach ($files as $file) {
+    echo "Processing: $file\n";
 }
 ```
+
+---
 
 ### `hasVariadicArguments(): bool`
 
-Vérifie si des arguments variadiques sont présents.
+Vérifie s'il y a des arguments variadiques.
 
-**Retourne :** `bool` - `true` s'il y a des arguments variadiques
-
-### `call(array|DirectiveExecutionRecord $record): void`
-
-Enregistre un appel vers une autre directive. Accepte soit un tableau, soit un objet `DirectiveExecutionRecord`. L'appel sera exécuté après la fin de la directive parente.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$record` | `array|DirectiveExecutionRecord` | Enregistrement de l'exécution (signature + arguments) ou tableau [signature, arguments] |
+**Retourne :** `bool`
 
 **Exemple :**
 ```php
-// Avec un tableau (conversion automatique)
-$this->call(['calc', ['add', '10', '5']]);
-
-// Avec un objet DirectiveExecutionRecord
-$args = new StringTypedCollection();
-$args->add('John');
-$this->call(new DirectiveExecutionRecord('greeting', $args));
-```
-
-### `getCalls(): array`
-
-Retourne la liste des appels enregistrés par cette directive.
-
-**Retourne :** `array<DirectiveExecutionRecord>` - Liste des appels
-
-**Exemple :**
-```php
-$calls = $directive->getCalls();
-foreach ($calls as $call) {
-    echo $call->signature;
+if ($directive->hasVariadicArguments()) {
+    $files = $directive->getVariadicArguments();
 }
 ```
 
-### `run(): ExitCode`
-
-Point d'entrée public de la directive. Exécute la logique de la directive via `execute()`.
-
-**Retourne :** `ExitCode` - Code de sortie
-
-**Exemple :**
-```php
-$exitCode = $directive->run();
-```
+---
 
 ### `line(string $message): void`
 
-Affiche un message texte brut.
+Affiche une ligne simple.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$message` | `string` | Message à afficher |
+
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-$this->line('Processing users...');
+$directive->line('Hello World');
 ```
+
+---
 
 ### `info(string $message): void`
 
-Affiche un message d'information (généralement en vert).
+Affiche un message d'information (bleu).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$message` | `string` | Message à afficher |
+
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-$this->info('Operation completed successfully!');
+$directive->info('Loading...');
 ```
+
+---
 
 ### `error(string $message): void`
 
-Affiche un message d'erreur (généralement en rouge).
+Affiche un message d'erreur (rouge).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$message` | `string` | Message à afficher |
+
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-$this->error('Failed to connect to database.');
+$directive->error('Operation failed');
 ```
 
-### `warn(string $message): void`
-
-Affiche un message d'avertissement (généralement en jaune).
-
-**Exemple :**
-```php
-$this->warn('This operation may take a while.');
-```
+---
 
 ### `newLine(): void`
 
-Affiche une ligne vide.
+Affiche une nouvelle ligne.
 
-**Exemple :**
-```php
-$this->line('First line');
-$this->newLine();
-$this->line('After a blank line');
-```
+**Retourne :** `void`
+
+---
 
 ### `separator(string $character = '-', int $length = 80): void`
 
@@ -324,325 +269,419 @@ Affiche une ligne de séparation.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$character` | `string` | Caractère de séparation (défaut: '-') |
-| `$length` | `int` | Longueur de la ligne (défaut: 80) |
+| `$character` | `string` | Caractère de séparation |
+| `$length` | `int` | Longueur de la ligne |
+
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-$this->separator('=', 100);
-$this->line('Section Title');
-$this->separator();
+$directive->separator('=', 50);
 ```
+
+---
 
 ### `ask(string $question): string`
 
-Pose une question et retourne la réponse de l'utilisateur.
+Demande une saisie utilisateur.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$question` | `string` | La question à poser |
+| `$question` | `string` | Question à poser |
 
-**Retourne :** `string` - La réponse saisie
+**Retourne :** `string` - Réponse de l'utilisateur
 
 **Exemple :**
 ```php
-$name = $this->ask('What is your name?');
+$name = $directive->ask('What is your name?');
 ```
+
+---
 
 ### `confirm(string $question): bool`
 
-Demande une confirmation et retourne le choix de l'utilisateur.
+Demande une confirmation Oui/Non.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$question` | `string` | La question de confirmation |
+| `$question` | `string` | Question à poser |
 
-**Retourne :** `bool` - `true` si l'utilisateur confirme (y/yes)
+**Retourne :** `bool` - `true` si confirmé
 
 **Exemple :**
 ```php
-if ($this->confirm('Do you want to continue?')) {
-    // Continuer
+if ($directive->confirm('Continue?')) {
+    // ...
 }
 ```
 
-### `table(StringTypedCollection $headers, RowCollection $rows): void`
+---
 
-Affiche un tableau formaté avec en-têtes et lignes.
+### `table(ListCollection|array $headers, ListCollection|array $rows): void`
+
+Affiche un tableau formaté.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$headers` | `StringTypedCollection` | Les en-têtes du tableau |
-| `$rows` | `RowCollection` | Les lignes du tableau |
+| `$headers` | `ListCollection\|array` | En-têtes du tableau |
+| `$rows` | `ListCollection\|array` | Lignes du tableau |
+
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-$headers = new StringTypedCollection();
-$headers->add('ID', 'Name', 'Email');
-
-$rows = new RowCollection();
-$row = new RowCollection();
-$row->add(1, 'John Doe', 'john@example.com');
-$rows->add($row);
-
-$this->table($headers, $rows);
+$directive->table(
+    ['Name', 'Email'],
+    [
+        ['John', 'john@example.com'],
+        ['Jane', 'jane@example.com'],
+    ]
+);
 ```
+
+---
+
+### `call(string $query): void`
+
+Appelle une autre directive.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$query` | `string` | Commande à exécuter |
+
+**Retourne :** `void`
+
+**Exemple :**
+```php
+$this->call('list');
+$this->call('backup /var/www /backup --force');
+```
+
+---
+
+### `getCalls(): array`
+
+Retourne tous les appels enregistrés.
+
+**Retourne :** `array<DirectiveCallRecord>`
+
+**Exemple :**
+```php
+$calls = $directive->getCalls();
+foreach ($calls as $call) {
+    echo $call->query;
+}
+```
+
+---
+
+### `run(): ExitCode`
+
+Exécute la directive avec les hooks `beforeExecute()` et `afterExecute()`.
+
+**Retourne :** `ExitCode` - Code de sortie
+
+**Exceptions :** `Throwable` - Les exceptions sont capturées et retournent `ExitCode::RUNTIME_ERROR`
+
+**Exemple :**
+```php
+$exitCode = $directive->run(); // ExitCode::SUCCESS
+```
+
+---
+
+### `getAliases(): StringTypedCollection`
+
+Retourne les alias de la directive.
+
+**Retourne :** `StringTypedCollection`
+
+**Exemple :**
+```php
+$aliases = $directive->getAliases(); // ['ls', '-l']
+```
+
+---
+
+### `getSignature(): string` (abstract)
+
+Retourne la signature de la directive.
+
+**Retourne :** `string`
+
+**Exemple :**
+```php
+public function getSignature(): string
+{
+    return 'user:create {name} {email} {--force}';
+}
+```
+
+---
+
+### `execute(): ExitCode` (abstract)
+
+Contient la logique métier de la directive.
+
+**Retourne :** `ExitCode`
+
+**Exemple :**
+```php
+protected function execute(): ExitCode
+{
+    $name = $this->argument('name');
+    $this->info("Hello $name");
+    return ExitCode::SUCCESS;
+}
+```
+
+---
+
+## Hooks
+
+### `beforeExecute(): void`
+
+Exécuté avant `execute()`. Utile pour les validations.
+
+**Retourne :** `void`
+
+**Exceptions :** `Throwable` - Si une exception est levée, la directive s'arrête et retourne `ExitCode::RUNTIME_ERROR`
+
+**Exemple :**
+```php
+protected function beforeExecute(): void
+{
+    $source = $this->argument('source');
+    if (!is_dir($source)) {
+        throw new \RuntimeException("Source directory not found: $source");
+    }
+}
+```
+
+---
+
+### `afterExecute(ExitCode $exitCode): void`
+
+Exécuté après `execute()`. Utile pour le nettoyage ou le logging.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$exitCode` | `ExitCode` | Code de sortie de la directive |
+
+**Retourne :** `void`
+
+**Exceptions :** Les exceptions sont capturées et affichées en erreur
+
+**Exemple :**
+```php
+protected function afterExecute(ExitCode $exitCode): void
+{
+    if ($exitCode->isSuccess()) {
+        $this->info('Operation completed successfully');
+    } else {
+        $this->error('Operation failed');
+    }
+}
+```
+
+---
 
 ## Cas d'utilisation
 
-### Cas 1 : Directive avec arguments et options
+### Cas 1 : Directive de backup avec validation
 
 ```php
+<?php
+
+declare(strict_types=1);
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+final class BackupDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'backup {source} {destination} {--force}';
+    }
+
+    protected function beforeExecute(): void
+    {
+        $source = $this->argument('source');
+        if (!is_dir($source)) {
+            throw new \RuntimeException("Source directory not found: $source");
+        }
+    }
+
+    protected function execute(): ExitCode
+    {
+        $source = $this->argument('source');
+        $destination = $this->argument('destination');
+        
+        $this->info("Backing up from $source to $destination");
+        // Logique de backup...
+        
+        return ExitCode::SUCCESS;
+    }
+
+    protected function afterExecute(ExitCode $exitCode): void
+    {
+        if ($exitCode->isSuccess()) {
+            $this->info('Backup completed successfully');
+        }
+    }
+}
+```
+
+### Cas 2 : Directive avec appels imbriqués
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+final class DeployDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'deploy {env} {--force}';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $env = $this->argument('env');
+        
+        $this->info("Deploying to $env");
+        
+        // Appeler d'autres directives
+        $this->call('backup /var/www /backup');
+        $this->call('migrate --force');
+        $this->call('cache:clear');
+        
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### Cas 3 : Directive avec interactions utilisateur
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
 final class UserCreateDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'user-create {name} {email} {--role=user} {--notify}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Create a new user account';
+        return 'user:create {--admin}';
     }
 
     protected function execute(): ExitCode
     {
-        $name = $this->argument('name');
-        $email = $this->argument('email');
-        $role = $this->option('role');
-        $notify = $this->option('notify');
-
-        $this->info("User {$name} created with role {$role}");
-
-        if ($notify) {
-            $this->info("Notification sent to {$email}");
-        }
-
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### Cas 2 : Directive interactive
-
-```php
-final class SetupDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'app-setup';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Interactive application setup wizard';
-    }
-
-    protected function execute(): ExitCode
-    {
-        $this->info('Welcome to the setup wizard!');
-
-        $appName = $this->ask('Application name');
-        $environment = $this->ask('Environment (local/production)');
-
-        if (!$this->confirm("Create configuration for {$appName} in {$environment}?")) {
-            $this->warn('Setup cancelled');
-            return ExitCode::SUCCESS;
-        }
-
-        $headers = new StringTypedCollection();
-        $headers->add('Setting', 'Value');
-
-        $rows = new RowCollection();
-        $row = new RowCollection();
-        $row->add('App Name', $appName);
-        $row->add('Environment', $environment);
-        $rows->add($row);
-
-        $this->table($headers, $rows);
-        $this->info('Setup completed successfully!');
-
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### Cas 3 : Directive avec arguments variadiques
-
-```php
-final class ProcessFilesDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'process {files*} {--verbose}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Process multiple files';
-    }
-
-    protected function execute(): ExitCode
-    {
-        $files = $this->getVariadicArguments();
+        $name = $this->ask('Enter username:');
+        $email = $this->ask('Enter email:');
         
-        if (!$this->hasVariadicArguments()) {
-            $this->error('No files provided');
-            return ExitCode::INVALID_ARGUMENT;
-        }
-
-        foreach ($files as $file) {
-            $this->line("Processing: {$file}");
-        }
-
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### Cas 4 : Directive orchestratrice (Call System)
-
-```php
-final class UserOrchestratorDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'user-orchestrate {user-id}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Orchestrate multiple user operations';
-    }
-
-    protected function execute(): ExitCode
-    {
-        $userId = $this->argument('user-id');
-
-        $this->info("Starting orchestration for user {$userId}");
-
-        // Appel avec tableau (conversion automatique)
-        $this->call(['fetch-user', [$userId]]);
-        $this->call(['process-user', [$userId]]);
-        $this->call(['send-notification', [$userId]]);
-
-        $this->info("Orchestration completed");
-
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### Cas 5 : Directive avec Laravel (base de données)
-
-```php
-final class UserStatsDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'user-stats';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Display user statistics from database';
-    }
-
-    public function shouldBootLaravel(): bool
-    {
-        return true; // Besoin d'Eloquent
-    }
-
-    protected function execute(): ExitCode
-    {
-        if (!$this->hasLaravel()) {
-            $this->error('Laravel is not available!');
-            return ExitCode::FAILURE;
-        }
-
-        $app = $this->getLaravel();
-        $userModel = $app->make(User::class);
-        $totalUsers = $userModel->count();
+        $isAdmin = $this->option('admin');
         
-        $this->info("Total users: {$totalUsers}");
-
+        if ($this->confirm("Create user $name with admin rights?")) {
+            // Créer l'utilisateur
+            $this->info("User $name created");
+        }
+        
         return ExitCode::SUCCESS;
     }
 }
 ```
+
+---
 
 ## Flux d'exécution
 
 ```
-1. Instanciation de la directive (constructeur final)
-   └── __construct(DirectiveContext $context, DirectiveInteractionService $interaction)
-
-2. Injection des valeurs par le conteneur
-   ├── setArguments(ParameterCollection $arguments)
-   ├── setOptions(ParameterCollection $options)
-   └── setVariadicArguments(StringTypedCollection $variadic)
-
-3. Bootstrap Laravel (si shouldBootLaravel() === true)
-   └── LaravelBootstrapperInterface::bootstrap()
-
-4. Exécution
-   ├── run() appelé par DirectiveExecutionService
-   │   └── execute(): ExitCode
-   │       ├── Enregistrement des appels via call()
-   │       └── Logique métier (avec getLaravel() pour les services)
-   │
-   └── Après la fin de execute(), les appels sont exécutés
-       └── Récursion : chaque call est exécuté
-
-5. Sortie utilisateur
-   ├── line() / info() / error() / warn()
-   ├── table()
-   └── ask() / confirm()
+run()
+    ↓
+try {
+    beforeExecute()
+    ↓
+    execute() → ExitCode
+    ↓
+    afterExecute($exitCode)
+} catch (Throwable $e) {
+    afterExecute(RUNTIME_ERROR)
+    error($e->getMessage())
+    return RUNTIME_ERROR
+}
+    ↓
+Retourne ExitCode
 ```
+
+---
 
 ## Gestion des erreurs
 
-| Situation | Comportement |
-|-----------|--------------|
-| Argument inexistant | `argument()` retourne `null`, `hasArgument()` retourne `false` |
-| Option inexistante | `option()` retourne `null`, `hasOption()` retourne `false` |
-| Laravel non bootstrapé | `hasLaravel()` retourne `false` |
-| Exception dans `execute()` | Capturée par `DirectiveExecutionService`, retourne `ExitCode::FAILURE` |
-| Appel vers une directive inexistante | Ignoré silencieusement (pas de rupture de flux) |
+| Situation | Comportement | Code de sortie |
+|-----------|--------------|----------------|
+| beforeExecute() lance une exception | Capture, affiche erreur | `ExitCode::RUNTIME_ERROR` |
+| execute() lance une exception | afterExecute appelé, capture, affiche erreur | `ExitCode::RUNTIME_ERROR` |
+| afterExecute() lance une exception | Capture, affiche erreur | `ExitCode::RUNTIME_ERROR` |
+| Opération réussie | - | `ExitCode::SUCCESS` |
+| Appel circulaire détecté | Avertissement, arrêt | `ExitCode::CONFLICT` |
+| Directive non trouvée | Message d'erreur | `ExitCode::NOT_FOUND` |
+
+---
 
 ## Intégration
 
-`AbstractDirective` s'intègre avec :
+### Dans une application Laravel
 
-- **`DirectiveContext`** : Stockage centralisé de l'état (blueprint, aliases, arguments, options)
-- **`DirectiveInteractionService`** : Gère l'affichage et les interactions utilisateur
-- **`DirectiveExecutionService`** : Exécute les directives et leurs appels en cascade
-- **`DirectiveTestingService`** : Permet de tester les directives avec enregistrement des appels
-- **`LaravelBootstrapperInterface`** : Bootstrap optionnel de Laravel
-- **`ParameterCollection`** : Stockage typé des arguments et options
-- **`RowCollection`** : Collection pour les lignes de tableau
-- **`StringTypedCollection`** : Collection pour les chaînes (en-têtes, alias, variadic)
+```php
+// Dans un ServiceProvider
+$this->app->singleton(BackupDirective::class, function ($app) {
+    return new BackupDirective($app, $query);
+});
+```
+
+### Avec DirectiveExecutionService
+
+```php
+$executionService = app(DirectiveExecutionService::class);
+$exitCode = $executionService->execute('backup /var/www /backup --force');
+```
+
+---
 
 ## Performance
 
-| Aspect | Caractéristique |
-|--------|----------------|
-| Arguments/Options | Accès O(1) via `ParameterCollection` |
-| Affichage | Délégation à `DirectiveInteractionService` |
-| Bootstrap Laravel | Une seule fois par exécution (si nécessaire) |
-| Appels (Calls) | Stockage en mémoire, exécution récursive |
-| Mémoire | Une instance par exécution de directive + appels |
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| `argument()` | O(1) | Accès direct aux collections parsées |
+| `option()` | O(1) | Accès direct aux collections parsées |
+| `call()` | O(1) | Ajout à la liste des calls |
+| `run()` | O(n) | n = nombre de calls imbriqués |
+
+---
 
 ## Compatibilité
 
-| Version | Support |
-|---------|---------|
-| PHP 8.1+ | ✅ Requis (types unions, readonly) |
-| PHP 8.2+ | ✅ Complet |
-| PHP 8.3+ | ✅ Complet |
-| Laravel 10+ | ✅ Complet (bootstrap optionnel) |
+| Version Laravel | Support | Notes |
+|-----------------|---------|-------|
+| Laravel 15.x | ✅ Complet | Support total |
+| Laravel 14.x | ✅ Complet | Support total |
+| Laravel 13.x | ✅ Complet | Support total |
+| Laravel 12.x | ✅ Complet | Support total |
+| Laravel 11.x | ✅ Complet | Support total |
+| Laravel 10.x | ✅ Complet | Support total |
 
-## Exemple complet avec Call System
+---
+
+## Exemple complet
 
 ```php
 <?php
@@ -653,68 +692,69 @@ namespace App\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use App\Services\UserService;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class UserOrchestratorDirective extends AbstractDirective
+final class ProcessDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'user-orchestrate {user-id}';
+        return 'process {input} {output} {--verbose} {--force}';
     }
 
     public function getDescription(): string
     {
-        return 'Orchestrate user operations (fetch, process, notify)';
+        return 'Process files with optional flags';
     }
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection();
-        $aliases->add('orchestrate');
-        return $aliases;
+        return StringTypedCollection::from(['proc', 'p']);
     }
 
-    public function shouldBootLaravel(): bool
+    protected function beforeExecute(): void
     {
-        return true; // Besoin des services Laravel
+        $input = $this->argument('input');
+        if (!file_exists($input)) {
+            throw new \RuntimeException("Input file not found: $input");
+        }
     }
 
     protected function execute(): ExitCode
     {
-        $userId = (int) $this->argument('user-id');
+        $input = $this->argument('input');
+        $output = $this->argument('output');
 
-        $this->info("🚀 Starting user orchestration for ID: {$userId}");
-        $this->separator('=', 50);
-
-        // Récupérer le service via Laravel
-        $app = $this->getLaravel();
-        $userService = $app->make(UserService::class);
-
-        // Vérifier que l'utilisateur existe
-        if (!$userService->exists($userId)) {
-            $this->error("❌ User {$userId} not found");
-            return ExitCode::FAILURE;
+        if ($this->option('verbose')) {
+            $this->info("Processing $input -> $output");
         }
 
-        $this->info("✅ User {$userId} found");
+        // Logique de traitement...
+        $this->call('validate ' . $input);
 
-        // Étape 1 : Récupérer l'utilisateur
-        $this->info('📥 Fetching user data...');
-        $this->call(['fetch-user', [$userId]]);
+        if ($this->option('force')) {
+            $this->info('Force mode enabled');
+        }
 
-        // Étape 2 : Traiter l'utilisateur
-        $this->info('⚙️ Processing user data...');
-        $this->call(['process-user', [$userId]]);
-
-        // Étape 3 : Envoyer une notification
-        $this->info('📧 Sending notification...');
-        $this->call(['send-notification', [$userId]]);
-
-        $this->separator('=', 50);
-        $this->info('✅ User orchestration completed successfully!');
-
+        $this->line('Done');
         return ExitCode::SUCCESS;
+    }
+
+    protected function afterExecute(ExitCode $exitCode): void
+    {
+        if ($exitCode->isSuccess()) {
+            $this->info('✅ Processing completed successfully');
+        } else {
+            $this->error('❌ Processing failed');
+        }
     }
 }
 ```
+
+## Voir aussi
+
+- `DirectiveInterface` - Interface des directives
+- `DirectiveExecutionService` - Service d'exécution
+- `Console` - Composant de sortie console
+- `ParsedSignatureRecord` - Structure des données parsées
+- `ExitCode` - Codes de sortie disponibles
 ---

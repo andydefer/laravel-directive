@@ -1,127 +1,139 @@
 <?php
 
-// src/AbstractDirective.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive;
 
-use AndyDefer\Directive\Collections\RowCollection;
-use AndyDefer\Directive\Contexts\DirectiveContext;
+use AndyDefer\ConsoleWriter\Console\Console;
+use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\Directive\Records\DirectiveExecutionRecord;
-use AndyDefer\Directive\Services\DirectiveInteractionService;
+use AndyDefer\Directive\Records\DirectiveCallRecord;
+use AndyDefer\Directive\Records\DirectiveMetadataRecord;
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Services\DirectiveHydratorService;
+use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Utils\ListCollection;
+use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
+use Illuminate\Foundation\Application;
+use Throwable;
 
 abstract class AbstractDirective implements DirectiveInterface
 {
     private array $calls = [];
 
-    public function __construct(
-        protected DirectiveContext $context,
-        protected DirectiveInteractionService $interaction
-    ) {}
+    private static array $executionStack = [];
 
-    final public function getBlueprint(): DirectiveBlueprintRecord
+    protected Application $app;
+
+    protected Console $console;
+
+    protected ParsedSignatureRecord $parsed;
+
+    private DirectiveParserService $parser;
+
+    public function __construct(Application $app, string $query)
     {
-        return $this->context->getBlueprint();
+        $this->app = $app;
+        $this->console = $app->make(Console::class);
+        $this->parser = $app->make(DirectiveParserService::class);
+        $this->parsed = $this->parser->parse($this->getSignature(), $query);
     }
 
-    public function getAliases(): StringTypedCollection
+    final public function getLaravel(): Application
     {
-        return $this->context->getAliases();
+        return $this->app;
     }
 
-    final public function hasLaravel(): bool
+    final public function getConsole(): Console
     {
-        return $this->context->hasLaravel();
+        return $this->console;
     }
 
-    final public function getLaravel(): ?object
+    final public function getParsed(): ParsedSignatureRecord
     {
-        return $this->context->getLaravel();
+        return $this->parsed;
     }
 
     final public function argument(string $key): mixed
     {
-        return $this->context->getArgument($key);
+        return $this->parsed->required->get($key) ?? $this->parsed->default->get($key);
     }
 
     final public function hasArgument(string $key): bool
     {
-        return $this->context->hasArgument($key);
+        return $this->parsed->required->has($key) || $this->parsed->default->has($key);
     }
 
-    final public function option(string $key): mixed
+    final public function option(string $key): bool
     {
-        return $this->context->getOption($key);
+        return $this->parsed->options->get($key);
     }
 
     final public function hasOption(string $key): bool
     {
-        return $this->context->hasOption($key);
+        return $this->parsed->options->isActive($key);
     }
 
     final public function getVariadicArguments(): StringTypedCollection
     {
-        return $this->context->getVariadicArguments();
+        $allValues = new StringTypedCollection;
+        foreach ($this->parsed->variadic->getAllValues() as $value) {
+            $allValues->add($value);
+        }
+
+        return $allValues;
     }
 
     final public function hasVariadicArguments(): bool
     {
-        return $this->context->hasVariadicArguments();
+        return $this->parsed->variadic->countAllValues() > 0;
     }
 
     final public function line(string $message): void
     {
-        $this->interaction->line($message);
+        $this->console->line($message);
     }
 
     final public function info(string $message): void
     {
-        $this->interaction->info($message);
+        $this->console->info($message);
     }
 
     final public function error(string $message): void
     {
-        $this->interaction->error($message);
-    }
-
-    final public function warn(string $message): void
-    {
-        $this->interaction->warn($message);
+        $this->console->error($message);
     }
 
     final public function newLine(): void
     {
-        $this->interaction->newLine();
+        $this->console->newLine();
     }
 
     final public function separator(string $character = '-', int $length = 80): void
     {
-        $this->interaction->separator($character, $length);
+        $this->console->line(str_repeat($character, $length));
     }
 
     final public function ask(string $question): string
     {
-        return $this->interaction->ask($question);
+        return $this->console->ask($question);
     }
 
     final public function confirm(string $question): bool
     {
-        return $this->interaction->confirm($question);
+        return $this->console->confirm($question);
     }
 
-    final public function table(StringTypedCollection $headers, RowCollection $rows): void
+    final public function table(ListCollection|array $headers, ListCollection|array $rows): void
     {
-        $this->interaction->table($headers, $rows);
+        $this->console->table($headers, $rows);
     }
 
-    final protected function call(DirectiveExecutionRecord $record): void
+    final protected function call(string $query): void
     {
-        $this->calls[] = $record;
+        $this->calls[] = new DirectiveCallRecord($query);
     }
 
     final public function getCalls(): array
@@ -129,10 +141,128 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->calls;
     }
 
-    final public function run(): ExitCode
+    private function executeCall(string $query): ExitCode
     {
-        return $this->execute();
+        // Extraire le nom de la commande
+        $parts = explode(' ', $query);
+        $commandName = $parts[0];
+
+        // Trouver la directive
+        $discovery = $this->app->make(DirectiveDiscoveryService::class);
+        $directives = $discovery->discover();
+        $directive = $this->findDirective($directives, $commandName);
+
+        if ($directive === null) {
+            $this->console->error("Directive not found: {$commandName}");
+
+            return ExitCode::NOT_FOUND;
+        }
+
+        // Vérifier la récursion
+        $stackKey = $directive->class.'|'.$query;
+        if (in_array($stackKey, self::$executionStack, true)) {
+            $this->console->alertWarning("Circular call detected: {$query}");
+
+            return ExitCode::CONFLICT;
+        }
+
+        // Ajouter à la pile
+        self::$executionStack[] = $stackKey;
+
+        try {
+            $hydrator = $this->app->make(DirectiveHydratorService::class);
+            $instance = $hydrator->hydrate($directive->class, $query);
+
+            $exitCode = $instance->run();
+
+            array_pop(self::$executionStack);
+
+            return $exitCode;
+        } catch (Throwable $e) {
+            array_pop(self::$executionStack);
+            $this->console->error('Error executing call: '.$e->getMessage());
+
+            return ExitCode::RUNTIME_ERROR;
+        }
     }
 
+    private function findDirective(DirectiveMetadataCollection $directives, string $commandName): ?DirectiveMetadataRecord
+    {
+        foreach ($directives as $directive) {
+            $signatureParts = explode(' ', $directive->signature);
+            $directiveName = $signatureParts[0];
+
+            if ($directiveName === $commandName) {
+                return $directive;
+            }
+
+            foreach ($directive->aliases as $alias) {
+                if ($alias === $commandName) {
+                    return $directive;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function executeCalls(): ExitCode
+    {
+        $calls = $this->getCalls();
+
+        foreach ($calls as $call) {
+            $callResult = $this->executeCall($call->query);
+            if ($callResult !== ExitCode::SUCCESS) {
+                return $callResult;
+            }
+        }
+
+        return ExitCode::SUCCESS;
+    }
+
+    final public function run(): ExitCode
+    {
+        try {
+            $this->beforeExecute();
+        } catch (Throwable $e) {
+            $this->error('Error in before hook: '.$e->getMessage());
+
+            return ExitCode::RUNTIME_ERROR;
+        }
+
+        try {
+            $exitCode = $this->execute();
+
+            // Exécuter les calls APRÈS execute() et AVANT afterExecute()
+            $callExitCode = $this->executeCalls();
+
+            if ($callExitCode !== ExitCode::SUCCESS) {
+                $this->afterExecute($callExitCode);
+
+                return $callExitCode;
+            }
+
+            $this->afterExecute($exitCode);
+
+            return $exitCode;
+        } catch (Throwable $e) {
+            $this->afterExecute(ExitCode::RUNTIME_ERROR);
+            $this->error('Error in execute hook: '.$e->getMessage());
+
+            return ExitCode::RUNTIME_ERROR;
+        }
+    }
+
+    public function getAliases(): StringTypedCollection
+    {
+        return new StringTypedCollection;
+    }
+
+    abstract public function getSignature(): string;
+
     abstract protected function execute(): ExitCode;
+
+    protected function beforeExecute(): void {}
+
+    protected function afterExecute(ExitCode $exitCode): void {}
 }

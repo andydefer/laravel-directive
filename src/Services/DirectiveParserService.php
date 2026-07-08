@@ -1,145 +1,52 @@
 <?php
 
-// src/Services/DirectiveParserService.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
-use AndyDefer\Directive\Collections\ParsedArgumentCollection;
-use AndyDefer\Directive\Collections\ParsedOptionCollection;
-use AndyDefer\Directive\Collections\ParsedParameterCollection;
-use AndyDefer\Directive\Configs\DirectiveParserConfig;
-use AndyDefer\Directive\Contexts\ParameterParserContext;
-use AndyDefer\Directive\Contracts\Configs\DirectiveParserConfigInterface;
-use AndyDefer\Directive\Records\ParsedDirectiveRecord;
-use AndyDefer\Directive\Records\ParsedResultRecord;
-use AndyDefer\Directive\Strategies\DefaultValueArgumentStrategy;
-use AndyDefer\Directive\Strategies\OptionalArgumentStrategy;
-use AndyDefer\Directive\Strategies\OptionStrategy;
-use AndyDefer\Directive\Strategies\RequiredArgumentStrategy;
-use AndyDefer\Directive\Strategies\VariadicArgumentStrategy;
+use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\SignatureParser\Contracts\ParserInterface;
+use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
+use AndyDefer\SignatureParser\SignatureParser;
 
-class DirectiveParserService
+final class DirectiveParserService implements DirectiveParserInterface
 {
-    private ParameterParserContext $parserContext;
+    public function __construct(
+        private readonly SignatureParser $parser,
+    ) {}
 
-    private ParameterOrderValidatorService $orderValidator;
-
-    private ParameterExtractorService $extractor;
-
-    private OptionParserService $optionParser;
-
-    private ArgumentApplierService $argumentApplier;
-
-    private ArgumentSplitterService $argumentSplitter;
-
-    public function __construct(?DirectiveParserConfigInterface $config = null)
+    public function parse(string $signature, string $query): ParsedSignatureRecord
     {
-        $config = $config ?? new DirectiveParserConfig;
-        $this->parserContext = $this->buildParserContext();
-        $this->orderValidator = new ParameterOrderValidatorService($this->parserContext);
-        $this->extractor = new ParameterExtractorService($this->parserContext);
-        $this->optionParser = new OptionParserService($config);
-        $this->argumentApplier = new ArgumentApplierService;
-        $this->argumentSplitter = new ArgumentSplitterService($config);
+        return $this->parser->parse($signature, $query);
     }
 
-    private function buildParserContext(): ParameterParserContext
+    public function addParser(ParserInterface $parser): self
     {
-        $context = new ParameterParserContext;
-        $context->addStrategy(new RequiredArgumentStrategy);
-        $context->addStrategy(new DefaultValueArgumentStrategy);
-        $context->addStrategy(new OptionalArgumentStrategy);
-        $context->addStrategy(new VariadicArgumentStrategy);
-        $context->addStrategy(new OptionStrategy);
+        $this->parser->addParser($parser);
 
-        return $context;
+        return $this;
     }
 
-    public function parse(string $signature, StringTypedCollection $argv): ParsedDirectiveRecord
+    public function removeParser(string $parserClass): self
     {
-        $arguments = new ParsedArgumentCollection;
-        $options = new ParsedOptionCollection;
+        $this->parser->removeParser($parserClass);
 
-        // Séparer les arguments normaux des variadiques
-        $splitResult = $this->argumentSplitter->split($argv);
-        $regularArgs = $splitResult->regular->toArray();
-        $variadicItems = $splitResult->variadic->toArray();
-
-        // Valider la signature
-        $this->orderValidator->validate([], $signature);
-        $parameters = $this->extractor->extract($signature);
-
-        // Séparer les options des arguments normaux
-        $providedArguments = [];
-        $optionArguments = new StringTypedCollection;
-
-        foreach ($regularArgs as $argument) {
-            if ($this->optionParser->isOption($argument)) {
-                $optionArguments->add($argument);
-            } else {
-                $providedArguments[] = $argument;
-            }
-        }
-
-        // Parser les options
-        if ($optionArguments->isNotEmpty()) {
-            $this->optionParser->parseOptions($optionArguments, $options);
-        }
-
-        // Appliquer les arguments (sans variadic)
-        $this->argumentApplier->apply($parameters, $providedArguments, $arguments, $variadicItems);
-
-        // Créer la collection des arguments variadiques
-        $variadicArgumentsCollection = new StringTypedCollection;
-        foreach ($variadicItems as $item) {
-            $variadicArgumentsCollection->add($item);
-        }
-
-        return new ParsedDirectiveRecord($arguments, $options, $variadicArgumentsCollection);
+        return $this;
     }
 
-    public function extractHelp(string $signature): ParsedParameterCollection
+    public function getParsers(): array
     {
-        $parameters = new ParsedParameterCollection;
-        $matches = $this->extractParameters($signature);
-
-        foreach ($matches as $parameter) {
-            $parameters->add($this->parserContext->parse($parameter));
-        }
-
-        return $parameters;
+        return $this->parser->getParsers();
     }
 
-    public function toResult(ParsedDirectiveRecord $parsed): ParsedResultRecord
+    public function extractSignatureElements(string $signature): StringTypedCollection
     {
-        return new ParsedResultRecord(
-            arguments: $parsed->arguments,
-            options: $parsed->options,
-            variadic_arguments: $parsed->variadic_arguments,
-        );
+        return $this->parser->extractSignatureElements($signature);
     }
 
-    public function toJson(ParsedDirectiveRecord $parsed): string
+    public function extractQueryElements(string $query): StringTypedCollection
     {
-        return json_encode([
-            'arguments' => $parsed->arguments->toAssociativeArray(),
-            'options' => $parsed->options->toAssociativeArray(),
-            'variadic_arguments' => $parsed->variadic_arguments->toArray(),
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    }
-
-    private function extractParameters(string $signature): StringTypedCollection
-    {
-        preg_match_all('/\{([^}]+)\}/', $signature, $matches);
-        $result = new StringTypedCollection;
-
-        foreach ($matches[1] as $parameter) {
-            $result->add($parameter);
-        }
-
-        return $result;
+        return $this->parser->extractQueryElements($query);
     }
 }

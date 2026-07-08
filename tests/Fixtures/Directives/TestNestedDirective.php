@@ -1,15 +1,11 @@
 <?php
 
-// tests/Fixtures/Directives/TestNestedDirective.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\DirectiveExecutionRecord;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TestNestedDirective extends AbstractDirective
 {
@@ -27,13 +23,8 @@ final class TestNestedDirective extends AbstractDirective
     {
         $this->info('Nested directive started');
 
-        $args1 = new StringTypedCollection;
-        $args1->add('child1');
-        $this->call(new DirectiveExecutionRecord('child1', $args1));
-
-        $args2 = new StringTypedCollection;
-        $args2->add('child2');
-        $this->call(new DirectiveExecutionRecord('child2', $args2));
+        $this->call('child1');
+        $this->call('child2');
 
         $this->info('Nested directive finished');
 

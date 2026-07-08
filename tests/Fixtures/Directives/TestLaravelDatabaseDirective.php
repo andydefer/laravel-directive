@@ -12,6 +12,7 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestPost;
 use AndyDefer\Directive\Tests\Fixtures\Models\TestUser;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Utils\ListCollection;
 
 final class TestLaravelDatabaseDirective extends AbstractDirective
 {
@@ -28,12 +29,6 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
     public function execute(): ExitCode
     {
         $this->info('Testing Laravel database integration...');
-
-        if (! $this->hasLaravel()) {
-            $this->error('Laravel is not available!');
-
-            return ExitCode::FAILURE;
-        }
 
         $this->info('✓ Laravel is available');
 
@@ -62,9 +57,9 @@ final class TestLaravelDatabaseDirective extends AbstractDirective
                     $rows->add($row);
                 }
 
-                $this->table($headers, $rows);
+                $this->table(ListCollection::from($headers), ListCollection::from($rows));
             } else {
-                $this->warn('No verified users found');
+                $this->getConsole()->alertWarning('No verified users found');
             }
 
             $publishedPosts = TestPost::published()->with('user')->get();

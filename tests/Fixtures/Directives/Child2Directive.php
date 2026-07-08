@@ -7,27 +7,21 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 
-final class TestParentDirective extends AbstractDirective
+final class Child2Directive extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-parent';
+        return 'child2';
     }
 
     public function getDescription(): string
     {
-        return 'Test directive that calls other directives';
+        return 'Test child 2 directive';
     }
 
     protected function execute(): ExitCode
     {
-        $this->info('Parent directive started');
-
-        $this->call('calc add 10 5');
-        $this->call('calc pow 2 3');
-        $this->call('greeting John');
-
-        $this->info('Parent directive finished');
+        $this->info('Child 2 directive executed');
 
         return ExitCode::SUCCESS;
     }

@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c8f30a8c7a09ce426b858ed029260164",
+    "content-hash": "4a745b951166354046e8a3541e023aae",
     "packages": [
         {
             "name": "andydefer/domain-structures",
-            "version": "v1.19.1",
+            "version": "v1.21.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/domain-structures.git",
-                "reference": "1e8bb1bf252833a31601bd22f9e55415596333da"
+                "reference": "b45be9a780cd3642be16ef610c3dc6522a8002a4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/domain-structures/zipball/1e8bb1bf252833a31601bd22f9e55415596333da",
-                "reference": "1e8bb1bf252833a31601bd22f9e55415596333da",
+                "url": "https://api.github.com/repos/andydefer/domain-structures/zipball/b45be9a780cd3642be16ef610c3dc6522a8002a4",
+                "reference": "b45be9a780cd3642be16ef610c3dc6522a8002a4",
                 "shasum": ""
             },
             "require": {
@@ -53,26 +53,73 @@
             "description": "A complete domain structures package for PHP: Records, Value Objects, Data DTOs, and TypedCollections. Brings type safety and clean architecture to your application.",
             "support": {
                 "issues": "https://github.com/andydefer/domain-structures/issues",
-                "source": "https://github.com/andydefer/domain-structures/tree/v1.19.1"
+                "source": "https://github.com/andydefer/domain-structures/tree/v1.21.1"
             },
-            "time": "2026-06-16T14:37:01+00:00"
+            "time": "2026-06-25T06:24:29+00:00"
         },
         {
-            "name": "andydefer/php-services",
-            "version": "v1.1.1",
+            "name": "andydefer/php-console",
+            "version": "v1.2.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/andydefer/php-services.git",
-                "reference": "a8d73e8fcad39b2487da778799bed5950fbb4d5b"
+                "url": "https://github.com/andydefer/php-console.git",
+                "reference": "e6ae05ea93fc08f7d003713a1652e35522d538ad"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/php-services/zipball/a8d73e8fcad39b2487da778799bed5950fbb4d5b",
-                "reference": "a8d73e8fcad39b2487da778799bed5950fbb4d5b",
+                "url": "https://api.github.com/repos/andydefer/php-console/zipball/e6ae05ea93fc08f7d003713a1652e35522d538ad",
+                "reference": "e6ae05ea93fc08f7d003713a1652e35522d538ad",
                 "shasum": ""
             },
             "require": {
-                "andydefer/php-vo": "^0.9.3",
+                "andydefer/php-vo": "^0.11.0",
+                "php": ">=8.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.29",
+                "mockery/mockery": "^1.6",
+                "orchestra/testbench": "^9.0|^10.0",
+                "phpunit/phpunit": "^10.5|^11.0|^12.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "AndyDefer\\ConsoleWriter\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andy Defer",
+                    "email": "andykanidimbu@gmail.com"
+                }
+            ],
+            "description": "A simple and elegant console output writer for PHP with styled components",
+            "support": {
+                "issues": "https://github.com/andydefer/php-console/issues",
+                "source": "https://github.com/andydefer/php-console/tree/v1.2.1"
+            },
+            "time": "2026-06-26T18:18:29+00:00"
+        },
+        {
+            "name": "andydefer/php-services",
+            "version": "v1.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/andydefer/php-services.git",
+                "reference": "b0486d584cf3671c6444278f603a50f04a4d693f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/andydefer/php-services/zipball/b0486d584cf3671c6444278f603a50f04a4d693f",
+                "reference": "b0486d584cf3671c6444278f603a50f04a4d693f",
+                "shasum": ""
+            },
+            "require": {
+                "andydefer/php-vo": "^0.11.0",
                 "php": "^8.2"
             },
             "require-dev": {
@@ -81,6 +128,7 @@
                 "mockery/mockery": "^1.6",
                 "phpunit/phpunit": "^12.5",
                 "rector/rector": "*",
+                "symfony/var-dumper": "^8.1",
                 "vimeo/psalm": "^6.14"
             },
             "type": "library",
@@ -102,26 +150,26 @@
             "description": "Collection of reusable services for PHP and Laravel applications including model transformation, caching, and common business logic",
             "support": {
                 "issues": "https://github.com/andydefer/php-services/issues",
-                "source": "https://github.com/andydefer/php-services/tree/v1.1.1"
+                "source": "https://github.com/andydefer/php-services/tree/v1.3.0"
             },
-            "time": "2026-06-17T12:59:40+00:00"
+            "time": "2026-07-02T07:41:52+00:00"
         },
         {
             "name": "andydefer/php-signature-parser",
-            "version": "v0.2.1",
+            "version": "v0.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/php-signature-parser.git",
-                "reference": "9e99c918e5b6ed03fa207d01a76f6ae445dc6a9a"
+                "reference": "fb8388200ada62272c3532962638361fc8427e28"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/php-signature-parser/zipball/9e99c918e5b6ed03fa207d01a76f6ae445dc6a9a",
-                "reference": "9e99c918e5b6ed03fa207d01a76f6ae445dc6a9a",
+                "url": "https://api.github.com/repos/andydefer/php-signature-parser/zipball/fb8388200ada62272c3532962638361fc8427e28",
+                "reference": "fb8388200ada62272c3532962638361fc8427e28",
                 "shasum": ""
             },
             "require": {
-                "andydefer/domain-structures": "^1.19",
+                "andydefer/domain-structures": "^1.21.1",
                 "php": "^8.1"
             },
             "require-dev": {
@@ -148,30 +196,31 @@
             ],
             "description": "A flexible signature parser for CLI commands",
             "support": {
-                "issues": "https://github.com/andydefer/andydefer-php-signature-parser/issues",
-                "source": "https://github.com/andydefer/andydefer-php-signature-parser/tree/v0.2.1"
+                "issues": "https://github.com/andydefer/php-signature-parser/issues",
+                "source": "https://github.com/andydefer/php-signature-parser/tree/v0.5.0"
             },
-            "time": "2026-06-18T13:29:35+00:00"
+            "time": "2026-07-07T14:19:50+00:00"
         },
         {
             "name": "andydefer/php-vo",
-            "version": "v0.9.3",
+            "version": "v0.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/php-vo.git",
-                "reference": "74de604a68a883615b58200bcd8211d0a702ef1a"
+                "reference": "a563a39a252fd3fa5f320a79534a0d2701c9abb7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/php-vo/zipball/74de604a68a883615b58200bcd8211d0a702ef1a",
-                "reference": "74de604a68a883615b58200bcd8211d0a702ef1a",
+                "url": "https://api.github.com/repos/andydefer/php-vo/zipball/a563a39a252fd3fa5f320a79534a0d2701c9abb7",
+                "reference": "a563a39a252fd3fa5f320a79534a0d2701c9abb7",
                 "shasum": ""
             },
             "require": {
-                "andydefer/domain-structures": "^1.18.2",
+                "andydefer/domain-structures": "^1.21.0",
                 "php": ">=8.1"
             },
             "require-dev": {
+                "laravel/pint": "^1.29",
                 "mockery/mockery": "^1.6",
                 "orchestra/testbench": "^9.0|^10.0",
                 "phpunit/phpunit": "^10.5|^11.0|^12.0"
@@ -195,9 +244,9 @@
             "description": "A collection of reusable Value Objects and Enums for PHP applications (Email, Money, Address, PostalCode, Iso8601DateTime, Currency, etc.)",
             "support": {
                 "issues": "https://github.com/andydefer/php-vo/issues",
-                "source": "https://github.com/andydefer/php-vo/tree/v0.9.3"
+                "source": "https://github.com/andydefer/php-vo/tree/v0.11.0"
             },
-            "time": "2026-06-16T08:32:49+00:00"
+            "time": "2026-06-26T18:14:54+00:00"
         },
         {
             "name": "brick/math",

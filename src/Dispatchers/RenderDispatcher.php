@@ -6,6 +6,7 @@ namespace AndyDefer\Directive\Dispatchers;
 
 use AndyDefer\Directive\Collections\ReplacementCollection;
 use AndyDefer\Directive\Contexts\LaravelBootstrapperContext;
+use AndyDefer\Directive\Contracts\RenderStrategyInterface;
 use AndyDefer\Directive\Enums\RenderType;
 use AndyDefer\Directive\Records\RenderRecord;
 use AndyDefer\Directive\Strategies\ConflictRenderStrategy;

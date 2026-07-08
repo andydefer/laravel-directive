@@ -6,26 +6,20 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TestDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-directive';
+        return 'test-directive {name} {email} {format=zip} {files*} {--force} {--verbose}';
     }
 
     public function getDescription(): string
     {
-        return 'Test directive';
+        return 'Test directive for testing purposes';
     }
 
-    public function getAliases(): StringTypedCollection
-    {
-        return new StringTypedCollection;
-    }
-
-    public function execute(): ExitCode
+    protected function execute(): ExitCode
     {
         return ExitCode::SUCCESS;
     }

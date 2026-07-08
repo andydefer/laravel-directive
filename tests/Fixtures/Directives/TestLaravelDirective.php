@@ -23,12 +23,6 @@ final class TestLaravelDirective extends AbstractDirective
     {
         $this->info('Test Laravel directive executed');
 
-        if ($this->hasLaravel()) {
-            $this->info('✓ Laravel is available');
-        } else {
-            $this->warn('Laravel is not available');
-        }
-
         return ExitCode::SUCCESS;
     }
 }

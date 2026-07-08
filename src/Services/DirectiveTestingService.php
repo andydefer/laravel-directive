@@ -1,90 +1,81 @@
 <?php
 
-// src/Services/DirectiveTestingService.php
-
 declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Collections\ParameterVOCollection;
-use AndyDefer\Directive\Contexts\DirectiveContext;
-use AndyDefer\Directive\Dispatchers\InputDispatcher;
-use AndyDefer\Directive\Dispatchers\RenderDispatcher;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\Directive\Records\DirectiveExecutionRecord;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
-use AndyDefer\Directive\ValueObjects\ParameterVO;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-use AndyDefer\PhpServices\Services\PrimitiveTypeConverterService;
 use Illuminate\Foundation\Application;
-use InvalidArgumentException;
 use Throwable;
 
 final class DirectiveTestingService
 {
-    private PrimitiveTypeConverterService $typeConverter;
-
-    private DirectiveInteractionService $interaction;
-
     private string $tempDir;
-
-    private ?Application $application;
 
     private string $originalCwd;
 
-    private array $calls = [];
+    private array $executed = [];
 
-    private array $registeredDirectives = [];
-
-    public function __construct(?Application $application = null)
-    {
-        $this->application = $application;
-        $this->typeConverter = new PrimitiveTypeConverterService;
-        $this->interaction = new DirectiveInteractionService(new RenderDispatcher, new InputDispatcher);
-
+    public function __construct(
+        private readonly Application $app,
+    ) {
         $this->originalCwd = getcwd();
-
         $this->setupTempDirectory();
     }
 
-    public function registerDirective(string $class): self
+    public function run(string $class, string $query): DirectiveResponseRecord
     {
-        if (! in_array($class, $this->registeredDirectives)) {
-            $this->registeredDirectives[] = $class;
-        }
+        $this->executed = [];
 
-        return $this;
-    }
-
-    public function run(string $class, array $arguments = []): DirectiveResponseRecord
-    {
         try {
-            $directive = $this->createDirective($class);
-        } catch (InvalidArgumentException $e) {
-            return new DirectiveResponseRecord(ExitCode::NOT_FOUND, $e->getMessage());
+            $directive = $this->app->make($class, ['query' => $query]);
         } catch (Throwable $e) {
             return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
         }
 
-        return $this->executeDirective($directive, $arguments);
+        ob_start();
+        try {
+            $exitCode = $this->executeDirective($directive);
+            $output = ob_get_clean();
+
+            return new DirectiveResponseRecord($exitCode, $output);
+        } catch (Throwable $e) {
+            ob_end_clean();
+
+            return new DirectiveResponseRecord(ExitCode::RUNTIME_ERROR, $e->getMessage());
+        }
     }
 
-    public function destroy(): void
+    private function executeDirective(AbstractDirective $directive): ExitCode
     {
-        if ($this->originalCwd !== '' && is_dir($this->originalCwd)) {
-            chdir($this->originalCwd);
+        $key = get_class($directive);
+
+        if (in_array($key, $this->executed, true)) {
+            return ExitCode::CONFLICT;
         }
 
-        if (is_dir($this->tempDir)) {
-            $this->removeDirectory($this->tempDir);
-        }
-    }
+        $this->executed[] = $key;
 
-    public function getInteraction(): DirectiveInteractionService
-    {
-        return $this->interaction;
+        $exitCode = $directive->run();
+
+        // Exécuter récursivement les calls
+        $calls = $directive->getCalls();
+        foreach ($calls as $call) {
+            try {
+                $callDirective = $this->app->make($call->class, ['query' => $call->query]);
+                $callResult = $this->executeDirective($callDirective);
+
+                if ($callResult !== ExitCode::SUCCESS) {
+                    return $callResult;
+                }
+            } catch (Throwable $e) {
+                return ExitCode::FAILURE;
+            }
+        }
+
+        return $exitCode;
     }
 
     public function getTempDir(): string
@@ -92,222 +83,13 @@ final class DirectiveTestingService
         return $this->tempDir;
     }
 
-    public function getCalls(): array
+    public function destroy(): void
     {
-        return $this->calls;
-    }
+        chdir($this->originalCwd);
 
-    public function clearCalls(): void
-    {
-        $this->calls = [];
-    }
-
-    private function createDirective(string $class): AbstractDirective
-    {
-        if (! class_exists($class)) {
-            throw new InvalidArgumentException("Directive class {$class} does not exist");
+        if (is_dir($this->tempDir)) {
+            $this->removeDirectory($this->tempDir);
         }
-
-        $reflection = new \ReflectionClass($class);
-        $constructor = $reflection->getConstructor();
-
-        if ($constructor === null) {
-            return $reflection->newInstance();
-        }
-
-        $args = [];
-        foreach ($constructor->getParameters() as $param) {
-            $paramType = $param->getType();
-            $paramName = $paramType?->getName();
-
-            $args[] = match (true) {
-                $paramName === DirectiveContext::class => $this->createDirectiveContext($class),
-                $paramName === DirectiveInteractionService::class => $this->interaction,
-                $this->application !== null && $paramType?->isBuiltin() === false && class_exists($paramName) => $this->application->make($paramName),
-                default => $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null,
-            };
-        }
-
-        return $reflection->newInstanceArgs($args);
-    }
-
-    private function createDirectiveContext(string $class): DirectiveContext
-    {
-        $blueprint = new DirectiveBlueprintRecord($class, '', '');
-        $aliases = new StringTypedCollection;
-
-        return new DirectiveContext(
-            $blueprint,
-            $aliases,
-            $this->application,
-            $this->registeredDirectives
-        );
-    }
-
-    private function executeDirective(AbstractDirective $directive, array $arguments): DirectiveResponseRecord
-    {
-        $context = $this->createDirectiveContext(get_class($directive));
-
-        try {
-            $parsed = $this->parseArguments($directive->getSignature(), $arguments);
-        } catch (InvalidArgumentException $e) {
-            return new DirectiveResponseRecord(ExitCode::INVALID_ARGUMENT, $e->getMessage());
-        } catch (Throwable $e) {
-            return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
-        }
-
-        $context->setArguments($parsed['arguments']);
-        $context->setOptions($parsed['options']);
-        $context->setVariadicArguments($parsed['variadic']);
-
-        $hydratedDirective = $this->hydrateDirective($directive, $context);
-
-        $this->calls = [];
-
-        ob_start();
-        try {
-            $exitCode = $hydratedDirective->run();
-            $parentOutput = ob_get_clean();
-
-            $this->calls = $hydratedDirective->getCalls();
-
-            $childOutput = '';
-            $calls = $this->calls;
-            foreach ($calls as $call) {
-                $childOutput .= $this->executeCall($call);
-            }
-
-            return new DirectiveResponseRecord($exitCode, $parentOutput.$childOutput);
-        } catch (Throwable $e) {
-            ob_end_clean();
-
-            return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
-        }
-    }
-
-    private function executeCall(DirectiveExecutionRecord $record): string
-    {
-        $class = $this->findDirectiveClass($record->signature);
-        if ($class === null) {
-            return '';
-        }
-
-        $reflection = new \ReflectionClass($class);
-        $tempInstance = $reflection->newInstanceWithoutConstructor();
-
-        $context = $this->createDirectiveContext($class);
-
-        try {
-            $parsed = $this->parseArguments(
-                $tempInstance->getSignature(),
-                $record->arguments->toArray()
-            );
-        } catch (Throwable $e) {
-            return '';
-        }
-
-        $context->setArguments($parsed['arguments']);
-        $context->setOptions($parsed['options']);
-        $context->setVariadicArguments($parsed['variadic']);
-
-        $directive = $this->hydrateDirective($tempInstance, $context);
-
-        try {
-            ob_start();
-            $directive->run();
-            $output = ob_get_clean();
-
-            $childCalls = $directive->getCalls();
-            foreach ($childCalls as $childCall) {
-                $output .= $this->executeCall($childCall);
-            }
-
-            return $output;
-        } catch (Throwable $e) {
-            return '';
-        }
-    }
-
-    private function findDirectiveClass(string $signature): ?string
-    {
-        foreach ($this->registeredDirectives as $class) {
-            $reflection = new \ReflectionClass($class);
-            $instance = $reflection->newInstanceWithoutConstructor();
-
-            $fullSignature = $instance->getSignature();
-            $baseSignature = explode(' ', $fullSignature)[0];
-            $baseSignature = explode('{', $baseSignature)[0];
-            $baseSignature = rtrim($baseSignature, '-');
-
-            if ($baseSignature === $signature) {
-                return $class;
-            }
-
-            if ($instance->getAliases()->contains($signature)) {
-                return $class;
-            }
-        }
-
-        return null;
-    }
-
-    private function parseArguments(string $signature, array $arguments): array
-    {
-        $parser = new DirectiveParserService;
-        $argumentCollection = new StringTypedCollection;
-
-        foreach ($arguments as $arg) {
-            $argumentCollection->add((string) $arg);
-        }
-
-        $parsed = $parser->parse($signature, $argumentCollection);
-
-        $argumentsVO = new ParameterVOCollection;
-        foreach ($parsed->arguments as $arg) {
-            $type = $this->typeConverter->detectType($arg->value);
-            $value = $this->typeConverter->convert($arg->value, $type);
-            $argumentsVO->add(new ParameterVO($arg->name, $value, $type));
-        }
-
-        $optionsVO = new ParameterVOCollection;
-        foreach ($parsed->options as $opt) {
-            $value = match ($opt->value) {
-                'true' => true,
-                'false' => false,
-                default => $opt->value,
-            };
-            $type = $this->typeConverter->detectType($value);
-            $optionsVO->add(new ParameterVO($opt->name, $value, $type));
-        }
-
-        return [
-            'arguments' => $argumentsVO,
-            'options' => $optionsVO,
-            'variadic' => $parsed->variadic_arguments,
-        ];
-    }
-
-    private function hydrateDirective(AbstractDirective $directive, DirectiveContext $context): AbstractDirective
-    {
-        $reflection = new \ReflectionClass($directive);
-        $constructor = $reflection->getConstructor();
-
-        if ($constructor === null) {
-            return $directive;
-        }
-
-        $args = [];
-        foreach ($constructor->getParameters() as $param) {
-            $paramName = $param->getType()?->getName();
-
-            $args[] = match (true) {
-                $paramName === DirectiveContext::class => $context,
-                $paramName === DirectiveInteractionService::class => $this->interaction,
-                default => $param->isDefaultValueAvailable() ? $param->getDefaultValue() : null,
-            };
-        }
-
-        return $reflection->newInstanceArgs($args);
     }
 
     private function setupTempDirectory(): void
