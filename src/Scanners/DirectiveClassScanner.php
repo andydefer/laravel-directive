@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Scanners;
 
+use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use PhpParser\Error;
@@ -14,17 +15,19 @@ use PhpParser\Node\Stmt\Use_;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 use PhpParser\Parser;
-use PhpParser\ParserFactory;
 
+/**
+ * Scans PHP files to discover directive classes.
+ *
+ * This scanner uses AST parsing to reliably detect classes that extend
+ * AbstractDirective, even with complex syntax or aliased imports.
+ */
 final class DirectiveClassScanner implements DirectiveScannerInterface
 {
-    private Parser $parser;
-
     public function __construct(
         private readonly FileSystemInterface $fileSystem,
-    ) {
-        $this->parser = (new ParserFactory)->createForNewestSupportedVersion();
-    }
+        private Parser $parser,
+    ) {}
 
     public function scan(string $directory, int $maxDepth = 3): array
     {
@@ -69,9 +72,10 @@ final class DirectiveClassScanner implements DirectiveScannerInterface
     }
 
     /**
-     * Analyse un fichier PHP et retourne tous les FQCN des directives valides.
+     * Analyzes a PHP file and returns all valid directive FQCNs.
      *
-     * @return array<string> Liste des FQCN
+     * @param  string  $content  The PHP file content
+     * @return array<int, string> List of fully qualified class names
      */
     private function analyzeFile(string $content): array
     {
@@ -93,7 +97,6 @@ final class DirectiveClassScanner implements DirectiveScannerInterface
 
                 public function enterNode(Node $node): ?int
                 {
-                    // Capturer le namespace
                     if ($node instanceof Namespace_) {
                         $this->currentNamespace = $node->name !== null
                             ? $node->name->toString()
@@ -102,7 +105,6 @@ final class DirectiveClassScanner implements DirectiveScannerInterface
                         return null;
                     }
 
-                    // Capturer les use (pour les alias)
                     if ($node instanceof Use_) {
                         foreach ($node->uses as $use) {
                             $alias = $use->alias !== null
@@ -114,19 +116,16 @@ final class DirectiveClassScanner implements DirectiveScannerInterface
                         return null;
                     }
 
-                    // Analyser les classes
                     if ($node instanceof Class_) {
                         $className = $node->name->toString();
                         $isAbstract = $node->isAbstract();
 
-                        // Vérifier l'héritage en tenant compte des alias
                         $extendsAbstractDirective = false;
                         if ($node->extends !== null) {
                             $parentName = $node->extends->toString();
                             $extendsAbstractDirective = $this->isAbstractDirectiveParent($parentName);
                         }
 
-                        // Si c'est une directive valide, l'ajouter
                         if ($extendsAbstractDirective && ! $isAbstract && $this->currentNamespace !== null) {
                             $this->classes[] = $this->currentNamespace.'\\'.$className;
                         }
@@ -139,19 +138,16 @@ final class DirectiveClassScanner implements DirectiveScannerInterface
 
                 private function isAbstractDirectiveParent(string $parentName): bool
                 {
-                    // Vérifier avec le nom complet
-                    if ($parentName === 'AndyDefer\\Directive\\AbstractDirective') {
+                    if ($parentName === AbstractDirective::class) {
                         return true;
                     }
 
-                    // Vérifier avec les alias (use)
                     foreach ($this->aliases as $alias => $fqcn) {
-                        if ($parentName === $alias && $fqcn === 'AndyDefer\\Directive\\AbstractDirective') {
+                        if ($parentName === $alias && $fqcn === AbstractDirective::class) {
                             return true;
                         }
                     }
 
-                    // Vérifier avec le nom court (si use est utilisé)
                     $parts = explode('\\', $parentName);
 
                     return end($parts) === 'AbstractDirective';

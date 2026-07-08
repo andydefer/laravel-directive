@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Scanners;
 
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
-use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\Directive\Tests\Helpers\TestHelper;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
-use AndyDefer\PhpServices\Services\FileSystemService;
 
 final class DirectiveClassScannerTest extends IntegrationTestCase
 {
@@ -23,8 +21,7 @@ final class DirectiveClassScannerTest extends IntegrationTestCase
         $this->tempDir = sys_get_temp_dir().'/scanner_test_'.uniqid();
         mkdir($this->tempDir, 0777, true);
 
-        $fileSystem = new FileSystemService;
-        $this->scanner = new DirectiveClassScanner($fileSystem);
+        $this->scanner = $this->app->make(DirectiveScannerInterface::class);
     }
 
     protected function tearDown(): void

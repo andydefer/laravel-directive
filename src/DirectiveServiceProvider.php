@@ -23,6 +23,8 @@ use AndyDefer\SignatureParser\Contracts\ParserRegistryInterface;
 use AndyDefer\SignatureParser\Contracts\SignatureParserInterface;
 use AndyDefer\SignatureParser\SignatureParser;
 use Illuminate\Support\ServiceProvider;
+use PhpParser\Parser;
+use PhpParser\ParserFactory;
 
 final class DirectiveServiceProvider extends ServiceProvider
 {
@@ -72,10 +74,14 @@ final class DirectiveServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(Parser::class, function () {
+            return (new ParserFactory)->createForNewestSupportedVersion();
+        });
         $this->app->singleton(DirectiveScannerInterface::class, function ($app) {
-            return new DirectiveClassScanner(
-                $app->make(FileSystemInterface::class),
-            );
+            $fileSystem = $app->make(FileSystemInterface::class);
+            $parser = $app->make(Parser::class);
+
+            return new DirectiveClassScanner($fileSystem, $parser);
         });
 
         $this->app->singleton(BuiltInDirectiveDiscovery::class);

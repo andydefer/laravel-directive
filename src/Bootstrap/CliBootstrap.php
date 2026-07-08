@@ -10,16 +10,30 @@ use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Foundation\Application;
 
 /**
- * Bootstrap script for the Directive CLI runner.
+ * Bootstraps the Laravel application for the Directive CLI runner.
+ *
+ * This class handles environment loading, autoloader registration, application
+ * creation, service provider registration, and application bootstrapping.
  */
 final readonly class CliBootstrap
 {
+    /**
+     * The package name used in compiled providers storage.
+     */
+    private const PACKAGE_KEY = 'andydefer/laravel-directive';
+
+    /**
+     * @param  Application  $app  The Laravel application instance
+     */
     public function __construct(
         private Application $app,
     ) {}
 
     /**
-     * @param  array<int, string>  $arguments
+     * Executes the CLI runner with the given arguments.
+     *
+     * @param  array<int, string>  $arguments  The CLI arguments
+     * @return int The exit code
      */
     public function run(array $arguments): int
     {
@@ -28,6 +42,13 @@ final readonly class CliBootstrap
         return $runner->run($arguments);
     }
 
+    /**
+     * Creates a fully bootstrapped CLI bootstrap instance.
+     *
+     * @return self A new instance with a bootstrapped application
+     *
+     * @throws BootstrapException If bootstrapping fails
+     */
     public static function create(): self
     {
         self::loadEnvironment();
@@ -40,9 +61,12 @@ final readonly class CliBootstrap
         return new self($app);
     }
 
+    /**
+     * Loads environment variables from the .env file.
+     */
     private static function loadEnvironment(): void
     {
-        if (! Paths::hasEnvFile()) {
+        if (! Paths::hasEnvFile() || ! function_exists('putenv')) {
             return;
         }
 
@@ -51,16 +75,19 @@ final readonly class CliBootstrap
         foreach ($lines as $line) {
             $trimmed = ltrim($line);
 
-            if (str_starts_with($trimmed, '#')) {
+            if (str_starts_with($trimmed, '#') || ! str_contains($line, '=')) {
                 continue;
             }
 
-            if (str_contains($line, '=')) {
-                putenv($line);
-            }
+            putenv($line);
         }
     }
 
+    /**
+     * Loads the Composer autoloader and registers package autoloading.
+     *
+     * @throws BootstrapException If the autoloader is not found
+     */
     private static function loadAutoloader(): void
     {
         if (! Paths::hasProjectAutoload()) {
@@ -76,6 +103,13 @@ final readonly class CliBootstrap
         }
     }
 
+    /**
+     * Creates and returns the Laravel application instance.
+     *
+     * @return Application The bootstrapped application
+     *
+     * @throws BootstrapException If the bootstrap file is missing or invalid
+     */
     private static function createApplication(): Application
     {
         if (! Paths::hasLaravelBootstrap()) {
@@ -95,6 +129,11 @@ final readonly class CliBootstrap
         return $app;
     }
 
+    /**
+     * Registers all service providers from storage and configuration.
+     *
+     * @param  Application  $app  The application instance
+     */
     private static function registerProviders(Application $app): void
     {
         $providers = array_merge(
@@ -102,17 +141,30 @@ final readonly class CliBootstrap
             self::resolveProvidersFromConfig()
         );
 
-        foreach ($providers as $provider) {
-            if (! is_string($provider) || ! class_exists($provider)) {
-                continue;
-            }
+        $validProviders = self::filterValidProviders($providers);
 
+        foreach ($validProviders as $provider) {
             $app->register($provider);
         }
     }
 
     /**
-     * @return list<class-string>
+     * Filters and validates provider class names.
+     *
+     * @param  array<string|class-string>  $providers  The provider class names to validate
+     * @return list<class-string> The validated provider class names
+     */
+    private static function filterValidProviders(array $providers): array
+    {
+        return array_values(
+            array_filter($providers, fn ($provider): bool => is_string($provider) && class_exists($provider))
+        );
+    }
+
+    /**
+     * Resolves service providers from the compiled providers storage.
+     *
+     * @return list<class-string> The resolved provider class names
      */
     private static function resolveProvidersFromStorage(): array
     {
@@ -125,16 +177,17 @@ final readonly class CliBootstrap
 
         $providers = $providersData['providers'] ?? [];
 
-        $packageKey = 'andydefer/laravel-task';
-        if (isset($providersData[$packageKey]['providers']) && is_array($providersData[$packageKey]['providers'])) {
-            $providers = array_merge($providers, $providersData[$packageKey]['providers']);
+        if (isset($providersData[self::PACKAGE_KEY]['providers']) && is_array($providersData[self::PACKAGE_KEY]['providers'])) {
+            $providers = array_merge($providers, $providersData[self::PACKAGE_KEY]['providers']);
         }
 
         return array_values(array_filter($providers, 'is_string'));
     }
 
     /**
-     * @return list<class-string>
+     * Resolves service providers from the application configuration.
+     *
+     * @return list<class-string> The resolved provider class names
      */
     private static function resolveProvidersFromConfig(): array
     {
@@ -150,6 +203,11 @@ final readonly class CliBootstrap
         return is_array($providers) ? array_values(array_filter($providers, 'is_string')) : [];
     }
 
+    /**
+     * Boots the Laravel application.
+     *
+     * @param  Application  $app  The application to boot
+     */
     private static function bootApplication(Application $app): void
     {
         $app->make(Kernel::class)->bootstrap();

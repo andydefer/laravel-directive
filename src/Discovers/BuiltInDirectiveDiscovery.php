@@ -9,22 +9,34 @@ use AndyDefer\Directive\BuiltIn\ListDirective;
 use AndyDefer\Directive\BuiltIn\VersionDirective;
 use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
 
+/**
+ * Discovery source for built-in directives.
+ *
+ * Provides the core directives that come bundled with the package:
+ * - ListDirective: Lists all available directives
+ * - HelpDirective: Displays help information
+ * - VersionDirective: Shows version information
+ */
 final class BuiltInDirectiveDiscovery implements DiscoverySourceInterface
 {
+    /**
+     * The list of built-in directive class names.
+     *
+     * @var array<int, class-string>
+     */
     private array $builtInDirectives = [
         ListDirective::class,
         HelpDirective::class,
         VersionDirective::class,
     ];
 
+    /**
+     * Discovers all built-in directives.
+     *
+     * @return array<int, class-string> The list of built-in directive class names
+     */
     public function discover(): array
     {
-        $fqcns = [];
-
-        foreach ($this->builtInDirectives as $class) {
-            $fqcns[] = $class;
-        }
-
-        return $fqcns;
+        return $this->builtInDirectives;
     }
 }
