@@ -8,9 +8,9 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
+use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 
 final class DirectiveDiscoveryService
@@ -24,7 +24,7 @@ final class DirectiveDiscoveryService
         private readonly DiscoverySourceInterface $workspaceSource,
         private readonly DiscoverySourceInterface $vendorSource,
         private readonly DirectiveParserInterface $parser,
-        private readonly DirectiveClassScanner $scanner,
+        private readonly DirectiveScannerInterface $scanner,
         private readonly FileSystemInterface $fileSystem,
         private readonly DirectiveConfigInterface $config,
         private readonly int $maxDepth = 3,

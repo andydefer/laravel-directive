@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Scanners;
 
-use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 
-final class DirectiveClassScanner
+final class DirectiveClassScanner implements DirectiveScannerInterface
 {
     public function __construct(
         private readonly FileSystemInterface $fileSystem,
@@ -20,6 +20,7 @@ final class DirectiveClassScanner
         if (! $this->fileSystem->isDirectory($directory)) {
             return $fqcns;
         }
+
         $this->scanDirectory($directory, $fqcns, 0, $maxDepth);
 
         return $fqcns;
@@ -39,34 +40,30 @@ final class DirectiveClassScanner
             }
 
             $content = $this->fileSystem->get($file);
-            $className = $this->extractClassName($content);
 
-            if ($className === null) {
-                continue;
-            }
-
+            // Extraire le namespace
             $namespace = $this->extractNamespace($content);
-
             if ($namespace === null) {
                 continue;
             }
 
+            // Extraire le nom de la classe
+            $className = $this->extractClassName($content);
+            if ($className === null) {
+                continue;
+            }
+
+            // Vérifier si la classe étend AbstractDirective (via le contenu du fichier)
+            if (! $this->extendsAbstractDirective($content)) {
+                continue;
+            }
+
+            // Vérifier si la classe est abstraite (via le contenu du fichier)
+            if ($this->isAbstractClass($content)) {
+                continue;
+            }
+
             $fqcn = $namespace.'\\'.$className;
-
-            if (! class_exists($fqcn)) {
-                continue;
-            }
-
-            $reflection = new \ReflectionClass($fqcn);
-
-            if ($reflection->isAbstract()) {
-                continue;
-            }
-
-            if (! $reflection->isSubclassOf(AbstractDirective::class)) {
-                continue;
-            }
-
             $fqcns[] = $fqcn;
         }
 
@@ -93,5 +90,18 @@ final class DirectiveClassScanner
         }
 
         return null;
+    }
+
+    private function extendsAbstractDirective(string $content): bool
+    {
+        // Vérifie si la classe étend AbstractDirective (avec ou sans namespace complet)
+        return preg_match('/class\s+\w+\s+extends\s+(?:\\\\)?AbstractDirective/', $content) === 1 ||
+               preg_match('/class\s+\w+\s+extends\s+(?:\\\\)?AndyDefer\\\\Directive\\\\AbstractDirective/', $content) === 1;
+    }
+
+    private function isAbstractClass(string $content): bool
+    {
+        // Vérifie si la classe est abstraite
+        return preg_match('/abstract\s+class/', $content) === 1;
     }
 }

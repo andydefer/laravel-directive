@@ -6,13 +6,13 @@ namespace AndyDefer\Directive\Tests\Feature;
 
 use AndyDefer\Directive\Configs\DirectiveConfig;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
+use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Discovers\BuiltInDirectiveDiscovery;
 use AndyDefer\Directive\Discovers\VendorDirectiveDiscovery;
 use AndyDefer\Directive\Discovers\WorkspaceDirectiveDiscovery;
-use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\Directive\Services\DependencyResolverService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -116,7 +116,7 @@ final class DirectiveServiceProviderTest extends OrchestraTestCase
     public function test_scanner_is_registered(): void
     {
         $this->provider->register();
-        $this->assertTrue($this->app->bound(DirectiveClassScanner::class));
+        $this->assertTrue($this->app->bound(DirectiveScannerInterface::class));
     }
 
     public function test_composer_reader_is_registered(): void

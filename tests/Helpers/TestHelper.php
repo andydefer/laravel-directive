@@ -127,6 +127,33 @@ return [
 PHP;
     }
 
+    public static function createAdminDirectiveContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\Admin\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+final class AdminDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'admin';
+    }
+
+    public function execute(): ExitCode
+    {
+        return ExitCode::SUCCESS;
+    }
+}
+PHP;
+    }
+
     public static function createDirective(string $className, string $signature, string $description, string $executeContent, array $aliases = []): string
     {
         $aliasCode = '';
@@ -161,7 +188,7 @@ final class {$className} extends AbstractDirective
         return '{$description}';
     }
 
-    {$aliasCode}
+{$aliasCode}
 
     protected function execute(): ExitCode
     {
@@ -313,6 +340,273 @@ foreach ($files as $file) {
 if ($this->flag('verbose')) {
     $this->info('Verbose mode enabled');
 }
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createHelperFileContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\Directives;
+
+// No class defined here, just some functions
+function test_helper(): void {}
+PHP;
+    }
+
+    public static function createNoNamespaceDirectiveContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+final class NoNamespaceDirective extends AndyDefer\Directive\AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'no-namespace';
+    }
+
+    public function execute(): ExitCode
+    {
+        return ExitCode::SUCCESS;
+    }
+}
+PHP;
+    }
+
+    public static function createAbstractDirectiveContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+abstract class AbstractTestDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'abstract-test';
+    }
+
+    abstract public function execute(): ExitCode;
+}
+PHP;
+    }
+
+    public static function createNonDirectiveClassContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\Directives;
+
+class NonDirectiveClass
+{
+    public function test(): void
+    {
+        // Not a directive
+    }
+}
+PHP;
+    }
+
+    public static function createDeepDirectiveContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\Deep\Nested\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+final class DeepDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'deep';
+    }
+
+    public function execute(): ExitCode
+    {
+        return ExitCode::SUCCESS;
+    }
+}
+PHP;
+    }
+
+    public static function createBeforeAfterDirective(): string
+    {
+        return self::createDirective(
+            className: 'BeforeAfterDirective',
+            signature: 'before-after',
+            description: 'Test before and after hooks',
+            executeContent: <<<'PHP'
+$this->info('Execute hook executed');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createBeforeFailingDirective(): string
+    {
+        return self::createDirective(
+            className: 'BeforeFailingDirective',
+            signature: 'before-failing',
+            description: 'Test failing before hook',
+            executeContent: <<<'PHP'
+$this->info('Execute hook should not be reached');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createAfterFailingDirective(): string
+    {
+        return self::createDirective(
+            className: 'AfterFailingDirective',
+            signature: 'after-failing',
+            description: 'Test failing after hook',
+            executeContent: <<<'PHP'
+$this->info('Execute hook executed');
+throw new \RuntimeException('After hook failure');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createNestedBeforeAfterDirective(): string
+    {
+        return self::createDirective(
+            className: 'NestedBeforeAfterDirective',
+            signature: 'nested-before-after',
+            description: 'Test nested before and after hooks',
+            executeContent: <<<'PHP'
+$this->info('Parent execute hook executed');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createParentDirective(): string
+    {
+        return self::createDirective(
+            className: 'ParentDirective',
+            signature: 'parent',
+            description: 'Parent directive that calls children',
+            executeContent: <<<'PHP'
+$this->info('Parent directive started');
+$this->call('calculator add 10 5');
+$this->call('calculator pow 2 3');
+$this->call('greeting John');
+$this->info('Parent directive finished');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createCircularDirective(): string
+    {
+        return self::createDirective(
+            className: 'CircularDirective',
+            signature: 'circular',
+            description: 'Directive with circular call',
+            executeContent: <<<'PHP'
+$this->info('Circular directive started');
+$this->call('circular');
+$this->info('Circular directive finished');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createTestCallDirective(): string
+    {
+        return self::createDirective(
+            className: 'TestCallDirective',
+            signature: 'test-call',
+            description: 'Test directive with calls',
+            executeContent: <<<'PHP'
+$this->info('Test call directive started');
+$this->call('greeting Alice');
+$this->call('calculator add 5 3');
+$this->info('Test call directive finished');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createTestConcreteDirective(): string
+    {
+        return self::createDirective(
+            className: 'TestConcreteDirective',
+            signature: 'test-concrete {name} {email} {format=zip} {files*} {--force} {--verbose}',
+            description: 'Test concrete directive for AbstractDirective tests',
+            executeContent: <<<'PHP'
+$name = $this->argument('name');
+$email = $this->argument('email');
+$this->info("Name: {$name}, Email: {$email}");
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createTestEchoDirective(): string
+    {
+        return self::createDirective(
+            className: 'TestEchoDirective',
+            signature: 'test-echo {message=?} {extra=?}',
+            description: 'Test echo directive',
+            aliases: ['echo'],
+            executeContent: <<<'PHP'
+$message = $this->argument('message') ?? 'Hello World';
+$this->line($message);
+if ($this->argument('extra')) {
+    $this->line($this->argument('extra'));
+}
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createTestGreetingDirective(): string
+    {
+        return self::createDirective(
+            className: 'TestGreetingDirective',
+            signature: 'greeting {name=?}',
+            description: 'Test greeting directive',
+            executeContent: <<<'PHP'
+$name = $this->argument('name') ?? 'World';
+$this->info("Hello, {$name}!");
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createTestDirective(): string
+    {
+        return self::createDirective(
+            className: 'TestDirective',
+            signature: 'test-directive {name} {email} {format=zip} {files*} {--force} {--verbose}',
+            description: 'Test directive',
+            executeContent: <<<'PHP'
+$name = $this->argument('name');
+$email = $this->argument('email');
+$this->info("Name: {$name}, Email: {$email}");
 return ExitCode::SUCCESS;
 PHP
         );

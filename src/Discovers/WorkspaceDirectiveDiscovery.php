@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Discovers;
 
 use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
-use AndyDefer\Directive\Scanners\DirectiveClassScanner;
+use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 
 final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
 {
     public function __construct(
         private readonly FileSystemInterface $fileSystem,
-        private readonly DirectiveClassScanner $scanner,
+        private readonly DirectiveScannerInterface $scanner,
         private readonly int $maxDepth = 3,
     ) {}
 

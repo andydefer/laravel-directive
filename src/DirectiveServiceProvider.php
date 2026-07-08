@@ -7,6 +7,7 @@ namespace AndyDefer\Directive;
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Configs\DirectiveConfig;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
+use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
 use AndyDefer\Directive\Discovers\BuiltInDirectiveDiscovery;
 use AndyDefer\Directive\Discovers\VendorDirectiveDiscovery;
@@ -71,7 +72,7 @@ final class DirectiveServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(DirectiveClassScanner::class, function ($app) {
+        $this->app->singleton(DirectiveScannerInterface::class, function ($app) {
             return new DirectiveClassScanner(
                 $app->make(FileSystemInterface::class),
             );
@@ -81,7 +82,7 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->singleton(WorkspaceDirectiveDiscovery::class, function ($app) {
             return new WorkspaceDirectiveDiscovery(
                 $app->make(FileSystemInterface::class),
-                $app->make(DirectiveClassScanner::class),
+                $app->make(DirectiveScannerInterface::class),
             );
         });
 
@@ -90,7 +91,7 @@ final class DirectiveServiceProvider extends ServiceProvider
                 $app->make(ComposerReaderService::class),
                 $app->make(DependencyResolverService::class),
                 $app->make(FileSystemInterface::class),
-                $app->make(DirectiveClassScanner::class),
+                $app->make(DirectiveScannerInterface::class),
             );
         });
     }

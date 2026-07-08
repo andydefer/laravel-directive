@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Discovers;
 
 use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
+use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\ComposerReaderInterface;
 use AndyDefer\Directive\Contracts\Services\DependencyResolverInterface;
-use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 
 final class VendorDirectiveDiscovery implements DiscoverySourceInterface
@@ -16,7 +16,7 @@ final class VendorDirectiveDiscovery implements DiscoverySourceInterface
         private readonly ComposerReaderInterface $composerReader,
         private readonly DependencyResolverInterface $dependencyResolver,
         private readonly FileSystemInterface $fileSystem,
-        private readonly DirectiveClassScanner $scanner,
+        private readonly DirectiveScannerInterface $scanner,
         private readonly int $maxDepth = 3,
     ) {}
 
