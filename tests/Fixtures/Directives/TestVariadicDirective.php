@@ -33,7 +33,7 @@ final class TestVariadicDirective extends AbstractDirective
             }
         }
 
-        if ($this->option('verbose')) {
+        if ($this->isFlagActive('verbose')) {
             $this->info('Verbose mode enabled');
         }
 

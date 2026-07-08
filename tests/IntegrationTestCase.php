@@ -16,6 +16,7 @@ abstract class IntegrationTestCase extends Orchestra
         Carbon::setTestNow(Carbon::create(2024, 1, 1, 12, 0, 0));
 
         $this->runDatabaseMigrations();
+
     }
 
     protected function tearDown(): void

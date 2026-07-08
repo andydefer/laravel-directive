@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\Configs\DirectiveConfig;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Services\ComposerReaderService;
-use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\PhpServices\Services\FileSystemService;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use RuntimeException;
 
-final class ComposerReaderServiceTest extends UnitTestCase
+#[AllowMockObjectsWithoutExpectations]
+final class ComposerReaderServiceTest extends IntegrationTestCase
 {
     private string $tempDir;
 
     private FileSystemService $fileSystem;
+
+    private DirectiveConfigInterface $config;
 
     protected function setUp(): void
     {
@@ -23,6 +30,15 @@ final class ComposerReaderServiceTest extends UnitTestCase
         mkdir($this->tempDir, 0777, true);
 
         $this->fileSystem = new FileSystemService;
+
+        // Créer un config mock qui pointe vers le tempDir
+        $configRepository = $this->createMock(ConfigRepository::class);
+        $configRepository->method('get')
+            ->willReturnMap([
+                ['directive.base_path', null, $this->tempDir],
+            ]);
+
+        $this->config = new DirectiveConfig($configRepository);
     }
 
     protected function tearDown(): void
@@ -53,7 +69,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $result = $reader->getRequire();
 
         $this->assertSame('^1.0', $result['andydefer/domain-structures']);
@@ -71,7 +87,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $result = $reader->getRequireDev();
 
         $this->assertSame('^10.0', $result['phpunit/phpunit']);
@@ -91,7 +107,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $result = $reader->getAllDependencies();
 
         $this->assertCount(2, $result);
@@ -111,7 +127,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $result = $reader->getPackageNames();
 
         $this->assertContains('andydefer/domain-structures', $result);
@@ -130,7 +146,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $result = $reader->getVendorDirectories();
 
         $this->assertContains('andydefer', $result);
@@ -148,7 +164,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
 
         $this->assertTrue($reader->hasPackage('andydefer/domain-structures'));
         $this->assertFalse($reader->hasPackage('unknown/package'));
@@ -164,7 +180,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
 
         $this->assertSame('^1.0', $reader->getPackageVersion('andydefer/domain-structures'));
         $this->assertNull($reader->getPackageVersion('unknown/package'));
@@ -182,7 +198,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $result = $reader->getAutoload();
 
         $this->assertArrayHasKey('psr-4', $result);
@@ -201,7 +217,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $result = $reader->getAutoloadDev();
 
         $this->assertArrayHasKey('psr-4', $result);
@@ -210,7 +226,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
     public function test_get_vendor_dir_returns_vendor_path(): void
     {
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
 
         $this->assertSame($this->tempDir.'/vendor', $reader->getVendorDir());
     }
@@ -220,7 +236,8 @@ final class ComposerReaderServiceTest extends UnitTestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('composer.json not found');
 
-        $reader = new ComposerReaderService('/invalid/path', $this->fileSystem);
+        // Ne pas créer composer.json
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $reader->getRequire();
     }
 
@@ -234,7 +251,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Invalid JSON in composer.json');
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
         $reader->getRequire();
     }
 
@@ -246,7 +263,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
 
         $this->assertSame([], $reader->getRequire());
         $this->assertSame([], $reader->getRequireDev());
@@ -264,7 +281,7 @@ final class ComposerReaderServiceTest extends UnitTestCase
 
         $this->createComposerJson($composerData);
 
-        $reader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+        $reader = new ComposerReaderService($this->config, $this->fileSystem);
 
         $this->assertSame([], $reader->getRequire());
         $this->assertSame([], $reader->getRequireDev());

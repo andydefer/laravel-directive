@@ -6,13 +6,13 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
-use AndyDefer\Directive\Services\DirectiveHydratorService;
+use Illuminate\Foundation\Application;
 
 final class DirectiveKernel
 {
     public function __construct(
+        private readonly Application $app,
         private readonly DirectiveDiscoveryService $discovery,
-        private readonly DirectiveHydratorService $hydrator,
     ) {}
 
     public function run(array $argv): ExitCode
@@ -55,7 +55,9 @@ final class DirectiveKernel
             return ExitCode::NOT_FOUND;
         }
 
-        $instance = $this->hydrator->hydrate($directive->class, $query);
+        $instance = $this->app->make($directive->class, [
+            'query' => $query,
+        ]);
 
         return $instance->run();
     }

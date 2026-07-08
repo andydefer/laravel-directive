@@ -14,7 +14,6 @@ use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\Directive\Services\DependencyResolverService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
-use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use AndyDefer\SignatureParser\SignatureParser;
@@ -68,13 +67,10 @@ final class CliRunner
             $config,
         );
 
-        // Hydrator
-        $hydrator = new DirectiveHydratorService($this->application);
-
-        // Kernel
+        // Kernel (plus besoin de Hydrator)
         return new DirectiveKernel(
+            $this->application,
             $discovery,
-            $hydrator,
         );
     }
 }

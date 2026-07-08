@@ -1,0 +1,320 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AndyDefer\Directive\Tests\Helpers;
+
+final class TestHelper
+{
+    public static function getDirectories(): array
+    {
+        return [
+            '/app/Directives',
+            '/bootstrap',
+            '/config',
+            '/vendor',
+            '/vendor/composer',
+        ];
+    }
+
+    public static function createComposerJsonContent(): string
+    {
+        return <<<'JSON'
+{
+    "name": "laravel-directive/test-app",
+    "type": "project",
+    "require": {
+        "php": "^8.1",
+        "laravel/framework": "^12.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    }
+}
+JSON;
+    }
+
+    public static function createAutoloadContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+spl_autoload_register(function ($class) {
+    $prefix = 'App\\';
+    $baseDir = __DIR__ . '/../app/';
+    
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+    
+    $relativeClass = substr($class, $len);
+    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+    
+    if (file_exists($file)) {
+        require $file;
+    }
+});
+PHP;
+    }
+
+    public static function createBootstrapAppContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Support\Facades\Facade;
+
+$app = new Application(
+    $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
+);
+
+$app->singleton(
+    Kernel::class,
+    Illuminate\Foundation\Http\Kernel::class
+);
+
+$app->singleton(
+    Illuminate\Contracts\Console\Kernel::class,
+    Illuminate\Foundation\Console\Kernel::class
+);
+
+$app->singleton(
+    ExceptionHandler::class,
+    Handler::class
+);
+
+Facade::setFacadeApplication($app);
+
+return $app;
+PHP;
+    }
+
+    public static function createConfigAppContent(): string
+    {
+        return <<<'PHP'
+<?php
+
+return [
+    'name' => 'Laravel Test Application',
+    'env' => 'testing',
+    'debug' => true,
+    'url' => 'http://localhost',
+    'timezone' => 'UTC',
+    'locale' => 'en',
+    'fallback_locale' => 'en',
+    'faker_locale' => 'en_US',
+    'key' => 'base64:' . base64_encode(random_bytes(32)),
+    'cipher' => 'AES-256-CBC',
+    'providers' => [
+        AndyDefer\Directive\DirectiveServiceProvider::class,
+    ],
+];
+PHP;
+    }
+
+    public static function createDirective(string $className, string $signature, string $description, string $executeContent, array $aliases = []): string
+    {
+        $aliasCode = '';
+        if (! empty($aliases)) {
+            $aliasCode = sprintf(
+                '    public function getAliases(): StringTypedCollection
+    {
+        return StringTypedCollection::from([%s]);
+    }',
+                implode(', ', array_map(fn ($a) => "'$a'", $aliases))
+            );
+        }
+
+        return <<<PHP
+<?php
+
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+
+final class {$className} extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return '{$signature}';
+    }
+
+    public function getDescription(): string
+    {
+        return '{$description}';
+    }
+
+    {$aliasCode}
+
+    protected function execute(): ExitCode
+    {
+        {$executeContent}
+    }
+}
+PHP;
+    }
+
+    public static function createUserCreateDirective(): string
+    {
+        return self::createDirective(
+            className: 'UserCreateDirective',
+            signature: 'user-create {name} {email} {--admin}',
+            description: 'Create a new user',
+            executeContent: <<<'PHP'
+$name = $this->argument('name');
+$email = $this->argument('email');
+$isAdmin = $this->flag('admin');
+$message = "User {$name} ({$email}) created";
+if ($isAdmin) {
+    $message .= " as admin";
+}
+$this->info($message);
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createCacheClearDirective(): string
+    {
+        return self::createDirective(
+            className: 'CacheClearDirective',
+            signature: 'cache-clear {--force}',
+            description: 'Clear application cache',
+            executeContent: <<<'PHP'
+$force = $this->flag('force');
+$message = "Cache cleared";
+if ($force) {
+    $message .= " (forced)";
+}
+$this->info($message);
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createAliasTestDirective(): string
+    {
+        return self::createDirective(
+            className: 'AliasTestDirective',
+            signature: 'original-name',
+            description: 'Directive with alias',
+            aliases: ['alias'],
+            executeContent: <<<'PHP'
+$this->info('Alias works!');
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createEchoDirective(): string
+    {
+        return self::createDirective(
+            className: 'EchoDirective',
+            signature: 'echo {message=Hello World} {extra=?}',
+            description: 'Echo a message',
+            aliases: ['echo'],
+            executeContent: <<<'PHP'
+$message = $this->argument('message');
+$extra = $this->argument('extra');
+$output = $message;
+if ($extra) {
+    $output .= " " . $extra;
+}
+$this->line($output);
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createGreetingDirective(): string
+    {
+        return self::createDirective(
+            className: 'GreetingDirective',
+            signature: 'greeting {name=World}',
+            description: 'Say hello to someone',
+            executeContent: <<<'PHP'
+$name = $this->argument('name');
+$this->info("Hello, {$name}!");
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createCalculatorDirective(): string
+    {
+        return self::createDirective(
+            className: 'CalculatorDirective',
+            signature: 'calculator {operation} {a} {b=?}',
+            description: 'Test calculator directive for arithmetic operations',
+            aliases: ['calc', 'math'],
+            executeContent: <<<'PHP'
+$operation = $this->argument('operation');
+$a = (int) $this->argument('a');
+$b = (int) $this->argument('b', 0);
+
+switch ($operation) {
+    case 'add':
+        $result = $a + $b;
+        break;
+    case 'sub':
+        $result = $a - $b;
+        break;
+    case 'mul':
+        $result = $a * $b;
+        break;
+    case 'div':
+        if ($b === 0) {
+            $this->error('Division by zero');
+            return ExitCode::FAILURE;
+        }
+        $result = $a / $b;
+        break;
+    default:
+        $this->error("Unknown operation: {$operation}");
+        return ExitCode::INVALID_ARGUMENT;
+}
+
+$this->info((string) $result);
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+
+    public static function createVariadicDirective(): string
+    {
+        return self::createDirective(
+            className: 'VariadicDirective',
+            signature: 'variadic {name} {files*} {--verbose}',
+            description: 'Test variadic arguments',
+            executeContent: <<<'PHP'
+$name = $this->argument('name');
+$this->info("Name: {$name}");
+$files = $this->getVariadicArguments();
+foreach ($files as $file) {
+    $this->line("- {$file}");
+}
+if ($this->flag('verbose')) {
+    $this->info('Verbose mode enabled');
+}
+return ExitCode::SUCCESS;
+PHP
+        );
+    }
+}

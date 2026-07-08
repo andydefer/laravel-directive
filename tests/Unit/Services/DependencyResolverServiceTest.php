@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit\Services;
 
+use AndyDefer\Directive\Configs\DirectiveConfig;
+use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\Directive\Services\DependencyResolverService;
-use AndyDefer\Directive\Tests\UnitTestCase;
+use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpServices\Services\FileSystemService;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
-final class DependencyResolverServiceTest extends UnitTestCase
+#[AllowMockObjectsWithoutExpectations]
+final class DependencyResolverServiceTest extends IntegrationTestCase
 {
     private string $tempDir;
 
@@ -20,6 +25,8 @@ final class DependencyResolverServiceTest extends UnitTestCase
 
     private DependencyResolverService $resolver;
 
+    private DirectiveConfigInterface $config;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -28,12 +35,17 @@ final class DependencyResolverServiceTest extends UnitTestCase
         mkdir($this->tempDir, 0777, true);
 
         $this->fileSystem = new FileSystemService;
-        $this->composerReader = new ComposerReaderService($this->tempDir, $this->fileSystem);
+
+        // Créer un config mock qui pointe vers le tempDir
+        $configRepository = $this->createMock(ConfigRepository::class);
+        $configRepository->method('get')
+            ->willReturnMap([
+                ['directive.base_path', null, $this->tempDir],
+            ]);
+
+        $this->config = new DirectiveConfig($configRepository);
+        $this->composerReader = new ComposerReaderService($this->config, $this->fileSystem);
         $this->resolver = new DependencyResolverService($this->composerReader, $this->fileSystem);
-
-        $reader = new ComposerReaderService(getcwd(), $this->fileSystem);
-        $resolver = new DependencyResolverService($reader, $this->fileSystem);
-
     }
 
     protected function tearDown(): void
@@ -283,8 +295,6 @@ final class DependencyResolverServiceTest extends UnitTestCase
             ],
         ]);
 
-        // Ne pas créer le dossier vendor/andydefer/package-a
-
         $result = $this->resolver->resolveAll();
 
         $this->assertArrayNotHasKey('andydefer/package-a', $result);
@@ -298,7 +308,6 @@ final class DependencyResolverServiceTest extends UnitTestCase
             ],
         ]);
 
-        // Créer le dossier sans composer.json
         mkdir($this->tempDir.'/vendor/andydefer/package-a', 0777, true);
 
         $result = $this->resolver->resolveAll();

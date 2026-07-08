@@ -12,7 +12,7 @@ final class TestEchoDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-echo {message=} {extra=}';
+        return 'test-echo {message=?} {extra=?}';
     }
 
     public function getDescription(): string
@@ -22,18 +22,16 @@ final class TestEchoDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        $aliases = new StringTypedCollection;
-        $aliases->add('echo');
-
-        return $aliases;
+        return StringTypedCollection::from(['echo']);
     }
 
     public function execute(): ExitCode
     {
         $message = $this->argument('message') ?? 'Hello World';
+
         $this->line($message);
 
-        if ($this->hasArgument('extra')) {
+        if ($this->argument('extra')) {
             $this->line($this->argument('extra'));
         }
 

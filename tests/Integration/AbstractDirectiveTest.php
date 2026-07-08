@@ -62,36 +62,36 @@ final class AbstractDirectiveTest extends IntegrationTestCase
     {
         $directive = $this->createDirective('test-concrete John john@example.com --force');
 
-        $this->assertTrue($directive->option('force'));
-        $this->assertFalse($directive->option('verbose'));
+        $this->assertTrue($directive->isFlagActive('force'));
+        $this->assertFalse($directive->isFlagActive('verbose'));
     }
 
     public function test_option_returns_false_for_unknown_key(): void
     {
         $directive = $this->createDirective('test-concrete John john@example.com --force');
 
-        $this->assertFalse($directive->option('unknown'));
+        $this->assertFalse($directive->hasFlag('unknown'));
     }
 
     public function test_has_option_returns_true_when_exists(): void
     {
         $directive = $this->createDirective('test-concrete John john@example.com --force');
 
-        $this->assertTrue($directive->hasOption('force'));
+        $this->assertTrue($directive->hasFlag('force'));
     }
 
     public function test_has_option_returns_false_when_not_exists(): void
     {
         $directive = $this->createDirective('test-concrete John john@example.com --force');
 
-        $this->assertFalse($directive->hasOption('unknown'));
+        $this->assertFalse($directive->hasFlag('unknown'));
     }
 
     public function test_has_option_returns_false_for_inactive_option(): void
     {
         $directive = $this->createDirective('test-concrete John john@example.com --force');
 
-        $this->assertFalse($directive->hasOption('verbose'));
+        $this->assertFalse($directive->isFlagActive('verbose'));
     }
 
     public function test_variadic_arguments_returns_values(): void

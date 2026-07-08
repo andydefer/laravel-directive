@@ -12,7 +12,7 @@ class TestCalculatorDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'calculator {operation} {a} {b?}';
+        return 'calculator {operation} {a} {b=?}';
     }
 
     public function getDescription(): string
@@ -59,7 +59,7 @@ class TestCalculatorDirective extends AbstractDirective
 
         $this->line((string) $result);
 
-        if ($this->hasOption('verbose')) {
+        if ($this->hasFlag('verbose')) {
             $this->info("Operation: {$operation}, A: {$a}, B: {$b}, Result: {$result}");
         }
 

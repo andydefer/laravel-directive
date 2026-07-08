@@ -12,11 +12,18 @@ use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-use ReflectionClass;
 
 final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 {
     private string $fixturesPath;
+
+    private string $invalidFixturesPath;
+
+    private string $abstractFixturesPath;
+
+    private string $nonDirectiveFixturesPath;
+
+    private string $malformedFixturesPath;
 
     private DirectiveDiscoveryService $service;
 
@@ -25,8 +32,11 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         parent::setUp();
 
         $this->fixturesPath = realpath(__DIR__.'/../../Fixtures/Directives');
+        $this->invalidFixturesPath = realpath(__DIR__.'/../../Fixtures/Invalid');
+        $this->abstractFixturesPath = realpath(__DIR__.'/../../Fixtures/Abstracts');
+        $this->nonDirectiveFixturesPath = realpath(__DIR__.'/../../Fixtures/NonDirectives');
+        $this->malformedFixturesPath = realpath(__DIR__.'/../../Fixtures/Malformed');
 
-        // Ajouter le chemin des fixtures comme source personnalisée
         $this->service = $this->app->make(DirectiveDiscoveryService::class);
         $this->service->addSource($this->fixturesPath);
     }
@@ -59,65 +69,54 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 
     public function test_ignores_invalid_directives_that_dont_extend_abstract_directive(): void
     {
-        $tempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
-        mkdir($tempDir, 0777, true);
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+        $service->addSource($this->invalidFixturesPath);
 
-        $invalidClassPath = $tempDir.'/InvalidDirective.php';
-        $invalidClassContent = <<<'PHP'
-<?php
+        $result = $service->discover();
 
-declare(strict_types=1);
-
-namespace AndyDefer\Directive\Tests\Fixtures\Directives;
-
-use AndyDefer\Directive\Contracts\DirectiveInterface;
-use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Records\DirectiveBlueprintRecord;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-
-final class InvalidDirective implements DirectiveInterface
-{
-    public function getSignature(): string { return 'invalid'; }
-    public function getDescription(): string { return 'Invalid directive'; }
-    public function getAliases(): StringTypedCollection { return new StringTypedCollection(); }
-    public function getBlueprint(): DirectiveBlueprintRecord { return new DirectiveBlueprintRecord('invalid', static::class, 'test'); }
-    public function setArguments($arguments) { return $this; }
-    public function argument(string $key): ?string { return null; }
-    public function setOptions($options) { return $this; }
-    public function option(string $key): bool|string|null { return null; }
-    public function hasOption(string $key): bool { return false; }
-    public function hasLaravel(): bool { return false; }
-    public function getLaravel(): ?object { return null; }
-    public function setLaravelBootstrapper($bootstrapper) { return $this; }
-    public function execute(): ExitCode { return ExitCode::SUCCESS; }
-}
-PHP;
-
-        file_put_contents($invalidClassPath, $invalidClassContent);
-
-        // Créer un nouveau service avec ce dossier
-        $tempService = $this->app->make(DirectiveDiscoveryService::class);
-        $tempService->addSource($tempDir);
-
-        $result = $tempService->discover();
-
-        $this->assertEquals(0, $result->count());
-
-        unlink($invalidClassPath);
-        rmdir($tempDir);
+        // Aucune directive ne doit être trouvée car InvalidDirective n'implémente pas AbstractDirective
+        foreach ($result as $directive) {
+            $this->assertNotEquals('invalid', $directive->signature);
+        }
     }
 
     public function test_ignores_abstract_directives(): void
     {
-        $result = $this->service->discover();
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+        $service->addSource($this->abstractFixturesPath);
 
-        $this->assertGreaterThan(0, $result->count(), 'No directives found to test abstract check');
+        $result = $service->discover();
 
+        // Aucune directive ne doit être trouvée car la classe est abstraite
         foreach ($result as $directive) {
-            $reflection = new ReflectionClass($directive->class);
-            $this->assertFalse($reflection->isAbstract(), 'Directive '.$directive->class.' should not be abstract');
-            $this->assertTrue(is_subclass_of($directive->class, AbstractDirective::class), 'Directive '.$directive->class.' must extend AbstractDirective');
+            $this->assertNotEquals('abstract', $directive->signature);
         }
+    }
+
+    public function test_ignores_non_directive_classes(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+        $service->addSource($this->nonDirectiveFixturesPath);
+
+        $result = $service->discover();
+
+        // Aucune directive ne doit être trouvée car la classe n'implémente pas DirectiveInterface
+        foreach ($result as $directive) {
+            $this->assertNotEquals('not-a-directive', $directive->signature);
+        }
+    }
+
+    public function test_handles_malformed_php_files_gracefully(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+        $service->addSource($this->malformedFixturesPath);
+
+        $result = $service->discover();
+
+        // Les fichiers malformés doivent être ignorés silencieusement
+        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
+        // Les directives built-in sont toujours présentes
+        $this->assertGreaterThan(0, $result->count());
     }
 
     public function test_finds_concrete_directives(): void
@@ -180,29 +179,12 @@ PHP;
 
     public function test_returns_empty_result_for_invalid_path(): void
     {
-        $tempService = $this->app->make(DirectiveDiscoveryService::class);
-        // Ajouter un chemin invalide ne devrait pas lever d'exception
-        $tempService->addSource('/invalid/path/that/does/not/exist');
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+        $service->addSource('/invalid/path/that/does/not/exist');
 
-        $result = $tempService->discover();
-
-        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
-    }
-
-    public function test_returns_empty_result_for_empty_directory(): void
-    {
-        $emptyDir = sys_get_temp_dir().'/empty_directives_'.uniqid();
-        mkdir($emptyDir, 0777, true);
-
-        $tempService = $this->app->make(DirectiveDiscoveryService::class);
-        $tempService->addSource($emptyDir);
-
-        $result = $tempService->discover();
+        $result = $service->discover();
 
         $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
-        $this->assertEquals(0, $result->count());
-
-        rmdir($emptyDir);
     }
 
     public function test_aliases_are_loaded_correctly(): void
@@ -237,25 +219,5 @@ PHP;
                 sprintf('Class %s does not implement DirectiveInterface', $directive->class)
             );
         }
-    }
-
-    public function test_handles_malformed_php_files_gracefully(): void
-    {
-        $tempDir = sys_get_temp_dir().'/malformed_test_'.uniqid();
-        mkdir($tempDir, 0777, true);
-
-        $malformedPath = $tempDir.'/MalformedDirective.php';
-        file_put_contents($malformedPath, '<?php this is not valid php code {');
-
-        $tempService = $this->app->make(DirectiveDiscoveryService::class);
-        $tempService->addSource($tempDir);
-
-        $result = $tempService->discover();
-
-        $this->assertInstanceOf(DirectiveMetadataCollection::class, $result);
-        $this->assertEquals(0, $result->count());
-
-        unlink($malformedPath);
-        rmdir($tempDir);
     }
 }

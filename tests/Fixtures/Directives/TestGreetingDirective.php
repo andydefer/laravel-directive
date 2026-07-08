@@ -13,7 +13,7 @@ final class TestGreetingDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'greeting {name=}';
+        return 'greeting {name=?}';
     }
 
     public function getDescription(): string

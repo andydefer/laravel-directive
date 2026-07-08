@@ -7,7 +7,6 @@ namespace AndyDefer\Directive\Tests\Unit;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
-use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 
 final class DirectiveKernelTest extends IntegrationTestCase
@@ -16,22 +15,30 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     private DirectiveDiscoveryService $discovery;
 
-    private DirectiveHydratorService $hydrator;
-
     protected function setUp(): void
     {
         parent::setUp();
 
+        // Capturer les sorties console
+        ob_start();
+
         $this->discovery = $this->app->make(DirectiveDiscoveryService::class);
-        $this->hydrator = $this->app->make(DirectiveHydratorService::class);
 
         // Ajouter le chemin des fixtures
         $this->discovery->addSource(getcwd().'/tests/Fixtures/Directives');
 
         $this->kernel = new DirectiveKernel(
+            $this->app,
             $this->discovery,
-            $this->hydrator,
         );
+    }
+
+    protected function tearDown(): void
+    {
+        // Nettoyer le buffer de sortie
+        ob_end_clean();
+
+        parent::tearDown();
     }
 
     public function test_run_without_arguments_returns_help(): void

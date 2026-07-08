@@ -11,11 +11,11 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveCallRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
-use AndyDefer\Directive\Services\DirectiveHydratorService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
+use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
 use Illuminate\Foundation\Application;
 use Throwable;
 
@@ -31,6 +31,8 @@ abstract class AbstractDirective implements DirectiveInterface
 
     protected ParsedSignatureRecord $parsed;
 
+    protected SignatureStructureVO $structure;
+
     private DirectiveParserService $parser;
 
     public function __construct(Application $app, string $query)
@@ -39,6 +41,7 @@ abstract class AbstractDirective implements DirectiveInterface
         $this->console = $app->make(Console::class);
         $this->parser = $app->make(DirectiveParserService::class);
         $this->parsed = $this->parser->parse($this->getSignature(), $query);
+        $this->structure = new SignatureStructureVO($this->getSignature());
     }
 
     final public function getLaravel(): Application
@@ -56,6 +59,11 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->parsed;
     }
 
+    final public function getStructure(): SignatureStructureVO
+    {
+        return $this->structure;
+    }
+
     final public function argument(string $key): mixed
     {
         return $this->parsed->required->get($key) ?? $this->parsed->default->get($key);
@@ -66,14 +74,19 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->parsed->required->has($key) || $this->parsed->default->has($key);
     }
 
-    final public function option(string $key): bool
+    final public function flag(string $key): bool
     {
-        return $this->parsed->options->get($key);
+        return $this->parsed->flags->get($key);
     }
 
-    final public function hasOption(string $key): bool
+    final public function hasFlag(string $key): bool
     {
-        return $this->parsed->options->isActive($key);
+        return $this->parsed->flags->has($key);
+    }
+
+    final public function isFlagActive(string $key): bool
+    {
+        return $this->parsed->flags->isActive($key);
     }
 
     final public function getVariadicArguments(): StringTypedCollection
@@ -89,6 +102,41 @@ abstract class AbstractDirective implements DirectiveInterface
     final public function hasVariadicArguments(): bool
     {
         return $this->parsed->variadic->countAllValues() > 0;
+    }
+
+    final public function getRequiredArguments(): array
+    {
+        return $this->parsed->required->toAssociativeArray();
+    }
+
+    final public function getDefaultArguments(): array
+    {
+        return $this->parsed->default->toAssociativeArray();
+    }
+
+    final public function getFlags(): array
+    {
+        return $this->parsed->flags->toAssociativeArray();
+    }
+
+    final public function getActiveFlags(): array
+    {
+        return $this->parsed->flags->getActiveNames();
+    }
+
+    final public function hasRequireds(): bool
+    {
+        return $this->parsed->required->isNotEmpty();
+    }
+
+    final public function hasDefaults(): bool
+    {
+        return $this->parsed->default->isNotEmpty();
+    }
+
+    final public function hasFlags(): bool
+    {
+        return $this->parsed->flags->isNotEmpty();
     }
 
     final public function line(string $message): void
@@ -143,11 +191,9 @@ abstract class AbstractDirective implements DirectiveInterface
 
     private function executeCall(string $query): ExitCode
     {
-        // Extraire le nom de la commande
         $parts = explode(' ', $query);
         $commandName = $parts[0];
 
-        // Trouver la directive
         $discovery = $this->app->make(DirectiveDiscoveryService::class);
         $directives = $discovery->discover();
         $directive = $this->findDirective($directives, $commandName);
@@ -158,7 +204,6 @@ abstract class AbstractDirective implements DirectiveInterface
             return ExitCode::NOT_FOUND;
         }
 
-        // Vérifier la récursion
         $stackKey = $directive->class.'|'.$query;
         if (in_array($stackKey, self::$executionStack, true)) {
             $this->console->alertWarning("Circular call detected: {$query}");
@@ -166,12 +211,12 @@ abstract class AbstractDirective implements DirectiveInterface
             return ExitCode::CONFLICT;
         }
 
-        // Ajouter à la pile
         self::$executionStack[] = $stackKey;
 
         try {
-            $hydrator = $this->app->make(DirectiveHydratorService::class);
-            $instance = $hydrator->hydrate($directive->class, $query);
+            $instance = $this->app->make($directive->class, [
+                'query' => $query,
+            ]);
 
             $exitCode = $instance->run();
 
@@ -233,7 +278,6 @@ abstract class AbstractDirective implements DirectiveInterface
         try {
             $exitCode = $this->execute();
 
-            // Exécuter les calls APRÈS execute() et AVANT afterExecute()
             $callExitCode = $this->executeCalls();
 
             if ($callExitCode !== ExitCode::SUCCESS) {

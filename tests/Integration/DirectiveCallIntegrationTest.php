@@ -6,9 +6,6 @@ namespace AndyDefer\Directive\Tests\Integration;
 
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveTestingService;
-use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
-use AndyDefer\Directive\Tests\Fixtures\Directives\TestGreetingDirective;
-use AndyDefer\Directive\Tests\Fixtures\Directives\TestParentDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 
 final class DirectiveCallIntegrationTest extends IntegrationTestCase
@@ -19,11 +16,10 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        $this->service = new DirectiveTestingService($this->app);
-
-        $this->service
-            ->registerDirective(TestCalculatorDirective::class)
-            ->registerDirective(TestGreetingDirective::class);
+        $this->service = new DirectiveTestingService(
+            $this->app,
+            [getcwd().'/tests/Fixtures/Directives'],
+        );
     }
 
     protected function tearDown(): void
@@ -34,7 +30,7 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_parent_directive_executes_child_directives(): void
     {
-        $response = $this->service->run(TestParentDirective::class, []);
+        $response = $this->service->run('test-parent');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Parent directive started', $response->output);
@@ -46,7 +42,7 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_parent_directive_with_no_calls(): void
     {
-        $response = $this->service->run(TestGreetingDirective::class, ['Alice']);
+        $response = $this->service->run('greeting Alice');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello, Alice!', $response->output);
@@ -54,25 +50,22 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_child_output_appears_after_parent_execution(): void
     {
-        $response = $this->service->run(TestParentDirective::class, []);
+        $response = $this->service->run('test-parent');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 
         $output = $response->output;
 
-        // Le parent s'exécute complètement avant les enfants
         $this->assertTrue(
             strpos($output, 'Parent directive started') < strpos($output, 'Parent directive finished'),
             'Parent should start before finishing'
         );
 
-        // Les enfants s'exécutent après que le parent ait fini
         $this->assertTrue(
             strpos($output, 'Parent directive finished') < strpos($output, '15'),
             'Children should execute after parent finishes'
         );
 
-        // L'ordre des enfants est respecté
         $this->assertTrue(
             strpos($output, '15') < strpos($output, '8'),
             'Calculator add should execute before pow'
@@ -85,13 +78,13 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_multiple_executions_are_independent(): void
     {
-        $response1 = $this->service->run(TestParentDirective::class, []);
+        $response1 = $this->service->run('test-parent');
         $this->assertSame(ExitCode::SUCCESS, $response1->exit_code);
         $this->assertStringContainsString('15', $response1->output);
         $this->assertStringContainsString('8', $response1->output);
         $this->assertStringContainsString('Hello, John!', $response1->output);
 
-        $response2 = $this->service->run(TestGreetingDirective::class, ['Bob']);
+        $response2 = $this->service->run('greeting Bob');
         $this->assertSame(ExitCode::SUCCESS, $response2->exit_code);
         $this->assertStringContainsString('Hello, Bob!', $response2->output);
         $this->assertStringNotContainsString('15', $response2->output);
@@ -100,40 +93,36 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_calculator_directive_works_independently(): void
     {
-        $response = $this->service->run(TestCalculatorDirective::class, ['add', '10', '5']);
+        $response = $this->service->run('calculator add 10 5');
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('15', $response->output);
 
-        $response = $this->service->run(TestCalculatorDirective::class, ['pow', '2', '3']);
+        $response = $this->service->run('calculator pow 2 3');
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('8', $response->output);
     }
 
     public function test_greeting_directive_works_independently(): void
     {
-        $response = $this->service->run(TestGreetingDirective::class, ['Alice']);
+        $response = $this->service->run('greeting Alice');
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello, Alice!', $response->output);
 
-        $response = $this->service->run(TestGreetingDirective::class, []);
+        $response = $this->service->run('greeting');
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello, World!', $response->output);
     }
 
-    public function test_register_directive_twice_does_not_duplicate(): void
+    public function test_nested_calls_execute_in_correct_order(): void
     {
-        $service = new DirectiveTestingService($this->app);
-        $service->registerDirective(TestCalculatorDirective::class);
-        $service->registerDirective(TestCalculatorDirective::class);
-        $service->registerDirective(TestGreetingDirective::class);
-
-        $response = $service->run(TestParentDirective::class, []);
+        $response = $this->service->run('test-nested-before-after');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('15', $response->output);
-        $this->assertStringContainsString('8', $response->output);
-        $this->assertStringContainsString('Hello, John!', $response->output);
-
-        $service->destroy();
+        $this->assertStringContainsString('Parent before hook executed', $response->output);
+        $this->assertStringContainsString('Parent execute hook executed', $response->output);
+        $this->assertStringContainsString('Before hook executed', $response->output);
+        $this->assertStringContainsString('Execute hook executed', $response->output);
+        $this->assertStringContainsString('After hook executed', $response->output);
+        $this->assertStringContainsString('Parent after hook executed', $response->output);
     }
 }

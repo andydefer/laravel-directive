@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
-use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use Illuminate\Foundation\Application;
@@ -16,28 +16,33 @@ final class DirectiveTestingService
 
     private string $originalCwd;
 
-    private array $executed = [];
+    private DirectiveKernel $kernel;
 
     public function __construct(
         private readonly Application $app,
+        private readonly array $sourcePaths = [],
     ) {
         $this->originalCwd = getcwd();
         $this->setupTempDirectory();
-    }
 
-    public function run(string $class, string $query): DirectiveResponseRecord
-    {
-        $this->executed = [];
+        $discovery = $this->app->make(DirectiveDiscoveryService::class);
 
-        try {
-            $directive = $this->app->make($class, ['query' => $query]);
-        } catch (Throwable $e) {
-            return new DirectiveResponseRecord(ExitCode::FAILURE, $e->getMessage());
+        foreach ($this->sourcePaths as $path) {
+            $discovery->addSource($path);
         }
 
+        $this->kernel = new DirectiveKernel(
+            $this->app,
+            $discovery,
+        );
+    }
+
+    public function run(string $query): DirectiveResponseRecord
+    {
         ob_start();
         try {
-            $exitCode = $this->executeDirective($directive);
+            $argv = ['directive', ...explode(' ', $query)];
+            $exitCode = $this->kernel->run($argv);
             $output = ob_get_clean();
 
             return new DirectiveResponseRecord($exitCode, $output);
@@ -48,36 +53,6 @@ final class DirectiveTestingService
         }
     }
 
-    private function executeDirective(AbstractDirective $directive): ExitCode
-    {
-        $key = get_class($directive);
-
-        if (in_array($key, $this->executed, true)) {
-            return ExitCode::CONFLICT;
-        }
-
-        $this->executed[] = $key;
-
-        $exitCode = $directive->run();
-
-        // Exécuter récursivement les calls
-        $calls = $directive->getCalls();
-        foreach ($calls as $call) {
-            try {
-                $callDirective = $this->app->make($call->class, ['query' => $call->query]);
-                $callResult = $this->executeDirective($callDirective);
-
-                if ($callResult !== ExitCode::SUCCESS) {
-                    return $callResult;
-                }
-            } catch (Throwable $e) {
-                return ExitCode::FAILURE;
-            }
-        }
-
-        return $exitCode;
-    }
-
     public function getTempDir(): string
     {
         return $this->tempDir;
@@ -85,7 +60,9 @@ final class DirectiveTestingService
 
     public function destroy(): void
     {
-        chdir($this->originalCwd);
+        if (is_dir($this->originalCwd)) {
+            chdir($this->originalCwd);
+        }
 
         if (is_dir($this->tempDir)) {
             $this->removeDirectory($this->tempDir);
@@ -96,6 +73,24 @@ final class DirectiveTestingService
     {
         $this->tempDir = sys_get_temp_dir().'/directive_test_'.uniqid();
         mkdir($this->tempDir, 0777, true);
+
+        // Créer un composer.json minimal pour éviter l'erreur
+        $composerJson = <<<'JSON'
+{
+    "name": "directive-test/app",
+    "type": "project",
+    "require": {
+        "php": "^8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    }
+}
+JSON;
+        file_put_contents($this->tempDir.'/composer.json', $composerJson);
+
         chdir($this->tempDir);
     }
 
@@ -107,7 +102,11 @@ final class DirectiveTestingService
 
         foreach (array_diff(scandir($dir), ['.', '..']) as $file) {
             $path = $dir.DIRECTORY_SEPARATOR.$file;
-            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+            } else {
+                unlink($path);
+            }
         }
         rmdir($dir);
     }

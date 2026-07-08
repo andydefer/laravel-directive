@@ -38,7 +38,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->assertSame('john@example.com', $result->required->last()->value);
         $this->assertCount(0, $result->default);
         $this->assertCount(0, $result->variadic);
-        $this->assertCount(0, $result->options);
+        $this->assertCount(0, $result->flags);
     }
 
     public function test_parse_with_argument_default_value(): void
@@ -82,36 +82,36 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->assertSame('user', $result->default->first()->value);
     }
 
-    public function test_parse_with_options(): void
+    public function test_parse_with_flags(): void
     {
         // Arrange
-        $signature = 'user:create {--role} {--active}';
-        $query = 'user:create --role --active';
+        $signature = 'user:create {--admin} {--active}';
+        $query = 'user:create --admin --active';
 
         // Act
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $this->assertTrue($result->options->first()->value);
-        $this->assertTrue($result->options->last()->value);
+        $this->assertTrue($result->flags->first()->value);
+        $this->assertTrue($result->flags->last()->value);
     }
 
-    public function test_parse_with_arguments_and_options(): void
+    public function test_parse_with_arguments_and_flags(): void
     {
         // Arrange
-        $signature = 'user:create {name} {--role} {--active}';
-        $query = 'user:create John --role --active';
+        $signature = 'user:create {name} {--admin} {--active}';
+        $query = 'user:create John --admin --active';
 
         // Act
         $result = $this->service->parse($signature, $query);
 
         // Assert
         $this->assertSame('John', $result->required->first()->value);
-        $this->assertTrue($result->options->first()->value);
-        $this->assertTrue($result->options->last()->value);
+        $this->assertTrue($result->flags->first()->value);
+        $this->assertTrue($result->flags->last()->value);
     }
 
-    public function test_parse_with_options_between_arguments(): void
+    public function test_parse_with_flags_between_arguments(): void
     {
         // Arrange
         $signature = 'user:create {name} {email} {--active} {--verbose}';
@@ -123,8 +123,8 @@ final class DirectiveParserServiceTest extends UnitTestCase
         // Assert
         $this->assertSame('John', $result->required->first()->value);
         $this->assertSame('john@example.com', $result->required->last()->value);
-        $this->assertTrue($result->options->first()->value);  // active
-        $this->assertFalse($result->options->last()->value);  // verbose
+        $this->assertTrue($result->flags->first()->value);  // active
+        $this->assertFalse($result->flags->last()->value);  // verbose
     }
 
     public function test_parse_with_variadic_argument(): void
@@ -160,7 +160,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->assertSame(['file1.txt', 'file2.txt'], $variadic->values->toArray());
     }
 
-    public function test_parse_with_variadic_and_options(): void
+    public function test_parse_with_variadic_and_flags(): void
     {
         // Arrange
         $signature = 'process {files*} {--verbose}';
@@ -172,7 +172,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
         // Assert
         $variadic = $result->variadic->first();
         $this->assertCount(2, $variadic->values);
-        $this->assertTrue($result->options->first()->value);
+        $this->assertTrue($result->flags->first()->value);
     }
 
     public function test_parse_with_empty_query(): void
@@ -189,7 +189,7 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->assertCount(0, $result->required);
         $this->assertCount(0, $result->default);
         $this->assertCount(0, $result->variadic);
-        $this->assertCount(0, $result->options);
+        $this->assertCount(0, $result->flags);
     }
 
     public function test_parse_with_complex_command(): void
@@ -216,7 +216,97 @@ final class DirectiveParserServiceTest extends UnitTestCase
         $this->assertSame('purpose', $purpose->name);
         $this->assertSame(['home', 'data', 'models'], $purpose->values->toArray());
 
-        $this->assertTrue($result->options->first()->value);
-        $this->assertFalse($result->options->last()->value);
+        $this->assertTrue($result->flags->first()->value);
+        $this->assertFalse($result->flags->last()->value);
+    }
+
+    public function test_validate_query(): void
+    {
+        // Arrange
+        $signature = 'backup {source} {destination}';
+        $query = 'backup /var/www';
+
+        // Act
+        $result = $this->service->validate($signature, $query);
+
+        // Assert
+        $this->assertFalse($result->isValid);
+        $this->assertNotEmpty($result->errors);
+    }
+
+    public function test_is_valid_query(): void
+    {
+        // Arrange
+        $signature = 'backup {source} {destination}';
+        $query = 'backup /var/www /backup';
+
+        // Act
+        $result = $this->service->isValid($signature, $query);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    public function test_is_valid_query_with_missing_argument(): void
+    {
+        // Arrange
+        $signature = 'backup {source} {destination}';
+        $query = 'backup /var/www';
+
+        // Act
+        $result = $this->service->isValid($signature, $query);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    public function test_validate_signature(): void
+    {
+        // Arrange
+        $signature = 'backup {source} {destination} {--force}';
+
+        // Act
+        $result = $this->service->validateSignature($signature);
+
+        // Assert
+        $this->assertTrue($result->isValid);
+        $this->assertEmpty($result->errors);
+    }
+
+    public function test_validate_signature_invalid_order(): void
+    {
+        // Arrange
+        $signature = 'backup {format=zip} {source} {--force}';
+
+        // Act
+        $result = $this->service->validateSignature($signature);
+
+        // Assert
+        $this->assertFalse($result->isValid);
+        $this->assertNotEmpty($result->errors);
+    }
+
+    public function test_is_signature_valid(): void
+    {
+        // Arrange
+        $signature = 'backup {source} {destination} {--force}';
+
+        // Act
+        $result = $this->service->isSignatureValid($signature);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    public function test_is_signature_valid_invalid(): void
+    {
+        // Arrange
+        $signature = 'backup {format=zip} {source} {--force}';
+
+        // Act
+        $result = $this->service->isSignatureValid($signature);
+
+        // Assert
+        $this->assertFalse($result);
     }
 }
