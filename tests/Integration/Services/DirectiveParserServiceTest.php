@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tests\Directive\Unit\Services;
+namespace AndyDefer\Directive\Tests\Integration\Services;
 
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\Directive\Tests\UnitTestCase;

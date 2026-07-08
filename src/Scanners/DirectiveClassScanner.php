@@ -6,12 +6,25 @@ namespace AndyDefer\Directive\Scanners;
 
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
+use PhpParser\Error;
+use PhpParser\Node;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\Namespace_;
+use PhpParser\Node\Stmt\Use_;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitorAbstract;
+use PhpParser\Parser;
+use PhpParser\ParserFactory;
 
 final class DirectiveClassScanner implements DirectiveScannerInterface
 {
+    private Parser $parser;
+
     public function __construct(
         private readonly FileSystemInterface $fileSystem,
-    ) {}
+    ) {
+        $this->parser = (new ParserFactory)->createForNewestSupportedVersion();
+    }
 
     public function scan(string $directory, int $maxDepth = 3): array
     {
@@ -39,32 +52,13 @@ final class DirectiveClassScanner implements DirectiveScannerInterface
                 continue;
             }
 
-            $content = $this->fileSystem->get($file);
-
-            // Extraire le namespace
-            $namespace = $this->extractNamespace($content);
-            if ($namespace === null) {
+            try {
+                $content = $this->fileSystem->get($file);
+                $classes = $this->analyzeFile($content);
+                $fqcns = array_merge($fqcns, $classes);
+            } catch (\Throwable $e) {
                 continue;
             }
-
-            // Extraire le nom de la classe
-            $className = $this->extractClassName($content);
-            if ($className === null) {
-                continue;
-            }
-
-            // Vérifier si la classe étend AbstractDirective (via le contenu du fichier)
-            if (! $this->extendsAbstractDirective($content)) {
-                continue;
-            }
-
-            // Vérifier si la classe est abstraite (via le contenu du fichier)
-            if ($this->isAbstractClass($content)) {
-                continue;
-            }
-
-            $fqcn = $namespace.'\\'.$className;
-            $fqcns[] = $fqcn;
         }
 
         $subDirectories = $this->fileSystem->glob($directory.'/*', GLOB_ONLYDIR);
@@ -74,34 +68,103 @@ final class DirectiveClassScanner implements DirectiveScannerInterface
         }
     }
 
-    private function extractClassName(string $content): ?string
+    /**
+     * Analyse un fichier PHP et retourne tous les FQCN des directives valides.
+     *
+     * @return array<string> Liste des FQCN
+     */
+    private function analyzeFile(string $content): array
     {
-        if (preg_match('/class\s+([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)/', $content, $matches)) {
-            return $matches[1];
+        $foundClasses = [];
+
+        try {
+            $ast = $this->parser->parse($content);
+            if ($ast === null) {
+                return $foundClasses;
+            }
+
+            $visitor = new class extends NodeVisitorAbstract
+            {
+                public array $classes = [];
+
+                public ?string $currentNamespace = null;
+
+                public array $aliases = [];
+
+                public function enterNode(Node $node): ?int
+                {
+                    // Capturer le namespace
+                    if ($node instanceof Namespace_) {
+                        $this->currentNamespace = $node->name !== null
+                            ? $node->name->toString()
+                            : null;
+
+                        return null;
+                    }
+
+                    // Capturer les use (pour les alias)
+                    if ($node instanceof Use_) {
+                        foreach ($node->uses as $use) {
+                            $alias = $use->alias !== null
+                                ? $use->alias->toString()
+                                : $use->name->getLast();
+                            $this->aliases[$alias] = $use->name->toString();
+                        }
+
+                        return null;
+                    }
+
+                    // Analyser les classes
+                    if ($node instanceof Class_) {
+                        $className = $node->name->toString();
+                        $isAbstract = $node->isAbstract();
+
+                        // Vérifier l'héritage en tenant compte des alias
+                        $extendsAbstractDirective = false;
+                        if ($node->extends !== null) {
+                            $parentName = $node->extends->toString();
+                            $extendsAbstractDirective = $this->isAbstractDirectiveParent($parentName);
+                        }
+
+                        // Si c'est une directive valide, l'ajouter
+                        if ($extendsAbstractDirective && ! $isAbstract && $this->currentNamespace !== null) {
+                            $this->classes[] = $this->currentNamespace.'\\'.$className;
+                        }
+
+                        return null;
+                    }
+
+                    return null;
+                }
+
+                private function isAbstractDirectiveParent(string $parentName): bool
+                {
+                    // Vérifier avec le nom complet
+                    if ($parentName === 'AndyDefer\\Directive\\AbstractDirective') {
+                        return true;
+                    }
+
+                    // Vérifier avec les alias (use)
+                    foreach ($this->aliases as $alias => $fqcn) {
+                        if ($parentName === $alias && $fqcn === 'AndyDefer\\Directive\\AbstractDirective') {
+                            return true;
+                        }
+                    }
+
+                    // Vérifier avec le nom court (si use est utilisé)
+                    $parts = explode('\\', $parentName);
+
+                    return end($parts) === 'AbstractDirective';
+                }
+            };
+
+            $traverser = new NodeTraverser;
+            $traverser->addVisitor($visitor);
+            $traverser->traverse($ast);
+
+            return $visitor->classes;
+        } catch (Error $e) {
+            return [];
         }
-
-        return null;
-    }
-
-    private function extractNamespace(string $content): ?string
-    {
-        if (preg_match('/namespace\s+([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\\\]+);/', $content, $matches)) {
-            return $matches[1];
-        }
-
-        return null;
-    }
-
-    private function extendsAbstractDirective(string $content): bool
-    {
-        // Vérifie si la classe étend AbstractDirective (avec ou sans namespace complet)
-        return preg_match('/class\s+\w+\s+extends\s+(?:\\\\)?AbstractDirective/', $content) === 1 ||
-               preg_match('/class\s+\w+\s+extends\s+(?:\\\\)?AndyDefer\\\\Directive\\\\AbstractDirective/', $content) === 1;
-    }
-
-    private function isAbstractClass(string $content): bool
-    {
-        // Vérifie si la classe est abstraite
-        return preg_match('/abstract\s+class/', $content) === 1;
     }
 }
