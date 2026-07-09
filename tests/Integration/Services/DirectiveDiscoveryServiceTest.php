@@ -6,8 +6,8 @@ namespace AndyDefer\Directive\Tests\Integration\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
-use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
@@ -63,7 +63,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         }');
 
         // Create a mock application
-        $appMock = $this->createMock(ContainerInterface::class);
+        $appMock = $this->createMock(Container::class);
 
         // Create mocks for services
         $parserMock = $this->createMock(DirectiveParserInterface::class);

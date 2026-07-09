@@ -8,7 +8,6 @@ use AndyDefer\ConsoleWriter\Console\Components\KeyValue;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\MapCollection;
 
@@ -84,9 +83,8 @@ final class ListDirective extends AbstractDirective
      */
     private function discoverDirectives(): DirectiveMetadataCollection
     {
-        $discovery = $this->getContainer()->make(DirectiveDiscoveryService::class);
 
-        return $discovery->discover()->unique();
+        return $this->getKernel()->discover()->unique();
     }
 
     /**

@@ -24,6 +24,11 @@ abstract class IntegrationTestCase extends Orchestra
 
     }
 
+    protected function stripAnsi(string $text): string
+    {
+        return preg_replace('/\033\[[0-9;]+m/', '', $text);
+    }
+
     /**
      * Assert that a string does not start with a given prefix.
      *

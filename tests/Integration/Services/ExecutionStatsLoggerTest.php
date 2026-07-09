@@ -12,10 +12,10 @@ use AndyDefer\Directive\Records\ExecutionStatsRecord;
 use AndyDefer\Directive\Services\ExecutionStatsLogger;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\DomainStructures\Utils\MapCollection;
-use AndyDefer\LaravelJsonl\Contexts\JsonlContext;
 use AndyDefer\LaravelJsonl\JsonlService;
 use AndyDefer\LaravelJsonl\Strategies\TemporalPathStrategy;
 use AndyDefer\PhpServices\Services\FileSystemService;
+use Carbon\Carbon;  // ← AJOUTER
 use Illuminate\Config\Repository as ConfigRepository;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
@@ -33,30 +33,23 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
         ob_start();
 
         $this->basePath = sys_get_temp_dir().'/directive_logs_'.uniqid();
+        mkdir($this->basePath, 0777, true);
 
         $configRepository = new ConfigRepository([
             'directive' => [
                 'base_path' => $this->basePath,
+                'log_base_path' => $this->basePath,
             ],
         ]);
         $this->config = new DirectiveConfig($configRepository);
         $this->fileSystem = new FileSystemService;
 
-        $strategy = new TemporalPathStrategy($this->config->basePath());
-        $jsonlService = new JsonlService(
-            $strategy,
-            $this->fileSystem,
-            new JsonlContext
-        );
-
         $this->logger = new ExecutionStatsLogger(
             $this->config,
             $this->fileSystem,
-            $jsonlService,
             new Console
         );
     }
@@ -117,8 +110,9 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $this->logger->log($record);
         $this->logger->getJsonlService()->flushBuffer();
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $hour = Carbon::now()->format('H');
         $filePath = $this->basePath.'/'.$today.'/'.$hour.'.jsonl';
 
         $this->assertFileExists($filePath);
@@ -154,8 +148,9 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $this->logger->log($record);
         $this->logger->getJsonlService()->flushBuffer();
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $hour = Carbon::now()->format('H');
         $filePath = $this->basePath.'/'.$today.'/'.$hour.'.jsonl';
 
         $this->assertFileExists($filePath);
@@ -179,8 +174,9 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $this->logger->log($record, $context);
         $this->logger->getJsonlService()->flushBuffer();
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $hour = Carbon::now()->format('H');
         $filePath = $this->basePath.'/'.$today.'/'.$hour.'.jsonl';
 
         $this->assertFileExists($filePath);
@@ -200,8 +196,9 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $this->logger->log($record, null);
         $this->logger->getJsonlService()->flushBuffer();
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $hour = Carbon::now()->format('H');
         $filePath = $this->basePath.'/'.$today.'/'.$hour.'.jsonl';
 
         $this->assertFileExists($filePath);
@@ -222,8 +219,9 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $this->logger->log($record);
         $this->logger->getJsonlService()->flushBuffer();
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $hour = Carbon::now()->format('H');
         $filePath = $newBasePath.'/'.$today.'/'.$hour.'.jsonl';
 
         $this->assertFileExists($filePath);
@@ -236,7 +234,10 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
     public function test_get_base_path_returns_current_path(): void
     {
         $basePath = $this->logger->getBasePath();
-        $this->assertSame($this->basePath, $basePath);
+
+        $expectedPath = $this->basePath;
+
+        $this->assertSame($expectedPath, $basePath);
     }
 
     public function test_get_summary_returns_empty_summary_when_no_logs(): void
@@ -261,6 +262,11 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $this->logger->log($this->createStatsRecord(ExitCode::SUCCESS));
 
         $this->logger->getJsonlService()->flushBuffer();
+
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $basePath = $this->logger->getBasePath();
+        $filePath = $basePath.'/'.$today.'/'.Carbon::now()->format('H').'.jsonl';
 
         $summary = $this->logger->getSummary();
 
@@ -310,8 +316,9 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $this->logger->log($record2);
         $this->logger->getJsonlService()->flushBuffer();
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $hour = Carbon::now()->format('H');
         $filePath = $this->basePath.'/'.$today.'/'.$hour.'.jsonl';
 
         $this->assertFileExists($filePath);
@@ -338,28 +345,22 @@ final class ExecutionStatsLoggerTest extends IntegrationTestCase
         $mockConfig->method('basePath')->willReturn($invalidBasePath);
 
         $strategy = new TemporalPathStrategy($invalidBasePath);
-        $jsonlService = new JsonlService(
-            $strategy,
-            $this->fileSystem,
-            new JsonlContext
-        );
 
         $logger = new ExecutionStatsLogger(
             $mockConfig,
             $this->fileSystem,
-            $jsonlService,
             new Console
         );
 
         $record = $this->createStatsRecord();
 
-        // ✅ L'exception est capturée et un warning est affiché
         $logger->log($record);
 
         $logger->getJsonlService()->flushBuffer();
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        // ✅ Utiliser Carbon
+        $today = Carbon::now()->format('Y-m-d');
+        $hour = Carbon::now()->format('H');
         $filePath = $invalidBasePath.'/'.$today.'/'.$hour.'.jsonl';
         $this->assertFileDoesNotExist($filePath);
     }

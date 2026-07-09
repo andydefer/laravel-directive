@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Contracts;
 
 use AndyDefer\ConsoleWriter\Console\Console;
+use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
@@ -22,9 +23,9 @@ interface DirectiveInterface
     /**
      * Gets the container instance.
      *
-     * @return ContainerInterface|null The container instance
+     * @return Container|null The container instance
      */
-    public function getContainer(): ?ContainerInterface;
+    public function getContainer(): ?Container;
 
     /**
      * Gets the console output handler.

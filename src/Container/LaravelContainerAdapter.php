@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Container;
 
-use AndyDefer\Directive\Contracts\ContainerInterface;
 use Illuminate\Contracts\Foundation\Application;
 
 /**
  * Laravel container adapter.
  *
- * Adapts the Laravel application container to the Directive ContainerInterface.
+ * Adapts the Laravel application container to the Directive Container.
  */
-final class LaravelContainerAdapter implements ContainerInterface
+final class LaravelContainerAdapter extends Container
 {
     /**
      * @param  Application  $app  The Laravel application instance

@@ -8,12 +8,18 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
 final class TestGreetingDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
         return 'greeting {name=?}';
+    }
+
+    public function getAliases(): StringTypedCollection
+    {
+        return StringTypedCollection::from(['hello']);
     }
 
     public function getDescription(): string

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\ConsoleWriter\Console\Console;
-use AndyDefer\Directive\Contracts\ContainerInterface;
+use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveCallRecord;
@@ -74,9 +74,17 @@ abstract class AbstractDirective implements DirectiveInterface
     /**
      * {@inheritdoc}
      */
-    final public function getContainer(): ?ContainerInterface
+    final public function getContainer(): ?Container
     {
         return $this->kernel->getContainer();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    final public function getKernel(): ?DirectiveKernel
+    {
+        return $this->kernel;
     }
 
     /**

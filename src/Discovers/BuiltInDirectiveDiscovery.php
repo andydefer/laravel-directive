@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Discovers;
 
+use AndyDefer\Directive\BuiltIn\CleanLogsDirective;
 use AndyDefer\Directive\BuiltIn\HelpDirective;
 use AndyDefer\Directive\BuiltIn\ListDirective;
 use AndyDefer\Directive\BuiltIn\VersionDirective;
@@ -28,6 +29,7 @@ final class BuiltInDirectiveDiscovery implements DiscoverySourceInterface
         ListDirective::class,
         HelpDirective::class,
         VersionDirective::class,
+        CleanLogsDirective::class,
     ];
 
     /**

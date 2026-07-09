@@ -3,6 +3,8 @@
 
 declare(strict_types=1);
 
+require './vendor/autoload.php';
+
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Bootstrap\CliBootstrap;
 use AndyDefer\Directive\Exceptions\BootstrapException;

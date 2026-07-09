@@ -6,6 +6,7 @@ namespace AndyDefer\Directive\Tests\Fixtures\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
+use Carbon\Carbon;
 
 final class ContextPipelineDirective extends AbstractDirective
 {
@@ -29,7 +30,7 @@ final class ContextPipelineDirective extends AbstractDirective
 
         // Step 2: Enrich
         $this->contextSet('enriched', true);
-        $this->contextSet('timestamp', date('Y-m-d H:i:s'));
+        $this->contextSet('timestamp', Carbon::now()->format('Y-m-d H:i:s'));
 
         // Step 3: Process
         $this->call('context:increment');

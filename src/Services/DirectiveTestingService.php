@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
+use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Container\LaravelContainerAdapter;
-use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
@@ -24,11 +24,11 @@ final class DirectiveTestingService
     private DirectiveKernel $kernel;
 
     /**
-     * @param  ContainerInterface|LaravelApplication  $container  The container instance
+     * @param  Container|LaravelApplication  $container  The container instance
      * @param  array<int, string>  $sourcePaths  Additional source paths to scan
      */
     public function __construct(
-        private readonly ContainerInterface|LaravelApplication $container,
+        private readonly Container|LaravelApplication $container,
         private readonly array $sourcePaths = [],
     ) {
         $this->originalCwd = getcwd();
@@ -64,6 +64,11 @@ final class DirectiveTestingService
 
             return new DirectiveResponseRecord(ExitCode::RUNTIME_ERROR, $e->getMessage());
         }
+    }
+
+    public function getKernel(): DirectiveKernel
+    {
+        return $this->kernel;
     }
 
     public function getTempDir(): string

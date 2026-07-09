@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Container;
 
 use AndyDefer\Directive\Contracts\ContainerInterface;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
 /**
- * Simple dependency injection container.
+ * Abstract dependency injection container with core services registration.
+ *
+ * Provides a base container with essential services registration for standalone usage.
+ * Extend this class to add custom services or override registrations.
  */
-class Container implements ContainerInterface
+abstract class Container implements ContainerInterface
 {
     /**
      * @var array<string, object>
@@ -30,10 +34,22 @@ class Container implements ContainerInterface
 
     private ?string $version = null;
 
+    /**
+     * @var bool Whether core services have been registered
+     */
+    private bool $coreServicesRegistered = false;
+
     public function __construct(string $basePath = '')
     {
         $this->basePath = $basePath ?: getcwd();
+
+        $this->singleton(ContainerInterface::class, $this);
+
+        // Register core services automatically
+        $this->registerCoreServices();
     }
+
+    // ==================== CONTAINER METHODS ====================
 
     public function singleton(string $abstract, mixed $concrete): self
     {
@@ -93,6 +109,15 @@ class Container implements ContainerInterface
         $instance->register($this);
     }
 
+    public function has(string $abstract): bool
+    {
+        return isset($this->bindings[$abstract])
+            || isset($this->singletons[$abstract])
+            || isset($this->aliases[$abstract]);
+    }
+
+    // ==================== GETTERS / SETTERS ====================
+
     public function basePath(): string
     {
         return $this->basePath;
@@ -117,12 +142,64 @@ class Container implements ContainerInterface
         return $this;
     }
 
-    public function has(string $abstract): bool
+    // ==================== CORE SERVICES REGISTRATION ====================
+
+    /**
+     * Register core services required for standalone operation.
+     */
+    private function registerCoreServices(): void
     {
-        return isset($this->bindings[$abstract])
-            || isset($this->singletons[$abstract])
-            || isset($this->aliases[$abstract]);
+        if ($this->coreServicesRegistered) {
+            return;
+        }
+
+        // Register ConfigRepository for standalone
+        $this->registerConfigRepository();
+
+        // Register other core services
+        $this->registerStandaloneServices();
+
+        $this->coreServicesRegistered = true;
     }
+
+    /**
+     * Register the configuration repository for standalone usage.
+     */
+    private function registerConfigRepository(): void
+    {
+        $this->singleton(ConfigRepository::class, function (Container $c) {
+            $config = [
+                'directive' => [
+                    'base_path' => $c->basePath(),
+                    'debug' => false,
+                    'max_depth' => 3,
+                    'custom_sources' => [],
+                    'log_base_path' => $c->basePath().'/.directive',
+                ],
+            ];
+
+            $configFile = $c->basePath().'/config/directive.php';
+            if (file_exists($configFile)) {
+                $fileConfig = require $configFile;
+                if (is_array($fileConfig)) {
+                    $config['directive'] = array_merge($config['directive'], $fileConfig);
+                }
+            }
+
+            return new ArrayConfigRepository($config);
+        });
+    }
+
+    /**
+     * Register standalone services.
+     * Override this method to add custom services.
+     */
+    protected function registerStandaloneServices(): void
+    {
+        // To be overridden by child classes
+    }
+
+    // ==================== REFLECTION HELPERS ====================
 
     private function build(string $class, array $parameters = []): object
     {

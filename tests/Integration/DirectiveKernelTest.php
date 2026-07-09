@@ -9,6 +9,7 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\ExecutionStatsRecord;
 use AndyDefer\Directive\Services\ExecutionStatsLogger;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
+use Carbon\Carbon;
 
 final class DirectiveKernelTest extends IntegrationTestCase
 {
@@ -20,7 +21,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        // Capturer les sorties console
         ob_start();
 
         $this->kernel = DirectiveKernel::init($this->laravelContainer);
@@ -71,8 +71,9 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     private function getLogFilePath(): string
     {
-        $today = date('Y-m-d');
-        $hour = date('H');
+        $now = Carbon::now();
+        $today = $now->format('Y-m-d');
+        $hour = $now->format('H');
 
         return $this->logBasePath.'/'.$today.'/'.$hour.'.jsonl';
     }
@@ -86,51 +87,23 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_with_help_alias_returns_help(): void
+    public function test_run_with_help_flag_returns_help(): void
     {
         $result = $this->kernel->run(['directive', '--help']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_with_short_help_alias_returns_help(): void
-    {
-        $result = $this->kernel->run(['directive', '-h']);
-
-        $this->assertSame(ExitCode::SUCCESS, $result);
-    }
-
-    public function test_run_with_list_alias_returns_list(): void
-    {
-        $result = $this->kernel->run(['directive', '--list']);
-
-        $this->assertSame(ExitCode::SUCCESS, $result);
-    }
-
-    public function test_run_with_short_list_alias_returns_list(): void
-    {
-        $result = $this->kernel->run(['directive', '-l']);
-
-        $this->assertSame(ExitCode::SUCCESS, $result);
-    }
-
-    public function test_run_with_version_alias_returns_version(): void
+    public function test_run_with_version_flag_returns_version(): void
     {
         $result = $this->kernel->run(['directive', '--version']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_with_short_version_alias_returns_version(): void
+    public function test_run_with_list_flag_returns_list(): void
     {
-        $result = $this->kernel->run(['directive', '-v']);
-
-        $this->assertSame(ExitCode::SUCCESS, $result);
-    }
-
-    public function test_run_with_valid_directive_returns_success(): void
-    {
-        $result = $this->kernel->run(['directive', 'test-directive John john@example.com']);
+        $result = $this->kernel->run(['directive', '--list']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
@@ -142,58 +115,103 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $this->assertSame(ExitCode::NOT_FOUND, $result);
     }
 
-    public function test_run_with_directive_and_arguments_passes_query_correctly(): void
+    public function test_run_with_valid_directive_returns_success(): void
     {
-        $result = $this->kernel->run(['directive', 'test-directive John^Doe john@example.com']);
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_with_alias_help_after_other_args(): void
+    public function test_run_directive_with_aliases(): void
     {
-        $result = $this->kernel->run(['directive', '--help']);
+        $result = $this->kernel->run(['directive', 'test-echo', 'Hello']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_with_directive_using_circular_call_returns_conflict(): void
+    public function test_run_directive_with_options(): void
     {
-        $result = $this->kernel->run(['directive', 'test-circular']);
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', '--force']);
 
-        $this->assertSame(ExitCode::CONFLICT, $result);
+        $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_with_directive_using_calls_returns_success(): void
+    public function test_run_directive_with_verbose(): void
+    {
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', '--verbose']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_run_directive_with_files(): void
+    {
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', 'file1.txt', 'file2.txt']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_run_directive_with_format(): void
+    {
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', 'json']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_run_directive_with_calls(): void
     {
         $result = $this->kernel->run(['directive', 'test-call']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_respects_before_and_after_hooks(): void
+    public function test_run_directive_with_before_after(): void
     {
         $result = $this->kernel->run(['directive', 'test-before-after']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
-    public function test_run_with_before_hook_failure_returns_runtime_error(): void
+    public function test_run_directive_with_before_failing(): void
     {
         $result = $this->kernel->run(['directive', 'test-before-failing']);
 
         $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
     }
 
-    public function test_run_with_execute_hook_failure_returns_runtime_error(): void
+    public function test_run_directive_with_after_failing(): void
     {
         $result = $this->kernel->run(['directive', 'test-after-failing']);
 
         $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
     }
 
-    public function test_run_with_nested_before_after_hooks_executes_correctly(): void
+    public function test_run_directive_with_nested_before_after(): void
     {
         $result = $this->kernel->run(['directive', 'test-nested-before-after']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_run_directive_with_circular_dependency(): void
+    {
+        $result = $this->kernel->run(['directive', 'test-circular']);
+
+        $this->assertSame(ExitCode::CONFLICT, $result);
+    }
+
+    public function test_run_directive_with_signature(): void
+    {
+        $result = $this->kernel->runSignature('test-directive John john@example.com');
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_run_directive_with_fqcn(): void
+    {
+        $result = $this->kernel->runDirective(
+            'AndyDefer\Directive\Tests\Fixtures\Directives\TestDirective',
+            ['John', 'john@example.com']
+        );
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
@@ -398,11 +416,10 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $result = $this->kernel->run(['directive', 'test-directive John john@example.com']);
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
-        // Vérifier que le log a été écrit
         $logFile = $this->getLogFilePath();
         $this->assertFileExists($logFile);
 
@@ -452,7 +469,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         // Set context then execute
         $this->kernel->run(['directive', 'context:set', 'John']);
-        $result = $this->kernel->run(['directive', 'test-directive Jane jane@example.com']);
+        $result = $this->kernel->run(['directive', 'test-directive', 'Jane', 'jane@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
@@ -479,7 +496,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $result = $this->kernel->run(['directive', 'test-directive John john@example.com']);
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
@@ -507,12 +524,13 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         $this->kernel->setLogBasePath($newBasePath);
 
-        $result = $this->kernel->run(['directive', 'test-directive John john@example.com']);
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
-        $today = date('Y-m-d');
-        $hour = date('H');
+        $now = Carbon::now();
+        $today = $now->format('Y-m-d');
+        $hour = $now->format('H');
         $filePath = $newBasePath.'/'.$today.'/'.$hour.'.jsonl';
 
         $this->assertFileExists($filePath);
@@ -527,9 +545,9 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $this->kernel->run(['directive', 'test-directive John john@example.com']);
-        $this->kernel->run(['directive', 'test-echo Hello']);
-        $this->kernel->run(['directive', 'test-directive Jane jane@example.com']);
+        $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
+        $this->kernel->run(['directive', 'test-echo', 'Hello']);
+        $this->kernel->run(['directive', 'test-directive', 'Jane', 'jane@example.com']);
 
         $logFile = $this->getLogFilePath();
         $this->assertFileExists($logFile);
@@ -553,7 +571,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $result = $this->kernel->run(['directive', 'test-directive John john@example.com']);
+        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 

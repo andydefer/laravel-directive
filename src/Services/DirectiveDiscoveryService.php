@@ -6,8 +6,8 @@ namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
-use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveDiscoveryInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
@@ -99,10 +99,10 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     private int $maxDepth = 3;
 
     /**
-     * @param  ContainerInterface  $container  The container instance
+     * @param  Container  $container  The container instance
      */
     protected function __construct(
-        private readonly ContainerInterface $container,
+        private readonly Container $container,
     ) {
         $this->collection = new DirectiveMetadataCollection;
         $this->customSources = new StringTypedCollection;
@@ -126,7 +126,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Initialize the discovery service with a container.
      */
-    public static function init(ContainerInterface $container): self
+    public static function init(Container $container): self
     {
         return new self($container);
     }

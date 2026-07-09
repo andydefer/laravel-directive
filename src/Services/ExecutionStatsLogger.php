@@ -15,6 +15,7 @@ use AndyDefer\LaravelJsonl\Records\LogJsonlRecord;
 use AndyDefer\LaravelJsonl\Strategies\TemporalPathStrategy;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpVo\ValueObjects\DateTimeVO;
+use Carbon\Carbon;
 
 /**
  * Execution statistics logger using JSONL format.
@@ -26,13 +27,21 @@ final class ExecutionStatsLogger
 {
     private JsonlService $jsonlService;
 
+    private string $basePath;
+
     public function __construct(
         private readonly DirectiveConfigInterface $config,
         private readonly FileSystemInterface $fileSystem,
-        JsonlService $jsonlService,
         private readonly Console $console,
     ) {
-        $this->jsonlService = $jsonlService;
+        $this->basePath = $this->config->getLogBasePath() ?? $this->config->basePath().'/.directive';
+
+        $strategy = new TemporalPathStrategy($this->basePath);
+        $this->jsonlService = new JsonlService(
+            $strategy,
+            $this->fileSystem,
+            new JsonlContext
+        );
     }
 
     /**
@@ -89,6 +98,7 @@ final class ExecutionStatsLogger
      */
     public function setBasePath(string $path): self
     {
+        $this->basePath = $path;
         $strategy = new TemporalPathStrategy($path);
         $this->jsonlService = new JsonlService(
             $strategy,
@@ -104,7 +114,7 @@ final class ExecutionStatsLogger
      */
     public function getBasePath(): string
     {
-        return $this->jsonlService->getBaseDirectory();
+        return $this->basePath;
     }
 
     /**
@@ -120,7 +130,7 @@ final class ExecutionStatsLogger
      */
     public function getSummary(): array
     {
-        $logs = $this->readAll();
+        $logs = $this->readAllLogs();
 
         if (empty($logs)) {
             return [
@@ -166,18 +176,29 @@ final class ExecutionStatsLogger
     }
 
     /**
-     * Read all logs from the current date.
+     * Read all logs from today.
      */
-    private function readAll(): array
+    private function readAllLogs(): array
     {
-        $today = date('Y-m-d');
-        $filePath = $this->getBasePath().'/'.$today.'/'.date('H').'.jsonl';
+        $logs = [];
+        $today = Carbon::now()->format('Y-m-d');  // ← Utilise Carbon
+        $baseDir = $this->basePath.'/'.$today;
 
-        if (! $this->jsonlService->fileExists($filePath)) {
-            return [];
+        if (! is_dir($baseDir)) {
+            return $logs;
         }
 
-        return $this->jsonlService->readAll($filePath);
+        // Lire tous les fichiers .jsonl du jour
+        $files = glob($baseDir.'/*.jsonl');
+
+        foreach ($files as $file) {
+            if ($this->jsonlService->fileExists($file)) {
+                $fileLogs = $this->jsonlService->readAll($file);
+                $logs = array_merge($logs, $fileLogs);
+            }
+        }
+
+        return $logs;
     }
 
     /**
