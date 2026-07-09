@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "14f4cb45eb7939adf3dd7d989d381b44",
+    "content-hash": "fac116a66304728630b2d5d6232c1452",
     "packages": [
         {
             "name": "andydefer/algo-kit",
@@ -153,7 +153,7 @@
         },
         {
             "name": "andydefer/laravel-jsonl",
-            "version": "v0.8.0",
+            "version": "v0.8.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/laravel-jsonl.git",
@@ -202,7 +202,7 @@
             "description": "JSONL storage service for Laravel - write, read, query, and clean JSON Lines files with custom path strategies",
             "support": {
                 "issues": "https://github.com/andydefer/laravel-jsonl/issues",
-                "source": "https://github.com/andydefer/laravel-jsonl/tree/v0.8.0"
+                "source": "https://github.com/andydefer/laravel-jsonl/tree/v0.8.1"
             },
             "time": "2026-07-09T16:00:08+00:00"
         },

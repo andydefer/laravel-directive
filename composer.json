@@ -14,10 +14,10 @@
         "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
         "andydefer/php-signature-parser": "^0.6.0",
         "nikic/php-parser": "^5.8",
-        "andydefer/laravel-jsonl": "^0.8.0",
         "andydefer/algo-kit": "^0.8.0",
         "andydefer/php-console": "^1.3",
-        "andydefer/algokit": "^0.8.0"
+        "andydefer/algokit": "^0.8.0",
+        "andydefer/laravel-jsonl": "^0.8.1"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
