@@ -41,7 +41,8 @@
         }
     },
     "bin": [
-        "bin/directive"
+        "bin/directive",
+        "bin/directive-agno"
     ],
     "scripts": {
         "test": "phpunit",

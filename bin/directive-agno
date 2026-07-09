@@ -5,6 +5,7 @@ declare(strict_types=1);
 require './vendor/autoload.php';
 
 use AndyDefer\ConsoleWriter\Console\Console;
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\DomainStructures\Normalizers\NormalizerChain;
@@ -12,9 +13,9 @@ use AndyDefer\DomainStructures\Normalizers\NormalizerChain;
 $console = new Console;
 
 try {
-    $container = DirectiveContainer::create(getcwd());
+    $container = DirectiveContainer::create(Paths::projectRoot());
     $kernel = DirectiveKernel::init($container);
-    $kernel->addSource(getcwd().'/tests/Fixtures/Directives');
+    $kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
 
     $exitCode = $kernel->run($argv);
     exit($exitCode->value);
