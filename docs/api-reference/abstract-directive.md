@@ -2,30 +2,422 @@
 
 ## Description
 
-Classe abstraite de base pour toutes les directives. Elle fournit les fonctionnalités communes nécessaires à l'exécution des directives : parsing des arguments, gestion des flags, méthodes de sortie, et exécution des appels internes. Les directives sont des commandes CLI autonomes qui définissent une signature, des alias et une logique d'exécution.
+Classe de base abstraite pour toutes les directives. Fournit les fonctionnalités communes d'exécution, de parsing des arguments, de gestion des flags, de méthodes de sortie console et d'appels internes.
 
 ## Hiérarchie / Implémentations
 
 ```
 DirectiveInterface
-    └── AbstractDirective (abstract)
-        ├── HelpDirective
-        ├── ListDirective
-        └── VersionDirective
+    └── AbstractDirective
+        ├── BuiltIn\ListDirective
+        ├── BuiltIn\HelpDirective
+        ├── BuiltIn\VersionDirective
+        ├── BuiltIn\CleanLogsDirective
+        └── ... (Directives personnalisées)
 ```
 
 ## Rôle principal
 
-Servir de classe de base pour toutes les directives du package. Elle centralise :
-1. Le parsing des signatures et des requêtes
-2. L'accès aux arguments, flags et valeurs variadiques
-3. Les méthodes de sortie (console)
-4. La gestion des appels internes (chaînage de directives)
-5. La détection des dépendances circulaires
+`AbstractDirective` est le fondement de tout le système de directives. Elle permet de :
+
+- Définir une signature de commande avec arguments, options et flags
+- Parser automatiquement les requêtes entrantes
+- Accéder aux arguments, aux valeurs par défaut et aux flags
+- Gérer un contexte partagé entre les directives
+- Exécuter des appels internes à d'autres directives
+- Détecter les dépendances circulaires
+- Fournir des méthodes de sortie console (info, error, table, etc.)
+- Définir des hooks `beforeExecute()` et `afterExecute()`
 
 ## Installation
 
-### Créer une nouvelle directive
+```bash
+composer require andydefer/directive
+```
+
+### Dépendances
+
+- `Console` - Sortie console
+- `Container` - Conteneur de dépendances
+- `DirectiveParserService` - Parsing des signatures
+- `DirectiveKernel` - Noyau d'exécution
+- PHP 8.1+
+
+## API / Méthodes publiques
+
+### `__construct(DirectiveKernel $kernel, string $query = '')`
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$kernel` | `DirectiveKernel` | Noyau d'exécution |
+| `$query` | `string` | Requête à exécuter |
+
+**Retourne :** `void`
+
+**Exemple :**
+```php
+$directive = new GreetDirective($kernel, 'John --formal');
+```
+
+---
+
+### `getSignature(): string` (abstract)
+
+Retourne la signature de la directive.
+
+**Retourne :** `string` - Signature (ex: `greet {name} {--formal}`)
+
+**Exemple :**
+```php
+public function getSignature(): string
+{
+    return 'greet {name} {--formal}';
+}
+```
+
+---
+
+### `getAliases(): StringTypedCollection`
+
+Retourne la liste des alias de la directive.
+
+**Retourne :** `StringTypedCollection` - Collection des alias
+
+**Exemple :**
+```php
+public function getAliases(): StringTypedCollection
+{
+    return StringTypedCollection::from(['hello', 'hi']);
+}
+```
+
+---
+
+### `getDescription(): string` (abstract)
+
+Retourne la description de la directive.
+
+**Retourne :** `string` - Description
+
+**Exemple :**
+```php
+public function getDescription(): string
+{
+    return 'Say hello to someone';
+}
+```
+
+---
+
+### `argument(string $key): mixed`
+
+Récupère la valeur d'un argument.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Nom de l'argument |
+
+**Retourne :** `mixed` - Valeur de l'argument ou `null`
+
+**Exemple :**
+```php
+$name = $this->argument('name');
+```
+
+---
+
+### `hasArgument(string $key): bool`
+
+Vérifie si un argument existe.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Nom de l'argument |
+
+**Retourne :** `bool` - `true` si l'argument existe
+
+---
+
+### `flag(string $key): bool`
+
+Récupère la valeur d'un flag (option booléenne).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Nom du flag |
+
+**Retourne :** `bool` - Valeur du flag
+
+**Exemple :**
+```php
+if ($this->flag('verbose')) {
+    $this->info('Verbose mode enabled');
+}
+```
+
+---
+
+### `hasFlag(string $key): bool`
+
+Vérifie si un flag existe.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Nom du flag |
+
+**Retourne :** `bool` - `true` si le flag existe
+
+---
+
+### `isFlagActive(string $key): bool`
+
+Vérifie si un flag est actif.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Nom du flag |
+
+**Retourne :** `bool` - `true` si le flag est actif
+
+---
+
+### `getVariadicArguments(): StringTypedCollection`
+
+Récupère les arguments variadiques.
+
+**Retourne :** `StringTypedCollection` - Collection des valeurs variadiques
+
+**Exemple :**
+```php
+$files = $this->getVariadicArguments();
+foreach ($files as $file) {
+    echo "Processing: $file\n";
+}
+```
+
+---
+
+### `hasVariadicArguments(): bool`
+
+Vérifie si des arguments variadiques sont présents.
+
+**Retourne :** `bool` - `true` si des arguments variadiques existent
+
+---
+
+### `getRequiredArguments(): array`
+
+Récupère tous les arguments requis.
+
+**Retourne :** `array<string, mixed>` - Tableau des arguments requis
+
+---
+
+### `getDefaultArguments(): array`
+
+Récupère tous les arguments avec valeurs par défaut.
+
+**Retourne :** `array<string, mixed>` - Tableau des arguments par défaut
+
+---
+
+### `getFlags(): array`
+
+Récupère tous les flags.
+
+**Retourne :** `array<string, bool>` - Tableau des flags
+
+---
+
+### `getActiveFlags(): array`
+
+Récupère les flags actifs.
+
+**Retourne :** `array<int, string>` - Noms des flags actifs
+
+---
+
+### `line(string $message): void`
+
+Affiche une ligne de texte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$message` | `string` | Message à afficher |
+
+---
+
+### `info(string $message): void`
+
+Affiche un message d'information (vert).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$message` | `string` | Message à afficher |
+
+---
+
+### `error(string $message): void`
+
+Affiche un message d'erreur (rouge).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$message` | `string` | Message à afficher |
+
+---
+
+### `newLine(): void`
+
+Affiche une ligne vide.
+
+---
+
+### `separator(string $character = '-', int $length = 80): void`
+
+Affiche une ligne de séparation.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$character` | `string` | Caractère de séparation |
+| `$length` | `int` | Longueur de la ligne |
+
+---
+
+### `ask(string $question): string`
+
+Demande une entrée utilisateur.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$question` | `string` | Question à poser |
+
+**Retourne :** `string` - Réponse de l'utilisateur
+
+---
+
+### `confirm(string $question): bool`
+
+Demande une confirmation (oui/non).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$question` | `string` | Question à poser |
+
+**Retourne :** `bool` - `true` si l'utilisateur répond oui
+
+---
+
+### `table(ListCollection|array $headers, ListCollection|array $rows): void`
+
+Affiche un tableau.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$headers` | `ListCollection\|array` | En-têtes du tableau |
+| `$rows` | `ListCollection\|array` | Lignes du tableau |
+
+---
+
+### `contextGet(string $key, mixed $default = null): mixed`
+
+Récupère une valeur du contexte partagé.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Clé du contexte |
+| `$default` | `mixed` | Valeur par défaut |
+
+**Retourne :** `mixed` - Valeur du contexte
+
+---
+
+### `contextSet(string $key, mixed $value): void`
+
+Définit une valeur dans le contexte partagé.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Clé du contexte |
+| `$value` | `mixed` | Valeur à définir |
+
+---
+
+### `contextHas(string $key): bool`
+
+Vérifie si une clé existe dans le contexte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Clé à vérifier |
+
+**Retourne :** `bool` - `true` si la clé existe
+
+---
+
+### `contextAll(): MapCollection`
+
+Récupère tout le contexte.
+
+**Retourne :** `MapCollection` - Contexte complet
+
+---
+
+### `contextMerge(array $data): void`
+
+Fusionne des données dans le contexte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$data` | `array<string, mixed>` | Données à fusionner |
+
+---
+
+### `contextRemove(string $key): void`
+
+Supprime une clé du contexte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Clé à supprimer |
+
+---
+
+### `contextClear(): void`
+
+Efface tout le contexte.
+
+---
+
+### `contextIncrement(string $key, int $step = 1): int`
+
+Incrémente une valeur numérique dans le contexte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Clé du contexte |
+| `$step` | `int` | Pas d'incrémentation |
+
+**Retourne :** `int` - Nouvelle valeur
+
+---
+
+### `contextDecrement(string $key, int $step = 1): int`
+
+Décrémente une valeur numérique dans le contexte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Clé du contexte |
+| `$step` | `int` | Pas de décrémentation |
+
+**Retourne :** `int` - Nouvelle valeur
+
+---
+
+## Cas d'utilisation
+
+### Cas 1 : Directive simple avec arguments
 
 ```php
 <?php
@@ -36,470 +428,61 @@ namespace App\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class MyDirective extends AbstractDirective
+final class GreetDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'my:command {name} {--force}';
+        return 'greet {name} {--formal}';
     }
-
+    
     public function getDescription(): string
     {
-        return 'Ma commande personnalisée';
-    }
-
-    public function getAliases(): StringTypedCollection
-    {
-        return StringTypedCollection::from(['mc']);
-    }
-
-    protected function execute(): ExitCode
-    {
-        $name = $this->argument('name');
-        $force = $this->flag('force');
-        
-        $this->info("Bonjour {$name} !");
-        
-        if ($force) {
-            $this->line("Mode forcé activé");
-        }
-        
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-## API / Méthodes publiques
-
-### `getApplication(): Application`
-
-Récupère l'instance de l'application Laravel.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `Application` - L'application Laravel
-
-**Exemple :**
-```php
-<?php
-
-$app = $this->getApplication();
-$config = $app->make(Config::class);
-```
-
----
-
-### `getConsole(): Console`
-
-Récupère l'instance de la console pour les opérations de sortie.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `Console` - L'instance de la console
-
-**Exemple :**
-```php
-<?php
-
-$console = $this->getConsole();
-$console->title('Mon Titre');
-```
-
----
-
-### `getParsed(): ParsedSignatureRecord`
-
-Récupère le record de la signature parsée.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `ParsedSignatureRecord` - Les données parsées de la signature
-
-**Exemple :**
-```php
-<?php
-
-$parsed = $this->getParsed();
-$required = $parsed->required->toArray();
-```
-
----
-
-### `argument(string $key): mixed`
-
-Récupère la valeur d'un argument (requis ou par défaut).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$key` | `string` | Le nom de l'argument |
-
-**Retourne :** `mixed` - La valeur de l'argument, ou `null` si non trouvé
-
-**Exemple :**
-```php
-<?php
-
-$name = $this->argument('name');
-$email = $this->argument('email') ?? 'default@example.com';
-```
-
----
-
-### `hasArgument(string $key): bool`
-
-Vérifie si un argument existe (requis ou par défaut).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$key` | `string` | Le nom de l'argument |
-
-**Retourne :** `bool` - `true` si l'argument existe, `false` sinon
-
-**Exemple :**
-```php
-<?php
-
-if ($this->hasArgument('name')) {
-    $name = $this->argument('name');
-}
-```
-
----
-
-### `flag(string $key): bool`
-
-Récupère la valeur d'un flag.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$key` | `string` | Le nom du flag |
-
-**Retourne :** `bool` - `true` si le flag est présent, `false` sinon
-
-**Exemple :**
-```php
-<?php
-
-if ($this->flag('force')) {
-    $this->line('Mode forcé');
-}
-```
-
----
-
-### `hasFlag(string $key): bool`
-
-Vérifie si un flag existe dans la signature.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$key` | `string` | Le nom du flag |
-
-**Retourne :** `bool` - `true` si le flag existe, `false` sinon
-
-**Exemple :**
-```php
-<?php
-
-if ($this->hasFlag('force')) {
-    $force = $this->flag('force');
-}
-```
-
----
-
-### `isFlagActive(string $key): bool`
-
-Vérifie si un flag est actif dans la requête courante.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$key` | `string` | Le nom du flag |
-
-**Retourne :** `bool` - `true` si le flag est actif, `false` sinon
-
-**Exemple :**
-```php
-<?php
-
-if ($this->isFlagActive('admin')) {
-    // Exécuter en mode administrateur
-}
-```
-
----
-
-### `getVariadicArguments(): StringTypedCollection`
-
-Récupère tous les arguments variadiques.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `StringTypedCollection` - Collection des valeurs variadiques
-
-**Exemple :**
-```php
-<?php
-
-$files = $this->getVariadicArguments();
-foreach ($files as $file) {
-    $this->line("Fichier: {$file}");
-}
-```
-
----
-
-### `line(string $message): void`
-
-Affiche une ligne de texte.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$message` | `string` | Le message à afficher |
-
-**Exemple :**
-```php
-<?php
-
-$this->line('Hello World');
-```
-
----
-
-### `info(string $message): void`
-
-Affiche un message d'information (en vert).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$message` | `string` | Le message à afficher |
-
-**Exemple :**
-```php
-<?php
-
-$this->info('Succès !');
-```
-
----
-
-### `error(string $message): void`
-
-Affiche un message d'erreur (en rouge).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$message` | `string` | Le message à afficher |
-
-**Exemple :**
-```php
-<?php
-
-$this->error('Une erreur est survenue');
-```
-
----
-
-### `table(ListCollection|array $headers, ListCollection|array $rows): void`
-
-Affiche un tableau.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$headers` | `ListCollection|array` | Les en-têtes du tableau |
-| `$rows` | `ListCollection|array` | Les lignes du tableau |
-
-**Exemple :**
-```php
-<?php
-
-$this->table(
-    ['ID', 'Nom', 'Email'],
-    [
-        [1, 'John Doe', 'john@example.com'],
-        [2, 'Jane Doe', 'jane@example.com'],
-    ]
-);
-```
-
----
-
-### `call(string $query): void`
-
-Enfile un appel interne vers une autre directive.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$query` | `string` | La requête à exécuter |
-
-**Exemple :**
-```php
-<?php
-
-$this->call('list');
-$this->call('db:backup --force');
-```
-
----
-
-### `getCalls(): array`
-
-Récupère la liste des appels internes.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `array<int, DirectiveCallRecord>` - Liste des appels
-
-**Exemple :**
-```php
-<?php
-
-$calls = $this->getCalls();
-foreach ($calls as $call) {
-    echo $call->query . PHP_EOL;
-}
-```
-
----
-
-### `run(): ExitCode`
-
-Exécute la directive.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `ExitCode` - Le code de sortie
-
-**Exemple :**
-```php
-<?php
-
-$exitCode = $this->run();
-exit($exitCode->value);
-```
-
----
-
-### `getAliases(): StringTypedCollection`
-
-Récupère les alias de la directive.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `StringTypedCollection` - Collection des alias
-
-**Exemple :**
-```php
-<?php
-
-public function getAliases(): StringTypedCollection
-{
-    return StringTypedCollection::from(['u', 'user']);
-}
-```
-
----
-
-### `getSignature(): string`
-
-Récupère la signature de la directive (à implémenter).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
-
-**Retourne :** `string` - La signature
-
-**Exemple :**
-```php
-<?php
-
-public function getSignature(): string
-{
-    return 'user:create {name} {email?} {--admin}';
-}
-```
-
-## Hooks
-
-### `beforeExecute(): void`
-
-Hook appelé avant l'exécution principale.
-
-**Exemple :**
-```php
-<?php
-
-protected function beforeExecute(): void
-{
-    $this->line('Début de l\'exécution...');
-}
-```
-
-### `afterExecute(ExitCode $exitCode): void`
-
-Hook appelé après l'exécution principale.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$exitCode` | `ExitCode` | Le code de sortie de l'exécution |
-
-**Exemple :**
-```php
-<?php
-
-protected function afterExecute(ExitCode $exitCode): void
-{
-    $this->line('Fin de l\'exécution');
-}
-```
-
-## Cas d'utilisation
-
-### Cas 1 : Directive avec arguments et flags
-
-```php
-<?php
-
-final class BackupDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'backup {file?} {--force} {--compression=gzip} {--format=sql}';
+        return 'Say hello to someone';
     }
     
     protected function execute(): ExitCode
     {
-        $file = $this->argument('file') ?? date('Y-m-d') . '.sql';
-        $compression = $this->flag('compression');
-        $format = $this->flag('format');
-        $force = $this->flag('force');
+        $name = $this->argument('name');
+        $formal = $this->flag('formal');
         
-        $this->info("Sauvegarde de {$file}");
-        $this->info("Format: {$format}");
+        $greeting = $formal ? "Good day, $name" : "Hello, $name";
+        $this->info($greeting);
         
-        if ($compression) {
-            $this->info("Compression: {$compression}");
-        }
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### Cas 2 : Directive avec arguments variadiques
+
+```php
+<?php
+
+final class ProcessFilesDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'process {files*} {--verbose}';
+    }
+    
+    public function getDescription(): string
+    {
+        return 'Process multiple files';
+    }
+    
+    protected function execute(): ExitCode
+    {
+        $files = $this->getVariadicArguments();
+        $verbose = $this->flag('verbose');
         
-        if ($force) {
-            $this->line('Mode forcé');
+        $this->info("Processing " . $files->count() . " files");
+        
+        foreach ($files as $file) {
+            if ($verbose) {
+                $this->line("  - Processing: $file");
+            }
+            // Traitement du fichier...
         }
         
         return ExitCode::SUCCESS;
@@ -507,7 +490,53 @@ final class BackupDirective extends AbstractDirective
 }
 ```
 
-### Cas 2 : Directive avec appel interne
+### Cas 3 : Directive avec contexte partagé
+
+```php
+<?php
+
+final class UserContextDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'user:set {name}';
+    }
+    
+    protected function execute(): ExitCode
+    {
+        $name = $this->argument('name');
+        
+        // Stocker dans le contexte partagé
+        $this->contextSet('user_name', $name);
+        $this->contextSet('last_update', date('Y-m-d H:i:s'));
+        
+        $this->info("User set to: $name");
+        
+        // Une autre directive peut accéder à ce contexte
+        return ExitCode::SUCCESS;
+    }
+}
+
+final class UserGetDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'user:get';
+    }
+    
+    protected function execute(): ExitCode
+    {
+        $name = $this->contextGet('user_name', 'anonymous');
+        $lastUpdate = $this->contextGet('last_update', 'never');
+        
+        $this->info("Current user: $name (last update: $lastUpdate)");
+        
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### Cas 4 : Directive avec appels internes
 
 ```php
 <?php
@@ -516,180 +545,236 @@ final class DeployDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'deploy {environment} {--migrate} {--seed}';
+        return 'deploy {--force}';
     }
     
     protected function execute(): ExitCode
     {
-        $env = $this->argument('environment');
+        $this->info('Starting deployment...');
         
-        $this->info("Déploiement vers {$env}");
+        // Appeler d'autres directives
+        $this->call('build --clean');
+        $this->call('test --unit');
+        $this->call('migrate --force');
         
-        // Exécuter les directives de maintenance
-        $this->call('cache:clear');
-        $this->call('config:cache');
-        
-        if ($this->flag('migrate')) {
-            $this->call('db:migrate --force');
+        if ($this->flag('force')) {
+            $this->call('cache:clear');
         }
         
-        if ($this->flag('seed')) {
-            $this->call('db:seed');
-        }
-        
-        $this->info("Déploiement terminé");
+        $this->info('Deployment completed!');
         
         return ExitCode::SUCCESS;
     }
 }
 ```
 
-### Cas 3 : Directive interactive
+### Cas 5 : Directive avec hooks before/after
 
 ```php
 <?php
 
-final class UserCreateDirective extends AbstractDirective
+final class TransactionDirective extends AbstractDirective
 {
+    private array $transactions = [];
+    
     public function getSignature(): string
     {
-        return 'user:create {name} {--admin}';
+        return 'transaction {action}';
+    }
+    
+    protected function beforeExecute(): void
+    {
+        $this->info('=== Starting transaction ===');
+        $this->transactions = [];
+        $this->contextSet('transaction_start', microtime(true));
     }
     
     protected function execute(): ExitCode
     {
-        $name = $this->argument('name');
-        $isAdmin = $this->flag('admin');
+        $action = $this->argument('action');
         
-        // Confirmation interactive
-        if (!$this->confirm("Créer l'utilisateur {$name} ?")) {
-            $this->line('Annulé');
-            return ExitCode::SUCCESS;
-        }
-        
-        // Demander des informations supplémentaires
-        $email = $this->ask("Email pour {$name} :");
-        
-        $this->info("Utilisateur {$name} créé avec l'email {$email}");
-        
-        if ($isAdmin) {
-            $this->info("Droits administrateur attribués");
-        }
+        // Logique de transaction...
+        $this->transactions[] = $action;
+        $this->info("Executed: $action");
         
         return ExitCode::SUCCESS;
     }
+    
+    protected function afterExecute(ExitCode $exitCode): void
+    {
+        $duration = microtime(true) - $this->contextGet('transaction_start');
+        
+        $this->separator('=');
+        $this->info("Transaction completed in " . round($duration, 3) . "s");
+        $this->info("Actions executed: " . count($this->transactions));
+        $this->separator('=');
+    }
 }
 ```
+
+---
 
 ## Flux d'exécution
 
 ```
-AbstractDirective::run()
-    │
-    ├── try
-    │   ├── beforeExecute()
-    │   │   └── Hook personnalisé
-    │   │
-    │   ├── execute()
-    │   │   └── Logique métier de la directive
-    │   │       ├── Accès aux arguments
-    │   │       ├── Accès aux flags
-    │   │       └── Appels internes ($this->call())
-    │   │
-    │   ├── executeCalls()
-    │   │   └── foreach($calls)
-    │   │       └── executeCall()
-    │   │           ├── extractCommandName()
-    │   │           ├── findDirective()
-    │   │           ├── isCircularCall()
-    │   │           └── executeDirectiveInstance()
-    │   │
-    │   └── afterExecute()
-    │       └── Hook personnalisé
-    │
-    └── catch(Throwable)
-        ├── Gestion des erreurs
-        └── Retourne ExitCode::RUNTIME_ERROR
+new Directive($kernel, $query)
+    ↓
+__construct()
+    ├── kernel = $kernel
+    ├── context = kernel->getContext()
+    ├── console = container->make(Console::class)
+    ├── parser = container->make(DirectiveParserService::class)
+    ├── parsed = parser->parse($signature, $query)
+    └── structure = new SignatureStructureVO($signature)
+    ↓
+run()
+    ↓
+beforeExecute() (hook)
+    ├── Succès → continuer
+    └── Exception → RUNTIME_ERROR
+    ↓
+execute() (méthode abstraite)
+    ├── Logique métier de la directive
+    ├── Appels internes via call()
+    └── Retourne ExitCode
+    ↓
+executeCalls()
+    ├── Pour chaque appel enregistré
+    │   ├── Trouver la directive
+    │   ├── Vérifier les dépendances circulaires
+    │   └── Exécuter la directive
+    └── Retourner ExitCode
+    ↓
+afterExecute($exitCode) (hook)
+    ↓
+Retourner ExitCode final
 ```
+
+### Détection des dépendances circulaires
+
+```
+isCircularCall($directive, $query)
+    ↓
+$stackKey = $directive->class . '|' . $query
+    ↓
+Vérifier si $stackKey dans $executionStack
+    ├── Oui → CONFLICT (circulaire détectée)
+    └── Non → continuer
+    ↓
+Exécuter la directive
+    ↓
+Ajouter $stackKey à $executionStack
+    ↓
+Supprimer après exécution
+```
+
+---
 
 ## Gestion des erreurs
 
-| Situation | Exception | Message |
-|-----------|-----------|---------|
-| Erreur dans `beforeExecute()` | `Throwable` | `Error in before hook: {message}` |
-| Erreur dans `execute()` | `Throwable` | `Error in execute hook: {message}` |
-| Directive non trouvée | Aucune | `Directive not found: {command}` |
-| Appel circulaire détecté | Aucune | `Circular call detected: {query}` |
-| Erreur d'exécution d'appel | Aucune | `Error executing call: {message}` |
+| Situation | Exception | Comportement |
+|-----------|-----------|--------------|
+| beforeExecute échoue | `Throwable` | `RUNTIME_ERROR` + message d'erreur |
+| execute échoue | `Throwable` | `RUNTIME_ERROR` + message d'erreur |
+| Appel interne échoue | `Throwable` | `RUNTIME_ERROR` + message d'erreur |
+| Dépendance circulaire | Détection | `CONFLICT` + message d'alerte |
+| Directive introuvable | Aucune | `NOT_FOUND` + message d'erreur |
 
-### Messages d'erreur typiques
-
-```php
-// Erreur dans beforeExecute()
-"Error in before hook: Undefined variable $foo"
-
-// Erreur dans execute()
-"Error in execute hook: Connection refused"
-
-// Directive non trouvée
-"Directive not found: nonexistent"
-
-// Appel circulaire
-"Circular call detected: list"
-
-// Erreur d'exécution
-"Error executing call: Invalid argument"
-```
+---
 
 ## Intégration
 
-L'`AbstractDirective` s'intègre avec :
-
-| Composant | Utilisation |
-|-----------|-------------|
-| `DirectiveInterface` | Implémentation de l'interface |
-| `DirectiveParserService` | Parsing des signatures |
-| `DirectiveDiscoveryService` | Découverte des directives |
-| `Console` | Sortie console |
-| `Application` | Conteneur Laravel |
-
-## Performance
-
-| Métrique | Valeur | Description |
-|----------|--------|-------------|
-| Parsing | 1-5ms | Parsing de la signature |
-| Exécution | Variable | Dépend de la directive |
-| Mémoire | < 1MB | Minimal |
-
-### Optimisations
+### Création d'une directive personnalisée
 
 ```php
-// Utiliser le cache pour les opérations coûteuses
-protected function execute(): ExitCode
+<?php
+
+declare(strict_types=1);
+
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+final class MyCustomDirective extends AbstractDirective
 {
-    static $cache = [];
-    
-    if (isset($cache['expensive_operation'])) {
-        return $cache['expensive_operation'];
+    public function getSignature(): string
+    {
+        return 'my:command {param} {--option} {--verbose}';
     }
     
-    // Opération coûteuse
-    $result = $this->expensiveOperation();
-    $cache['expensive_operation'] = $result;
+    public function getDescription(): string
+    {
+        return 'My custom command description';
+    }
     
-    return $result;
+    public function getAliases(): StringTypedCollection
+    {
+        return StringTypedCollection::from(['mc']);
+    }
+    
+    protected function beforeExecute(): void
+    {
+        if ($this->flag('verbose')) {
+            $this->info('Verbose mode enabled');
+        }
+    }
+    
+    protected function execute(): ExitCode
+    {
+        $param = $this->argument('param');
+        $option = $this->flag('option');
+        
+        $this->line("Param: $param");
+        $this->line("Option: " . ($option ? 'yes' : 'no'));
+        
+        return ExitCode::SUCCESS;
+    }
+    
+    protected function afterExecute(ExitCode $exitCode): void
+    {
+        $this->newLine();
+        $this->info("Execution completed with exit code: " . $exitCode->value);
+    }
 }
 ```
 
+### Enregistrement dans le discovery
+
+```php
+$discovery = DirectiveDiscoveryService::init($container);
+$discovery->addDirective(MyCustomDirective::class);
+$discovery->addDirectives([
+    AnotherDirective::class,
+    DeployDirective::class,
+]);
+```
+
+---
+
+## Performance
+
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| `__construct()` | O(n) | Parsing de la signature |
+| `argument()` | O(1) | Accès au tableau parsé |
+| `flag()` | O(1) | Accès au tableau parsé |
+| `call()` | O(1) | Ajout à la liste des appels |
+| `run()` | O(n) | n = nombre d'appels internes |
+| Contexte `contextGet/Set` | O(1) | Opération sur MapCollection |
+
+---
+
 ## Compatibilité
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| PHP 8.1+ | ✅ Complet | - |
-| PHP 8.2+ | ✅ Complet | Support `readonly` |
-| Laravel 9.x | ✅ Complet | - |
-| Laravel 10.x | ✅ Complet | - |
-| Laravel 11.x | ✅ Complet | - |
+| Version PHP | Support | Notes |
+|-------------|---------|-------|
+| PHP 8.4 | ✅ Complet | Support total |
+| PHP 8.3 | ✅ Complet | Support total |
+| PHP 8.2 | ✅ Complet | Support total |
+| PHP 8.1 | ✅ Complet | Support total |
+
+---
 
 ## Exemple complet
 
@@ -704,133 +789,122 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-/**
- * Commande de déploiement avancée.
- *
- * Exemple complet d'une directive avec toutes les fonctionnalités :
- * - Arguments requis et optionnels
- * - Flags avec valeurs
- * - Arguments variadiques
- * - Appels internes
- * - Hooks
- * - Sortie interactive
- */
-final class DeployDirective extends AbstractDirective
+final class CompleteDirective extends AbstractDirective
 {
+    // 1. Définition de la signature
     public function getSignature(): string
     {
-        return 'deploy {environment} {--migrate} {--seed} {--compression=gzip} {files*}';
+        return 'complete {name} {email} {format=json} {files*} {--force} {--verbose}';
     }
     
+    // 2. Description
     public function getDescription(): string
     {
-        return 'Déploie l\'application dans l\'environnement spécifié';
+        return 'Complete example directive with all features';
     }
     
+    // 3. Alias
     public function getAliases(): StringTypedCollection
     {
-        return StringTypedCollection::from(['d', 'dp']);
+        return StringTypedCollection::from(['comp', 'c']);
     }
     
+    // 4. Hook before
     protected function beforeExecute(): void
     {
-        $this->newLine();
-        $this->info('=== DÉPLOIEMENT ===');
-        $this->newLine();
+        if ($this->flag('verbose')) {
+            $this->info('=== Starting execution ===');
+        }
+        
+        // Initialiser le contexte
+        $this->contextSet('execution_start', microtime(true));
+        $this->contextSet('processed_files', []);
     }
     
+    // 5. Logique principale
     protected function execute(): ExitCode
     {
-        $env = $this->argument('environment');
+        // Récupération des arguments
+        $name = $this->argument('name');
+        $email = $this->argument('email');
+        $format = $this->argument('format');
         $files = $this->getVariadicArguments();
+        $force = $this->flag('force');
+        $verbose = $this->flag('verbose');
         
-        $this->info("Environnement: {$env}");
+        // Affichage
+        $this->separator('=');
+        $this->info('Processing...');
+        $this->separator('-');
         
-        // Vérification des fichiers
-        if ($files->isNotEmpty()) {
-            $this->line("Fichiers à déployer:");
-            foreach ($files as $file) {
-                $this->line("  - {$file}");
+        $this->line("Name: $name");
+        $this->line("Email: $email");
+        $this->line("Format: $format");
+        $this->line("Files: " . $files->count());
+        $this->line("Force: " . ($force ? 'yes' : 'no'));
+        
+        // Traitement des fichiers
+        $processed = [];
+        foreach ($files as $file) {
+            if ($verbose) {
+                $this->line("Processing: $file");
             }
+            $processed[] = $file;
         }
         
-        // Exécution des tâches de maintenance
-        $this->call('cache:clear');
-        $this->call('config:cache');
+        // Mise à jour du contexte
+        $this->contextSet('processed_files', $processed);
+        $this->contextSet('last_file', end($processed));
         
-        // Migration
-        if ($this->flag('migrate')) {
-            $this->call('db:migrate --force');
-            $this->info('✅ Migration effectuée');
+        // Appels internes conditionnels
+        if ($force) {
+            $this->call('clean --all');
         }
         
-        // Seed
-        if ($this->flag('seed')) {
-            $this->call('db:seed');
-            $this->info('✅ Seed effectué');
-        }
+        $this->call('log "Processed ' . count($processed) . ' files"');
         
-        // Compression
-        $compression = $this->flag('compression');
-        $this->info("Compression: {$compression}");
+        // Tableau récapitulatif
+        $this->newLine();
+        $this->info('Summary:');
+        $headers = ['Item', 'Value'];
+        $rows = [
+            ['Name', $name],
+            ['Email', $email],
+            ['Format', $format],
+            ['Files processed', count($processed)],
+            ['Force mode', $force ? 'Yes' : 'No'],
+        ];
+        $this->table($headers, $rows);
         
         return ExitCode::SUCCESS;
     }
     
+    // 6. Hook after
     protected function afterExecute(ExitCode $exitCode): void
     {
-        $this->newLine();
+        $duration = microtime(true) - $this->contextGet('execution_start');
+        $processed = count($this->contextGet('processed_files', []));
+        
+        $this->separator('=');
+        $this->info("Execution completed");
+        $this->line("Duration: " . round($duration, 3) . "s");
+        $this->line("Files processed: $processed");
+        $this->line("Exit code: " . $exitCode->value . " (" . $exitCode->getLabel() . ")");
         
         if ($exitCode->isSuccess()) {
-            $this->info('✅ Déploiement réussi !');
+            $this->info('✅ Success!');
         } else {
-            $this->error('❌ Déploiement échoué');
+            $this->error('❌ Failed!');
         }
-        
-        $this->newLine();
     }
 }
-
-// Utilisation
-// php directive deploy production --migrate --seed --compression=zstd fichiers/*
 ```
 
-## Notes techniques
+## Voir aussi
 
-### Détection des appels circulaires
-
-L'AbstractDirective utilise une pile d'exécution pour détecter les appels circulaires :
-
-```php
-private static array $executionStack = [];
-
-// Exemple de circulation
-// Directive A appelle Directive B
-// Directive B appelle Directive A
-// → "Circular call detected: A"
-```
-
-### Gestion des hooks
-
-Les hooks `beforeExecute()` et `afterExecute()` sont optionnels mais permettent de :
-- Initialiser des ressources
-- Afficher des en-têtes/pieds de page
-- Effectuer des nettoyages
-- Logger des informations
-
-### Méthodes finales
-
-Les méthodes suivantes sont `final` et ne peuvent pas être surchargées :
-- `getApplication()`, `getConsole()`, `getParsed()`, `getStructure()`
-- Toutes les méthodes d'accès aux arguments et flags
-- `run()`, `call()`, `getCalls()`
-- Les méthodes de sortie (`line()`, `info()`, `error()`, etc.)
-
-### Bonnes pratiques
-
-1. **Toujours documenter** : Ajouter une description avec `getDescription()`
-2. **Utiliser les alias** : Rendre la directive facile à utiliser
-3. **Gérer les erreurs** : Toujours retourner un `ExitCode` approprié
-4. **Fournir des feedbacks** : Utiliser `info()`, `line()`, `error()`
-5. **Tester les directives** : Utiliser `DirectiveTestingService`
----
+- `DirectiveInterface` - Interface de la directive
+- `DirectiveKernel` - Noyau d'exécution
+- `DirectiveParserService` - Parsing des signatures
+- `ExitCode` - Énumération des codes de sortie
+- `Console` - Service de sortie console
+- `MapCollection` - Collection clé-valeur pour le contexte

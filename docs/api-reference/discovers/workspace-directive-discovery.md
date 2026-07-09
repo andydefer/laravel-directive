@@ -2,59 +2,81 @@
 
 ## Description
 
-Source de découverte qui scanne les répertoires de l'application (workspace) pour trouver des directives définies par le développeur. Par défaut, elle recherche dans `src/Directives` et `app/Directives`, mais peut être configurée pour scanner des chemins personnalisés.
+Source de découverte des directives dans l'espace de travail de l'application. Scanne les répertoires propres à l'application pour trouver les classes de directives définies par l'utilisateur.
 
 ## Hiérarchie / Implémentations
 
 ```
 DiscoverySourceInterface
-    └── WorkspaceDirectiveDiscovery (final)
+    └── WorkspaceDirectiveDiscovery
 ```
 
 ## Rôle principal
 
-Permettre aux développeurs de créer leurs propres directives dans l'application sans configuration supplémentaire. La classe découvre automatiquement toutes les classes qui étendent `AbstractDirective` dans les dossiers configurés.
+`WorkspaceDirectiveDiscovery` est la source de découverte pour les directives de l'application. Elle permet de :
+
+- Scanner les répertoires par défaut (`src/Directives`, `app/Directives`)
+- Ajouter des chemins personnalisés via configuration ou programmatiquement
+- Lire les sources personnalisées depuis la configuration du package
+- Mettre en cache les résultats pour optimiser les performances
+- Scanner l'arborescence avec une profondeur configurable
 
 ## Installation
 
-Cette classe est utilisée automatiquement par le service de découverte. Aucune configuration manuelle n'est nécessaire.
-
-### Configuration via le fichier de config
-
-```php
-// config/directive.php
-return [
-    'directories' => [
-        'app/Directives',
-        'src/Directives',
-        'app/Console/Commands/Directives', // Dossier personnalisé
-    ],
-];
+```bash
+composer require andydefer/directive
 ```
+
+### Dépendances
+
+- `FileSystemInterface` - Opérations sur le système de fichiers
+- `DirectiveScannerInterface` - Scanner des classes de directives
+- `DirectiveConfigInterface` - Configuration du package (optionnel)
+- PHP 8.1+
 
 ## API / Méthodes publiques
 
-### `discover(): array`
-
-Découvre toutes les directives présentes dans le workspace de l'application.
+### `__construct(FileSystemInterface $fileSystem, DirectiveScannerInterface $scanner, ?DirectiveConfigInterface $config = null, int $maxDepth = 3)`
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| Aucun | - | - |
+| `$fileSystem` | `FileSystemInterface` | Service de système de fichiers |
+| `$scanner` | `DirectiveScannerInterface` | Scanner de directives |
+| `$config` | `?DirectiveConfigInterface` | Configuration (optionnel) |
+| `$maxDepth` | `int` | Profondeur de scan (défaut: 3) |
 
-**Retourne :** `array<int, string>` - Liste des noms de classes qualifiés (FQCN)
-
-**Exceptions :** Aucune (les répertoires inexistants sont ignorés silencieusement)
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-<?php
+$workspaceDiscovery = new WorkspaceDirectiveDiscovery(
+    $fileSystem,
+    $scanner,
+    $config,
+    4
+);
+```
 
-use AndyDefer\Directive\Discovers\WorkspaceDirectiveDiscovery;
+---
 
-$discovery = new WorkspaceDirectiveDiscovery($fileSystem, $scanner);
-$directives = $discovery->discover();
-// Retourne les directives trouvées dans src/Directives et app/Directives
+### `discover(): array`
+
+Découvre les directives dans l'espace de travail.
+
+**Retourne :** `array<int, string>` - Liste des FQCN des directives trouvées
+
+**Exceptions :** `RuntimeException` - Si le répertoire courant ne peut être déterminé
+
+**Exemple :**
+```php
+$directives = $workspaceDiscovery->discover();
+
+foreach ($directives as $class) {
+    echo "Directive trouvée: $class\n";
+}
+// App\Directives\GreetDirective
+// App\Directives\HelpDirective
+// App\Commands\CustomDirective
 ```
 
 ---
@@ -67,262 +89,338 @@ Ajoute un chemin personnalisé à scanner.
 |-----------|------|-------------|
 | `$path` | `string` | Chemin relatif à la racine du projet |
 
-**Retourne :** `self` - L'instance courante (fluent interface)
-
-**Exceptions :** Aucune
+**Retourne :** `self` - Instance fluide
 
 **Exemple :**
 ```php
-<?php
-
-$discovery = new WorkspaceDirectiveDiscovery($fileSystem, $scanner);
-$discovery
-    ->addPath('app/CustomDirectives')
-    ->addPath('modules/Admin/Directives');
+$workspaceDiscovery
+    ->addPath('src/Commands')
+    ->addPath('lib/Directives');
 ```
 
 ---
 
 ### `addPaths(array $paths): self`
 
-Ajoute plusieurs chemins personnalisés à scanner.
+Ajoute plusieurs chemins personnalisés.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$paths` | `array<int, string>` | Liste des chemins relatifs à la racine du projet |
+| `$paths` | `array<int, string>` | Chemins relatifs à la racine du projet |
 
-**Retourne :** `self` - L'instance courante (fluent interface)
-
-**Exceptions :** Aucune
+**Retourne :** `self` - Instance fluide
 
 **Exemple :**
 ```php
-<?php
-
-$discovery->addPaths([
-    'app/CustomDirectives',
-    'modules/Admin/Directives',
-    'packages/Acme/Directives',
+$workspaceDiscovery->addPaths([
+    'src/Console',
+    'app/Directives',
+    'packages/core/src/Directives',
 ]);
 ```
+
+---
 
 ## Cas d'utilisation
 
-### Cas 1 : Structure de projet Laravel standard
-
-```php
-// Dossiers par défaut
-// app/Directives/
-//   UserDirective.php
-//   AdminDirective.php
-
-// src/Directives/
-//   ApiDirective.php
-
-// Découverte automatique
-$discovery = new WorkspaceDirectiveDiscovery($fileSystem, $scanner);
-$directives = $discovery->discover();
-// Retourne toutes les directives dans ces dossiers
-```
-
-### Cas 2 : Structure modulaire
-
-```php
-// Structure : app/Modules/Admin/Directives/
-// app/Modules/
-//   Admin/
-//     Directives/
-//       DashboardDirective.php
-//     Commands/
-//   Api/
-//     Directives/
-//       EndpointDirective.php
-
-// Configuration
-$discovery = new WorkspaceDirectiveDiscovery($fileSystem, $scanner);
-$discovery->addPaths([
-    'app/Modules/Admin/Directives',
-    'app/Modules/Api/Directives',
-]);
-
-$directives = $discovery->discover();
-// Retourne DashboardDirective et EndpointDirective
-```
-
-### Cas 3 : Configuration via fichier config
-
-```php
-// config/directive.php
-<?php
-
-return [
-    'directories' => [
-        'app/Console/Directives',
-        'app/Http/Directives',
-        'modules/*/Directives', // Pattern glob (à développer)
-    ],
-];
-
-// Dans le service provider
-$config = app(DirectiveConfigInterface::class);
-$discovery = new WorkspaceDirectiveDiscovery(
-    $fileSystem,
-    $scanner,
-    $config // Utilise la configuration
-);
-```
-
-### Cas 4 : Ajout dynamique lors de l'exécution
+### Cas 1 : Découverte standard
 
 ```php
 <?php
 
 use AndyDefer\Directive\Discovers\WorkspaceDirectiveDiscovery;
+use AndyDefer\Directive\Scanners\DirectiveClassScanner;
+use AndyDefer\PhpServices\Services\FileSystemService;
+use PhpParser\ParserFactory;
 
-class MyServiceProvider extends ServiceProvider
-{
-    public function boot()
-    {
-        $discovery = $this->app->make(WorkspaceDirectiveDiscovery::class);
-        
-        // Ajouter des chemins basés sur les modules actifs
-        if ($this->moduleExists('Admin')) {
-            $discovery->addPath('modules/Admin/Directives');
-        }
-        
-        if ($this->moduleExists('Api')) {
-            $discovery->addPath('modules/Api/Directives');
-        }
-    }
-}
+$fileSystem = new FileSystemService();
+$parser = (new ParserFactory())->createForNewestSupportedVersion();
+$scanner = new DirectiveClassScanner($fileSystem, $parser);
+
+$workspaceDiscovery = new WorkspaceDirectiveDiscovery(
+    $fileSystem,
+    $scanner
+);
+
+$directives = $workspaceDiscovery->discover();
+
+echo "Directives trouvées: " . count($directives) . "\n";
+// App\Directives\GreetDirective
+// App\Directives\HelpDirective
 ```
+
+### Cas 2 : Structure de répertoires typique
+
+```php
+<?php
+
+// Structure du projet
+// project/
+// ├── src/
+// │   └── Directives/
+// │       ├── GreetDirective.php
+// │       └── HelpDirective.php
+// ├── app/
+// │   └── Directives/
+// │       ├── AdminDirective.php
+// │       └── UserDirective.php
+// ├── lib/
+// │   └── Commands/
+// │       └── CustomDirective.php
+// └── config/
+//     └── directive.php
+
+// Par défaut: src/Directives et app/Directives sont scannés
+// Résultat: GreetDirective, HelpDirective, AdminDirective, UserDirective
+```
+
+### Cas 3 : Ajout de chemins personnalisés
+
+```php
+<?php
+
+$workspaceDiscovery = new WorkspaceDirectiveDiscovery(
+    $fileSystem,
+    $scanner,
+    $config
+);
+
+// Ajouter des chemins spécifiques
+$workspaceDiscovery
+    ->addPath('lib/Commands')
+    ->addPath('packages/admin/src/Directives')
+    ->addPath('app/Console/Commands');
+
+$directives = $workspaceDiscovery->discover();
+// Les 3 nouveaux dossiers sont scannés en plus des dossiers par défaut
+```
+
+### Cas 4 : Configuration via directive.config
+
+```php
+<?php
+
+// config/directive.php
+<?php
+
+return [
+    'directories' => [
+        'app/Commands',
+        'src/Directives',
+        'lib/Console',
+    ],
+    'custom_sources' => [
+        'packages/core/src',
+        'modules/admin/src/Directives',
+    ],
+];
+
+// Le service utilisera les chemins configurés
+$workspaceDiscovery = new WorkspaceDirectiveDiscovery(
+    $fileSystem,
+    $scanner,
+    $config // DirectiveConfig avec les chemins définis
+);
+
+$directives = $workspaceDiscovery->discover();
+```
+
+### Cas 5 : Utilisation avec DirectiveDiscoveryService
+
+```php
+<?php
+
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+
+$discoveryService = DirectiveDiscoveryService::init($container);
+
+// Le service utilise WorkspaceDirectiveDiscovery automatiquement
+// si la source WORKSPACE n'est pas ignorée
+$directives = $discoveryService
+    ->enableSource(DiscoverySource::WORKSPACE)
+    ->addSource('src/Commands') // Ajoute un custom source
+    ->discover();
+
+echo "Directives workspace: " . $directives->count() . "\n";
+```
+
+---
 
 ## Flux d'exécution
 
 ```
-WorkspaceDirectiveDiscovery::discover()
-    │
-    ├── Vérifie $cache
-    │   └── Si cache présent → retourne
-    │
-    └── doDiscover()
-        │
-        ├── getProjectRoot()
-        │   └── getcwd() (vérifié)
-        │
-        ├── getScanPaths()
-        │   ├── DEFAULT_PATHS
-        │   ├── Config::getDirectories() (si config présent)
-        │   └── $customPaths
-        │
-        └── foreach($paths)
-            │
-            ├── fullPath = projectRoot + path
-            ├── Vérifie isDirectory()
-            └── scanner->scan(fullPath, maxDepth)
+discover()
+    ↓
+Vérifier le cache
+    ├── Cache existe → retourner
+    └── Cache vide → doDiscover()
+    ↓
+doDiscover()
+    ↓
+getProjectRoot() → getcwd()
+    ↓
+getScanPaths()
+    ├── DEFAULT_PATHS (src/Directives, app/Directives)
+    ├── Config->getDirectories() (si config fourni)
+    └── customPaths (via addPath)
+    ↓
+Pour chaque chemin
+    ├── fullPath = projectRoot/path
+    ├── Si répertoire existe
+    │   └── scanner->scan(fullPath, maxDepth)
+    │       ├── src/Directives/GreetDirective.php
+    │       ├── src/Directives/HelpDirective.php
+    │       └── app/Directives/AdminDirective.php
+    └── Ajouter les classes trouvées
+    ↓
+scanWorkspaceCustomSources()
+    ├── Config->getCustomSources()
+    ├── Pour chaque source
+    │   ├── fullPath = projectRoot/source
+    │   ├── Si répertoire existe
+    │   │   └── scanner->scan(fullPath, maxDepth)
+    │   └── Ajouter les classes
+    └── Retourner les directives
+    ↓
+Mettre en cache les résultats
+    ↓
+Retourner le tableau des FQCN
 ```
 
-## Structure de recherche
-
-### Ordre de priorité des chemins
-
-1. **Config `directories`** (si `$config` fourni)
-2. **Chemins par défaut** (`src/Directives`, `app/Directives`)
-3. **Chemins personnalisés** (ajoutés via `addPath()`)
-
-Les chemins sont fusionnés, pas remplacés.
-
-### Chemins par défaut
-
-```php
-const DEFAULT_PATHS = [
-    'src/Directives',    // 1. Pour les applications modernes
-    'app/Directives',    // 2. Pour les applications Laravel traditionnelles
-];
-```
+---
 
 ## Gestion des erreurs
 
-| Situation | Comportement | Message |
-|-----------|--------------|---------|
-| Répertoire inexistant | Ignoré silencieusement | - |
-| Répertoire non accessible | Ignoré silencieusement | - |
-| Chemin invalide | Ignoré silencieusement | - |
-| Project root non déterminable | Exception | `Unable to determine current working directory` |
-| Erreur de scan | Ignorée (logique interne du scanner) | - |
+| Situation | Comportement |
+|-----------|--------------|
+| Répertoire inexistant | Ignoré (continuation) |
+| Aucun répertoire trouvé | Retourne un tableau vide |
+| Erreur de parsing PHP | Ignorée par le scanner |
+| CWD impossible | `RuntimeException` |
 
-### Exceptions explicites
+**Exceptions :**
+- `RuntimeException` - Si `getcwd()` échoue
 
-| Exception | Condition | Message |
-|-----------|-----------|---------|
-| `\RuntimeException` | `getcwd()` retourne `false` | `Unable to determine current working directory` |
+---
 
 ## Intégration
 
-La classe `WorkspaceDirectiveDiscovery` s'intègre avec :
+### Avec DirectiveDiscoveryService
 
-| Composant | Utilisation |
-|-----------|-------------|
-| `FileSystemInterface` | Opérations sur le système de fichiers |
-| `DirectiveScannerInterface` | Scan des classes PHP |
-| `DirectiveConfigInterface` | Configuration optionnelle |
-| `DirectiveDiscoveryService` | Orchestration de la découverte |
-
-### Ordre dans le processus de découverte
-
+```php
+// Dans DirectiveDiscoveryService
+private function discoverWorkspaceDirectives(): void
+{
+    $source = new WorkspaceDirectiveDiscovery(
+        $this->getFileSystem(),
+        $this->getScanner(),
+        $this->getConfig(),
+        $this->maxDepth
+    );
+    
+    $fqcns = $source->discover();
+    
+    foreach ($fqcns as $fqcn) {
+        $this->addDirectiveFromFqcn($fqcn, false);
+    }
+}
 ```
-1. BuiltInDirectiveDiscovery      (prioritaire)
-2. WorkspaceDirectiveDiscovery    (projet)  ← Vous êtes ici
-3. VendorDirectiveDiscovery        (packages)
-4. CustomSources                  (personnalisées)
+
+### Avec Laravel
+
+```php
+<?php
+
+namespace App\Providers;
+
+use AndyDefer\Directive\Discovers\WorkspaceDirectiveDiscovery;
+use Illuminate\Support\ServiceProvider;
+
+class DirectiveServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        $discovery = app(DirectiveDiscoveryService::class);
+        
+        // Ajouter des chemins Laravel spécifiques
+        $workspaceDiscovery = app(WorkspaceDirectiveDiscovery::class);
+        $workspaceDiscovery->addPaths([
+            app_path('Commands'),
+            app_path('Directives'),
+            app_path('Console/Commands'),
+        ]);
+        
+        // Désactiver la découverte workspace si nécessaire
+        $discovery->ignoreSource(DiscoverySource::WORKSPACE);
+    }
+}
 ```
+
+### Extension personnalisée
+
+```php
+<?php
+
+class ExtendedWorkspaceDiscovery extends WorkspaceDirectiveDiscovery
+{
+    private array $ignoredPaths = [];
+    
+    public function ignorePath(string $path): self
+    {
+        $this->ignoredPaths[] = $path;
+        return $this;
+    }
+    
+    private function doDiscover(): array
+    {
+        $directives = parent::doDiscover();
+        
+        // Filtrer les résultats
+        return array_filter($directives, function($class) {
+            foreach ($this->ignoredPaths as $ignored) {
+                if (strpos($class, $ignored) !== false) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+}
+```
+
+---
 
 ## Performance
 
-| Métrique | Valeur | Description |
-|----------|--------|-------------|
-| Complexité | O(n) | n = nombre de dossiers à scanner |
-| Cache | ✅ Oui | Les résultats sont mis en cache |
-| Invalidation | Automatique | Le cache est vidé lors de l'ajout de chemins |
-| Mémoire | ~1-2 MB | Dépend du nombre de fichiers PHP |
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| `discover()` | O(1) | Lecture du cache (après première exécution) |
+| `doDiscover()` | O(n × d) | n = fichiers, d = profondeur |
+| `addPath()` | O(1) | Ajout dans un tableau |
 
-### Stratégie de cache
+**Optimisations :**
+- Cache des résultats après la première découverte
+- Ignorance des répertoires inexistants
+- Profondeur configurable pour limiter l'exploration
+- Pas de re-scan si les chemins ne changent pas
 
-```php
-public function discover(): array
-{
-    // Cache actif
-    if ($this->cache !== null) {
-        return $this->cache;
-    }
-    
-    // Calcul et mise en cache
-    $this->cache = $this->doDiscover();
-    return $this->cache;
-}
+**Mémoire :**
+- Les résultats sont mis en cache
+- Les chemins sont stockés en mémoire
+- Les FQCN sont conservés dans le cache
 
-// Le cache est invalidé lors des modifications
-public function addPath(string $path): self
-{
-    if (!in_array($path, $this->customPaths, true)) {
-        $this->customPaths[] = $path;
-        $this->cache = null; // Invalidation
-    }
-    return $this;
-}
-```
+---
 
 ## Compatibilité
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| PHP 8.1+ | ✅ Complet | - |
-| PHP 8.2+ | ✅ Complet | - |
-| Laravel 9.x | ✅ Complet | - |
-| Laravel 10.x | ✅ Complet | - |
-| Laravel 11.x | ✅ Complet | - |
-| Windows | ✅ Complet | Utilise `DIRECTORY_SEPARATOR` |
-| Unix/Linux | ✅ Complet | - |
+| Version PHP | Support | Notes |
+|-------------|---------|-------|
+| PHP 8.4 | ✅ Complet | Support total |
+| PHP 8.3 | ✅ Complet | Support total |
+| PHP 8.2 | ✅ Complet | Support total |
+| PHP 8.1 | ✅ Complet | Support total |
+
+---
 
 ## Exemple complet
 
@@ -331,113 +429,150 @@ public function addPath(string $path): self
 
 declare(strict_types=1);
 
+use AndyDefer\Directive\Configs\DirectiveConfig;
 use AndyDefer\Directive\Discovers\WorkspaceDirectiveDiscovery;
 use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\PhpServices\Services\FileSystemService;
+use Illuminate\Config\Repository as ConfigRepository;
 use PhpParser\ParserFactory;
 
-// Créer les dépendances
+// 1. Configuration
+$configRepo = new ConfigRepository([
+    'directive' => [
+        'directories' => [
+            'app/Commands',
+            'src/Directives',
+            'lib/Console',
+        ],
+        'custom_sources' => [
+            'packages/admin/src',
+            'modules/core/src/Directives',
+        ],
+    ]
+]);
+
+$config = new DirectiveConfig($configRepo);
 $fileSystem = new FileSystemService();
 $parser = (new ParserFactory())->createForNewestSupportedVersion();
 $scanner = new DirectiveClassScanner($fileSystem, $parser);
 
-// Créer le discovery avec configuration par défaut
-$discovery = new WorkspaceDirectiveDiscovery($fileSystem, $scanner);
-
-// Ajouter des chemins personnalisés
-$discovery->addPaths([
-    'app/CustomDirectives',
-    'modules/Admin/Directives',
-    'packages/Acme/Directives',
-]);
-
-// Découvrir les directives
-$directives = $discovery->discover();
-
-// Afficher les résultats
-echo "Directives trouvées : " . count($directives) . PHP_EOL;
-
-foreach ($directives as $fqcn) {
-    echo "- " . $fqcn . PHP_EOL;
-    
-    // Analyser la directive
-    $reflection = new ReflectionClass($fqcn);
-    if (!$reflection->isAbstract()) {
-        $instance = $reflection->newInstanceWithoutConstructor();
-        echo "  Signature: " . $instance->getSignature() . PHP_EOL;
-        
-        $aliases = $instance->getAliases()->toArray();
-        if (!empty($aliases)) {
-            echo "  Aliases: " . implode(', ', $aliases) . PHP_EOL;
-        }
-    }
-}
-
-// Exemple avec configuration
-$config = app(DirectiveConfigInterface::class);
-$discoveryWithConfig = new WorkspaceDirectiveDiscovery(
+// 2. Création du discovery service
+$workspaceDiscovery = new WorkspaceDirectiveDiscovery(
     $fileSystem,
     $scanner,
-    $config
+    $config,
+    4 // Profondeur
 );
 
-// Les chemins de la config sont automatiquement utilisés
-$discoveredDirectives = $discoveryWithConfig->discover();
-```
+// 3. Ajout de chemins personnalisés
+$workspaceDiscovery->addPaths([
+    'src/Console/Commands',
+    'app/Console',
+    'lib/Directives',
+]);
 
-## Bonnes pratiques
+// 4. Découverte
+echo "=== Découverte des directives workspace ===\n\n";
+$directives = $workspaceDiscovery->discover();
 
-### 1. Organisation des directives
+echo "Total directives trouvées: " . count($directives) . "\n\n";
 
-```
-app/
-├── Directives/                 # ✅ Bonne pratique
-│   ├── UserDirective.php
-│   └── AdminDirective.php
-├── Console/
-│   └── Directives/            # ✅ Alternative
-├── Modules/
-│   └── Admin/
-│       └── Directives/        # ✅ Organisation modulaire
-└── Directives/                 # ❌ Dossier à la racine (déconseillé)
-```
+// 5. Analyse par namespace
+$namespaceMap = [];
+foreach ($directives as $class) {
+    $parts = explode('\\', $class);
+    if (count($parts) >= 2) {
+        $namespace = $parts[0] . '\\' . $parts[1];
+        if (!isset($namespaceMap[$namespace])) {
+            $namespaceMap[$namespace] = [];
+        }
+        $namespaceMap[$namespace][] = $class;
+    }
+}
 
-### 2. Nommage des chemins
+echo "=== Répartition par namespace ===\n";
+foreach ($namespaceMap as $namespace => $classes) {
+    echo "$namespace: " . count($classes) . " directive(s)\n";
+    foreach ($classes as $class) {
+        echo "  - $class\n";
+    }
+    echo "\n";
+}
 
-```php
-// ✅ Utiliser des chemins relatifs à la racine
-$discovery->addPath('app/Directives');
+// 6. Chemins scannés
+echo "=== Chemins scannés ===\n";
 
-// ✅ Utiliser des chemins avec séparateur Unix
-$discovery->addPath('app/Modules/Admin/Directives');
+// Chemins par défaut + configuration + personnalisés
+$paths = array_merge(
+    ['src/Directives', 'app/Directives'],
+    $config->getDirectories(),
+    $workspaceDiscovery->customPaths // Note: propriété privée, utilisez getter si disponible
+);
 
-// ❌ Éviter les chemins absolus
-$discovery->addPath('/var/www/project/app/Directives');
+$uniquePaths = array_unique($paths);
+foreach ($uniquePaths as $path) {
+    $fullPath = getcwd() . '/' . $path;
+    $exists = is_dir($fullPath) ? '✅' : '❌';
+    echo "$exists $path\n";
+}
+echo "\n";
 
-// ❌ Éviter les chemins avec ".."
-$discovery->addPath('../app/Directives');
-```
+// 7. Sources personnalisées
+echo "=== Sources personnalisées ===\n";
+$customSources = $config->getCustomSources();
+foreach ($customSources as $source) {
+    $fullPath = getcwd() . '/' . $source;
+    $exists = is_dir($fullPath) ? '✅' : '❌';
+    echo "$exists $source\n";
+}
+echo "\n";
 
-### 3. Gestion des modules
+// 8. Statistiques
+echo "=== Statistiques ===\n";
+echo "Nombre de chemins configurés: " . count(array_unique($paths)) . "\n";
+echo "Nombre de sources personnalisées: " . count($customSources) . "\n";
+echo "Nombre de directives trouvées: " . count($directives) . "\n";
 
-```php
-class ModuleServiceProvider extends ServiceProvider
-{
-    public function register()
-    {
-        $discovery = $this->app->make(WorkspaceDirectiveDiscovery::class);
-        
-        // Ajouter automatiquement les directives des modules
-        foreach ($this->getActiveModules() as $module) {
-            $discovery->addPath("modules/{$module}/Directives");
+// 9. Vérification des classes
+echo "\n=== Vérification des classes ===\n";
+if (count($directives) > 0) {
+    // Vérifier que les classes existent
+    $valid = 0;
+    $invalid = 0;
+    
+    foreach ($directives as $class) {
+        if (class_exists($class)) {
+            $valid++;
+        } else {
+            $invalid++;
+            echo "⚠️ Classe non trouvée: $class\n";
         }
     }
     
-    private function getActiveModules(): array
-    {
-        // Logique pour déterminer les modules actifs
-        return ['Admin', 'Api', 'Blog'];
-    }
+    echo "\nClasses valides: $valid\n";
+    echo "Classes invalides: $invalid\n";
 }
+
+// 10. Test de cache
+echo "\n=== Test du cache ===\n";
+$startTime = microtime(true);
+$firstResult = $workspaceDiscovery->discover();
+$firstTime = microtime(true) - $startTime;
+
+$startTime = microtime(true);
+$secondResult = $workspaceDiscovery->discover();
+$secondTime = microtime(true) - $startTime;
+
+echo "Première découverte: " . round($firstTime * 1000, 2) . " ms\n";
+echo "Deuxième découverte (cache): " . round($secondTime * 1000, 2) . " ms\n";
+echo "Gain de performance: " . round(($firstTime / $secondTime), 2) . "x\n";
+echo "Même résultat: " . ($firstResult === $secondResult ? '✅' : '❌') . "\n";
 ```
----
+
+## Voir aussi
+
+- `DiscoverySourceInterface` - Interface de source de découverte
+- `DirectiveClassScanner` - Scanner des classes
+- `DirectiveConfigInterface` - Configuration du package
+- `VendorDirectiveDiscovery` - Découverte dans les vendors
+- `BuiltInDirectiveDiscovery` - Découverte des directives intégrées

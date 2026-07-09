@@ -2,275 +2,377 @@
 
 ## Description
 
-Scanner qui analyse des fichiers PHP pour découvrir les classes de directives. Il utilise l'AST (Abstract Syntax Tree) pour détecter de manière fiable les classes qui étendent `AbstractDirective`, même avec une syntaxe complexe ou des imports aliasés.
+Scanner de classes de directives utilisant l'analyse AST (Abstract Syntax Tree). Détecte les classes qui étendent `AbstractDirective` en analysant la structure syntaxique des fichiers PHP.
 
 ## Hiérarchie / Implémentations
 
 ```
 DirectiveScannerInterface
-    └── DirectiveClassScanner (final)
+    └── DirectiveClassScanner
+        └── NodeVisitor (analyse AST)
 ```
 
 ## Rôle principal
 
-Parcourir récursivement les répertoires, analyser les fichiers PHP, et identifier les classes qui sont des directives valides (non abstraites, étendant `AbstractDirective`). Il retourne la liste des FQCN (Fully Qualified Class Names) de toutes les directives trouvées.
+`DirectiveClassScanner` est le moteur de découverte des classes de directives. Il permet de :
+
+- Scanner récursivement des répertoires à la recherche de classes
+- Analyser l'AST des fichiers PHP pour identifier les directives
+- Gérer les alias d'import (`use`) pour résoudre les FQCN
+- Ignorer les classes abstraites et les classes sans namespace
+- Traverser l'arborescence avec une profondeur configurable
 
 ## Installation
 
+```bash
+composer require andydefer/directive
+```
+
 ### Dépendances
 
-```bash
-composer require nikic/php-parser
-```
-
-### Configuration dans le conteneur
-
-```php
-// Dans le service provider
-$this->app->singleton(DirectiveScannerInterface::class, function ($app) {
-    $fileSystem = $app->make(FileSystemInterface::class);
-    $parser = $app->make(Parser::class);
-    
-    return new DirectiveClassScanner($fileSystem, $parser);
-});
-```
+- `FileSystemInterface` - Opérations sur le système de fichiers
+- `Parser` (PhpParser) - Analyse syntaxique PHP
+- `NodeTraverser` - Parcours de l'AST
+- PHP 8.1+
 
 ## API / Méthodes publiques
 
-### `scan(string $directory, int $maxDepth = 3): array`
-
-Scanne un répertoire récursivement pour trouver les classes de directives.
+### `__construct(FileSystemInterface $fileSystem, Parser $parser)`
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$directory` | `string` | Le chemin du répertoire à scanner |
-| `$maxDepth` | `int` | Profondeur maximale de récursion (défaut: 3) |
+| `$fileSystem` | `FileSystemInterface` | Service de système de fichiers |
+| `$parser` | `Parser` | Parseur PHP (PhpParser) |
 
-**Retourne :** `array<int, string>` - Liste des FQCN des directives trouvées
-
-**Exceptions :** Aucune (les erreurs de lecture ou de parsing sont ignorées)
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-<?php
-
-use AndyDefer\Directive\Scanners\DirectiveClassScanner;
-
+$fileSystem = new FileSystemService();
+$parser = (new ParserFactory())->createForNewestSupportedVersion();
 $scanner = new DirectiveClassScanner($fileSystem, $parser);
-$directives = $scanner->scan('/var/www/project/app/Directives', 3);
-
-// Retourne : ['App\Directives\UserDirective', 'App\Directives\AdminDirective']
 ```
+
+---
+
+### `scan(string $directory, int $maxDepth = 3): array`
+
+Scanne un répertoire à la recherche de classes de directives.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$directory` | `string` | Chemin du répertoire à scanner |
+| `$maxDepth` | `int` | Profondeur maximale de scan (défaut: 3) |
+
+**Retourne :** `array<int, string>` - Liste des FQCN (Fully Qualified Class Names)
+
+**Exceptions :** Aucune (les erreurs de parsing sont ignorées)
+
+**Exemple :**
+```php
+$classes = $scanner->scan('/path/to/project/src', 5);
+
+foreach ($classes as $class) {
+    echo "Found directive: $class\n";
+}
+// App\Directives\GreetDirective
+// App\Directives\HelpDirective
+// App\Commands\AdminDirective
+```
+
+---
 
 ## Cas d'utilisation
 
-### Cas 1 : Scan des directives de l'application
+### Cas 1 : Scan standard d'un projet
 
 ```php
 <?php
 
 use AndyDefer\Directive\Scanners\DirectiveClassScanner;
+use AndyDefer\PhpServices\Services\FileSystemService;
+use PhpParser\ParserFactory;
 
-// Scanner les directives du projet
+$fileSystem = new FileSystemService();
+$parser = (new ParserFactory())->createForNewestSupportedVersion();
 $scanner = new DirectiveClassScanner($fileSystem, $parser);
-$directives = $scanner->scan('/var/www/project/app/Directives', 3);
 
-foreach ($directives as $fqcn) {
-    echo "Directive trouvée : " . $fqcn . PHP_EOL;
+// Scanner le dossier src avec profondeur 4
+$directives = $scanner->scan(__DIR__ . '/src', 4);
+
+echo "Directives trouvées: " . count($directives) . "\n";
+foreach ($directives as $class) {
+    echo "- $class\n";
 }
 ```
 
-### Cas 2 : Scan des directives d'un package vendor
+### Cas 2 : Scan de plusieurs sources
 
 ```php
 <?php
 
-$vendorPath = '/var/www/project/vendor/mon-package/src';
-$directives = $scanner->scan($vendorPath . '/Directives', 2);
+$sources = [
+    __DIR__ . '/src/Commands',
+    __DIR__ . '/src/Directives',
+    __DIR__ . '/vendor/andydefer/directive/src/BuiltIn',
+];
 
-// Retourne les directives du package
+$allDirectives = [];
+
+foreach ($sources as $source) {
+    $classes = $scanner->scan($source, 2);
+    $allDirectives = array_merge($allDirectives, $classes);
+}
+
+echo "Total directives: " . count($allDirectives) . "\n";
 ```
 
-### Cas 3 : Scan avec profondeur limitée
+### Cas 3 : Intégration dans un service de découverte
 
 ```php
 <?php
 
-// Scan uniquement sur 2 niveaux de profondeur
-$directives = $scanner->scan('/var/www/project/app', 2);
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 
-// Structure : app/
-//   Directives/          <- Niveau 1 (scanné)
-//     UserDirective.php  <- Niveau 2 (scanné)
-//     Admin/
-//       AdminDirective.php <- Niveau 3 (IGNORÉ)
+class CustomDirectiveDiscovery extends DirectiveDiscoveryService
+{
+    private DirectiveClassScanner $scanner;
+    
+    public function discoverWorkspaceDirectives(): void
+    {
+        $config = $this->getConfig();
+        $basePath = $config->basePath();
+        
+        // Scanner avec le scanner AST
+        $fqcns = $this->scanner->scan($basePath . '/src', 3);
+        
+        foreach ($fqcns as $fqcn) {
+            $this->addDirectiveFromFqcn($fqcn);
+        }
+    }
+}
 ```
+
+### Cas 4 : Analyse des imports et alias
+
+```php
+<?php
+
+// Exemple de fichier PHP avec imports
+// src/Directives/GreetDirective.php
+
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective as BaseDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+final class GreetDirective extends BaseDirective
+{
+    // ...
+}
+
+// Le scanner résout correctement l'alias "BaseDirective"
+// et détecte que GreetDirective étend AbstractDirective
+```
+
+### Cas 5 : Filtrage des classes abstraites
+
+```php
+<?php
+
+// src/Directives/AbstractBaseDirective.php
+namespace App\Directives;
+
+abstract class AbstractBaseDirective extends AbstractDirective
+{
+    // Classe abstraite - IGNORÉE
+}
+
+// src/Directives/ConcreteDirective.php
+final class ConcreteDirective extends AbstractBaseDirective
+{
+    // Classe concrète - DÉTECTÉE
+}
+
+// Résultat du scan:
+// ['App\Directives\ConcreteDirective']
+```
+
+---
 
 ## Flux d'exécution
 
 ```
-DirectiveClassScanner::scan($directory, $maxDepth)
-    │
-    ├── Vérifie que le répertoire existe
-    │
-    └── scanDirectory()
-        │
-        ├── Pour chaque fichier *.php
-        │   ├── analyzeFile()
-        │   │   ├── Parser::parse() → AST
-        │   │   ├── Traverse l'AST avec le visitor
-        │   │   │   ├── Capture du namespace
-        │   │   │   ├── Capture des use (aliases)
-        │   │   │   ├── Analyse des classes
-        │   │   │   │   ├── Vérifie l'héritage AbstractDirective
-        │   │   │   │   ├── Vérifie non-abstraite
-        │   │   │   │   └── Construction du FQCN
-        │   │   │   └── Retourne la liste des classes trouvées
-        │   │   └── Retourne les FQCN
-        │   └── Merge dans le tableau résultat
-        │
-        └── Pour chaque sous-répertoire (si profondeur < maxDepth)
-            └── Appel récursif de scanDirectory()
+scan($directory, $maxDepth)
+    ↓
+Vérifier si le répertoire existe
+    ├── Non → retourner []
+    └── Oui → scanDirectory()
+        ↓
+scanDirectory($directory, &$fqcns, $depth, $maxDepth)
+    ├── depth > maxDepth → retourner
+    ├── Parcourir les fichiers *.php
+    │   ├── Pour chaque fichier
+    │   │   ├── Lire le contenu
+    │   │   └── analyzeFile($content)
+    │   │       ├── parser->parse($content) → AST
+    │   │       ├── Visitor parcourt l'AST
+    │   │       │   ├── Namespace_ → enregistrer
+    │   │       │   ├── Use_ → enregistrer les alias
+    │   │       │   └── Class_ → vérifier l'extension
+    │   │       │       ├── Classe abstraite → ignorer
+    │   │       │       ├── Pas de namespace → ignorer
+    │   │       │       ├── Étend AbstractDirective → enregistrer
+    │   │       │       └── Étend un alias → résoudre
+    │   │       └── Retourner les FQCN trouvés
+    │   └── Ajouter les classes à $fqcns
+    ├── Parcourir les sous-répertoires
+    │   └── scanDirectory($subDir, $fqcns, depth+1)
+    └── Retourner $fqcns
 ```
 
-## Détection des directives
+### Analyse AST détaillée
 
-### Critères de validation
-
-Une classe est considérée comme une directive si :
-
-1. ✅ **Non abstraite** : `!$node->isAbstract()`
-2. ✅ **Étend AbstractDirective** : `$node->extends === AbstractDirective::class` ou via alias
-3. ✅ **A un namespace** : `$this->currentNamespace !== null`
-
-### Gestion des alias (use)
-
-```php
-use AndyDefer\Directive\AbstractDirective;
-
-class MyDirective extends AbstractDirective // ✅ Détecté
-{
-    // ...
-}
+```
+analyzeFile($content)
+    ↓
+parser->parse($content)
+    ├── Succès → AST
+    └── Erreur → retourner []
+    ↓
+Créer un NodeVisitor personnalisé
+    ↓
+Traverser l'AST
+    ├── Namespace_ → $currentNamespace = 'App\Directives'
+    ├── Use_ → $aliases['BaseDirective'] = 'AndyDefer\Directive\AbstractDirective'
+    └── Class_ → $node->extends? 
+        ├── Oui → $parentName = $node->extends->toString()
+        │   ├── 'BaseDirective' → résoudre avec $aliases
+        │   └── 'AndyDefer\Directive\AbstractDirective' → direct
+        ├── Vérifier si parent est AbstractDirective
+        ├── Vérifier si classe abstraite
+        ├── Vérifier si namespace existe
+        └── Ajouter FQCN
+    ↓
+Retourner la liste des classes
 ```
 
-```php
-use AndyDefer\Directive\AbstractDirective as BaseDirective;
-
-class MyDirective extends BaseDirective // ✅ Détecté via alias
-{
-    // ...
-}
-```
-
-### Syntaxe supportée
-
-| Syntaxe | Support |
-|---------|---------|
-| `class MyDirective extends AbstractDirective` | ✅ |
-| `class MyDirective extends \AndyDefer\Directive\AbstractDirective` | ✅ |
-| `class MyDirective extends AbstractDirective { ... }` | ✅ |
-| `final class MyDirective extends AbstractDirective` | ✅ |
-| `readonly class MyDirective extends AbstractDirective` | ✅ (PHP 8.2+) |
-| `class MyDirective extends AbstractDirective implements Interface` | ✅ |
-| `abstract class AbstractDirective extends ...` | ❌ (ignoré) |
-| `class MyDirective extends OtherClass` | ❌ (ignoré) |
-| `class MyDirective { ... }` | ❌ (ignoré) |
+---
 
 ## Gestion des erreurs
 
-| Situation | Comportement | Message |
-|-----------|--------------|---------|
-| Répertoire inexistant | Retourne un tableau vide | - |
-| Fichier PHP invalide | Ignoré silencieusement | - |
-| Erreur de parsing AST | Ignoré silencieusement | - |
-| Erreur de lecture fichier | Ignoré silencieusement | - |
-| Classe abstraite | Ignorée (non ajoutée) | - |
-| Classe n'étendant pas AbstractDirective | Ignorée | - |
-| Fichier sans namespace | Ignoré | - |
+| Situation | Comportement |
+|-----------|--------------|
+| Répertoire inexistant | Retourne un tableau vide |
+| Fichier PHP invalide | Ignoré (silencieusement) |
+| Erreur de parsing | Ignorée (silencieusement) |
+| Classe sans namespace | Ignorée (silencieusement) |
+| Classe abstraite | Ignorée |
+| Fichier non lisible | Ignoré (silencieusement) |
 
-### Pourquoi les erreurs sont ignorées ?
+**Aucune exception n'est levée.** Toutes les erreurs sont gérées silencieusement.
 
-Le scanner ignore silencieusement les erreurs pour :
-1. **Robustesse** : Un fichier mal formé ne doit pas bloquer le scan complet
-2. **Performance** : Évite les arrêts coûteux
-3. **Pratique** : Les fichiers PHP invalides sont rares dans un projet fonctionnel
+---
 
 ## Intégration
 
-La classe `DirectiveClassScanner` s'intègre avec :
-
-| Composant | Utilisation |
-|-----------|-------------|
-| `FileSystemInterface` | Opérations sur le système de fichiers |
-| `Parser` (nikic/php-parser) | Analyse AST des fichiers PHP |
-| `DirectiveDiscoveryService` | Utilisée par le service de découverte |
-| `WorkspaceDirectiveDiscovery` | Scan du workspace |
-| `VendorDirectiveDiscovery` | Scan des packages vendors |
-
-### Utilisation dans le service de découverte
+### Avec le service de découverte
 
 ```php
-class DirectiveDiscoveryService
+<?php
+
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Scanners\DirectiveClassScanner;
+
+class VendorDirectiveDiscovery
 {
-    public function discover(): DirectiveMetadataCollection
+    public function __construct(
+        private DirectiveClassScanner $scanner,
+        private ComposerReaderInterface $composerReader,
+    ) {}
+    
+    public function discover(): array
     {
-        // Scan des sources
-        $fqcns = $this->scanner->scan('/var/www/project/app/Directives');
+        $packages = $this->composerReader->getPackageNames();
+        $directives = [];
         
-        foreach ($fqcns as $fqcn) {
-            $this->addDirective($fqcn);
+        foreach ($packages as $package) {
+            $vendorDir = $this->composerReader->getVendorDir();
+            $path = $vendorDir . '/' . $package . '/src';
+            
+            if (is_dir($path)) {
+                $classes = $this->scanner->scan($path, 2);
+                $directives = array_merge($directives, $classes);
+            }
         }
+        
+        return $directives;
     }
 }
 ```
+
+### Avec Laravel
+
+```php
+<?php
+
+namespace App\Providers;
+
+use AndyDefer\Directive\Scanners\DirectiveClassScanner;
+use Illuminate\Support\ServiceProvider;
+use PhpParser\ParserFactory;
+
+class DirectiveServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(DirectiveClassScanner::class, function ($app) {
+            $parser = (new ParserFactory())->createForNewestSupportedVersion();
+            return new DirectiveClassScanner(
+                $app->make(FileSystemInterface::class),
+                $parser
+            );
+        });
+    }
+}
+```
+
+---
 
 ## Performance
 
-| Métrique | Valeur | Description |
-|----------|--------|-------------|
-| Complexité | O(n × m) | n = fichiers PHP, m = profondeur |
-| Temps typique | 50-200ms | Pour 50-100 fichiers |
-| Mémoire | 1-5 MB | Dépend de la taille des fichiers |
-| Cache | ❌ Non | Recommandé d'ajouter un cache |
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| `scan()` | O(n × m) | n = fichiers, m = profondeur |
+| `scanDirectory()` | O(f × a) | f = fichiers, a = analyse AST |
+| `analyzeFile()` | O(c) | c = complexité du code |
 
-### Facteurs de performance
+**Optimisations :**
+- Parse seulement les fichiers `.php`
+- Ignore les erreurs de parsing rapidement
+- Parcours récursif avec limite de profondeur
+- Pas d'analyse des dépendances
 
-1. **Nombre de fichiers** : Plus il y a de fichiers, plus le scan est lent
-2. **Profondeur de récursion** : Plus la profondeur est grande, plus le scan est lent
-3. **Taille des fichiers** : Les gros fichiers prennent plus de temps à parser
-4. **Parser** : L'AST parsing est plus lent que les regex mais plus fiable
+**Mémoire :**
+- L'AST est chargé pour chaque fichier (puis libéré)
+- Les FQCN sont stockés dans un tableau simple
+- Pas de cache permanent
 
-### Optimisations recommandées
-
-```php
-class DirectiveClassScanner
-{
-    private ?array $cache = null;
-    
-    public function scan(string $directory, int $maxDepth = 3): array
-    {
-        $cacheKey = md5($directory . $maxDepth);
-        
-        if (isset($this->cache[$cacheKey])) {
-            return $this->cache[$cacheKey];
-        }
-        
-        $this->cache[$cacheKey] = $this->doScan($directory, $maxDepth);
-        return $this->cache[$cacheKey];
-    }
-}
-```
+---
 
 ## Compatibilité
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| PHP 8.1+ | ✅ Complet | - |
-| PHP 8.2+ | ✅ Complet | Support `readonly` classes |
-| PHP 8.3+ | ✅ Complet | - |
-| nikic/php-parser 4.x | ✅ Complet | - |
-| nikic/php-parser 5.x | ✅ Complet | - |
+| Version PHP | Support | Notes |
+|-------------|---------|-------|
+| PHP 8.4 | ✅ Complet | Support total |
+| PHP 8.3 | ✅ Complet | Support total |
+| PHP 8.2 | ✅ Complet | Support total |
+| PHP 8.1 | ✅ Complet | Support total |
+
+**Dépendances :**
+- `nikic/php-parser` ^5.8
+
+---
 
 ## Exemple complet
 
@@ -283,74 +385,118 @@ use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use PhpParser\ParserFactory;
 
-// Créer les dépendances
+// 1. Création du scanner
 $fileSystem = new FileSystemService();
 $parser = (new ParserFactory())->createForNewestSupportedVersion();
-
-// Créer le scanner
 $scanner = new DirectiveClassScanner($fileSystem, $parser);
 
-// Scanner un répertoire
-$directives = $scanner->scan('/var/www/project/app/Directives', 3);
+// 2. Configuration des sources
+$sources = [
+    'builtin' => __DIR__ . '/vendor/andydefer/directive/src/BuiltIn',
+    'workspace' => __DIR__ . '/src/Directives',
+    'vendor' => __DIR__ . '/vendor',
+];
 
-// Afficher les résultats
-echo "Directives trouvées : " . count($directives) . PHP_EOL;
+// 3. Scan des sources
+echo "=== Scan des directives ===\n\n";
 
-foreach ($directives as $fqcn) {
-    echo "- " . $fqcn . PHP_EOL;
+foreach ($sources as $name => $path) {
+    echo "Source: $name\n";
+    echo "Chemin: $path\n";
     
-    // Vérification supplémentaire
-    $reflection = new ReflectionClass($fqcn);
-    if ($reflection->isSubclassOf(AbstractDirective::class)) {
-        $instance = $reflection->newInstanceWithoutConstructor();
-        echo "  Signature: " . $instance->getSignature() . PHP_EOL;
+    if (!is_dir($path)) {
+        echo "⚠️  Répertoire inexistant\n\n";
+        continue;
+    }
+    
+    $classes = $scanner->scan($path, 3);
+    
+    echo "Directives trouvées: " . count($classes) . "\n";
+    
+    foreach ($classes as $class) {
+        echo "  - $class\n";
+    }
+    
+    echo "\n";
+}
+
+// 4. Analyse détaillée des classes trouvées
+$allClasses = [];
+foreach ($sources as $path) {
+    if (is_dir($path)) {
+        $classes = $scanner->scan($path, 3);
+        $allClasses = array_merge($allClasses, $classes);
     }
 }
 
-// Exemple avec profondeur personnalisée
-$shallowScan = $scanner->scan('/var/www/project/app/Directives', 1);
-// Ne scanne que le dossier immédiat, pas les sous-dossiers
+echo "=== Analyse détaillée ===\n";
+echo "Total des classes: " . count($allClasses) . "\n\n";
 
-// Exemple avec répertoire inexistant
-$empty = $scanner->scan('/var/www/project/inexistant', 3);
-// Retourne [] sans erreur
+$directivesByNamespace = [];
+foreach ($allClasses as $class) {
+    $parts = explode('\\', $class);
+    $namespace = implode('\\', array_slice($parts, 0, -1));
+    $directivesByNamespace[$namespace][] = $class;
+}
+
+// Afficher par namespace
+foreach ($directivesByNamespace as $namespace => $classes) {
+    echo "Namespace: $namespace\n";
+    foreach ($classes as $class) {
+        $shortName = array_slice(explode('\\', $class), -1)[0];
+        echo "  - $shortName\n";
+    }
+    echo "\n";
+}
+
+// 5. Statistiques
+echo "=== Statistiques ===\n";
+echo "Total: " . count($allClasses) . " classes\n";
+echo "Namespaces: " . count($directivesByNamespace) . "\n";
+
+// 6. Vérification des classes abstraites
+$abstractClasses = [];
+$concreteClasses = [];
+
+foreach ($allClasses as $class) {
+    $reflection = new ReflectionClass($class);
+    if ($reflection->isAbstract()) {
+        $abstractClasses[] = $class;
+    } else {
+        $concreteClasses[] = $class;
+    }
+}
+
+echo "\nClasses abstraites: " . count($abstractClasses) . "\n";
+echo "Classes concrètes: " . count($concreteClasses) . "\n";
+
+// 7. Exemple de résultat
+echo "\n=== Exemples de directives ===\n";
+$sample = array_slice($concreteClasses, 0, 5);
+foreach ($sample as $class) {
+    $parts = explode('\\', $class);
+    $shortName = end($parts);
+    echo "- $shortName (classe concrète)\n";
+}
+
+// 8. Test avec un fichier spécifique (analyse AST)
+$testFile = __DIR__ . '/example.php';
+if (file_exists($testFile)) {
+    echo "\n=== Analyse d'un fichier spécifique ===\n";
+    $content = file_get_contents($testFile);
+    $classes = $scanner->analyzeFile($content);
+    
+    echo "Classes dans " . basename($testFile) . ":\n";
+    foreach ($classes as $class) {
+        echo "  - $class\n";
+    }
+}
 ```
 
-## Notes techniques
+## Voir aussi
 
-### Pourquoi l'AST plutôt que les regex ?
-
-| Approche | Avantages | Inconvénients |
-|----------|-----------|---------------|
-| **Regex** | Rapide, simple | Fragile, échoue sur syntaxe complexe |
-| **AST** | Fiable, robuste | Plus lent, dépendance externe |
-
-### Limitations connues
-
-1. **Fichiers inclus** : Les fichiers inclus via `include` ou `require` ne sont pas analysés
-2. **Classes anonymes** : Les classes anonymes sont ignorées
-3. **Trait** : Les traits ne sont pas détectés comme des directives
-4. **Interfaces** : Les interfaces ne sont pas détectées
-
-### Bonnes pratiques
-
-1. **Limiter la profondeur** : Utilisez une profondeur raisonnable (3 par défaut)
-2. **Utiliser le cache** : Mettez en cache les résultats pour les performances
-3. **Fichiers séparés** : Une directive par fichier pour un scan optimal
-4. **Namespace explicite** : Toujours déclarer un namespace
-
-```php
-// ✅ Bonne pratique
-namespace App\Directives;
-
-class UserDirective extends AbstractDirective
-{
-    // ...
-}
-
-// ❌ Mauvaise pratique (pas de namespace, sera ignoré)
-class UserDirective extends AbstractDirective
-{
-    // ...
-}
----
+- `DirectiveDiscoveryService` - Service de découverte
+- `DirectiveClassScanner` - Interface du scanner
+- `PhpParser` - Analyse AST
+- `FileSystemService` - Service de système de fichiers
+- `AbstractDirective` - Classe de base des directives

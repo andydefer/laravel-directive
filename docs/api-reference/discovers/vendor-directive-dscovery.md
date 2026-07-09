@@ -2,260 +2,404 @@
 
 ## Description
 
-Source de découverte qui scanne les packages Composer installés pour trouver des directives. Elle examine les chemins PSR-4 d'autoloading et les fichiers de configuration personnalisés des packages vendors.
+Source de découverte des directives dans les packages vendors. Scanne les packages Composer installés pour trouver les classes de directives via les chemins PSR-4 et les fichiers de configuration personnalisés.
 
 ## Hiérarchie / Implémentations
 
 ```
 DiscoverySourceInterface
-    └── VendorDirectiveDiscovery (final)
+    └── VendorDirectiveDiscovery
 ```
 
 ## Rôle principal
 
-Permettre aux packages tiers de fournir leurs propres directives en les découvrant automatiquement. Cela rend l'écosystème Laravel Directive extensible : n'importe quel package Composer peut inclure des directives qui seront automatiquement disponibles.
+`VendorDirectiveDiscovery` est la source de découverte pour les packages tiers. Elle permet de :
+
+- Scanner tous les packages installés via Composer
+- Explorer les chemins PSR-4 à la recherche d'un sous-dossier `Directives`
+- Lire les fichiers `config/directive.php` des packages pour des sources personnalisées
+- Résoudre les dépendances récursivement
+- Analyser les packages avec une profondeur de scan configurable
 
 ## Installation
 
-Cette classe est utilisée automatiquement par le service de découverte. Aucune configuration manuelle n'est nécessaire.
-
-```php
-// Le service provider l'enregistre automatiquement
-$this->app->singleton(VendorDirectiveDiscovery::class, function ($app) {
-    return new VendorDirectiveDiscovery(
-        $app->make(ComposerReaderInterface::class),
-        $app->make(DependencyResolverInterface::class),
-        $app->make(FileSystemInterface::class),
-        $app->make(DirectiveScannerInterface::class)
-    );
-});
+```bash
+composer require andydefer/directive
 ```
+
+### Dépendances
+
+- `ComposerReaderInterface` - Lecture de composer.json
+- `DependencyResolverInterface` - Résolution des dépendances
+- `FileSystemInterface` - Opérations sur le système de fichiers
+- `DirectiveScannerInterface` - Scan des classes de directives
+- PHP 8.1+
 
 ## API / Méthodes publiques
 
-### `discover(): array`
-
-Découvre toutes les directives présentes dans les packages Composer installés.
+### `__construct(ComposerReaderInterface $composerReader, DependencyResolverInterface $dependencyResolver, FileSystemInterface $fileSystem, DirectiveScannerInterface $scanner, int $maxDepth = 3)`
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| Aucun | - | - |
+| `$composerReader` | `ComposerReaderInterface` | Service de lecture composer.json |
+| `$dependencyResolver` | `DependencyResolverInterface` | Résolveur de dépendances |
+| `$fileSystem` | `FileSystemInterface` | Service de système de fichiers |
+| `$scanner` | `DirectiveScannerInterface` | Scanner de directives |
+| `$maxDepth` | `int` | Profondeur de scan (défaut: 3) |
 
-**Retourne :** `array<int, string>` - Liste des noms de classes qualifiés (FQCN)
+**Retourne :** `void`
+
+**Exemple :**
+```php
+$vendorDiscovery = new VendorDirectiveDiscovery(
+    $composerReader,
+    $dependencyResolver,
+    $fileSystem,
+    $scanner,
+    4 // Profondeur de scan
+);
+```
+
+---
+
+### `discover(): array`
+
+Découvre les directives dans tous les packages vendors.
+
+**Retourne :** `array<int, string>` - Liste des FQCN des directives trouvées
 
 **Exceptions :** Aucune (les erreurs sont silencieusement ignorées)
 
 **Exemple :**
 ```php
-<?php
+$directives = $vendorDiscovery->discover();
 
-use AndyDefer\Directive\Discovers\VendorDirectiveDiscovery;
-
-$discovery = $app->make(VendorDirectiveDiscovery::class);
-$directives = $discovery->discover();
-
-// Retourne les classes trouvées dans les packages vendors
-// Exemple: ['Vendor\Package\Directives\MyDirective']
+echo "Directives trouvées dans les vendors:\n";
+foreach ($directives as $class) {
+    echo "- $class\n";
+}
+// AndyDefer\Directive\BuiltIn\HelpDirective
+// Vendor\Package\Directives\CustomDirective
+// AnotherVendor\Package\Directives\AnotherDirective
 ```
+
+---
 
 ## Cas d'utilisation
 
-### Cas 1 : Fournir des directives dans un package vendor
+### Cas 1 : Découverte standard des packages vendors
 
 ```php
-// Dans un package vendor (ex: vendor/mon-package/composer.json)
-{
-    "autoload": {
-        "psr-4": {
-            "MonPackage\\": "src/"
-        }
-    }
-}
+<?php
 
-// Structure du package
-// vendor/mon-package/
-//   src/
-//     Directives/
-//       MaDirective.php
+use AndyDefer\Directive\Discovers\VendorDirectiveDiscovery;
+use AndyDefer\Directive\Services\ComposerReaderService;
+use AndyDefer\Directive\Services\DependencyResolverService;
+use AndyDefer\Directive\Scanners\DirectiveClassScanner;
+use AndyDefer\PhpServices\Services\FileSystemService;
+use PhpParser\ParserFactory;
 
-// La directive sera automatiquement découverte
-class MaDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'mon-package:commande';
-    }
+$fileSystem = new FileSystemService();
+$config = new DirectiveConfig(...);
+$composerReader = new ComposerReaderService($config, $fileSystem);
+$dependencyResolver = new DependencyResolverService($composerReader, $fileSystem);
+
+$parser = (new ParserFactory())->createForNewestSupportedVersion();
+$scanner = new DirectiveClassScanner($fileSystem, $parser);
+
+$vendorDiscovery = new VendorDirectiveDiscovery(
+    $composerReader,
+    $dependencyResolver,
+    $fileSystem,
+    $scanner
+);
+
+$directives = $vendorDiscovery->discover();
+
+echo "Total directives vendors: " . count($directives) . "\n";
+foreach ($directives as $class) {
+    echo "- $class\n";
 }
 ```
 
-### Cas 2 : Configuration personnalisée dans un package vendor
+### Cas 2 : Structure PSR-4 typique d'un package
 
 ```php
-// vendor/mon-package/config/directive.php
+<?php
+
+// Structure d'un package vendor typique
+// vendor/andydefer/directive/
+// ├── composer.json
+// ├── src/
+// │   ├── BuiltIn/
+// │   │   ├── HelpDirective.php
+// │   │   ├── ListDirective.php
+// │   │   └── VersionDirective.php
+// │   └── Directives/
+// │       └── CustomDirective.php
+// └── config/
+//     └── directive.php
+
+// Le scanner découvre:
+// - vendor/andydefer/directive/src/BuiltIn/ListDirective
+// - vendor/andydefer/directive/src/BuiltIn/HelpDirective
+// - vendor/andydefer/directive/src/Directives/CustomDirective
+```
+
+### Cas 3 : Package avec configuration personnalisée
+
+```php
+<?php
+
+// config/directive.php dans un package vendor
 <?php
 
 return [
     'custom_sources' => [
-        'src/Commands',     // Dossier supplémentaire à scanner
+        'src/Commands',
+        'src/Console',
+        'lib/Directives',
     ],
 ];
 
-// La classe sera découverte
-// vendor/mon-package/src/Commands/MaCommande.php
+// Le scanner explorera ces dossiers supplémentaires
+// vendor/package/src/Commands/
+// vendor/package/src/Console/
+// vendor/package/lib/Directives/
 ```
 
-### Cas 3 : Utilisation dans un script d'analyse
+### Cas 4 : Filtrage des packages PHP méta
 
 ```php
 <?php
 
-$discovery = $app->make(VendorDirectiveDiscovery::class);
-$directives = $discovery->discover();
+$composerData = [
+    'require' => [
+        'php' => '^8.1',           // Ignoré
+        'ext-json' => '*',         // Ignoré
+        'andydefer/directive' => '^1.0', // Scanné
+        'vendor/package' => '^2.0', // Scanné
+    ]
+];
 
-echo "Directives trouvées dans les vendors :" . PHP_EOL;
-
-foreach ($directives as $fqcn) {
-    $reflection = new ReflectionClass($fqcn);
-    $instance = $reflection->newInstanceWithoutConstructor();
-    echo "- " . $instance->getSignature() . " (" . $fqcn . ")" . PHP_EOL;
-}
+// Les packages 'php' et 'ext-*' sont automatiquement ignorés
 ```
+
+### Cas 5 : Intégration dans DirectiveDiscoveryService
+
+```php
+<?php
+
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+
+$discoveryService = DirectiveDiscoveryService::init($container);
+
+// Le service utilise VendorDirectiveDiscovery automatiquement
+// si la source VENDOR n'est pas ignorée
+$directives = $discoveryService
+    ->enableSource(DiscoverySource::VENDOR)
+    ->discover();
+
+echo "Total directives (incluant vendors): " . $directives->count() . "\n";
+```
+
+---
 
 ## Flux d'exécution
 
 ```
-VendorDirectiveDiscovery::discover()
-    │
-    ├── $this->dependencyResolver->getFlatDependencies()
-    │   └── Retourne la liste des packages installés
-    │
-    └── foreach($packages)
-        │
-        └── scanPackage($package)
-            │
-            ├── getPackagePath()
-            │   └── /vendor/{package}
-            │
-            ├── scanAutoloadPaths()
-            │   ├── readComposerJson()
-            │   ├── Extrait les chemins PSR-4
-            │   └── Scan /{path}/Directives/
-            │
-            └── scanCustomSources()
-                ├── Vérifie config/directive.php
-                ├── extractCustomSources()
-                └── Scan chaque source personnalisée
+discover()
+    ↓
+getFlatDependencies() (via DependencyResolver)
+    ├── Résoudre tous les packages
+    └── Retourner la liste plate
+    ↓
+Pour chaque package
+    ↓
+scanPackage($package)
+    ├── getPackagePath($package)
+    │   └── vendor_dir/{package}
+    ├── scanAutoloadPaths($package, $packagePath)
+    │   ├── readComposerJson()
+    │   │   └── packagePath/composer.json
+    │   ├── Extraire autoload.psr-4
+    │   ├── Pour chaque namespace => path
+    │   │   └── path/Directives/
+    │   └── scanner->scan($fullPath, $maxDepth)
+    ├── scanCustomSources($package, $packagePath)
+    │   ├── configPath = packagePath/config/directive.php
+    │   ├── Si existe → require()
+    │   ├── Extraire custom_sources
+    │   └── scanner->scan($fullPath, $maxDepth)
+    └── Retourner les directives trouvées
+    ↓
+Fusionner tous les résultats
+    ↓
+Retourner le tableau des FQCN
 ```
 
-## Structure de recherche
+### Scan PSR-4 détaillé
 
-### 1. Chemins PSR-4
-
-La classe recherche automatiquement dans les sous-dossiers `Directives` de chaque chemin PSR-4.
-
-```php
-// Exemple : Package "laravel/framework"
-{
-    "autoload": {
-        "psr-4": {
-            "Illuminate\\": "src/"
-        }
-    }
-}
-
-// Scan : vendor/laravel/framework/src/Directives/
+```
+scanAutoloadPaths($package, $packagePath)
+    ↓
+readComposerJson($packagePath)
+    ↓
+Extraire 'autoload' => ['psr-4' => [...]]
+    ↓
+Pour chaque mapping namespace => path
+    ├── namespace: 'AndyDefer\Directive\\'
+    ├── path: 'src/'
+    ├── fullPath = packagePath/src/Directives
+    ├── Si répertoire existe
+    │   └── scanner->scan(fullPath, maxDepth)
+    │       ├── src/Directives/HelpDirective.php
+    │       ├── src/Directives/ListDirective.php
+    │       └── src/Directives/VersionDirective.php
+    └── Ajouter les classes trouvées
 ```
 
-### 2. Configuration personnalisée
-
-Un package peut définir des sources supplémentaires via `config/directive.php` :
-
-```php
-// vendor/mon-package/config/directive.php
-<?php
-
-return [
-    'custom_sources' => [
-        'src/Commands',           // Relatif au package
-        'src/Console/Commands',   // Autre dossier
-    ],
-];
-```
+---
 
 ## Gestion des erreurs
 
-| Situation | Comportement | Message |
-|-----------|--------------|---------|
-| Package introuvable | Ignoré silencieusement | - |
-| composer.json manquant | Ignoré silencieusement | - |
-| JSON invalide | Ignoré silencieusement | - |
-| Fichier de config inexistant | Ignoré silencieusement | - |
-| Erreur de lecture fichier | Ignoré silencieusement | - |
-| Erreur d'extraction des sources | Ignoré silencieusement | - |
+| Situation | Comportement |
+|-----------|--------------|
+| Package inexistant | Ignoré |
+| composer.json manquant | Ignoré |
+| JSON invalide | Ignoré |
+| Fichier de config invalide | Ignoré |
+| Répertoire inexistant | Ignoré |
+| Erreur de parsing PHP | Ignorée par le scanner |
 
-⚠️ **Important** : Cette classe utilise `require` pour charger les fichiers de configuration. Assurez-vous que les packages tiers sont dignes de confiance.
+**Aucune exception n'est levée.** Toutes les erreurs sont gérées silencieusement.
+
+---
 
 ## Intégration
 
-La classe `VendorDirectiveDiscovery` s'intègre avec :
-
-| Composant | Utilisation |
-|-----------|-------------|
-| `ComposerReaderInterface` | Lecture du composer.json du projet |
-| `DependencyResolverInterface` | Résolution des dépendances |
-| `FileSystemInterface` | Opérations sur le système de fichiers |
-| `DirectiveScannerInterface` | Scan des classes PHP |
-| `DirectiveDiscoveryService` | Orchestration de la découverte |
-
-### Ordre dans le processus de découverte
-
-```
-1. BuiltInDirectiveDiscovery      (prioritaire)
-2. WorkspaceDirectiveDiscovery    (projet)
-3. VendorDirectiveDiscovery       (packages)  ← Vous êtes ici
-4. CustomSources                  (personnalisées)
-```
-
-## Performance
-
-| Métrique | Valeur | Description |
-|----------|--------|-------------|
-| Complexité | O(n × m) | n = packages, m = fichiers par package |
-| Temps typique | 200-500ms | Pour 10-20 packages avec scan modéré |
-| Mémoire | 2-5 MB | Dépend du nombre de packages |
-| Cache | Non | Recommandé de mettre en cache les résultats |
-
-### Optimisations possibles
+### Avec DirectiveDiscoveryService
 
 ```php
-// Ajout d'un cache pour les résultats
-class VendorDirectiveDiscovery
+// Dans DirectiveDiscoveryService
+private function discoverVendorDirectives(): void
 {
-    private ?array $cache = null;
+    $config = $this->getConfig();
+    $fileSystem = $this->getFileSystem();
     
-    public function discover(): array
-    {
-        if ($this->cache !== null) {
-            return $this->cache;
-        }
-        
-        $this->cache = $this->doDiscover();
-        return $this->cache;
+    $composerReader = new ComposerReaderService($config, $fileSystem);
+    $dependencyResolver = new DependencyResolverService($composerReader, $fileSystem);
+    
+    $source = new VendorDirectiveDiscovery(
+        $composerReader,
+        $dependencyResolver,
+        $fileSystem,
+        $this->getScanner(),
+        $this->maxDepth
+    );
+    
+    $fqcns = $source->discover();
+    
+    foreach ($fqcns as $fqcn) {
+        $this->addDirectiveFromFqcn($fqcn, false);
     }
 }
 ```
 
+### Dans un framework Laravel
+
+```php
+<?php
+
+namespace App\Providers;
+
+use AndyDefer\Directive\Discovers\VendorDirectiveDiscovery;
+use Illuminate\Support\ServiceProvider;
+
+class DirectiveServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        $discovery = app(DirectiveDiscoveryService::class);
+        
+        // Désactiver la découverte des vendors si nécessaire
+        $discovery->ignoreSource(DiscoverySource::VENDOR);
+        
+        // Ou configurer la profondeur
+        $vendorDiscovery = app(VendorDirectiveDiscovery::class);
+        $vendorDiscovery->setMaxDepth(5);
+    }
+}
+```
+
+### Extension personnalisée
+
+```php
+<?php
+
+class ExtendedVendorDiscovery extends VendorDirectiveDiscovery
+{
+    private array $extraDirectories = [];
+    
+    public function addVendorPath(string $vendor, string $path): self
+    {
+        $this->extraDirectories[$vendor] = $path;
+        return $this;
+    }
+    
+    private function scanPackage(string $package): array
+    {
+        // Scan standard
+        $directives = parent::scanPackage($package);
+        
+        // Ajouter des chemins personnalisés
+        if (isset($this->extraDirectories[$package])) {
+            $customPath = $this->getPackagePath($package) . '/' . $this->extraDirectories[$package];
+            if ($this->fileSystem->isDirectory($customPath)) {
+                $extra = $this->scanner->scan($customPath, $this->maxDepth);
+                $directives = array_merge($directives, $extra);
+            }
+        }
+        
+        return $directives;
+    }
+}
+```
+
+---
+
+## Performance
+
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| `discover()` | O(n × p × d) | n = packages, p = PSR-4 paths, d = profondeur |
+| `scanPackage()` | O(p × d) | p = PSR-4 paths, d = profondeur |
+| `scanAutoloadPaths()` | O(p × d) | p = PSR-4 paths, d = profondeur |
+| `scanCustomSources()` | O(c × d) | c = custom sources, d = profondeur |
+
+**Optimisations :**
+- Utilisation de `getFlatDependencies()` pour une liste plate
+- Scan limité aux chemins PSR-4
+- Ignorance des erreurs pour ne pas bloquer le processus
+- Profondeur configurable pour limiter l'exploration
+
+**Mémoire :**
+- Toutes les directives sont stockées dans un tableau
+- Les packages sont traités un par un
+- Les FQCN sont conservés en mémoire
+
+---
+
 ## Compatibilité
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| PHP 8.1+ | ✅ Complet | - |
-| PHP 8.2+ | ✅ Complet | - |
-| Laravel 9.x | ✅ Complet | - |
-| Laravel 10.x | ✅ Complet | - |
-| Laravel 11.x | ✅ Complet | - |
-| Windows | ✅ Complet | Utilise `DIRECTORY_SEPARATOR` |
-| Unix/Linux | ✅ Complet | - |
+| Version PHP | Support | Notes |
+|-------------|---------|-------|
+| PHP 8.4 | ✅ Complet | Support total |
+| PHP 8.3 | ✅ Complet | Support total |
+| PHP 8.2 | ✅ Complet | Support total |
+| PHP 8.1 | ✅ Complet | Support total |
+
+---
 
 ## Exemple complet
 
@@ -264,73 +408,166 @@ class VendorDirectiveDiscovery
 
 declare(strict_types=1);
 
+use AndyDefer\Directive\Configs\DirectiveConfig;
 use AndyDefer\Directive\Discovers\VendorDirectiveDiscovery;
 use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\Directive\Services\DependencyResolverService;
 use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\PhpServices\Services\FileSystemService;
+use Illuminate\Config\Repository as ConfigRepository;
+use PhpParser\ParserFactory;
 
-// Construire les dépendances
+// 1. Configuration
+$configRepo = new ConfigRepository([
+    'directive' => [
+        'base_path' => __DIR__,
+        'vendor_dir' => __DIR__ . '/vendor',
+        'composer_path' => __DIR__ . '/composer.json',
+    ]
+]);
+
+$config = new DirectiveConfig($configRepo);
 $fileSystem = new FileSystemService();
-$config = $app->make(DirectiveConfigInterface::class);
-$composerReader = new ComposerReaderService($config, $fileSystem);
-$dependencyResolver = new DependencyResolverService($composerReader, $fileSystem);
+$parser = (new ParserFactory())->createForNewestSupportedVersion();
 $scanner = new DirectiveClassScanner($fileSystem, $parser);
 
-// Créer le discovery
-$discovery = new VendorDirectiveDiscovery(
+// 2. Services Composer
+$composerReader = new ComposerReaderService($config, $fileSystem);
+$dependencyResolver = new DependencyResolverService($composerReader, $fileSystem);
+
+// 3. Découverte des vendors
+$vendorDiscovery = new VendorDirectiveDiscovery(
     $composerReader,
     $dependencyResolver,
     $fileSystem,
-    $scanner
+    $scanner,
+    3 // Profondeur
 );
 
-// Découvrir les directives des vendors
-$vendorDirectives = $discovery->discover();
+echo "=== Découverte des directives dans les vendors ===\n\n";
 
-// Analyser les résultats
-echo "Directives trouvées : " . count($vendorDirectives) . PHP_EOL;
+// 4. Découverte
+$directives = $vendorDiscovery->discover();
 
-foreach ($vendorDirectives as $fqcn) {
-    echo "- " . $fqcn . PHP_EOL;
+echo "Total directives trouvées: " . count($directives) . "\n\n";
+
+// 5. Analyse par vendor
+$vendorMap = [];
+foreach ($directives as $class) {
+    $parts = explode('\\', $class);
+    $vendor = $parts[0] ?? 'unknown';
+    if (!isset($vendorMap[$vendor])) {
+        $vendorMap[$vendor] = [];
+    }
+    $vendorMap[$vendor][] = $class;
 }
 
-// Pour voir d'où viennent les directives
-// Utiliser le résolveur de dépendances
-$dependencies = $dependencyResolver->getFlatDependencies();
-
-foreach ($dependencies as $package) {
-    echo "Package: " . $package . PHP_EOL;
-    // Les directives de ce package sont incluses dans le résultat
+echo "=== Répartition par vendor ===\n";
+foreach ($vendorMap as $vendor => $classes) {
+    echo "$vendor: " . count($classes) . " directive(s)\n";
+    foreach ($classes as $class) {
+        echo "  - $class\n";
+    }
+    echo "\n";
 }
-```
 
-## Notes de sécurité
-
-⚠️ **Attention** : Cette classe utilise `require` pour charger les fichiers `config/directive.php` des packages vendors. Cela signifie que tout code dans ces fichiers sera exécuté. Bien que cela soit nécessaire pour la flexibilité, cela peut présenter un risque de sécurité si un package malveillant est installé.
-
-### Bonnes pratiques
-
-1. **Vérifier les packages** : N'installez que des packages de sources fiables
-2. **Audit de sécurité** : Utilisez `composer audit` pour vérifier les vulnérabilités
-3. **Environnement de développement** : Testez les packages dans un environnement isolé
-4. **Contrôle des versions** : Utilisez des versions stables et vérifiées
-
-### Alternatives sécurisées
-
-```php
-// Si vous souhaitez limiter les risques, vous pouvez désactiver
-// la découverte des vendors ou limiter aux packages autorisés
-class VendorDirectiveDiscovery
-{
-    private const ALLOWED_PACKAGES = [
-        'andydefer/laravel-directive',
-        'trusted-vendor/trusted-package',
-    ];
-    
-    private function shouldScanPackage(string $package): bool
-    {
-        return in_array($package, self::ALLOWED_PACKAGES, true);
+// 6. Analyse par package
+$packageMap = [];
+foreach ($directives as $class) {
+    $parts = explode('\\', $class);
+    if (count($parts) >= 2) {
+        $package = $parts[0] . '/' . $parts[1];
+        if (!isset($packageMap[$package])) {
+            $packageMap[$package] = [];
+        }
+        $packageMap[$package][] = $class;
     }
 }
+
+echo "=== Répartition par package ===\n";
+foreach ($packageMap as $package => $classes) {
+    echo "$package: " . count($classes) . " directive(s)\n";
+}
+
+// 7. Statistiques
+echo "\n=== Statistiques ===\n";
+echo "Total packages scannés: " . count($composerReader->getAllDependencies()) . "\n";
+echo "Packages avec directives: " . count($packageMap) . "\n";
+echo "Directives totales: " . count($directives) . "\n";
+
+// 8. Analyse des chemins
+echo "\n=== Analyse des structures ===\n";
+
+$packagesScanned = 0;
+$pathsFound = 0;
+
+foreach ($composerReader->getPackageNames() as $package) {
+    $packagePath = $composerReader->getVendorDir() . '/' . $package;
+    $composerData = json_decode(
+        $fileSystem->get($packagePath . '/composer.json'),
+        true
+    );
+    
+    if (isset($composerData['autoload']['psr-4'])) {
+        $packagesScanned++;
+        foreach ($composerData['autoload']['psr-4'] as $namespace => $path) {
+            $fullPath = $packagePath . '/' . $path . '/Directives';
+            if ($fileSystem->isDirectory($fullPath)) {
+                $pathsFound++;
+                echo "Package $package: $fullPath\n";
+            }
+        }
+    }
+}
+
+echo "\nPackages avec autoload PSR-4: $packagesScanned\n";
+echo "Chemins Directives trouvés: $pathsFound\n";
+
+// 9. Configuration personnalisée
+echo "\n=== Configuration personnalisée ===\n";
+
+$packagesWithConfig = 0;
+foreach ($composerReader->getPackageNames() as $package) {
+    $packagePath = $composerReader->getVendorDir() . '/' . $package;
+    $configPath = $packagePath . '/config/directive.php';
+    
+    if ($fileSystem->exists($configPath)) {
+        $packagesWithConfig++;
+        echo "Package $package a une configuration custom\n";
+        
+        try {
+            $config = require $configPath;
+            if (isset($config['custom_sources'])) {
+                echo "  Sources personnalisées: " . implode(', ', $config['custom_sources']) . "\n";
+            }
+        } catch (Throwable $e) {
+            echo "  ⚠️ Erreur de lecture de la config\n";
+        }
+    }
+}
+
+echo "\nPackages avec configuration: $packagesWithConfig\n";
+
+// 10. Vérification des directives intégrées
+echo "\n=== Vérification des directives intégrées ===\n";
+$expected = [
+    'AndyDefer\Directive\BuiltIn\ListDirective',
+    'AndyDefer\Directive\BuiltIn\HelpDirective',
+    'AndyDefer\Directive\BuiltIn\VersionDirective',
+    'AndyDefer\Directive\BuiltIn\CleanLogsDirective',
+];
+
+foreach ($expected as $expectedClass) {
+    $found = in_array($expectedClass, $directives, true);
+    echo ($found ? '✅' : '❌') . " $expectedClass\n";
+}
 ```
+
+## Voir aussi
+
+- `DiscoverySourceInterface` - Interface de source de découverte
+- `DirectiveClassScanner` - Scanner des classes
+- `ComposerReaderService` - Lecture de composer.json
+- `DependencyResolverService` - Résolution des dépendances
+- `WorkspaceDirectiveDiscovery` - Découverte dans l'espace de travail
+- `BuiltInDirectiveDiscovery` - Découverte des directives intégrées

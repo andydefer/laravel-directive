@@ -2,278 +2,481 @@
 
 ## Description
 
-Le noyau central qui orchestre l'exécution des directives. Il est responsable de la découverte des directives, de la résolution de la directive appropriée pour une commande donnée, et de son exécution.
+Noyau d'exécution du système de directives. Orchestre la découverte, l'instanciation et l'exécution des commandes avec un système de suggestions intelligent basé sur un arbre BK-tree.
 
 ## Hiérarchie / Implémentations
 
 ```
-DirectiveKernel (final)
+DirectiveDiscoveryService
+    └── DirectiveKernel
 ```
 
 ## Rôle principal
 
-Agir comme point d'entrée principal du système de directives. Le kernel :
-1. Reçoit les arguments de la ligne de commande
-2. Découvre toutes les directives disponibles
-3. Identifie la directive correspondant à la commande
-4. Instancie et exécute la directive
-5. Retourne le code de sortie approprié
+`DirectiveKernel` est le point d'entrée central du package Directive. Il permet de :
+
+- Découvrir automatiquement toutes les directives disponibles (hérite de `DirectiveDiscoveryService`)
+- Exécuter les commandes avec leurs arguments
+- Fournir des suggestions de commandes via BK-tree (distance de Levenshtein)
+- Gérer le contexte partagé entre les directives
+- Journaliser les statistiques d'exécution au format JSONL
+- Détecter les erreurs et les enregistrer
+- Mettre en cache les directives pour des performances optimales
 
 ## Installation
 
-### Utilisation automatique
-
-Le kernel est automatiquement instancié par le conteneur via le service provider :
-
-```php
-// Dans DirectiveServiceProvider
-$this->app->singleton(DirectiveKernel::class, function ($app) {
-    return new DirectiveKernel(
-        $app,
-        $app->make(DirectiveDiscoveryService::class)
-    );
-});
+```bash
+composer require andydefer/directive
 ```
 
-### Utilisation manuelle
+### Dépendances
 
-```php
-<?php
-
-use AndyDefer\Directive\DirectiveKernel;
-
-$kernel = new DirectiveKernel($app, $discovery);
-$exitCode = $kernel->run(['directive', 'list']);
-```
+- `Container` - Conteneur de dépendances
+- `ExecutionStatsLogger` - Journalisation des statistiques
+- `BKTree` - Arbre pour les suggestions de commandes
+- `MemoryStorage` - Stockage en mémoire pour le BK-tree
+- `Console` - Sortie console pour les messages
+- PHP 8.1+
 
 ## API / Méthodes publiques
 
-### `run(array $argv): ExitCode`
+### `static init(Container $container): self`
 
-Exécute le kernel avec les arguments de la ligne de commande.
+Initialise le noyau avec un conteneur.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$argv` | `array<int, string>` | Les arguments de la ligne de commande |
+| `$container` | `Container` | Conteneur de dépendances configuré |
 
-**Retourne :** `ExitCode` - Le code de sortie de l'exécution
-
-**Exceptions :** Aucune (les erreurs sont gérées par les directives)
+**Retourne :** `self` - Instance du noyau
 
 **Exemple :**
 ```php
-<?php
-
-// Exécution d'une directive
-$exitCode = $kernel->run(['directive', 'list']);
-// Ou
-$exitCode = $kernel->run(['directive', 'user:create', 'John', '--admin']);
+$container = DirectiveContainer::create();
+$kernel = DirectiveKernel::init($container);
 ```
 
-## Cas d'utilisation
+---
 
-### Cas 1 : Exécution d'une directive simple
+### `run(array $argv): ExitCode`
 
+Exécute une commande à partir des arguments en ligne de commande.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$argv` | `array<int, string>` | Arguments de la ligne de commande |
+
+**Retourne :** `ExitCode` - Code de sortie (SUCCESS, NOT_FOUND, RUNTIME_ERROR, etc.)
+
+**Exceptions :** Aucune
+
+**Exemple :**
 ```php
-<?php
+$exitCode = $kernel->run(['directive', 'list']);
+// Affiche la liste des directives
+```
 
-use AndyDefer\Directive\DirectiveKernel;
+---
 
-// Arguments: directive list
-$argv = ['directive', 'list'];
-$exitCode = $kernel->run($argv);
+### `runDirective(string $fqcn, array $argv = []): ExitCode`
 
-if ($exitCode->isSuccess()) {
-    echo "Commande exécutée avec succès\n";
-} else {
-    echo "Erreur: " . $exitCode->getLabel() . "\n";
+Exécute une directive par son nom de classe complet.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$fqcn` | `class-string<AbstractDirective>` | Nom de classe complet |
+| `$argv` | `array<int, string>` | Arguments (sans le nom de la directive) |
+
+**Retourne :** `ExitCode` - Code de sortie
+
+**Exemple :**
+```php
+$exitCode = $kernel->runDirective(
+    'AndyDefer\\Directive\\BuiltIn\\ListDirective',
+    ['--format', 'json']
+);
+```
+
+---
+
+### `runSignature(string $query): ExitCode`
+
+Exécute une directive à partir d'une chaîne de requête.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$query` | `string` | Requête complète (ex: `"greet John --formal"`) |
+
+**Retourne :** `ExitCode` - Code de sortie
+
+**Exemple :**
+```php
+$exitCode = $kernel->runSignature('test-directive John john@example.com');
+```
+
+---
+
+### `getContainer(): Container`
+
+Retourne le conteneur de dépendances.
+
+**Retourne :** `Container` - Instance du conteneur
+
+---
+
+### `getContext(): MapCollection`
+
+Retourne le contexte partagé entre les directives.
+
+**Retourne :** `MapCollection` - Contexte sous forme de tableau clé-valeur
+
+**Exemple :**
+```php
+$context = $kernel->getContext();
+$userName = $context->get('user_name', 'anonymous');
+```
+
+---
+
+### `setContext(MapCollection $context): self`
+
+Définit le contexte (utile pour les tests ou l'isolation).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$context` | `MapCollection` | Nouveau contexte |
+
+**Retourne :** `self` - Instance fluide
+
+**Exemple :**
+```php
+$context = MapCollection::from(['user_name' => 'Alice']);
+$kernel->setContext($context);
+```
+
+---
+
+### `resetContext(): self`
+
+Réinitialise le contexte à vide.
+
+**Retourne :** `self` - Instance fluide
+
+**Exemple :**
+```php
+$kernel->resetContext(); // Toutes les directives partent d'un contexte vide
+```
+
+---
+
+### `getLastStats(): ?ExecutionStatsRecord`
+
+Retourne les statistiques de la dernière exécution.
+
+**Retourne :** `?ExecutionStatsRecord` - Statistiques ou `null` si aucune exécution
+
+**Exemple :**
+```php
+$stats = $kernel->getLastStats();
+if ($stats) {
+    echo "Duration: " . $stats->duration . "s\n";
+    echo "Memory: " . $stats->memoryUsage . " bytes\n";
 }
 ```
 
-### Cas 2 : Exécution avec arguments et flags
+---
+
+### `getLogger(): ExecutionStatsLogger`
+
+Retourne le service de journalisation.
+
+**Retourne :** `ExecutionStatsLogger` - Logger configuré
+
+**Exemple :**
+```php
+$logger = $kernel->getLogger();
+$logger->setBasePath('/custom/log/path');
+```
+
+---
+
+### `setLogBasePath(string $path): self`
+
+Définit le chemin de base pour les logs.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$path` | `string` | Chemin absolu vers le dossier des logs |
+
+**Retourne :** `self` - Instance fluide
+
+**Exemple :**
+```php
+$kernel->setLogBasePath('/var/log/directive');
+```
+
+---
+
+## Cas d'utilisation
+
+### Cas 1 : Exécution d'une commande simple
 
 ```php
 <?php
 
-// Arguments: directive user:create John --admin --role=editor
-$argv = ['directive', 'user:create', 'John', '--admin', '--role=editor'];
-$exitCode = $kernel->run($argv);
+declare(strict_types=1);
 
-// La directive user:create sera exécutée avec ces arguments
+use AndyDefer\Directive\Container\DirectiveContainer;
+use AndyDefer\Directive\DirectiveKernel;
+use AndyDefer\Directive\Enums\ExitCode;
+
+$container = DirectiveContainer::create(__DIR__);
+$kernel = DirectiveKernel::init($container);
+
+// Exécuter la commande 'help'
+$exitCode = $kernel->run(['directive', 'help']);
+
+if ($exitCode === ExitCode::SUCCESS) {
+    echo "Command executed successfully\n";
+}
 ```
 
-### Cas 3 : Exécution avec alias
+### Cas 2 : Exécution avec arguments et options
 
 ```php
 <?php
 
-// Utilisation d'un alias: directive ls (alias de list)
-$argv = ['directive', 'ls'];
-$exitCode = $kernel->run($argv);
+$exitCode = $kernel->run([
+    'directive',
+    'test-directive',
+    'John',
+    'john@example.com',
+    '--force',
+    '--verbose'
+]);
 
-// La directive list sera exécutée
+// Ou via runSignature
+$exitCode = $kernel->runSignature('test-directive John john@example.com --force');
 ```
 
-### Cas 4 : Intégration dans un script CLI
+### Cas 3 : Utilisation du contexte partagé
+
+```php
+<?php
+
+// Une directive définit un contexte
+$kernel->runSignature('context:set John');
+
+// Une autre directive peut le lire
+$kernel->runSignature('context:get');
+// Affiche : {"user_name":"John","counter":1}
+
+// Accès programmatique
+$context = $kernel->getContext();
+$userName = $context->get('user_name');
+echo "User: $userName\n";
+```
+
+### Cas 4 : Suggestions automatiques
+
+```php
+<?php
+
+// Lorsqu'une commande est mal tapée
+$exitCode = $kernel->run(['directive', 'lst']);
+
+// Affiche :
+// Directive not found: lst
+//
+// 💡 Did you mean:
+//   • list
+//   • help
+//   • version
+```
+
+### Cas 5 : Intégration dans un script personnalisé
 
 ```php
 #!/usr/bin/env php
 <?php
 
-use AndyDefer\Directive\Bootstrap\CliBootstrap;
+declare(strict_types=1);
 
-// Le bootstrap crée automatiquement le kernel
-$bootstrap = CliBootstrap::create();
-$exitCode = $bootstrap->run($argv);
+require_once __DIR__ . '/vendor/autoload.php';
 
-exit($exitCode);
+use AndyDefer\Directive\Container\DirectiveContainer;
+use AndyDefer\Directive\DirectiveKernel;
+use AndyDefer\Directive\Enums\ExitCode;
+
+$container = DirectiveContainer::create(__DIR__);
+$kernel = DirectiveKernel::init($container);
+
+// Ajouter des sources personnalisées
+$kernel->addCustomSource('/src/Directives');
+
+// Exécuter les arguments passés au script
+$exitCode = $kernel->run($argv);
+exit($exitCode->value);
 ```
+
+---
 
 ## Flux d'exécution
 
 ```
-DirectiveKernel::run($argv)
-    │
-    ├── isMissingCommand($argv)
-    │   ├── count($argv) < 2 → true
-    │   └── executeHelpDirective()
-    │       └── executeDirective('help', 'help')
-    │
-    └── parseArguments($argv)
-        ├── $query = implode(' ', array_slice($argv, 1))
-        ├── $parts = explode(' ', $query)
-        └── $commandName = $parts[0]
-    │
-    └── executeDirective($commandName, $query)
-        │
-        ├── $directives = $this->discovery->discover()
-        │
-        ├── findDirective($directives, $commandName)
-        │   ├── matchesCommandName()
-        │   │   └── Comparaison avec la première partie de la signature
-        │   └── matchesAlias()
-        │       └── Comparaison avec les alias
-        │
-        ├── if ($directive === null) → ExitCode::NOT_FOUND
-        │
-        └── instantiateAndRun($directive, $query)
-            ├── $this->app->make($directive->class, ['query' => $query])
-            └── $instance->run()
+run($argv)
+    ↓
+isMissingCommand()? → Oui → help
+    ↓
+parseArguments()
+    ↓
+executeDirective($commandName, $query)
+    ↓
+getDirectives() (avec cache)
+    ├── Cache vide → discover()
+    │   ├── Découverte de toutes les directives
+    │   └── initializeBKTree()
+    │       ├── Indexation des commandes
+    │       └── Indexation des alias
+    └── Cache présent → utilisation directe
+    ↓
+findDirective()
+    ├── Trouvé → instantiateAndRun()
+    │   ├── Début du tracking (time + memory)
+    │   ├── new $directive->class($this, $query)
+    │   │   ├── beforeExecute() (si présent)
+    │   │   ├── execute() (la logique métier)
+    │   │   └── afterExecute() (si présent)
+    │   ├── Fin du tracking
+    │   └── logExecution()
+    └── Non trouvé → suggestions BK-tree
+        ├── search($commandName, 2, 5)
+        └── Afficher les suggestions
+    ↓
+Retourner ExitCode
 ```
 
-## Exemples de résolution
+### Détails des suggestions BK-tree
 
-### Résolution par nom de commande
-
-```php
-// Directive avec signature: 'user:create {name}'
-// Commande: directive user:create
-// Résultat: Directive trouvée par nom de commande 'user:create'
+```
+initializeBKTree()
+    ↓
+Pour chaque directive découverte
+    ↓
+indexDirective($directive)
+    ├── Insertion du nom de commande
+    └── Insertion de chaque alias
+    ↓
+BK-tree prêt pour les requêtes
+    ↓
+getSuggestions($commandName, 2, 5)
+    ├── search avec distance maximale 2
+    ├── Limite à 5 résultats
+    └── Retourne les commandes similaires
 ```
 
-### Résolution par alias
-
-```php
-// Directive avec alias: '-l' pour 'list'
-// Commande: directive -l
-// Résultat: Directive trouvée par alias '-l' → 'list'
-```
-
-### Résolution par nom court
-
-```php
-// Directive avec signature: 'list'
-// Commande: directive list
-// Résultat: Directive trouvée par nom de commande 'list'
-```
+---
 
 ## Gestion des erreurs
 
-| Situation | Comportement | Code de sortie |
-|-----------|--------------|----------------|
-| Aucune commande fournie | Exécute `help` | `ExitCode::SUCCESS` |
-| Directive non trouvée | Retourne `NOT_FOUND` | `ExitCode::NOT_FOUND` |
-| Erreur d'exécution | Gérée par la directive | Variable |
+| Situation | ExitCode | Message |
+|-----------|----------|---------|
+| Aucune commande fournie | `SUCCESS` | Affiche l'aide (help) |
+| Commande non trouvée | `NOT_FOUND` | `Directive not found: {command}` + suggestions |
+| Erreur d'exécution | `RUNTIME_ERROR` | Dépend de la directive |
+| Conflit (circularité) | `CONFLICT` | Dépend de la directive |
+| Exception non capturée | `RUNTIME_ERROR` | Message de l'exception |
 
-### Scénarios d'erreur
+Les erreurs d'initialisation du BK-tree sont silencieusement ignorées (pas de suggestions).
 
-```php
-// Pas de commande
-$kernel->run(['directive']);
-// → Exécute help
-
-// Commande inexistante
-$kernel->run(['directive', 'nonexistent']);
-// → Retourne ExitCode::NOT_FOUND
-
-// Commande avec erreur interne
-$kernel->run(['directive', 'failing:command']);
-// → Retourne ExitCode::RUNTIME_ERROR (si géré par la directive)
-```
+---
 
 ## Intégration
 
-Le `DirectiveKernel` s'intègre avec :
-
-| Composant | Utilisation |
-|-----------|-------------|
-| `DirectiveDiscoveryService` | Découverte des directives |
-| `DirectiveMetadataCollection` | Collection des directives découvertes |
-| `DirectiveMetadataRecord` | Métadonnées des directives |
-| `ExitCode` | Codes de retour |
-| `Application` | Conteneur Laravel pour l'instanciation |
-
-### Utilisation avec CliBootstrap
+### Avec DirectiveContainer
 
 ```php
-// CliBootstrap utilise le kernel via CliRunner
-class CliRunner
+// Conteneur pré-configuré
+$container = DirectiveContainer::create('/path/to/project');
+$kernel = DirectiveKernel::init($container);
+```
+
+### Avec Laravel (via ServiceProvider)
+
+```php
+// Dans config/app.php
+'providers' => [
+    AndyDefer\Directive\DirectiveServiceProvider::class,
+];
+
+// Récupération
+$kernel = app(DirectiveKernel::class);
+$exitCode = $kernel->run($_SERVER['argv']);
+```
+
+### Avec un conteneur personnalisé
+
+```php
+<?php
+
+use AndyDefer\Directive\Container\Container;
+
+class CustomContainer extends Container
 {
-    public function run(array $argv): int
+    protected function registerStandaloneServices(): void
     {
-        $kernel = $this->buildKernel();
-        return $kernel->run($argv)->value;
+        // Ajout de services personnalisés
+        $this->singleton(MyCustomService::class, function ($c) {
+            return new MyCustomService($c->make(OtherService::class));
+        });
     }
 }
+
+$container = new CustomContainer('/path/to/project');
+$kernel = DirectiveKernel::init($container);
 ```
+
+---
 
 ## Performance
 
-| Métrique | Valeur | Description |
-|----------|--------|-------------|
-| Temps de découverte | 200-800ms | Première exécution |
-| Temps de résolution | < 1ms | Recherche dans la collection |
-| Temps d'instanciation | 1-5ms | Création de la directive |
-| Mémoire | 2-5 MB | Collection des directives |
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| Découverte initiale | O(n) | n = nombre de classes PHP |
+| Recherche de directive | O(1) | Cache en mémoire |
+| Suggestion BK-tree | O(log n) | Recherche dans l'arbre |
+| Exécution d'une directive | O(1) + logique métier | Dépend de la directive |
 
-### Optimisations
+**Optimisations :**
+- Cache des directives (`$directivesCache`)
+- Indexation BK-tree une seule fois
+- Pas de relecture des fichiers à chaque appel
+- Journalisation asynchrone (buffers JSONL)
 
-```php
-class DirectiveKernel
-{
-    private ?DirectiveMetadataCollection $cachedDirectives = null;
-    
-    private function executeDirective(string $commandName, string $query): ExitCode
-    {
-        if ($this->cachedDirectives === null) {
-            $this->cachedDirectives = $this->discovery->discover();
-        }
-        
-        $directive = $this->findDirective($this->cachedDirectives, $commandName);
-        // ...
-    }
-}
-```
+**Mémoire :**
+- Toutes les directives sont chargées en mémoire
+- BK-tree indexe les noms de commandes et alias
+- Le contexte partagé est conservé pendant l'exécution
+- Les statistiques de la dernière exécution sont stockées
+
+---
 
 ## Compatibilité
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| PHP 8.1+ | ✅ Complet | - |
-| PHP 8.2+ | ✅ Complet | - |
-| Laravel 9.x | ✅ Complet | - |
-| Laravel 10.x | ✅ Complet | - |
-| Laravel 11.x | ✅ Complet | - |
+| Version PHP | Support | Notes |
+|-------------|---------|-------|
+| PHP 8.4 | ✅ Complet | Support total |
+| PHP 8.3 | ✅ Complet | Support total |
+| PHP 8.2 | ✅ Complet | Support total |
+| PHP 8.1 | ✅ Complet | Support total |
+
+**Dépendances requises :**
+- `andydefer/console-writer` ^1.3
+- `andydefer/algo-kit` ^0.8
+- `andydefer/storage-kit` ^0.7
+- `illuminate/contracts` ^12.0|^13.0|^14.0|^15.0
+
+---
 
 ## Exemple complet
 
@@ -282,131 +485,116 @@ class DirectiveKernel
 
 declare(strict_types=1);
 
+use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\DirectiveKernel;
-use AndyDefer\Directive\Services\DirectiveDiscoveryService;
-use Illuminate\Foundation\Application;
+use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Enums\DiscoverySource;
+use AndyDefer\DomainStructures\Utils\MapCollection;
 
-class KernelExample
-{
-    private DirectiveKernel $kernel;
-    
-    public function __construct(Application $app)
-    {
-        $discovery = $app->make(DirectiveDiscoveryService::class);
-        $this->kernel = new DirectiveKernel($app, $discovery);
-    }
-    
-    public function runCommand(string $command): int
-    {
-        // Construire les arguments
-        $argv = ['directive', ...explode(' ', $command)];
-        
-        // Exécuter
-        $exitCode = $this->kernel->run($argv);
-        
-        return $exitCode->value;
-    }
-}
+// 1. Création du conteneur
+$container = DirectiveContainer::create(__DIR__);
 
-// Utilisation
-$example = new KernelExample($app);
+// 2. Initialisation du noyau
+$kernel = DirectiveKernel::init($container);
 
-// Exécuter une commande simple
-$result = $example->runCommand('list');
-echo "Résultat: " . $result . PHP_EOL;
-
-// Exécuter avec arguments
-$result = $example->runCommand('user:create John --admin');
-echo "Résultat: " . $result . PHP_EOL;
-
-// Gérer les erreurs
-$result = $example->runCommand('nonexistent');
-if ($result !== 0) {
-    echo "Erreur: Code {$result}\n";
-}
-
-// Exécution programmatique
-$commands = [
-    'cache:clear',
-    'config:cache',
-    'view:clear',
-];
-
-foreach ($commands as $command) {
-    $code = $example->runCommand($command);
-    if ($code !== 0) {
-        echo "Échec de: {$command} (code: {$code})\n";
-        break;
-    }
-    echo "Succès: {$command}\n";
-}
-```
-
-## Notes techniques
-
-### Résolution des directives
-
-Le kernel utilise deux méthodes pour trouver une directive :
-
-1. **Par nom de commande** : La première partie de la signature
-2. **Par alias** : Les alias définis dans la directive
-
-```php
-// Signature: 'user:create {name}'
-// Nom de commande: 'user:create'
-// Alias possibles: ['u', 'uc']
-
-// Résolution:
-// directive user:create → trouvée par nom
-// directive u → trouvée par alias
-// directive uc → trouvée par alias
-```
-
-### Commande par défaut
-
-Si aucune commande n'est fournie, le kernel exécute automatiquement `help` :
-
-```php
-// Pas de commande
-$kernel->run(['directive']);
-// → Exécute help
-```
-
-### Instanciation des directives
-
-Le kernel utilise le conteneur Laravel pour instancier les directives :
-
-```php
-$instance = $this->app->make($directive->class, [
-    'query' => $query,
+// 3. Configuration du contexte initial
+$initialContext = MapCollection::from([
+    'environment' => 'development',
+    'user_id' => 42,
+    'start_time' => microtime(true),
 ]);
-```
+$kernel->setContext($initialContext);
 
-Cela permet d'injecter automatiquement les dépendances via le conteneur.
+// 4. Configuration du chemin de logs personnalisé
+$kernel->setLogBasePath('/var/log/directive');
 
-### Points d'extension
+// 5. Configuration de la découverte
+$kernel
+    ->addSource(__DIR__ . '/src/Directives')
+    ->addSource(__DIR__ . '/app/Commands')
+    ->ignoreSource(DiscoverySource::VENDOR)
+    ->onlyNamespace('App\\Directives\\');
 
-1. **Nouvelles directives** : Ajoutées via `DirectiveDiscoveryService`
-2. **Nouveaux alias** : Définis dans `getAliases()` de la directive
-3. **Comportement par défaut** : Peut être modifié en surchargeant `executeHelpDirective()`
+// 6. Exécution des commandes
+echo "=== Test de différentes commandes ===\n\n";
 
-### Bonnes pratiques
+// 6a. Aide
+echo "--- Help ---\n";
+$kernel->run(['directive', 'help']);
+echo "\n";
 
-1. **Toujours utiliser le conteneur** : Pour l'instanciation des directives
-2. **Gérer les erreurs** : Retourner des `ExitCode` appropriés
-3. **Tester les directives** : Utiliser `DirectiveTestingService`
-4. **Documenter les commandes** : Utiliser `getDescription()`
+// 6b. Liste des directives
+echo "--- List ---\n";
+$kernel->run(['directive', 'list']);
+echo "\n";
 
-```php
-// ✅ Bonne pratique
-$exitCode = $kernel->run(['directive', 'list']);
+// 6c. Exécution d'une directive avec arguments
+echo "--- Test Directive ---\n";
+$exitCode = $kernel->run([
+    'directive',
+    'test-directive',
+    'John Doe',
+    'john@example.com',
+    '--force'
+]);
+echo "Exit code: " . $exitCode->value . " (" . $exitCode->getLabel() . ")\n\n";
 
-// ✅ Gestion du code de sortie
-if ($exitCode->isFailure()) {
-    // Gérer l'erreur
+// 6d. Test des suggestions
+echo "--- Suggestions ---\n";
+$kernel->run(['directive', 'lst']); // 'list' mal tapé
+echo "\n";
+
+// 6e. Test avec runSignature
+echo "--- Run Signature ---\n";
+$kernel->runSignature('greet Alice --formal');
+echo "\n";
+
+// 6f. Test avec runDirective
+echo "--- Run Directive by FQCN ---\n";
+$kernel->runDirective(
+    'AndyDefer\\Directive\\BuiltIn\\VersionDirective',
+    ['--verbose']
+);
+echo "\n";
+
+// 7. Récupération des statistiques
+$stats = $kernel->getLastStats();
+if ($stats) {
+    echo "=== Dernière exécution ===\n";
+    echo "Commande: {$stats->command}\n";
+    echo "Durée: " . round($stats->duration * 1000, 2) . " ms\n";
+    echo "Mémoire: " . number_format($stats->memoryUsage / 1024, 2) . " KB\n";
+    echo "Mémoire pic: " . number_format($stats->peakMemoryUsage / 1024, 2) . " KB\n";
+    echo "Code de sortie: {$stats->exitCode->value} ({$stats->exitCode->getLabel()})\n";
+    echo "Succès: " . ($stats->exitCode->isSuccess() ? '✅' : '❌') . "\n";
 }
 
-// ❌ Mauvaise pratique
-$kernel->run(['directive', 'list']); // Ignorer le code de sortie
+// 8. Récupération du contexte final
+$finalContext = $kernel->getContext();
+echo "\n=== Contexte final ===\n";
+print_r($finalContext->toArray());
+
+// 9. Vérification des suggestions
+echo "\n=== Suggestions disponibles ===\n";
+$directives = $kernel->getDirectives();
+$names = [];
+foreach ($directives as $directive) {
+    $parts = explode(' ', $directive->signature);
+    $names[] = $parts[0];
+}
+echo "Commandes disponibles: " . implode(', ', $names) . "\n";
+
+// 10. Nettoyage
+$kernel->resetContext();
+$kernel->setLogBasePath('.directive');
+echo "\n✅ Kernel réinitialisé\n";
 ```
----
+
+## Voir aussi
+
+- `DirectiveDiscoveryService` - Découverte des directives
+- `ExecutionStatsLogger` - Journalisation des statistiques
+- `DirectiveContainer` - Conteneur pré-configuré
+- `AbstractDirective` - Base pour créer des directives
+- `ExitCode` - Énumération des codes de sortie
+- `BKTree` - Structure de données pour les suggestions

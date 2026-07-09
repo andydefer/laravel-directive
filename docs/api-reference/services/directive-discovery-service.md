@@ -2,43 +2,79 @@
 
 ## Description
 
-Service d'orchestration qui découvre et gère les classes de directives provenant de multiples sources. Il coordonne la découverte depuis les sources intégrées, le workspace, les packages vendors et les sources personnalisées.
+Service de découverte et de gestion des classes de directives à partir de multiples sources (built-in, workspace, vendor, custom). Permet un filtrage fin via des mécanismes d'inclusion/exclusion et de gestion des réservations.
 
 ## Hiérarchie / Implémentations
 
 ```
-DirectiveDiscoveryService (final)
+DirectiveDiscoveryInterface
+    └── DirectiveDiscoveryService
 ```
 
 ## Rôle principal
 
-Agir comme un orchestrateur central qui :
-1. Agrège les directives de toutes les sources
-2. Filtre les signatures réservées
-3. Déduplique les directives
-4. Fournit une collection unifiée de toutes les directives disponibles
+`DirectiveDiscoveryService` est le moteur de découverte du système de directives. Il permet de :
+
+- Découvrir automatiquement les directives depuis 4 sources différentes
+- Filtrer les directives par namespace, préfixe, source ou signature
+- Gérer les signatures réservées (empêcher l'écrasement)
+- Ajouter manuellement des directives via leur FQCN
+- Configurer la profondeur de scan des répertoires
 
 ## Installation
 
-### Configuration dans le conteneur
-
-```php
-// Dans le service provider
-$this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
-    return new DirectiveDiscoveryService(
-        $app->make(BuiltInDirectiveDiscovery::class),
-        $app->make(WorkspaceDirectiveDiscovery::class),
-        $app->make(VendorDirectiveDiscovery::class),
-        $app->make(DirectiveParserInterface::class),
-        $app->make(DirectiveScannerInterface::class),
-        $app->make(FileSystemInterface::class),
-        $app->make(DirectiveConfigInterface::class),
-        3 // maxDepth
-    );
-});
+```bash
+composer require andydefer/directive
 ```
 
+### Dépendances
+
+- `Container` - Conteneur de dépendances
+- `DirectiveConfigInterface` - Configuration du package
+- `DirectiveScannerInterface` - Scan des classes PHP
+- `DirectiveParserInterface` - Parsing des signatures
+- `FileSystemInterface` - Opérations sur le système de fichiers
+- PHP 8.1+
+
 ## API / Méthodes publiques
+
+### `static init(Container $container): self`
+
+Initialise le service de découverte avec un conteneur.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$container` | `Container` | Conteneur de dépendances |
+
+**Retourne :** `self` - Instance du service
+
+**Exemple :**
+```php
+$container = DirectiveContainer::create();
+$discovery = DirectiveDiscoveryService::init($container);
+```
+
+---
+
+### `discover(): DirectiveMetadataCollection`
+
+Découvre toutes les directives disponibles depuis toutes les sources.
+
+**Retourne :** `DirectiveMetadataCollection` - Collection des métadonnées découvertes
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+$directives = $discovery->discover();
+// Collection contenant toutes les directives disponibles
+
+foreach ($directives as $directive) {
+    echo $directive->class . ' - ' . $directive->signature . "\n";
+}
+```
+
+---
 
 ### `addSource(string $directory): self`
 
@@ -46,17 +82,13 @@ Ajoute un répertoire source personnalisé à scanner.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$directory` | `string` | Chemin du répertoire à scanner |
+| `$directory` | `string` | Chemin absolu du répertoire |
 
-**Retourne :** `self` - L'instance courante (fluent interface)
-
-**Exceptions :** Aucune
+**Retourne :** `self` - Instance fluide
 
 **Exemple :**
 ```php
-<?php
-
-$discovery->addSource('app/CustomDirectives');
+$discovery->addSource(__DIR__ . '/src/Commands');
 ```
 
 ---
@@ -67,386 +99,513 @@ Ajoute plusieurs répertoires sources personnalisés.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$directories` | `array<int, string>` | Liste des chemins à scanner |
+| `$directories` | `array<int, string>` | Liste des chemins |
 
-**Retourne :** `self` - L'instance courante (fluent interface)
+**Retourne :** `self` - Instance fluide
 
-**Exceptions :** Aucune
+---
+
+### `addDirective(string $class, bool $force = false): self`
+
+Ajoute une directive manuellement par son nom de classe complet.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$class` | `class-string<AbstractDirective>` | Nom de classe complet |
+| `$force` | `bool` | Ignorer les signatures réservées |
+
+**Retourne :** `self` - Instance fluide
+
+**Exceptions :** `InvalidArgumentException` - Si la classe n'étend pas `AbstractDirective`
 
 **Exemple :**
 ```php
-<?php
-
-$discovery->addSources([
-    'app/CustomDirectives',
-    'modules/Admin/Directives',
-    'packages/Acme/Directives',
-]);
+$discovery->addDirective(MyCustomDirective::class);
 ```
 
 ---
 
-### `discover(): DirectiveMetadataCollection`
+### `addDirectives(array $classes, bool $force = false): self`
 
-Découvre toutes les directives disponibles depuis toutes les sources.
+Ajoute plusieurs directives manuellement.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| Aucun | - | - |
+| `$classes` | `array<class-string<AbstractDirective>>` | Liste des classes |
+| `$force` | `bool` | Ignorer les signatures réservées |
 
-**Retourne :** `DirectiveMetadataCollection` - Collection des directives découvertes
+**Retourne :** `self` - Instance fluide
 
-**Exceptions :** Aucune
+---
+
+### `setMaxDepth(int $depth): self`
+
+Définit la profondeur maximale de scan des répertoires.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$depth` | `int` | Profondeur (entre 2 et 7) |
+
+**Retourne :** `self` - Instance fluide
 
 **Exemple :**
 ```php
-<?php
-
-$directives = $discovery->discover();
-
-foreach ($directives as $directive) {
-    echo $directive->signature . ': ' . $directive->description . PHP_EOL;
-}
+$discovery->setMaxDepth(5); // Scan jusqu'à 5 niveaux
 ```
 
 ---
 
-### `addReservedSignature(string $signature): self`
+### `getMaxDepth(): int`
 
-Ajoute une signature à la liste des réservées.
+Retourne la profondeur maximale de scan.
+
+**Retourne :** `int` - Profondeur actuelle
+
+---
+
+### `ignoreSource(DiscoverySource|string $source): self`
+
+Ignore une source spécifique.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$signature` | `string` | La signature à réserver |
+| `$source` | `DiscoverySource\|string` | Source à ignorer |
 
-**Retourne :** `self` - L'instance courante (fluent interface)
-
-**Exceptions :** Aucune
+**Retourne :** `self` - Instance fluide
 
 **Exemple :**
 ```php
-<?php
+use AndyDefer\Directive\Enums\DiscoverySource;
 
-$discovery->addReservedSignature('my-command');
+$discovery->ignoreSource(DiscoverySource::VENDOR);
+// Désactive la découverte des vendors
 ```
 
 ---
 
-### `removeReservedSignature(string $signature): self`
+### `ignoreSources(array $sources): self`
 
-Retire une signature de la liste des réservées.
+Ignore plusieurs sources.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$signature` | `string` | La signature à retirer |
+| `$sources` | `array<DiscoverySource\|string>` | Sources à ignorer |
 
-**Retourne :** `self` - L'instance courante (fluent interface)
+**Retourne :** `self` - Instance fluide
 
-**Exceptions :** Aucune
+---
+
+### `ignorePath(string $path): self`
+
+Ignore un chemin spécifique lors du scan.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$path` | `string` | Chemin à ignorer |
+
+**Retourne :** `self` - Instance fluide
 
 **Exemple :**
 ```php
-<?php
-
-$discovery->removeReservedSignature('help');
+$discovery->ignorePath(__DIR__ . '/src/Deprecated');
 ```
 
 ---
 
-### `getReservedSignatures(): array`
+### `ignoreDirective(string $signature): self`
 
-Récupère la liste des signatures réservées.
+Ignore une directive par sa signature.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| Aucun | - | - |
+| `$signature` | `string` | Signature complète ou partielle |
 
-**Retourne :** `array<int, string>` - Liste des signatures réservées
-
-**Exceptions :** Aucune
+**Retourne :** `self` - Instance fluide
 
 **Exemple :**
 ```php
-<?php
-
-$reserved = $discovery->getReservedSignatures();
-// ['-h', '--help', '-v', '--version', ...]
+$discovery->ignoreDirective('test-directive');
+// Ignore toutes les directives commençant par "test-directive"
 ```
+
+---
+
+### `onlyNamespace(string $namespace): self`
+
+Restreint la découverte à un namespace spécifique.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$namespace` | `string` | Namespace à inclure |
+
+**Retourne :** `self` - Instance fluide
+
+**Exemple :**
+```php
+$discovery->onlyNamespace('App\\Commands\\');
+// Seulement les directives dans App\Commands
+```
+
+---
+
+### `excludeNamespace(string $namespace): self`
+
+Exclut un namespace de la découverte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$namespace` | `string` | Namespace à exclure |
+
+**Retourne :** `self` - Instance fluide
+
+---
+
+### `onlyPrefix(string $prefix): self`
+
+Restreint la découverte aux signatures commençant par un préfixe.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$prefix` | `string` | Préfixe à inclure |
+
+**Retourne :** `self` - Instance fluide
+
+**Exemple :**
+```php
+$discovery->onlyPrefix('app:');
+// Seulement les directives commençant par "app:"
+```
+
+---
+
+### `excludePrefix(string $prefix): self`
+
+Exclut les signatures commençant par un préfixe.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$prefix` | `string` | Préfixe à exclure |
+
+**Retourne :** `self` - Instance fluide
+
+---
+
+### `silent(bool $enabled = true): self`
+
+Active ou désactive le mode silencieux (supprime les logs).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$enabled` | `bool` | Activer le mode silencieux |
+
+**Retourne :** `self` - Instance fluide
+
+---
+
+### `disableAutoDiscovery(): self`
+
+Désactive la découverte automatique (seules les directives enregistrées manuellement sont utilisées).
+
+**Retourne :** `self` - Instance fluide
+
+**Exemple :**
+```php
+$discovery->disableAutoDiscovery();
+// Seules les directives ajoutées via addDirective() seront disponibles
+```
+
+---
+
+### `manualOnly(): self`
+
+Alias de `disableAutoDiscovery()`.
+
+---
+
+### `resetConfig(): self`
+
+Réinitialise tous les filtres à leurs valeurs par défaut.
+
+**Retourne :** `self` - Instance fluide
+
+---
 
 ## Cas d'utilisation
 
-### Cas 1 : Découverte des directives dans une application
+### Cas 1 : Découverte complète avec tous les filtres
 
 ```php
 <?php
 
+use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Enums\DiscoverySource;
 
-// Dans un contrôleur ou un service
-$discovery = app(DirectiveDiscoveryService::class);
+$container = DirectiveContainer::create();
+$discovery = DirectiveDiscoveryService::init($container);
+
+// Configuration de la découverte
+$discovery
+    ->setMaxDepth(4)
+    ->addSource(__DIR__ . '/src/Commands')
+    ->ignoreSource(DiscoverySource::VENDOR) // Ignore les vendors
+    ->ignorePath(__DIR__ . '/src/Deprecated')
+    ->onlyNamespace('App\\Commands\\')
+    ->excludePrefix('test:')
+    ->silent(true);
+
+// Découverte
 $directives = $discovery->discover();
 
+echo "Found " . $directives->count() . " directives\n";
 foreach ($directives as $directive) {
-    echo "Signature: " . $directive->signature . PHP_EOL;
-    echo "Classe: " . $directive->class . PHP_EOL;
-    echo "Description: " . $directive->description . PHP_EOL;
-    
-    if ($directive->aliases->isNotEmpty()) {
-        echo "Alias: " . $directive->aliases->join(', ') . PHP_EOL;
-    }
-    echo PHP_EOL;
+    echo "- {$directive->signature} ({$directive->class})\n";
 }
 ```
 
-### Cas 2 : Ajout de sources dynamiques
+### Cas 2 : Ajout manuel de directives
 
 ```php
 <?php
 
-class ModuleServiceProvider extends ServiceProvider
-{
-    public function boot()
-    {
-        $discovery = $this->app->make(DirectiveDiscoveryService::class);
-        
-        // Ajouter les directives des modules actifs
-        foreach ($this->getActiveModules() as $module) {
-            $path = base_path("modules/{$module}/Directives");
-            
-            if (is_dir($path)) {
-                $discovery->addSource($path);
-            }
-        }
-    }
-    
-    private function getActiveModules(): array
-    {
-        return ['Admin', 'Api', 'Blog'];
-    }
-}
+$discovery = DirectiveDiscoveryService::init($container);
+
+// Ajout manuel
+$discovery->addDirective(CustomDirective::class);
+$discovery->addDirectives([
+    AdminDirective::class,
+    UserDirective::class,
+    ReportDirective::class,
+]);
+
+// Découverte manuelle uniquement
+$discovery->disableAutoDiscovery();
+$directives = $discovery->discover();
+
+echo "Only manual directives: " . $directives->count() . "\n";
 ```
 
-### Cas 3 : Gestion des signatures réservées
+### Cas 3 : Filtrage avancé par namespace et préfixe
 
 ```php
 <?php
 
-$discovery = app(DirectiveDiscoveryService::class);
+$discovery = DirectiveDiscoveryService::init($container);
+
+// Inclure seulement les directives de l'API
+$discovery
+    ->onlyNamespace('App\\Api\\')
+    ->onlyPrefix('api:');
+
+$directives = $discovery->discover();
+// Ne retourne que les directives dans App\Api commençant par "api:"
+
+// Exclure certaines catégories
+$discovery
+    ->excludeNamespace('App\\Deprecated\\')
+    ->excludePrefix('legacy:');
+
+$directives = $discovery->discover();
+// Exclut les directives dépréciées
+```
+
+### Cas 4 : Gestion des signatures réservées
+
+```php
+<?php
 
 // Ajouter une signature réservée
-$discovery->addReservedSignature('import');
+$discovery->addReservedSignature('help');
 
-// Retirer une signature réservée
-$discovery->removeReservedSignature('version');
+// Une directive avec la signature 'help' sera ignorée (sauf si force=true)
+$discovery->addDirective(CustomHelpDirective::class); // Ignoré
 
-// Voir les signatures réservées
-$reserved = $discovery->getReservedSignatures();
+// Forcer l'ajout
+$discovery->addDirective(CustomHelpDirective::class, true); // Ajouté
+
+// Supprimer une signature réservée
+$discovery->removeReservedSignature('help');
+$discovery->addDirective(CustomHelpDirective::class); // Maintenant accepté
 ```
 
-### Cas 4 : Tests de découverte
+### Cas 5 : Utilisation dans un Kernel
 
 ```php
 <?php
 
-class DirectiveDiscoveryTest extends TestCase
-{
-    public function test_discover_directives()
-    {
-        $discovery = $this->app->make(DirectiveDiscoveryService::class);
-        
-        $directives = $discovery->discover();
-        
-        $this->assertGreaterThan(0, $directives->count());
-        $this->assertInstanceOf(DirectiveMetadataCollection::class, $directives);
-        
-        // Vérifier que les directives intégrées sont présentes
-        $signatures = $directives->pluck('signature')->toArray();
-        $this->assertContains('list', $signatures);
-        $this->assertContains('help', $signatures);
-        $this->assertContains('version', $signatures);
-    }
-}
+use AndyDefer\Directive\DirectiveKernel;
+
+$kernel = DirectiveKernel::init($container);
+
+// Le kernel utilise le discovery service en interne
+// Configuration via le discovery service
+$kernel
+    ->addSource(__DIR__ . '/src/Commands')
+    ->ignoreSource(DiscoverySource::VENDOR)
+    ->onlyNamespace('App\\Commands\\');
+
+// La découverte est déclenchée lors de l'exécution
+$kernel->run($argv);
 ```
+
+---
 
 ## Flux d'exécution
 
 ```
-DirectiveDiscoveryService::discover()
-    │
+discover()
+    ↓
+Réinitialiser la collection
+    ↓
+discoverRegisteredDirectives()
+    ├── Pour chaque directive enregistrée
+    │   ├── valider la classe
+    │   ├── vérifier les filtres
+    │   └── ajouter à la collection
+    ↓
+Si auto-discovery enabled:
     ├── discoverBuiltInDirectives()
-    │   └── $builtInSource->discover()
-    │       └── addDirective($fqcn, true)  ← force = true (prioritaire)
-    │
+    │   └── BuiltInDirectiveDiscovery → FQCNs
     ├── discoverWorkspaceDirectives()
-    │   └── $workspaceSource->discover()
-    │       └── addDirective($fqcn, false)
-    │
+    │   └── WorkspaceDirectiveDiscovery → FQCNs
     ├── discoverVendorDirectives()
-    │   └── $vendorSource->discover()
-    │       └── addDirective($fqcn, false)
-    │
-    ├── discoverCustomDirectives()
-    │   ├── foreach($customSources)
-    │   │   ├── $scanner->scan($directory)
-    │   │   └── addDirective($fqcn, false)
-    │   └──
-    │
-    └── return $this->collection->uniqueByClass()
-        └── Déduplication par nom de classe
+    │   └── VendorDirectiveDiscovery → FQCNs
+    └── discoverCustomDirectives()
+        └── Scanner → FQCNs par source
+    ↓
+Pour chaque FQCN:
+    ├── isValidDirectiveClass()
+    ├── vérifier ignoredDirectives
+    ├── vérifier reservedSignatures
+    ├── vérifier namespace filters
+    ├── vérifier prefix filters
+    └── ajouter à la collection
+    ↓
+Retourner DirectiveMetadataCollection (unique by class)
 ```
 
-## Ordre de découverte
+### Filtrage des FQCNs
 
-| Ordre | Source | Force | Description |
-|-------|--------|-------|-------------|
-| 1 | `BuiltInDirectiveDiscovery` | ✅ Force | Directives intégrées (prioritaires) |
-| 2 | `WorkspaceDirectiveDiscovery` | ❌ | Directives du projet |
-| 3 | `VendorDirectiveDiscovery` | ❌ | Directives des packages vendors |
-| 4 | `CustomSources` | ❌ | Sources personnalisées |
-
-### Règle de force
-
-- **Force = true** : La directive est ajoutée même si sa signature est réservée
-- **Force = false** : La directive est ignorée si sa signature est réservée
-
-## Filtrage des directives
-
-### 1. Validation de la classe
-
-```php
-private function isValidDirectiveClass(ReflectionClass $reflection): bool
-{
-    if ($reflection->isAbstract()) {
-        return false; // ❌ Les classes abstraites sont ignorées
-    }
-
-    return $reflection->isSubclassOf(AbstractDirective::class); // ✅ Doit étendre AbstractDirective
-}
+```
+addDirectiveFromFqcn($fqcn, $force)
+    ↓
+isValidDirectiveClass()
+    ├── Non abstraite
+    └── Étend AbstractDirective
+    ↓
+ignoredDirectives contient signature? → ignorer
+    ↓
+force=false ET isReservedSignature()? → ignorer
+    ↓
+passesNamespaceFilters()
+    ├── Si onlyNamespaces → doit correspondre
+    └── Si excludedNamespaces → ne doit pas correspondre
+    ↓
+passesPrefixFilters()
+    ├── Si onlyPrefixes → signature doit correspondre
+    └── Si excludedPrefixes → signature ne doit pas correspondre
+    ↓
+Ajouter à la collection
 ```
 
-### 2. Vérification des signatures réservées
-
-```php
-private function isReservedSignature(string $signature): bool
-{
-    $parsed = $this->parser->parse($signature, '');
-    $commandName = $parsed->source;
-    
-    return in_array($commandName, $this->config->getReservedSignatures(), true);
-}
-```
-
-### 3. Déduplication
-
-Les directives sont dédupliquées par nom de classe pour éviter les doublons :
-
-```php
-return $this->collection->uniqueByClass();
-```
+---
 
 ## Gestion des erreurs
 
-| Situation | Comportement | Message |
-|-----------|--------------|---------|
-| Répertoire personnalisé inexistant | Ignoré silencieusement | - |
-| Classe abstraite | Ignorée (non ajoutée) | - |
-| Classe ne respectant pas `AbstractDirective` | Ignorée (non ajoutée) | - |
-| Signature réservée | Ignorée (non ajoutée) | - |
+| Situation | Comportement |
+|-----------|--------------|
+| Classe non valide | Ignorée (avec message en mode non-silencieux) |
+| Signature réservée | Ignorée (sauf si `force=true`) |
+| Directive ignorée | Ignorée |
+| Namespace filtré | Ignorée |
+| Préfixe filtré | Ignorée |
+| Répertoire inexistant | Ignoré (custom sources) |
+| Fichier non lisible | Ignoré |
 
-### Signatures réservées par défaut
+Aucune exception n'est levée lors de la découverte.
 
-```php
-const DEFAULT_RESERVED_SIGNATURES = [
-    '-h',
-    '--help',
-    '-v',
-    '--version',
-    '-l',
-    '--list',
-    'help',
-    'list',
-    'version',
-];
-```
+---
 
 ## Intégration
 
-Le `DirectiveDiscoveryService` s'intègre avec :
-
-| Composant | Utilisation |
-|-----------|-------------|
-| `DiscoverySourceInterface` | Sources de découverte (BuiltIn, Workspace, Vendor) |
-| `DirectiveParserInterface` | Parsing des signatures pour validation |
-| `DirectiveScannerInterface` | Scan des répertoires personnalisés |
-| `FileSystemInterface` | Vérification des répertoires |
-| `DirectiveConfigInterface` | Configuration et signatures réservées |
-| `DirectiveMetadataCollection` | Collection des directives découvertes |
-
-### Utilisation par d'autres composants
+### Avec DirectiveContainer
 
 ```php
-// Dans DirectiveKernel
-class DirectiveKernel
-{
-    public function run(array $argv): ExitCode
-    {
-        $directives = $this->discovery->discover();
-        // Utiliser la collection pour trouver la directive appropriée
-    }
-}
+$container = DirectiveContainer::create('/path/to/project');
+$discovery = DirectiveDiscoveryService::init($container);
 ```
+
+### Avec Laravel (Service Provider)
+
+```php
+// Dans un ServiceProvider
+$this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
+    $discovery = DirectiveDiscoveryService::init($app->make(Container::class));
+    
+    // Configuration depuis config/directive.php
+    $config = config('directive');
+    if (!empty($config['custom_sources'])) {
+        $discovery->addSources($config['custom_sources']);
+    }
+    if (!empty($config['ignored_sources'])) {
+        $discovery->ignoreSources($config['ignored_sources']);
+    }
+    if (!empty($config['max_depth'])) {
+        $discovery->setMaxDepth($config['max_depth']);
+    }
+    
+    return $discovery;
+});
+```
+
+### Avec DirectiveKernel
+
+```php
+// Le kernel hérite de DirectiveDiscoveryService
+$kernel = DirectiveKernel::init($container);
+$kernel
+    ->addSource(__DIR__ . '/src/Directives')
+    ->onlyNamespace('App\\Directives\\')
+    ->ignoreSource(DiscoverySource::VENDOR);
+
+// La configuration est utilisée lors de l'exécution
+$kernel->run($argv);
+```
+
+---
 
 ## Performance
 
-| Métrique | Valeur | Description |
-|----------|--------|-------------|
-| Complexité | O(n × m) | n = sources, m = directives par source |
-| Temps typique | 200-800ms | Première découverte |
-| Mémoire | 2-5 MB | Dépend du nombre de directives |
-| Cache | ❌ Non | Recalcul à chaque appel |
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| `discover()` | O(n × d) | n = classes PHP, d = profondeur de scan |
+| `addDirective()` | O(1) | Ajout dans une collection |
+| `ignoreSource()` | O(1) | Ajout dans une collection |
+| `onlyNamespace()` | O(1) | Ajout dans une collection |
 
-### Facteurs de performance
+**Optimisations :**
+- Les directives enregistrées ont priorité
+- Les résultats sont dédoublonnés par classe
+- Les filtres sont évalués avant l'instanciation des classes
+- Mode silencieux pour les environnements de production
 
-1. **Nombre de sources** : Plus il y a de sources, plus la découverte est lente
-2. **Nombre de directives** : Plus il y a de directives, plus la collection est grande
-3. **Profondeur de scan** : Scan plus profond → plus de fichiers → plus lent
-4. **Parsing** : Chaque directive est parsée pour validation
+**Mémoire :**
+- Toutes les métadonnées sont stockées dans une collection
+- Les classes sont instanciées sans constructeur (si possible)
+- Les FQCNs sont conservés en mémoire
 
-### Optimisations
-
-```php
-class DirectiveDiscoveryService
-{
-    private ?DirectiveMetadataCollection $cachedDirectives = null;
-    
-    public function discover(): DirectiveMetadataCollection
-    {
-        if ($this->cachedDirectives !== null) {
-            return $this->cachedDirectives;
-        }
-        
-        // ... découverte ...
-        
-        $this->cachedDirectives = $this->collection->uniqueByClass();
-        return $this->cachedDirectives;
-    }
-    
-    public function clearCache(): void
-    {
-        $this->cachedDirectives = null;
-    }
-}
-```
+---
 
 ## Compatibilité
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| PHP 8.1+ | ✅ Complet | - |
-| PHP 8.2+ | ✅ Complet | - |
-| Laravel 9.x | ✅ Complet | - |
-| Laravel 10.x | ✅ Complet | - |
-| Laravel 11.x | ✅ Complet | - |
+| Version PHP | Support | Notes |
+|-------------|---------|-------|
+| PHP 8.4 | ✅ Complet | Support total |
+| PHP 8.3 | ✅ Complet | Support total |
+| PHP 8.2 | ✅ Complet | Support total |
+| PHP 8.1 | ✅ Complet | Support total |
+
+---
 
 ## Exemple complet
 
@@ -455,114 +614,103 @@ class DirectiveDiscoveryService
 
 declare(strict_types=1);
 
+use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Enums\DiscoverySource;
 
-// Dans un service provider
-class AppServiceProvider extends ServiceProvider
-{
-    public function register(): void
-    {
-        $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
-            return new DirectiveDiscoveryService(
-                $app->make(BuiltInDirectiveDiscovery::class),
-                $app->make(WorkspaceDirectiveDiscovery::class),
-                $app->make(VendorDirectiveDiscovery::class),
-                $app->make(DirectiveParserInterface::class),
-                $app->make(DirectiveScannerInterface::class),
-                $app->make(FileSystemInterface::class),
-                $app->make(DirectiveConfigInterface::class),
-                3
-            );
-        });
+// 1. Création du conteneur
+$container = DirectiveContainer::create(__DIR__);
+
+// 2. Initialisation du service
+$discovery = DirectiveDiscoveryService::init($container);
+
+// 3. Configuration
+$discovery
+    // Profondeur de scan
+    ->setMaxDepth(4)
+    
+    // Sources personnalisées
+    ->addSource(__DIR__ . '/src/Directives')
+    ->addSource(__DIR__ . '/app/Commands')
+    
+    // Ignorer certaines sources
+    ->ignoreSource(DiscoverySource::VENDOR)
+    ->ignoreSource(DiscoverySource::BUILTIN)
+    
+    // Ignorer des chemins spécifiques
+    ->ignorePath(__DIR__ . '/src/Deprecated')
+    ->ignorePath(__DIR__ . '/tests')
+    
+    // Ignorer certaines directives
+    ->ignoreDirective('test:legacy')
+    ->ignoreDirective('deprecated:')
+    
+    // Filtrage par namespace
+    ->onlyNamespace('App\\Directives\\')
+    ->excludeNamespace('App\\Directives\\Internal\\')
+    
+    // Filtrage par préfixe
+    ->onlyPrefix('app:')
+    ->excludePrefix('admin:')
+    
+    // Mode silencieux en production
+    ->silent(true);
+
+// 4. Découverte
+$directives = $discovery->discover();
+
+echo "=== Discovery Report ===\n";
+echo "Total directives found: " . $directives->count() . "\n\n";
+
+// 5. Analyse des résultats
+$classes = [];
+foreach ($directives as $directive) {
+    $classes[] = $directive->class;
+    echo "- {$directive->signature}\n";
+    echo "  Class: {$directive->class}\n";
+    echo "  Description: {$directive->description}\n";
+    if ($directive->aliases->isNotEmpty()) {
+        echo "  Aliases: " . implode(', ', $directive->aliases->toArray()) . "\n";
     }
+    echo "\n";
 }
 
-// Utilisation dans un contrôleur
-class DirectiveController extends Controller
-{
-    public function index(DirectiveDiscoveryService $discovery)
-    {
-        // Ajouter des sources personnalisées
-        $discovery->addSources([
-            base_path('app/CustomDirectives'),
-            base_path('modules/Admin/Directives'),
-        ]);
-        
-        // Ajouter une signature réservée
-        $discovery->addReservedSignature('import');
-        
-        // Découvrir les directives
-        $directives = $discovery->discover();
-        
-        return response()->json([
-            'total' => $directives->count(),
-            'directives' => $directives->map(function ($directive) {
-                return [
-                    'signature' => $directive->signature,
-                    'description' => $directive->description,
-                    'class' => $directive->class,
-                    'aliases' => $directive->aliases->toArray(),
-                ];
-            })->toArray(),
-        ]);
-    }
+// 6. Dédoublonnage
+$unique = $directives->uniqueByClass();
+echo "Unique classes: " . $unique->count() . "\n\n";
+
+// 7. Ajout manuel d'une directive
+try {
+    $discovery->addDirective(MyCustomDirective::class);
+    echo "✅ Manual directive added\n";
+} catch (InvalidArgumentException $e) {
+    echo "❌ Error: " . $e->getMessage() . "\n";
 }
 
-// Vérification des signatures réservées
-$discovery = app(DirectiveDiscoveryService::class);
+// 8. Forcer l'ajout (ignore réservé)
+$discovery->addDirective(MyHelpDirective::class, true);
+echo "✅ Forced directive added\n";
+
+// 9. Réinitialisation pour un nouveau scan
+$discovery->resetConfig()->manualOnly();
+echo "\nConfig reset, manual only\n";
+
+$manualDirectives = $discovery->discover();
+echo "Manual directives: " . $manualDirectives->count() . "\n";
+
+// 10. Vérification des signatures réservées
 $reserved = $discovery->getReservedSignatures();
-
-echo "Signatures réservées:\n";
+echo "\nReserved signatures:\n";
 foreach ($reserved as $signature) {
-    echo "- {$signature}\n";
-}
-
-// Retirer une signature réservée
-if (in_array('version', $reserved, true)) {
-    $discovery->removeReservedSignature('version');
-    echo "Signature 'version' retirée des réservées\n";
+    echo "  - $signature\n";
 }
 ```
 
-## Notes techniques
+## Voir aussi
 
-### Stratégie de force
-
-Les directives intégrées sont marquées avec `force = true` pour garantir leur présence :
-
-```php
-private function discoverBuiltInDirectives(): void
-{
-    $fqcns = $this->builtInSource->discover();
-    
-    foreach ($fqcns as $fqcn) {
-        $this->addDirective($fqcn, true); // ✅ Force = true
-    }
-}
-```
-
-### Déduplication intelligente
-
-La collection utilise `uniqueByClass()` pour éviter les doublons par nom de classe, même si la même directive est découverte depuis plusieurs sources.
-
-### Validation des signatures
-
-Les signatures sont parsées et validées avant d'être ajoutées à la collection :
-
-```php
-private function isReservedSignature(string $signature): bool
-{
-    $parsed = $this->parser->parse($signature, '');
-    $commandName = $parsed->source;
-    
-    return in_array($commandName, $this->config->getReservedSignatures(), true);
-}
-```
-
-### Points d'extension
-
-Le service peut être étendu via :
-1. **Nouvelles sources** : Ajout via `addSource()` et `addSources()`
-2. **Signatures réservées** : Gestion via `addReservedSignature()` et `removeReservedSignature()`
-3. **Sources personnalisées** : Implémentation de `DiscoverySourceInterface`
----
+- `DirectiveKernel` - Noyau d'exécution (hérite de ce service)
+- `DirectiveMetadataCollection` - Collection des métadonnées
+- `DiscoverySource` - Énumération des sources
+- `BuiltInDirectiveDiscovery` - Découverte des directives intégrées
+- `WorkspaceDirectiveDiscovery` - Découverte dans l'espace de travail
+- `VendorDirectiveDiscovery` - Découverte dans les vendors

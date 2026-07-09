@@ -2,148 +2,143 @@
 
 ## Description
 
-Service de lecture et d'accès aux informations des packages Composer. Fournit une abstraction typée sur le fichier `composer.json`, permettant de récupérer les dépendances, la configuration d'autoloading et les métadonnées des packages.
+Service de lecture et d'accès aux informations du fichier `composer.json`. Fournit une abstraction typée pour interroger les dépendances, la configuration d'autoloading et les métadonnées des packages.
 
 ## Hiérarchie / Implémentations
 
 ```
 ComposerReaderInterface
-    └── ComposerReaderService (final)
+    └── ComposerReaderService
 ```
 
 ## Rôle principal
 
-Centraliser l'accès au fichier `composer.json` du projet en fournissant une API typée et sécurisée. Le service gère la lecture, le parsing, la mise en cache et la validation des données du fichier Composer.
+`ComposerReaderService` offre une couche d'abstraction pour interagir avec le fichier `composer.json` d'un projet. Il permet de :
+
+- Lire les dépendances de production et de développement
+- Récupérer la configuration d'autoloading
+- Vérifier la présence d'un package spécifique
+- Extraire les noms des vendors
+- Mettre en cache les données pour des performances optimales
 
 ## Installation
 
+```bash
+composer require andydefer/directive
+```
+
 ### Dépendances
 
-```bash
-# Le service est automatiquement disponible via le conteneur
-composer require andydefer/laravel-directive
-```
-
-### Configuration dans le conteneur
-
-```php
-// Dans le service provider
-$this->app->singleton(ComposerReaderInterface::class, function ($app) {
-    return new ComposerReaderService(
-        $app->make(DirectiveConfigInterface::class),
-        $app->make(FileSystemInterface::class)
-    );
-});
-```
+- `DirectiveConfigInterface` - Configuration du package
+- `FileSystemInterface` - Opérations sur le système de fichiers
+- PHP 8.1+
 
 ## API / Méthodes publiques
 
-### `getRequire(): array`
-
-Récupère les dépendances de production du fichier `composer.json`.
+### `__construct(DirectiveConfigInterface $config, FileSystemInterface $fileSystem)`
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| Aucun | - | - |
+| `$config` | `DirectiveConfigInterface` | Configuration du package |
+| `$fileSystem` | `FileSystemInterface` | Service de système de fichiers |
 
-**Retourne :** `array<string, string>` - Tableau associatif [nom du package → contrainte de version]
-
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Retourne :** `void`
 
 **Exemple :**
 ```php
-<?php
+$config = new DirectiveConfig($configRepository);
+$fileSystem = new FileSystemService();
+$reader = new ComposerReaderService($config, $fileSystem);
+```
 
-$dependencies = $composerReader->getRequire();
-// ['laravel/framework' => '^10.0', 'php' => '^8.1']
+---
+
+### `getRequire(): array`
+
+Récupère les dépendances de production.
+
+**Retourne :** `array<string, string>` - Tableau [nom du package => contrainte de version]
+
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
+
+**Exemple :**
+```php
+$dependencies = $reader->getRequire();
+// [
+//     'laravel/framework' => '^12.0',
+//     'andydefer/domain-structures' => '^1.21',
+// ]
 ```
 
 ---
 
 ### `getRequireDev(): array`
 
-Récupère les dépendances de développement du fichier `composer.json`.
+Récupère les dépendances de développement.
 
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
+**Retourne :** `array<string, string>` - Tableau [nom du package => contrainte de version]
 
-**Retourne :** `array<string, string>` - Tableau associatif [nom du package → contrainte de version]
-
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$devDependencies = $composerReader->getRequireDev();
-// ['phpunit/phpunit' => '^10.0', 'pestphp/pest' => '^2.0']
+$devDependencies = $reader->getRequireDev();
+// [
+//     'phpunit/phpunit' => '^10.5',
+//     'mockery/mockery' => '^1.6',
+// ]
 ```
 
 ---
 
 ### `getAllDependencies(): array`
 
-Récupère toutes les dépendances (production + développement).
+Récupère l'ensemble des dépendances (production et développement).
 
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
+**Retourne :** `array<string, string>` - Tableau [nom du package => contrainte de version]
 
-**Retourne :** `array<string, string>` - Tableau associatif de toutes les dépendances
-
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$allDependencies = $composerReader->getAllDependencies();
-// ['laravel/framework' => '^10.0', 'phpunit/phpunit' => '^10.0']
+$allDeps = $reader->getAllDependencies();
+// Combine getRequire() + getRequireDev()
 ```
 
 ---
 
 ### `getVendorDirectories(): array`
 
-Récupère la liste des noms de vendors depuis les dépendances de production.
+Récupère la liste des noms de vendors à partir des dépendances de production.
 
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
+**Retourne :** `array<int, string>` - Liste des vendors uniques
 
-**Retourne :** `array<int, string>` - Liste des noms de vendors (uniques)
-
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$vendors = $composerReader->getVendorDirectories();
-// ['laravel', 'symfony', 'monolog']
+$vendors = $reader->getVendorDirectories();
+// ['laravel', 'andydefer', 'symfony', 'nikic']
 ```
 
 ---
 
 ### `getPackageNames(): array`
 
-Récupère la liste des noms de packages (production uniquement).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
+Récupère la liste de tous les packages de production.
 
 **Retourne :** `array<int, string>` - Liste des noms de packages
 
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$packages = $composerReader->getPackageNames();
-// ['laravel/framework', 'symfony/console', 'monolog/monolog']
+$packages = $reader->getPackageNames();
+// [
+//     'laravel/framework',
+//     'andydefer/domain-structures',
+//     'nikic/php-parser',
+// ]
 ```
 
 ---
@@ -154,18 +149,16 @@ Vérifie si un package spécifique est installé.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$packageName` | `string` | Le nom du package à vérifier (ex: "laravel/framework") |
+| `$packageName` | `string` | Nom du package à vérifier |
 
-**Retourne :** `bool` - `true` si le package existe, `false` sinon
+**Retourne :** `bool` - `true` si le package existe
 
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-if ($composerReader->hasPackage('laravel/framework')) {
-    echo "Laravel est installé";
+if ($reader->hasPackage('laravel/framework')) {
+    echo "Laravel is installed\n";
 }
 ```
 
@@ -177,22 +170,16 @@ Récupère la contrainte de version d'un package spécifique.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$packageName` | `string` | Le nom du package à interroger |
+| `$packageName` | `string` | Nom du package à interroger |
 
-**Retourne :** `string|null` - La contrainte de version, ou `null` si le package n'est pas trouvé
+**Retourne :** `?string` - Contrainte de version ou `null` si le package n'est pas trouvé
 
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$version = $composerReader->getPackageVersion('laravel/framework');
-// '^10.0'
-
-if ($version === null) {
-    echo "Package non installé";
-}
+$version = $reader->getPackageVersion('laravel/framework');
+// '^12.0'
 ```
 
 ---
@@ -201,20 +188,19 @@ if ($version === null) {
 
 Récupère la configuration d'autoloading de production.
 
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
+**Retourne :** `array<string, mixed>` - Configuration d'autoloading
 
-**Retourne :** `array<string, mixed>` - La configuration d'autoloading
-
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$autoload = $composerReader->getAutoload();
-// ['psr-4' => ['App\\' => 'app/'], 'classmap' => ['database/']]
+$autoload = $reader->getAutoload();
+// [
+//     'psr-4' => [
+//         'App\\' => 'app/',
+//         'AndyDefer\\Directive\\' => 'src/',
+//     ]
+// ]
 ```
 
 ---
@@ -223,239 +209,296 @@ $autoload = $composerReader->getAutoload();
 
 Récupère la configuration d'autoloading de développement.
 
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
+**Retourne :** `array<string, mixed>` - Configuration d'autoloading-dev
 
-**Retourne :** `array<string, mixed>` - La configuration d'autoloading-dev
-
-**Exceptions :** `RuntimeException` - Si le fichier `composer.json` ne peut pas être lu ou parsé
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$autoloadDev = $composerReader->getAutoloadDev();
-// ['psr-4' => ['Tests\\' => 'tests/']]
+$autoloadDev = $reader->getAutoloadDev();
+// [
+//     'psr-4' => [
+//         'Tests\\' => 'tests/',
+//     ]
+// ]
 ```
 
 ---
 
 ### `getVendorDir(): string`
 
-Récupère le chemin absolu du répertoire vendor.
+Récupère le chemin absolu vers le dossier `vendor`.
 
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| Aucun | - | - |
+**Retourne :** `string` - Chemin vers le dossier vendor
 
-**Retourne :** `string` - Le chemin absolu du répertoire vendor
-
-**Exceptions :** Aucune
+**Exceptions :** `RuntimeException` - Si `composer.json` est introuvable ou invalide
 
 **Exemple :**
 ```php
-<?php
-
-$vendorDir = $composerReader->getVendorDir();
-// '/var/www/project/vendor'
+$vendorDir = $reader->getVendorDir();
+// '/home/user/project/vendor'
 ```
+
+---
 
 ## Cas d'utilisation
 
-### Cas 1 : Vérification des dépendances requises
+### Cas 1 : Analyse des dépendances installées
 
 ```php
 <?php
 
+use AndyDefer\Directive\Configs\DirectiveConfig;
 use AndyDefer\Directive\Services\ComposerReaderService;
+use AndyDefer\PhpServices\Services\FileSystemService;
+use Illuminate\Config\Repository as ConfigRepository;
+
+$configRepo = new ConfigRepository([
+    'directive' => [
+        'base_path' => __DIR__,
+        'vendor_dir' => __DIR__ . '/vendor',
+        'composer_path' => __DIR__ . '/composer.json',
+    ]
+]);
+
+$config = new DirectiveConfig($configRepo);
+$fileSystem = new FileSystemService();
+$reader = new ComposerReaderService($config, $fileSystem);
+
+echo "=== Dependencies Overview ===\n\n";
+
+echo "Production dependencies:\n";
+foreach ($reader->getRequire() as $package => $version) {
+    echo "  - $package: $version\n";
+}
+
+echo "\nDevelopment dependencies:\n";
+foreach ($reader->getRequireDev() as $package => $version) {
+    echo "  - $package: $version\n";
+}
+
+echo "\nTotal: " . count($reader->getAllDependencies()) . " packages\n";
+
+echo "\nVendors:\n";
+foreach ($reader->getVendorDirectories() as $vendor) {
+    echo "  - $vendor\n";
+}
+```
+
+### Cas 2 : Vérification de compatibilité
+
+```php
+<?php
 
 $requiredPackages = [
-    'laravel/framework',
-    'symfony/console',
-    'monolog/monolog',
+    'laravel/framework' => '^12.0',
+    'php' => '^8.1',
 ];
 
-$missing = [];
+$allMissing = [];
 
-foreach ($requiredPackages as $package) {
-    if (!$composerReader->hasPackage($package)) {
-        $missing[] = $package;
+foreach ($requiredPackages as $package => $requiredVersion) {
+    if (!$reader->hasPackage($package)) {
+        $allMissing[] = $package;
+        continue;
     }
-}
-
-if (!empty($missing)) {
-    throw new RuntimeException(
-        'Missing required packages: ' . implode(', ', $missing)
-    );
-}
-```
-
-### Cas 2 : Analyse des dépendances pour la découverte
-
-```php
-<?php
-
-// Dans VendorDirectiveDiscovery
-$packages = $composerReader->getPackageNames();
-
-foreach ($packages as $package) {
-    $vendor = $composerReader->getVendorDir() . '/' . $package;
     
-    if (is_dir($vendor . '/src/Directives')) {
-        echo "Package {$package} contient des directives\n";
+    $installedVersion = $reader->getPackageVersion($package);
+    echo "$package: installed ($installedVersion), required ($requiredVersion)\n";
+}
+
+if (!empty($allMissing)) {
+    echo "\nMissing packages:\n";
+    foreach ($allMissing as $package) {
+        echo "  - $package\n";
     }
 }
 ```
 
-### Cas 3 : Génération d'un rapport de dépendances
+### Cas 3 : Découverte des vendors pour l'analyse de code
 
 ```php
 <?php
 
-$dependencies = $composerReader->getAllDependencies();
+$vendors = $reader->getVendorDirectories();
+$vendorPaths = [];
 
-echo "=== Rapport des dépendances ===\n";
-echo "Total: " . count($dependencies) . " packages\n\n";
+foreach ($vendors as $vendor) {
+    $path = $reader->getVendorDir() . '/' . $vendor;
+    if (is_dir($path)) {
+        $vendorPaths[$vendor] = $path;
+        echo "Vendor $vendor found at: $path\n";
+    }
+}
 
-foreach ($dependencies as $package => $version) {
-    $isDev = array_key_exists($package, $composerReader->getRequireDev());
-    $type = $isDev ? 'DEV' : 'PROD';
-    
-    echo "[{$type}] {$package} : {$version}\n";
+// Parcourir les packages de chaque vendor
+foreach ($reader->getPackageNames() as $package) {
+    $vendor = explode('/', $package)[0];
+    echo "Package $package belongs to vendor $vendor\n";
 }
 ```
 
-### Cas 4 : Configuration d'autoloading personnalisée
+### Cas 4 : Configuration d'autoloading
 
 ```php
 <?php
 
-$autoload = $composerReader->getAutoload();
+$autoload = $reader->getAutoload();
 
 if (isset($autoload['psr-4'])) {
+    echo "PSR-4 mappings:\n";
     foreach ($autoload['psr-4'] as $namespace => $path) {
-        echo "Namespace: {$namespace} → Path: {$path}\n";
+        echo "  $namespace => $path\n";
+    }
+}
+
+// Vérifier si un namespace est autoloadable
+$namespace = 'AndyDefer\\Directive\\';
+$psr4Mappings = $autoload['psr-4'] ?? [];
+
+foreach ($psr4Mappings as $nsPrefix => $path) {
+    if (str_starts_with($namespace, $nsPrefix)) {
+        echo "Namespace $namespace is autoloaded from $path\n";
+        break;
     }
 }
 ```
+
+---
 
 ## Flux d'exécution
 
 ```
-ComposerReaderService::getComposerData()
-    │
-    ├── Vérifie le cache ($composerData)
-    │   └── Si présent → retourne
-    │
-    ├── $composerPath = $config->getComposerPath()
-    │
-    ├── validateComposerFileExists()
-    │   └── Si non existant → RuntimeException
-    │
-    ├── readComposerFile()
-    │   ├── $fileSystem->get()
-    │   └── Si erreur → RuntimeException
-    │
-    ├── parseComposerJson()
-    │   ├── json_decode()
-    │   └── Si JSON invalide → RuntimeException
-    │
-    └── Mise en cache → retourne les données
+getComposerData()
+    ↓
+Vérifier le cache ($composerData)
+    ├── Cache trouvé → retourner
+    └── Cache vide → continuer
+    ↓
+validateComposerFileExists()
+    ├── Fichier existe → continuer
+    └── Fichier inexistant → RuntimeException
+    ↓
+readComposerFile()
+    ├── Lecture réussie → continuer
+    └── Échec de lecture → RuntimeException
+    ↓
+parseComposerJson()
+    ├── JSON valide → stocker dans cache
+    └── JSON invalide → RuntimeException
+    ↓
+Retourner les données décodées
 ```
 
-## Structure du composer.json analysé
+### Lecture des dépendances
 
-```json
-{
-    "require": {
-        "laravel/framework": "^10.0",
-        "symfony/console": "^6.0"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^10.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "App\\": "app/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Tests\\": "tests/"
-        }
-    }
-}
 ```
+getRequire()/getRequireDev()
+    ↓
+getComposerData() → données du composer.json
+    ↓
+Extraire la section 'require' ou 'require-dev'
+    ↓
+Retourner le tableau ou [] si absent
+```
+
+### Extraction des vendors
+
+```
+getVendorDirectories()
+    ↓
+getRequire() → dépendances de production
+    ↓
+Pour chaque package
+    ├── Si package PHP → ignorer
+    ├── Extraire le vendor (avant le '/')
+    └── Ajouter à la liste
+    ↓
+Retourner les vendors uniques
+```
+
+---
 
 ## Gestion des erreurs
 
 | Situation | Exception | Message |
 |-----------|-----------|---------|
-| Fichier composer.json inexistant | `RuntimeException` | `composer.json not found at: {path}` |
-| Fichier non lisible | `RuntimeException` | `Could not read composer.json at: {path}` |
+| composer.json introuvable | `RuntimeException` | `composer.json not found at: {path}` |
+| Lecture impossible | `RuntimeException` | `Could not read composer.json at: {path}` |
 | JSON invalide | `RuntimeException` | `Invalid JSON in composer.json at {path}: {error}` |
-| Package PHP (php, php-64bit) | Ignoré | - |
-| Format de package invalide | Ignoré | - |
 
-### Exceptions détaillées
+**Note :** Toutes les méthodes publiques peuvent lever une `RuntimeException` si le fichier `composer.json` est inaccessible ou invalide.
 
-```php
-// Exemple 1: Fichier manquant
-composer.json not found at: /var/www/project/composer.json
-
-// Exemple 2: JSON invalide
-Invalid JSON in composer.json at /var/www/project/composer.json: Syntax error
-
-// Exemple 3: Erreur de lecture
-Could not read composer.json at: /var/www/project/composer.json
-```
+---
 
 ## Intégration
 
-Le `ComposerReaderService` s'intègre avec :
+### Avec DirectiveConfig
 
-| Composant | Utilisation |
-|-----------|-------------|
-| `DirectiveConfigInterface` | Fournit le chemin du fichier composer.json |
-| `FileSystemInterface` | Opérations de lecture de fichiers |
-| `VendorDirectiveDiscovery` | Utilisé pour découvrir les packages vendors |
-| `DependencyResolverService` | Utilisé pour résoudre l'arbre des dépendances |
+```php
+$configRepo = new ConfigRepository([
+    'directive' => [
+        'base_path' => '/path/to/project',
+        'vendor_dir' => '/path/to/project/vendor',
+        'composer_path' => '/path/to/project/composer.json',
+    ]
+]);
+
+$config = new DirectiveConfig($configRepo);
+$reader = new ComposerReaderService($config, $fileSystem);
+```
+
+### Dans Laravel (Service Provider)
+
+```php
+$this->app->singleton(ComposerReaderInterface::class, function ($app) {
+    return new ComposerReaderService(
+        $app->make(DirectiveConfigInterface::class),
+        $app->make(FileSystemInterface::class)
+    );
+});
+```
+
+### Avec DependencyResolverService
+
+```php
+$resolver = new DependencyResolverService($reader, $fileSystem);
+$allDependencies = $resolver->resolveAll();
+```
+
+---
 
 ## Performance
 
-| Métrique | Valeur | Description |
-|----------|--------|-------------|
-| Complexité | O(1) | Lecture et parsing du fichier JSON |
-| Cache | ✅ Oui | Les données sont mises en cache après la première lecture |
-| Temps typique | 5-20ms | Première lecture, puis <1ms (cache) |
-| Mémoire | ~100KB | Dépend de la taille du fichier composer.json |
+| Opération | Complexité | Détails |
+|-----------|------------|---------|
+| `getComposerData()` | O(1) | Cache après première lecture |
+| `getRequire()` | O(1) | Lecture du cache |
+| `getAllDependencies()` | O(n) | n = nombre de dépendances |
+| `getVendorDirectories()` | O(n) | n = nombre de packages |
+| `hasPackage()` | O(1) | Recherche dans le tableau |
 
-### Stratégie de cache
+**Optimisations :**
+- Mise en cache du contenu de `composer.json`
+- Pas de relecture du fichier à chaque appel
+- Utilisation de tableaux associatifs pour les recherches O(1)
 
-```php
-private ?array $composerData = null;
+**Mémoire :**
+- Le fichier `composer.json` complet est stocké en mémoire
+- Taille typique : 5-20 KB selon le nombre de dépendances
 
-private function getComposerData(): array
-{
-    if ($this->composerData !== null) {
-        return $this->composerData; // ✅ Cache hit
-    }
-    
-    // Chargement et mise en cache
-    $this->composerData = $this->loadComposerData();
-    return $this->composerData;
-}
-```
+---
 
 ## Compatibilité
 
-| Version | Support | Notes |
-|---------|---------|-------|
-| PHP 8.1+ | ✅ Complet | - |
-| PHP 8.2+ | ✅ Complet | - |
-| Composer 2.x | ✅ Complet | - |
-| Composer 1.x | ⚠️ Limité | `composer.json` version 1 supporté |
+| Version PHP | Support | Notes |
+|-------------|---------|-------|
+| PHP 8.4 | ✅ Complet | Support total |
+| PHP 8.3 | ✅ Complet | Support total |
+| PHP 8.2 | ✅ Complet | Support total |
+| PHP 8.1 | ✅ Complet | Support total |
+
+---
 
 ## Exemple complet
 
@@ -464,113 +507,82 @@ private function getComposerData(): array
 
 declare(strict_types=1);
 
-use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\Directive\Configs\DirectiveConfig;
+use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use Illuminate\Config\Repository as ConfigRepository;
 
-// Créer les dépendances
-$configRepository = new ConfigRepository([
+// 1. Configuration
+$configRepo = new ConfigRepository([
     'directive' => [
-        'base_path' => '/var/www/project'
+        'base_path' => '/var/www/myapp',
+        'vendor_dir' => '/var/www/myapp/vendor',
+        'composer_path' => '/var/www/myapp/composer.json',
     ]
 ]);
 
-$config = new DirectiveConfig($configRepository);
+$config = new DirectiveConfig($configRepo);
 $fileSystem = new FileSystemService();
+$reader = new ComposerReaderService($config, $fileSystem);
 
-// Créer le service
-$composerReader = new ComposerReaderService($config, $fileSystem);
-
-// Utiliser le service
-echo "=== Informations Composer ===\n\n";
-
-// Dépendances de production
-$prod = $composerReader->getRequire();
-echo "Dépendances PROD (" . count($prod) . "):\n";
-foreach ($prod as $package => $version) {
-    echo "- {$package}: {$version}\n";
-}
-
-// Dépendances de développement
-$dev = $composerReader->getRequireDev();
-echo "\nDépendances DEV (" . count($dev) . "):\n";
-foreach ($dev as $package => $version) {
-    echo "- {$package}: {$version}\n";
-}
-
-// Toutes les dépendances
-$all = $composerReader->getAllDependencies();
-echo "\nTotal dépendances: " . count($all) . "\n";
-
-// Vérification d'un package
-if ($composerReader->hasPackage('laravel/framework')) {
-    $version = $composerReader->getPackageVersion('laravel/framework');
-    echo "\n✅ Laravel installé (version: {$version})\n";
-}
-
-// Autoloading
-$autoload = $composerReader->getAutoload();
-if (isset($autoload['psr-4'])) {
-    echo "\n=== Autoload PSR-4 ===\n";
-    foreach ($autoload['psr-4'] as $namespace => $path) {
-        echo "- {$namespace} → {$path}\n";
+try {
+    // 2. Récupérer toutes les dépendances
+    $allDependencies = $reader->getAllDependencies();
+    echo "=== All Dependencies ===\n";
+    echo "Total: " . count($allDependencies) . " packages\n\n";
+    
+    // 3. Afficher les dépendances de production
+    echo "=== Production Dependencies ===\n";
+    foreach ($reader->getRequire() as $package => $version) {
+        echo "  - $package: $version\n";
     }
+    
+    // 4. Afficher les dépendances de développement
+    echo "\n=== Development Dependencies ===\n";
+    foreach ($reader->getRequireDev() as $package => $version) {
+        echo "  - $package: $version\n";
+    }
+    
+    // 5. Liste des vendors
+    echo "\n=== Vendors ===\n";
+    foreach ($reader->getVendorDirectories() as $vendor) {
+        echo "  - $vendor\n";
+    }
+    
+    // 6. Vérification d'un package spécifique
+    $package = 'laravel/framework';
+    if ($reader->hasPackage($package)) {
+        $version = $reader->getPackageVersion($package);
+        echo "\n✅ $package is installed (version: $version)\n";
+    } else {
+        echo "\n❌ $package is not installed\n";
+    }
+    
+    // 7. Configuration d'autoloading
+    echo "\n=== Autoloading ===\n";
+    $autoload = $reader->getAutoload();
+    if (isset($autoload['psr-4'])) {
+        echo "PSR-4 mappings:\n";
+        foreach ($autoload['psr-4'] as $namespace => $path) {
+            echo "  - $namespace => $path\n";
+        }
+    }
+    
+    // 8. Liste des packages
+    echo "\n=== Package Names ===\n";
+    foreach ($reader->getPackageNames() as $package) {
+        echo "  - $package\n";
+    }
+    
+} catch (RuntimeException $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+    exit(1);
 }
-
-// Vendor directory
-$vendorDir = $composerReader->getVendorDir();
-echo "\n📁 Vendor directory: {$vendorDir}\n";
 ```
 
-## Notes techniques
+## Voir aussi
 
-### Packages PHP ignorés
-
-Les packages commençant par `php` sont automatiquement ignorés par les méthodes `getPackageNames()` et `getVendorDirectories()` :
-
-```php
-// Ces packages sont ignorés
-- php (meta-package)
-- php-64bit
-- php-80 (extension)
-- php-81 (extension)
-```
-
-### Format des packages
-
-Le service attend un format de package standard : `vendor/package`.
-
-```php
-// ✅ Format valide
-'laravel/framework'
-'symfony/console'
-'monolog/monolog'
-
-// ❌ Format invalide
-'laravel'              // Pas de vendor
-'laravel/framework/'   // Slash final
-'/laravel/framework'   // Slash initial
-```
-
-### Gestion des versions
-
-Les versions sont retournées telles quelles, sans parsing :
-
-```php
-// Exemples de versions retournées
-- '^10.0'
-- '~6.0'
-- '>=7.0'
-- 'dev-master'
-- '1.2.3'
-```
-
-### Bonnes pratiques
-
-1. **Utiliser le cache** : Le service gère automatiquement le cache
-2. **Vérifier l'existence** : Utiliser `hasPackage()` avant `getPackageVersion()`
-3. **Gérer les exceptions** : Toujours capturer `RuntimeException` lors des opérations
-4. **Validation des packages** : Vérifier que les packages ont le format `vendor/package`
-
----
+- `DependencyResolverService` - Résolution récursive des dépendances
+- `DirectiveConfig` - Configuration du package
+- `FileSystemService` - Service de système de fichiers
+- `ComposerReaderInterface` - Interface du lecteur

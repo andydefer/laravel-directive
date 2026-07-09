@@ -1,9 +1,9 @@
 # Laravel Directive
 
-**Un système de commandes CLI flexible pour Laravel qui brise les contraintes d'Artisan. Découverte automatique, signatures avancées, appels internes, tests isolés - avec un simple binaire.**
+**Un framework CLI pour Laravel. Orchestration de pipelines, contexte partagé, découverte automatique, appels internes - avec ou sans Laravel.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue)](https://php.net)
-[![Laravel Version](https://img.shields.io/badge/Laravel-9.x%20%7C%2010.x%20%7C%2011.x-blue)](https://laravel.com)
+[![Laravel Version](https://img.shields.io/badge/Laravel-12.x%20%7C%2013.x%20%7C%2014.x%20%7C%2015.x-blue)](https://laravel.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
@@ -12,16 +12,19 @@
 
 1. [Installation](#installation)
 2. [Pourquoi Laravel Directive ?](#pourquoi-laravel-directive-)
-3. [Créer une directive](#créer-une-directive)
-4. [Signature des directives](#signature-des-directives)
-5. [Arguments et options](#arguments-et-options)
-6. [Alias de commandes](#alias-de-commandes)
-7. [Appels internes](#appels-internes)
-8. [Sorties et interactions](#sorties-et-interactions)
-9. [Découverte automatique](#découverte-automatique)
-10. [Tester vos directives](#tester-vos-directives)
-11. [Référence des commandes](#référence-des-commandes)
-12. [Bonnes pratiques](#bonnes-pratiques)
+3. [Première directive](#première-directive)
+4. [Arguments et options](#arguments-et-options)
+5. [Contexte partagé](#contexte-partagé)
+6. [Appels internes (call)](#appels-internes-call)
+7. [Découverte automatique](#découverte-automatique)
+8. [Journalisation JSONL](#journalisation-jsonl)
+9. [Suggestions de commandes](#suggestions-de-commandes)
+10. [Directives intégrées](#directives-intégrées)
+11. [Mode autonome (sans Laravel)](#mode-autonome-sans-laravel)
+12. [Tests des directives](#tests-des-directives)
+13. [Cas d'usage concrets](#cas-dusage-concrets)
+14. [Bonnes pratiques](#bonnes-pratiques)
+15. [Référence des commandes](#référence-des-commandes)
 
 ---
 
@@ -29,38 +32,30 @@
 
 ```bash
 composer require andydefer/laravel-directive
-```
 
-**Prérequis :** PHP 8.1+ | Laravel 9.x, 10.x ou 11.x
-
-### Publication de la configuration (optionnelle)
-
-```bash
+# Pour Laravel (optionnel)
 php artisan vendor:publish --tag=directive-config
 ```
+
+**Prérequis :** PHP 8.1+ | Laravel 12.x, 13.x, 14.x ou 15.x
 
 ---
 
 ## Pourquoi Laravel Directive ?
 
-**Le problème :** Artisan vous force à étendre `Illuminate\Console\Command`, mêle logique métier et présentation, et rend les tests difficiles.
+**Le problème :** Vous construisez un pipeline de déploiement avec plusieurs commandes qui doivent partager un état. Ou une application CLI complexe où les commandes s'appellent entre elles.
 
-**La solution :** Laravel Directive. Une architecture propre, découplée et testable.
+Avec Artisan, chaque commande est isolée. Pas de contexte partagé. Les appels internes sont limités. Les commandes doivent être enregistrées manuellement.
 
-### Comparatif rapide
+**La solution :** Laravel Directive. Des directives composables avec un contexte partagé, des appels internes structurés, et une découverte automatique.
 
-| Besoin | Artisan | Laravel Directive |
-|--------|---------|-------------------|
-| Héritage flexible | ❌ Imposé | ✅ Vous choisissez |
-| Logique / Présentation séparées | ❌ Mélangées | ✅ Séparées |
-| Tests unitaires | ❌ Difficiles | ✅ Faciles |
-| Découverte automatique | ❌ Manuelle | ✅ Automatique |
-| Bootstrap Laravel | ✅ Toujours | ✅ À la demande |
-| API typée | ❌ Tableau brut | ✅ Typage fort |
-
+```bash
+# Un pipeline de déploiement en une seule commande
+./vendor/bin/directive deploy staging --skip-tests
+```
 ---
 
-## Créer une directive
+## Première directive
 
 ### 1. Créer la classe
 
@@ -71,13 +66,12 @@ namespace App\Directives;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class GreetDirective extends AbstractDirective
+class GreetDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'greet {name}';
+        return 'greet {name} {--formal}';
     }
 
     public function getDescription(): string
@@ -87,593 +81,1111 @@ final class GreetDirective extends AbstractDirective
 
     public function getAliases(): StringTypedCollection
     {
-        return StringTypedCollection::from(['hello', 'salut']);
+        return StringTypedCollection::from(['hello', 'hi']);
+    }
+
+    protected function beforeExecute(): void
+    {
+        if ($this->flag('formal')) {
+            $this->info('Formal mode enabled');
+        }
     }
 
     protected function execute(): ExitCode
     {
         $name = $this->argument('name');
-        $this->info("Hello, {$name}!");
+        $formal = $this->flag('formal');
+
+        $greeting = $formal ? "Good day, $name" : "Hello, $name";
+        $this->info($greeting);
+
         return ExitCode::SUCCESS;
+    }
+
+    protected function afterExecute(ExitCode $exitCode): void
+    {
+        $this->newLine();
+        $this->line('Execution completed');
     }
 }
 ```
 
-### 2. Exécuter la directive
+### 2. Exécuter
 
 ```bash
-# Par son nom
+# Exécution simple
 ./vendor/bin/directive greet John
+# Hello, John
 
-# Par son alias
-./vendor/bin/directive hello Jane
+# Avec option
+./vendor/bin/directive greet John --formal
+# Formal mode enabled
+# Good day, John
 
-# Avec aide
-./vendor/bin/directive greet --help
-```
-
----
-
-## Signature des directives
-
-### Syntaxe
-
-```
-commande {argument} {argument?} {argument=default} {--flag} {--flag=value} {arguments*}
-```
-
-### Éléments supportés
-
-| Élément | Syntaxe | Exemple |
-|---------|---------|---------|
-| Arguments requis | `{nom}` | `{name}` |
-| Arguments optionnels | `{nom?}` | `{name?}` |
-| Arguments par défaut | `{nom=default}` | `{name=John}` |
-| Flags booléens | `{--nom}` | `{--force}` |
-| Flags avec valeur | `{--nom=valeur}` | `{--format=gzip}` |
-| Arguments variadiques | `{nom*}` | `{files*}` |
-
-### Exemples
-
-```php
-// Directive simple
-public function getSignature(): string
-{
-    return 'list';
-}
-
-// Avec arguments
-public function getSignature(): string
-{
-    return 'user:create {name} {email}';
-}
-
-// Avec options
-public function getSignature(): string
-{
-    return 'backup {file?} {--force} {--compression=gzip}';
-}
-
-// Avec arguments variadiques
-public function getSignature(): string
-{
-    return 'copy {source*} {--recursive}';
-}
+# Avec alias
+./vendor/bin/directive hello John
+# Hello, John
 ```
 
 ---
 
 ## Arguments et options
 
-### Accès aux arguments
+### Signature syntax
+
+```php
+public function getSignature(): string
+{
+    return 'test {name} {email} {format=zip} {files*} {--force} {--verbose}';
+}
+```
+
+| Syntaxe | Type | Description |
+|---------|------|-------------|
+| `{name}` | Requis | Argument obligatoire |
+| `{email=value}` | Default | Valeur par défaut |
+| `{files*}` | Variadic | Zéro ou plusieurs valeurs |
+| `{--force}` | Flag | Option booléenne |
+| `{--verbose}` | Flag | Option booléenne |
+
+### Accès aux valeurs
 
 ```php
 protected function execute(): ExitCode
 {
-    // Argument requis
+    // Arguments requis
     $name = $this->argument('name');
-    
-    // Argument optionnel avec valeur par défaut
-    $limit = $this->argument('limit') ?? 10;
-    
-    // Vérifier l'existence
-    if ($this->hasArgument('email')) {
-        $email = $this->argument('email');
-    }
-    
+    $email = $this->argument('email');
+
+    // Argument avec valeur par défaut
+    $format = $this->argument('format'); // 'zip' par défaut
+
     // Arguments variadiques
     $files = $this->getVariadicArguments();
     foreach ($files as $file) {
-        $this->line("Processing: {$file}");
+        $this->line("Processing: $file");
     }
-    
+
+    // Flags
+    $force = $this->flag('force');
+    $verbose = $this->flag('verbose');
+
+    // Vérifications
+    if ($this->hasArgument('email')) {
+        // ...
+    }
+
+    if ($this->hasFlag('force')) {
+        // ...
+    }
+
     return ExitCode::SUCCESS;
 }
 ```
 
-### Accès aux options (flags)
+### Exemple complet
 
 ```php
-protected function execute(): ExitCode
+<?php
+
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+class ProcessFilesDirective extends AbstractDirective
 {
-    // Flag booléen
-    if ($this->flag('force')) {
-        $this->line('Mode forcé activé');
+    public function getSignature(): string
+    {
+        return 'process {directory} {files*} {--verbose} {--force} {--limit=10}';
     }
-    
-    // Flag avec valeur
-    $format = $this->flag('format') ?? 'json';
-    
-    // Vérifier l'existence d'un flag
-    if ($this->hasFlag('verbose')) {
-        $this->line('Mode verbeux');
+
+    protected function execute(): ExitCode
+    {
+        $directory = $this->argument('directory');
+        $files = $this->getVariadicArguments();
+        $verbose = $this->flag('verbose');
+        $force = $this->flag('force');
+        $limit = (int) $this->argument('limit');
+
+        $this->info("Processing files in $directory");
+
+        $count = 0;
+        foreach ($files as $file) {
+            if ($count >= $limit) {
+                $this->line("Limit reached ($limit)");
+                break;
+            }
+
+            if ($verbose) {
+                $this->line("Processing: $file");
+            }
+
+            if ($force) {
+                $this->line("Force mode: overwriting existing files");
+            }
+
+            $count++;
+        }
+
+        $this->info("Processed $count files");
+
+        return ExitCode::SUCCESS;
     }
-    
-    // Vérifier si un flag est actif
-    if ($this->isFlagActive('admin')) {
-        // Exécuter en mode admin
-    }
-    
-    return ExitCode::SUCCESS;
 }
-```
-
-### Méthodes utilitaires
-
-```php
-// Tous les arguments requis
-$required = $this->getRequiredArguments();
-
-// Tous les arguments par défaut
-$defaults = $this->getDefaultArguments();
-
-// Tous les flags
-$flags = $this->getFlags();
-
-// Les flags actifs
-$activeFlags = $this->getActiveFlags();
-
-// Vérifications
-$hasRequired = $this->hasRequireds();
-$hasDefaults = $this->hasDefaults();
-$hasFlags = $this->hasFlags();
 ```
 
 ---
 
-## Alias de commandes
+## Contexte partagé
 
-### Définir des alias
+Le contexte est un `MapCollection` mutable accessible par toutes les directives.
+
+### Définir et lire le contexte
 
 ```php
-public function getAliases(): StringTypedCollection
+// Dans une directive
+class SetContextDirective extends AbstractDirective
 {
-    return StringTypedCollection::from(['ls', '-l', '--list']);
+    public function getSignature(): string
+    {
+        return 'context:set {name}';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $name = $this->argument('name');
+
+        $this->contextSet('user_name', $name);
+        $this->contextSet('timestamp', time());
+        $this->contextSet('user_data', [
+            'name' => $name,
+            'role' => 'admin',
+        ]);
+
+        $this->info("Context set for: $name");
+
+        return ExitCode::SUCCESS;
+    }
+}
+
+// Dans une autre directive
+class GetContextDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'context:get';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $name = $this->contextGet('user_name', 'anonymous');
+        $role = $this->contextGet('user_data.role', 'guest');
+
+        $this->info("Current user: $name ($role)");
+
+        // Obtenir tout le contexte
+        $all = $this->contextAll();
+        $this->table(['Key', 'Value'], $all->toArray());
+
+        return ExitCode::SUCCESS;
+    }
 }
 ```
 
-### Utilisation
+### Méthodes du contexte
 
-```bash
-# Toutes ces commandes sont équivalentes
-./vendor/bin/directive list
-./vendor/bin/directive ls
-./vendor/bin/directive -l
-./vendor/bin/directive --list
+```php
+// Définir une valeur
+$this->contextSet('key', 'value');
+
+// Lire une valeur
+$value = $this->contextGet('key', 'default');
+
+// Vérifier l'existence
+if ($this->contextHas('key')) {
+    // ...
+}
+
+// Obtenir tout le contexte
+$all = $this->contextAll();
+
+// Fusionner des valeurs
+$this->contextMerge([
+    'user_id' => 42,
+    'user_role' => 'admin',
+]);
+
+// Supprimer une clé
+$this->contextRemove('temporary_data');
+
+// Effacer tout le contexte
+$this->contextClear();
+
+// Incrémenter / Décrémenter
+$this->contextIncrement('counter', 5);
+$this->contextDecrement('counter', 2);
+```
+
+### Exemple : Pipeline de traitement
+
+```php
+class ProcessDataDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'data:process {file}';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $file = $this->argument('file');
+
+        // Étape 1 : Chargement
+        $this->contextSet('file', $file);
+        $this->call('data:load');
+
+        // Étape 2 : Nettoyage
+        $this->call('data:clean');
+
+        // Étape 3 : Transformation
+        $this->call('data:transform');
+
+        // Récupérer les résultats
+        $stats = $this->contextGet('processing_stats');
+        $output = $this->contextGet('output_file');
+
+        $this->info("✅ Processing complete");
+        $this->info("📊 Stats: " . json_encode($stats));
+        $this->info("📄 Output: $output");
+
+        return ExitCode::SUCCESS;
+    }
+}
 ```
 
 ---
 
-## Appels internes
+## Appels internes (call)
 
-### Appeler une autre directive
+La méthode `call()` permet d'exécuter d'autres directives depuis une directive.
+
+### Syntaxe
 
 ```php
-protected function execute(): ExitCode
+// Appel simple
+$this->call('build --clean');
+
+// Avec argument
+$this->call('deploy:backup staging');
+
+// Avec options
+$this->call('deploy:migrate --force');
+
+// Appel dynamique
+$env = $this->argument('environment');
+$this->call("deploy:validate $env");
+```
+
+### Pipeline de déploiement
+
+```php
+<?php
+
+namespace App\Directives;
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+class DeployDirective extends AbstractDirective
 {
-    $this->info('Déploiement en cours...');
-    
-    // Appeler d'autres directives
-    $this->call('cache:clear');
-    $this->call('config:cache');
-    
-    if ($this->flag('migrate')) {
-        $this->call('db:migrate --force');
+    public function getSignature(): string
+    {
+        return 'deploy {environment} {--skip-tests} {--force}';
     }
-    
-    $this->info('Déploiement terminé');
-    return ExitCode::SUCCESS;
-}
-```
 
-### Détection des appels circulaires
+    protected function beforeExecute(): void
+    {
+        $env = $this->argument('environment');
+        $this->info("🚀 Starting deployment to $env");
+        $this->contextSet('deployment_start', microtime(true));
+    }
 
-Le système détecte automatiquement les appels circulaires :
+    protected function execute(): ExitCode
+    {
+        $env = $this->argument('environment');
+        $skipTests = $this->flag('skip-tests');
+        $force = $this->flag('force');
 
-```php
-// Directive A
-protected function execute(): ExitCode
-{
-    $this->call('b'); // Appelle B
-    return ExitCode::SUCCESS;
-}
+        // 1. Validation
+        $this->call("deploy:validate $env");
 
-// Directive B
-protected function execute(): ExitCode
-{
-    $this->call('a'); // Appelle A → Détection de cycle !
-    return ExitCode::SUCCESS;
-}
-```
+        // 2. Backup
+        $this->call("deploy:backup $env");
 
-**Résultat :** `Circular call detected: b` → `ExitCode::CONFLICT`
+        // 3. Build
+        if (!$skipTests) {
+            $this->call('deploy:build --with-tests');
+        } else {
+            $this->call('deploy:build');
+        }
 
----
+        // 4. Migration
+        $forceFlag = $force ? '--force' : '';
+        $this->call("deploy:migrate $env $forceFlag");
 
-## Sorties et interactions
+        // 5. Activation
+        $this->call("deploy:activate $env");
 
-### Méthodes de sortie
+        // 6. Post-deploiement
+        $this->call('deploy:post --notify');
 
-```php
-// Texte brut
-$this->line('Message simple');
+        // 7. Cleanup
+        $this->call('deploy:cleanup --keep-last=3');
 
-// Information (vert)
-$this->info('Succès !');
+        return ExitCode::SUCCESS;
+    }
 
-// Erreur (rouge)
-$this->error('Une erreur est survenue');
-
-// Avertissement (jaune)
-$this->warn('Attention');
-
-// Ligne vide
-$this->newLine();
-
-// Séparateur
-$this->separator('=', 50);
-
-// Tableau
-$this->table(
-    ['ID', 'Nom', 'Email'],
-    [
-        [1, 'John Doe', 'john@example.com'],
-        [2, 'Jane Doe', 'jane@example.com'],
-    ]
-);
-```
-
-### Interactions utilisateur
-
-```php
-// Question simple
-$name = $this->ask('Quel est votre nom ?');
-
-// Confirmation
-if ($this->confirm('Continuer ?')) {
-    $this->info('Continuité...');
-}
-
-// Choix (via askUserChoice)
-$this->line('1. Option A');
-$this->line('2. Option B');
-$this->line('3. Quitter');
-
-$choice = $this->askUserChoice('Sélectionnez une option', 3);
-```
-
-### Hooks d'exécution
-
-```php
-// Avant l'exécution
-protected function beforeExecute(): void
-{
-    $this->line('=== DÉBUT ===');
-}
-
-// Après l'exécution
-protected function afterExecute(ExitCode $exitCode): void
-{
-    if ($exitCode->isSuccess()) {
-        $this->info('✅ Succès');
-    } else {
-        $this->error('❌ Échec');
+    protected function afterExecute(ExitCode $exitCode): void
+    {
+        $duration = microtime(true) - $this->contextGet('deployment_start');
+        $this->info("✅ Deployment completed in " . round($duration, 2) . "s");
     }
 }
+```
+
+### Détection de circularité
+
+```php
+// Si une directive s'appelle elle-même ou crée un cycle
+class CircularDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'circular';
+    }
+
+    protected function execute(): ExitCode
+    {
+        // Appel récursif détecté
+        $this->call('circular'); // CONFLICT (circular)
+        return ExitCode::SUCCESS;
+    }
+}
+
+// Sortie :
+// Circular call detected: circular
 ```
 
 ---
 
 ## Découverte automatique
 
-Les directives sont découvertes automatiquement dans :
+Laravel Directive découvre automatiquement les directives via AST (Abstract Syntax Tree).
 
-| Source | Dossier | Priorité |
-|--------|---------|----------|
-| **Built-in** | (intégrées) | 1 (la plus haute) |
-| **Workspace** | `app/Directives/` | 2 |
-| **Workspace** | `src/Directives/` | 3 |
-| **Vendors** | `vendor/*/src/Directives/` | 4 |
-| **Custom** | Configuration | 5 |
+### Sources de découverte
 
-### Ajouter des sources personnalisées
+| Source | Description | Dossier par défaut |
+|--------|-------------|-------------------|
+| **Built-in** | Directives intégrées | `src/BuiltIn/` |
+| **Workspace** | Directives de l'application | `src/Directives/`, `app/Directives/` |
+| **Vendor** | Directives des packages | `vendor/*/src/Directives/` |
+| **Custom** | Sources configurées | Configurable |
 
-```php
-// Dans un ServiceProvider
-$discovery = $this->app->make(DirectiveDiscoveryService::class);
-$discovery->addSources([
-    base_path('modules/Admin/Directives'),
-    base_path('packages/Acme/Directives'),
-]);
-```
-
-### Configuration personnalisée
+### Configuration
 
 ```php
 // config/directive.php
 return [
     'directories' => [
-        'app/Directives',
-        'app/Console/Directives',
-        'modules/*/Directives',
+        'app/Commands',
+        'src/Directives',
+        'lib/Console',
     ],
     'custom_sources' => [
-        'app/CustomDirectives',
+        'packages/admin/src',
+        'modules/core/src/Directives',
     ],
-    'max_depth' => 3,
-    'debug' => env('DIRECTIVE_DEBUG', false),
+    'max_depth' => 4,
+    'reserved' => ['help', 'list', 'version'],
 ];
+```
+
+### Filtrer la découverte
+
+```php
+// Dans le Kernel
+$kernel = DirectiveKernel::init($container);
+
+// Ignorer une source
+$kernel->ignoreSource(DiscoverySource::VENDOR);
+
+// Ajouter une source
+$kernel->addSource(__DIR__ . '/src/Commands');
+
+// Filtrer par namespace
+$kernel->onlyNamespace('App\\Directives\\');
+$kernel->excludeNamespace('App\\Directives\\Internal\\');
+
+// Filtrer par préfixe
+$kernel->onlyPrefix('app:');
+$kernel->excludePrefix('admin:');
+
+// Ignorer une directive spécifique
+$kernel->ignoreDirective('deprecated:command');
+
+// Mode silencieux
+$kernel->silent(true);
+```
+
+### Exemple de découverte
+
+```php
+// Nouvelles directives découvertes automatiquement
+class NewDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'new:command';
+    }
+}
+
+// Immédiatement disponible, sans enregistrement
+$ ./vendor/bin/directive new:command
 ```
 
 ---
 
-## Tester vos directives
+## Journalisation JSONL
 
-### Installation des dépendances de test
+Chaque exécution est automatiquement journalisée au format JSONL (JSON Lines).
 
-```bash
-composer require --dev phpunit/phpunit orchestra/testbench
+### Structure du log
+
+```json
+{
+  "time": "2026-07-09T11:45:23+00:00",
+  "level": "info",
+  "type": "directive_execution",
+  "payload": {
+    "command": "deploy staging",
+    "directive_class": "App\\Directives\\DeployDirective",
+    "signature": "deploy {environment} {--skip-tests} {--force}",
+    "exit_code": 0,
+    "exit_code_label": "Success",
+    "success": true,
+    "duration_seconds": 12.345,
+    "memory_bytes": 2048,
+    "memory_human": "2.00 KB",
+    "peak_memory_bytes": 4096,
+    "peak_memory_human": "4.00 KB",
+    "calls_count": 7,
+    "context": {
+      "environment": "staging",
+      "deployment_start": 1700000000,
+      "backup_file": "backup_staging_2026-07-09.sql"
+    }
+  }
+}
 ```
 
-### Test unitaire simple
+### Configuration
+
+```php
+// config/directive.php
+return [
+    'log_base_path' => storage_path('logs/directive'),
+];
+
+// Ou en code
+$kernel->setLogBasePath('/var/log/directive');
+```
+
+### Analyse des logs
+
+```bash
+# Compter les exécutions par jour
+$ cat .directive/2026-07-09/11.jsonl | jq '.payload.command' | sort | uniq -c
+
+# Trouver les erreurs
+$ cat .directive/2026-07-09/11.jsonl | jq 'select(.level == "error")'
+
+# Statistiques de durée
+$ cat .directive/2026-07-09/11.jsonl | jq '.payload.duration_seconds' | awk '{sum+=$1; count++} END {print sum/count}'
+```
+
+### Résumé des logs
+
+```php
+$logger = $kernel->getLogger();
+$summary = $logger->getSummary();
+
+// [
+//     'total' => 42,
+//     'success' => 38,
+//     'failed' => 4,
+//     'success_rate' => 90.48,
+//     'avg_duration' => 0.015,
+//     'avg_memory' => 2048.5,
+//     'total_calls' => 156,
+//     'avg_calls' => 3.71,
+// ]
+```
+
+---
+
+## Suggestions de commandes
+
+Laravel Directive utilise un BK-tree (algorithme de distance de Levenshtein) pour suggérer des commandes similaires.
+
+### Exemple
+
+```bash
+$ ./vendor/bin/directive depoy
+Directive not found: depoy
+
+💡 Did you mean:
+  • deploy
+  • deploy:validate
+  • deploy:backup
+```
+
+### Distance de Levenshtein
+
+Les suggestions sont basées sur la distance d'édition (Levenshtein) avec un seuil de 2.
+
+```bash
+$ ./vendor/bin/directive lst
+Directive not found: lst
+
+💡 Did you mean:
+  • list
+  • help
+  • version
+  • build
+  • test
+```
+
+### Alias
+
+Les alias sont également pris en compte dans les suggestions.
+
+```php
+public function getAliases(): StringTypedCollection
+{
+    return StringTypedCollection::from(['hello', 'hi']);
+}
+
+// ./vendor/bin/directive hel
+💡 Did you mean:
+  • hello
+  • help
+```
+
+---
+
+## Directives intégrées
+
+### `help` - Aide
+
+```bash
+./vendor/bin/directive help
+./vendor/bin/directive help deploy
+./vendor/bin/directive -h
+./vendor/bin/directive --help
+```
+
+### `list` - Liste des directives
+
+```bash
+./vendor/bin/directive list
+./vendor/bin/directive ls
+./vendor/bin/directive -l
+./vendor/bin/directive --list
+```
+
+### `version` - Version
+
+```bash
+./vendor/bin/directive version
+./vendor/bin/directive -v
+./vendor/bin/directive --version
+```
+
+### `clean-logs` - Nettoyage des logs
+
+```bash
+# Supprimer les logs de plus de 30 jours
+./vendor/bin/directive clean-logs
+
+# Supprimer les logs de plus de 7 jours
+./vendor/bin/directive clean-logs 7
+
+# Simulation (dry-run)
+./vendor/bin/directive clean-logs 14 --dry-run
+
+# Mode verbeux
+./vendor/bin/directive clean-logs 30 --verbose
+```
+
+---
+
+## Mode autonome (sans Laravel)
+
+Laravel Directive peut fonctionner sans Laravel, avec son propre conteneur.
+
+### Script d'entrée
+
+```php
+#!/usr/bin/env php
+<?php
+
+// bin/app
+require_once __DIR__ . '/vendor/autoload.php';
+
+use AndyDefer\Directive\Container\DirectiveContainer;
+use AndyDefer\Directive\DirectiveKernel;
+
+$container = DirectiveContainer::create(__DIR__);
+$kernel = DirectiveKernel::init($container);
+
+// Ajouter des sources
+$kernel->addSource(__DIR__ . '/src/Directives');
+$kernel->addSource(__DIR__ . '/app/Commands');
+
+// Exécuter
+exit($kernel->run($argv)->value);
+```
+
+### Utilisation
+
+```bash
+chmod +x bin/app
+./bin/app deploy staging
+./bin/app list
+```
+
+### Intégration avec Laravel
+
+```php
+// Dans Laravel (via ServiceProvider)
+class DirectiveServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(DirectiveKernel::class, function ($app) {
+            return DirectiveKernel::init(
+                new LaravelContainerAdapter($app)
+            );
+        });
+    }
+}
+```
+
+---
+
+## Tests des directives
+
+`DirectiveTestingService` permet de tester les directives en isolation.
+
+### Configuration des tests
 
 ```php
 <?php
 
-namespace Tests\Unit\Directives;
+namespace Tests\Directives;
 
-use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\Services\DirectiveTestingService;
+use AndyDefer\Directive\Enums\ExitCode;
 use PHPUnit\Framework\TestCase;
-use App\Directives\GreetDirective;
 
-final class GreetDirectiveTest extends TestCase
+class GreetDirectiveTest extends TestCase
 {
-    private DirectiveTestingService $service;
+    private DirectiveTestingService $testing;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveTestingService();
+
+        $container = DirectiveContainer::create(__DIR__);
+        $this->testing = new DirectiveTestingService(
+            $container,
+            [__DIR__ . '/../app/Directives']
+        );
     }
 
     protected function tearDown(): void
     {
-        $this->service->destroy();
+        $this->testing->destroy();
         parent::tearDown();
     }
 
-    public function test_greet_directive(): void
+    public function test_greet_directive_returns_success(): void
     {
-        $response = $this->service->run('greet John');
-        
+        $response = $this->testing->run('greet John');
+
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Hello, John!', $response->output);
+        $this->assertStringContainsString('Hello, John', $response->output);
+    }
+
+    public function test_greet_directive_with_formal_option(): void
+    {
+        $response = $this->testing->run('greet John --formal');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Good day, John', $response->output);
     }
 
     public function test_greet_directive_with_alias(): void
     {
-        $response = $this->service->run('hello Jane');
-        
+        $response = $this->testing->run('hello John');
+
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Hello, Jane!', $response->output);
+        $this->assertStringContainsString('Hello, John', $response->output);
+    }
+
+    public function test_greet_directive_handles_missing_argument(): void
+    {
+        $response = $this->testing->run('greet');
+
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exit_code);
+        $this->assertStringContainsString('Missing required parameter', $response->output);
     }
 }
 ```
 
-### Test d'intégration avec Laravel
+### Tests avec contexte
 
 ```php
-<?php
-
-namespace Tests\Integration\Directives;
-
-use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\Directive\Services\DirectiveTestingService;
-use Tests\IntegrationTestCase;
-use App\Models\User;
-use App\Directives\UserCreateDirective;
-
-final class UserCreateDirectiveTest extends IntegrationTestCase
+public function test_context_persistence(): void
 {
-    private DirectiveTestingService $service;
+    $kernel = $this->testing->getKernel();
 
-    protected function setUp(): void
+    // Définir le contexte
+    $kernel->runSignature('context:set John');
+
+    // Vérifier le contexte
+    $context = $kernel->getContext();
+    $this->assertSame('John', $context->get('user_name'));
+
+    // Lire le contexte depuis une directive
+    $response = $this->testing->run('context:get');
+    $this->assertStringContainsString('John', $response->output);
+}
+```
+
+### Tests de pipeline
+
+```php
+public function test_deploy_pipeline_completes_successfully(): void
+{
+    $response = $this->testing->run('deploy staging --skip-tests');
+
+    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+    $this->assertStringContainsString('Deployment completed', $response->output);
+}
+```
+
+---
+
+## Cas d'usage concrets
+
+### 1. Pipeline de déploiement
+
+```php
+class DeployDirective extends AbstractDirective
+{
+    public function getSignature(): string
     {
-        parent::setUp();
-        $this->service = new DirectiveTestingService($this->app);
+        return 'deploy {environment} {--skip-tests} {--force}';
     }
 
-    protected function tearDown(): void
+    protected function execute(): ExitCode
     {
-        $this->service->destroy();
-        parent::tearDown();
-    }
+        $env = $this->argument('environment');
 
-    public function test_create_user(): void
-    {
-        $response = $this->service->run('user:create John john@example.com --role=admin');
-        
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertDatabaseHas('users', ['email' => 'john@example.com']);
+        $this->call("deploy:validate $env");
+        $this->call("deploy:backup $env");
+        $this->call('deploy:build' . ($this->flag('skip-tests') ? ' --skip-tests' : ''));
+        $this->call("deploy:migrate $env" . ($this->flag('force') ? ' --force' : ''));
+        $this->call("deploy:activate $env");
+        $this->call('deploy:post --notify');
+
+        return ExitCode::SUCCESS;
     }
 }
 ```
 
-### Environnement isolé
-
-`DirectiveTestingService` crée automatiquement un environnement isolé :
+### 2. Application CLI multi-commandes
 
 ```php
-$service = new DirectiveTestingService();
+class AppDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'app {action} {--id=} {--format=}';
+    }
 
-// Les fichiers sont créés dans /tmp/directive_test_xxx/
-// Le répertoire est automatiquement supprimé par destroy()
+    protected function execute(): ExitCode
+    {
+        $action = $this->argument('action');
+
+        match ($action) {
+            'deploy' => $this->call('deploy'),
+            'reports' => $this->call('reports --format=' . $this->argument('format')),
+            'monitor' => $this->call('monitor'),
+            'status' => $this->call('status --id=' . $this->argument('id')),
+            default => $this->error("Unknown action: $action"),
+        };
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### 3. Data processing pipeline
+
+```php
+class ProcessDataDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'data:process {file} {--format=csv} {--dry-run}';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $file = $this->argument('file');
+
+        $this->call("data:load $file");
+        $this->call('data:clean');
+        $this->call('data:transform --aggressive');
+        $this->call('data:validate');
+
+        if (!$this->flag('dry-run')) {
+            $format = $this->argument('format');
+            $this->call("data:export --format=$format");
+        }
+
+        $stats = $this->contextGet('processing_stats');
+        $this->info("📊 Processed {$stats['total']} records");
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### 4. Pipeline CI/CD
+
+```php
+class PipelineDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'ci:pipeline {--branch=main} {--parallel}';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $branch = $this->argument('branch');
+
+        $this->call('ci:lint');
+
+        if ($this->flag('parallel')) {
+            $this->call('ci:test --parallel');
+        } else {
+            $this->call('ci:test');
+        }
+
+        $this->call('ci:coverage');
+        $this->call('ci:build');
+
+        if ($branch === 'main') {
+            $this->call('deploy --skip-tests');
+        }
+
+        $coverage = $this->contextGet('coverage', 0);
+        $this->info("📊 Coverage: {$coverage}%");
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+### 5. Application de monitoring
+
+```php
+class MonitorDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'monitor {--interval=5} {--services=*}';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $interval = (int) $this->argument('interval');
+        $services = $this->getVariadicArguments();
+
+        while (true) {
+            foreach ($services as $service) {
+                $this->call("monitor:check $service");
+            }
+
+            $checkHistory = $this->contextGet('check_history', []);
+            $checkHistory[] = [
+                'timestamp' => date('Y-m-d H:i:s'),
+                'services' => $services,
+                'status' => $this->contextGet('service_status', []),
+            ];
+
+            if (count($checkHistory) > 100) {
+                array_shift($checkHistory);
+            }
+
+            $this->contextSet('check_history', $checkHistory);
+            $this->call('monitor:alert');
+
+            sleep($interval);
+        }
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+---
+
+## Bonnes pratiques
+
+### ✅ Injection de services
+
+```php
+// BON
+class UserController
+{
+    public function __construct(
+        private readonly UniqueTaskServiceInterface $taskService
+    ) {}
+}
+
+// ÉVITER (facade)
+use AndyDefer\Task\Facades\Task;
+Task::register(...);
+```
+
+### ✅ Validation des arguments
+
+```php
+protected function beforeExecute(): void
+{
+    $name = $this->argument('name');
+
+    if (empty($name) || strlen($name) < 3) {
+        $this->error('Name must be at least 3 characters');
+        throw new \RuntimeException('Invalid name');
+    }
+}
+```
+
+### ✅ Utiliser le contexte pour les données partagées
+
+```php
+// ✅ BON
+$this->contextSet('user_id', $user->id);
+$userId = $this->contextGet('user_id');
+
+// ÉVITER
+global $userId;
+$userId = 42;
+```
+
+### ✅ Gérer les erreurs
+
+```php
+protected function execute(): ExitCode
+{
+    try {
+        // Logique métier
+        return ExitCode::SUCCESS;
+    } catch (ConnectionException $e) {
+        $this->error('Database connection failed');
+        return ExitCode::RUNTIME_ERROR;
+    }
+}
+```
+
+### ✅ Hooks before/after
+
+```php
+protected function beforeExecute(): void
+{
+    // Initialisation
+    $this->contextSet('start_time', microtime(true));
+    $this->info('Starting...');
+}
+
+protected function afterExecute(ExitCode $exitCode): void
+{
+    // Nettoyage
+    $duration = microtime(true) - $this->contextGet('start_time');
+    $this->info("Completed in {$duration}s");
+}
+```
+
+### ✅ Journalisation structurée
+
+```php
+// Le logger capture automatiquement les métriques
+$kernel->setLogBasePath('/var/log/directive');
+
+// Visualisation
+$summary = $kernel->getLogger()->getSummary();
+```
+
+### ✅ Tests
+
+```php
+// Utiliser DirectiveTestingService pour les tests
+$testing = new DirectiveTestingService($container);
+$response = $testing->run('deploy staging');
+$this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 ```
 
 ---
 
 ## Référence des commandes
 
-### Commandes intégrées
+| Commande | Description |
+|----------|-------------|
+| `./vendor/bin/directive help` | Affiche l'aide |
+| `./vendor/bin/directive list` | Liste toutes les directives |
+| `./vendor/bin/directive version` | Affiche la version |
+| `./vendor/bin/directive clean-logs [days]` | Nettoie les logs |
+| `./vendor/bin/directive {directive} [args]` | Exécute une directive |
 
-| Commande | Description | Aliases |
-|----------|-------------|---------|
-| `help` | Affiche l'aide | `-h`, `--help` |
-| `list` | Liste les directives disponibles | `ls`, `-l`, `--list` |
-| `version` | Affiche la version | `-v`, `--version` |
+### Options globales
 
-### Exécution
-
-```bash
-# Aide
-./vendor/bin/directive --help
-./vendor/bin/directive -h
-
-# Liste des directives
-./vendor/bin/directive --list
-./vendor/bin/directive -l
-
-# Version
-./vendor/bin/directive --version
-./vendor/bin/directive -v
-
-# Directive personnalisée
-./vendor/bin/directive ma:commande --option valeur
-
-# Avec arguments variadiques
-./vendor/bin/directive copy file1.txt file2.txt file3.txt --recursive
-```
+| Option | Description |
+|--------|-------------|
+| `-h`, `--help` | Affiche l'aide |
+| `-l`, `--list` | Liste les directives |
+| `-v`, `--version` | Affiche la version |
 
 ### Codes de sortie
 
-| Code | Constante | Signification |
-|------|-----------|---------------|
-| 0 | `SUCCESS` | Succès |
-| 1 | `FAILURE` | Erreur générale |
-| 2 | `INVALID_ARGUMENT` | Argument invalide |
-| 3 | `NOT_FOUND` | Directive non trouvée |
-| 4 | `PERMISSION_DENIED` | Permission refusée |
-| 5 | `RUNTIME_ERROR` | Erreur d'exécution |
-| 6 | `INVALID_SIGNATURE` | Signature invalide |
-| 7 | `CONFLICT` | Conflit (appel circulaire) |
-| 8 | `DEPENDENCY_ERROR` | Erreur de dépendance |
-
----
-
-## Bonnes pratiques
-
-### ✅ Organisation des directives
-
-```
-app/
-├── Directives/
-│   ├── User/
-│   │   ├── CreateDirective.php
-│   │   ├── ListDirective.php
-│   │   └── DeleteDirective.php
-│   ├── System/
-│   │   ├── CacheClearDirective.php
-│   │   └── ConfigCacheDirective.php
-│   └── Maintenance/
-│       └── BackupDirective.php
-```
-
-### ✅ Nommage des signatures
-
-```php
-// ✅ Bon
-'user:create {name} {email}'
-'cache:clear --force'
-'backup {--compression=gzip}'
-
-// ❌ À éviter
-'user_create {name}'          // Utilisez ':' pour les catégories
-'cache clear'                 // Pas d'espaces
-'backup {--compression gzip}' // Syntaxe incorrecte
-```
-
-### ✅ Injection de dépendances
-
-```php
-final class UserCreateDirective extends AbstractDirective
-{
-    public function __construct(
-        private readonly UserRepository $users,
-        private readonly Mailer $mailer,
-    ) {
-        parent::__construct(...func_get_args());
-    }
-    
-    protected function execute(): ExitCode
-    {
-        // Utiliser les dépendances injectées
-        $user = $this->users->create($this->argument('name'));
-        $this->mailer->sendWelcome($user);
-        
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### ✅ Gestion des erreurs
-
-```php
-protected function execute(): ExitCode
-{
-    try {
-        $this->performAction();
-        $this->info('Succès');
-        return ExitCode::SUCCESS;
-    } catch (ValidationException $e) {
-        $this->error($e->getMessage());
-        return ExitCode::INVALID_ARGUMENT;
-    } catch (Exception $e) {
-        $this->error('Erreur inattendue: ' . $e->getMessage());
-        return ExitCode::RUNTIME_ERROR;
-    }
-}
-```
-
-### ✅ Tests
-
-```php
-public function test_directive_success(): void
-{
-    $response = $this->service->run('my:command --option value');
-    
-    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-    $this->assertStringContainsString('Expected output', $response->output);
-}
-
-public function test_directive_failure(): void
-{
-    $response = $this->service->run('my:command invalid');
-    
-    $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
-    $this->assertStringContainsString('Error message', $response->output);
-}
-```
+| Code | Label | Description |
+|------|-------|-------------|
+| `0` | SUCCESS | Exécution réussie |
+| `1` | FAILURE | Échec général |
+| `2` | INVALID_ARGUMENT | Argument invalide |
+| `3` | NOT_FOUND | Directive non trouvée |
+| `4` | PERMISSION_DENIED | Permission refusée |
+| `5` | RUNTIME_ERROR | Erreur d'exécution |
+| `6` | INVALID_SIGNATURE | Signature invalide |
+| `7` | CONFLICT | Conflit (circularité) |
+| `8` | DEPENDENCY_ERROR | Erreur de dépendance |
 
 ---
 
