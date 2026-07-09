@@ -13,6 +13,7 @@ use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
+use AndyDefer\DomainStructures\Utils\MapCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
 use Throwable;
@@ -52,6 +53,8 @@ abstract class AbstractDirective implements DirectiveInterface
 
     private DirectiveKernel $kernel;
 
+    private MapCollection $context;
+
     /**
      * @param  DirectiveKernel  $kernel  The directive kernel
      * @param  string  $query  The query string to execute
@@ -61,6 +64,7 @@ abstract class AbstractDirective implements DirectiveInterface
         protected readonly string $query = '',
     ) {
         $this->kernel = $kernel;
+        $this->context = $kernel->getContext();
         $this->console = $this->kernel->getContainer()->make(Console::class);
         $this->parser = $this->kernel->getContainer()->make(DirectiveParserService::class);
         $this->parsed = $this->parser->parse($this->getSignature(), $query);
@@ -330,6 +334,98 @@ abstract class AbstractDirective implements DirectiveInterface
      * @param  ExitCode  $exitCode  The exit code
      */
     protected function afterExecute(ExitCode $exitCode): void {}
+
+    // ==================== CONTEXT METHODS ====================
+
+    /**
+     * Get a value from the shared context.
+     */
+    final protected function contextGet(string $key, mixed $default = null): mixed
+    {
+        return $this->context->get($key) ?? $default;
+    }
+
+    /**
+     * Set a value in the shared context.
+     *
+     * Note: MapCollection is immutable, so we replace the kernel's context.
+     */
+    final protected function contextSet(string $key, mixed $value): void
+    {
+        $this->context = $this->context->put($key, $value);
+        $this->kernel->setContext($this->context);
+    }
+
+    /**
+     * Check if a key exists in the shared context.
+     */
+    final protected function contextHas(string $key): bool
+    {
+        return $this->context->hasKey($key);
+    }
+
+    /**
+     * Get the entire context.
+     */
+    final protected function contextAll(): MapCollection
+    {
+        return $this->context;
+    }
+
+    /**
+     * Merge multiple values into the context.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    final protected function contextMerge(array $data): void
+    {
+        $this->context = $this->context->mergeArray($data);
+        $this->kernel->setContext($this->context);
+    }
+
+    /**
+     * Remove a key from the context.
+     */
+    final protected function contextRemove(string $key): void
+    {
+        $this->context = $this->context->remove($key);
+        $this->kernel->setContext($this->context);
+    }
+
+    /**
+     * Clear the entire context.
+     */
+    final protected function contextClear(): void
+    {
+        $this->context = new MapCollection;
+        $this->kernel->setContext($this->context);
+    }
+
+    /**
+     * Increment a numeric value in the context.
+     */
+    final protected function contextIncrement(string $key, int $step = 1): int
+    {
+        $current = (int) $this->contextGet($key, 0);
+        $new = $current + $step;
+        $this->contextSet($key, $new);
+
+        return $new;
+    }
+
+    /**
+     * Decrement a numeric value in the context.
+     */
+    final protected function contextDecrement(string $key, int $step = 1): int
+    {
+        $current = (int) $this->contextGet($key, 0);
+        $new = $current - $step;
+        $this->contextSet($key, $new);
+
+        return $new;
+    }
+
+    // ==================== EXECUTION METHODS ====================
 
     /**
      * {@inheritdoc}

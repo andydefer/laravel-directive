@@ -8,7 +8,10 @@ use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
 use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
+use AndyDefer\Directive\Records\ExecutionStatsRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Services\ExecutionStatsLogger;
+use AndyDefer\DomainStructures\Utils\MapCollection;
 use ReflectionClass;
 
 /**
@@ -19,6 +22,18 @@ use ReflectionClass;
  */
 final class DirectiveKernel extends DirectiveDiscoveryService
 {
+    private MapCollection $context;
+
+    private ExecutionStatsLogger $logger;
+
+    private ?ExecutionStatsRecord $lastStats = null;
+
+    private ?string $lastError = null;
+
+    private float $startTime;
+
+    private int $startMemory;
+
     /**
      * @param  ContainerInterface  $container  The container instance
      */
@@ -26,6 +41,9 @@ final class DirectiveKernel extends DirectiveDiscoveryService
         private readonly ContainerInterface $container,
     ) {
         parent::__construct($container);
+        $this->context = new MapCollection;
+
+        $this->logger = $this->container->make(ExecutionStatsLogger::class);
     }
 
     /**
@@ -42,6 +60,60 @@ final class DirectiveKernel extends DirectiveDiscoveryService
     public function getContainer(): ContainerInterface
     {
         return $this->container;
+    }
+
+    /**
+     * Get the shared context.
+     */
+    public function getContext(): MapCollection
+    {
+        return $this->context;
+    }
+
+    /**
+     * Set the context (for testing or isolation).
+     */
+    public function setContext(MapCollection $context): self
+    {
+        $this->context = $context;
+
+        return $this;
+    }
+
+    /**
+     * Reset the context to empty.
+     */
+    public function resetContext(): self
+    {
+        $this->context = new MapCollection;
+
+        return $this;
+    }
+
+    /**
+     * Get the last execution statistics.
+     */
+    public function getLastStats(): ?ExecutionStatsRecord
+    {
+        return $this->lastStats;
+    }
+
+    /**
+     * Get the execution stats logger.
+     */
+    public function getLogger(): ExecutionStatsLogger
+    {
+        return $this->logger;
+    }
+
+    /**
+     * Set a custom log base path.
+     */
+    public function setLogBasePath(string $path): self
+    {
+        $this->logger->setBasePath($path);
+
+        return $this;
     }
 
     /**
@@ -142,7 +214,44 @@ final class DirectiveKernel extends DirectiveDiscoveryService
             return ExitCode::NOT_FOUND;
         }
 
-        return $this->instantiateAndRun($directive, $query);
+        // Start tracking
+        $this->startTime = microtime(true);
+        $this->startMemory = memory_get_usage();
+
+        $exitCode = $this->instantiateAndRun($directive, $query);
+
+        // Stop tracking and log
+        $this->logExecution($directive, $commandName, $exitCode);
+
+        return $exitCode;
+    }
+
+    /**
+     * Log execution statistics to JSONL.
+     */
+    private function logExecution(DirectiveMetadataRecord $directive, string $commandName, ExitCode $exitCode): void
+    {
+        $duration = microtime(true) - $this->startTime;
+        $memoryUsed = memory_get_usage() - $this->startMemory;
+        $peakMemory = memory_get_peak_usage();
+
+        $record = new ExecutionStatsRecord(
+            command: $commandName,
+            directiveClass: $directive->class,
+            signature: $directive->signature,
+            exitCode: $exitCode,
+            duration: $duration,
+            memoryUsage: $memoryUsed,
+            peakMemoryUsage: $peakMemory,
+            callsCount: 0,
+            error: $this->lastError,
+        );
+
+        $this->lastStats = $record;
+        $this->lastError = null;
+
+        // Log to JSONL
+        $this->logger->log($record, $this->context);
     }
 
     /**

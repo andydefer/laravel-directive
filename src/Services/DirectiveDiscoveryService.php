@@ -192,7 +192,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Get the config from the container.
      */
-    private function getConfig(): DirectiveConfigInterface
+    protected function getConfig(): DirectiveConfigInterface
     {
         return $this->container->make(DirectiveConfigInterface::class);
     }

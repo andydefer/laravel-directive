@@ -6,8 +6,10 @@ namespace AndyDefer\Directive\Tests\Integration;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\DirectiveKernel;
+use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
+use AndyDefer\DomainStructures\Utils\MapCollection;
 
 final class AbstractDirectiveTest extends IntegrationTestCase
 {
@@ -16,9 +18,12 @@ final class AbstractDirectiveTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->kernel = DirectiveKernel::init($this->laravelContainer);
 
+        // Capturer les sorties console
+
+        $this->kernel = DirectiveKernel::init($this->laravelContainer);
         $this->kernel->addSource(getcwd().'/tests/Fixtures/Directives');
+        $this->kernel->resetContext();
     }
 
     private function createDirective(string $query): AbstractDirective
@@ -165,7 +170,7 @@ final class AbstractDirectiveTest extends IntegrationTestCase
         $this->expectOutputRegex('/-{80}/');
     }
 
-    public function test_get_application_returns_application(): void
+    public function test_get_container_returns_container(): void
     {
         $directive = $this->createDirective('test-concrete John john@example.com');
 
@@ -186,5 +191,200 @@ final class AbstractDirectiveTest extends IntegrationTestCase
         $directive = $this->createDirective('test-concrete John john@example.com');
 
         $this->assertEmpty($directive->getCalls());
+    }
+
+    // ==================== CONTEXT TESTS ====================
+
+    public function test_context_set_and_get(): void
+    {
+        // Execute directive that sets context
+        $result = $this->kernel->run(['directive', 'context:set', 'John']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        // Check context was set
+        $context = $this->kernel->getContext();
+        $this->assertTrue($context->hasKey('user_name'));
+        $this->assertSame('John', $context->get('user_name'));
+        $this->assertSame(1, $context->get('counter'));
+
+        // Execute directive that gets context
+        $result = $this->kernel->run(['directive', 'context:get']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+    }
+
+    public function test_context_increment_and_decrement(): void
+    {
+        $this->kernel->resetContext();
+
+        // Set initial counter
+        $this->kernel->run(['directive', 'context:set', 'John']);
+
+        // Increment by 1
+        $result = $this->kernel->run(['directive', 'context:increment']);
+        $this->assertSame(ExitCode::SUCCESS, $result);
+        $this->assertSame(2, $this->kernel->getContext()->get('counter'));
+
+        // Increment by 5
+        $result = $this->kernel->run(['directive', 'context:increment', '5']);
+        $this->assertSame(ExitCode::SUCCESS, $result);
+        $this->assertSame(7, $this->kernel->getContext()->get('counter'));
+
+        // Decrement by 2
+        $result = $this->kernel->run(['directive', 'context:decrement', '2']);
+        $this->assertSame(ExitCode::SUCCESS, $result);
+        $this->assertSame(5, $this->kernel->getContext()->get('counter'));
+    }
+
+    public function test_context_merge(): void
+    {
+        $this->kernel->resetContext();
+
+        // Set initial value
+        $this->kernel->run(['directive', 'context:set', 'John']);
+
+        // Merge additional data
+        $result = $this->kernel->run(['directive', 'context:merge']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        $context = $this->kernel->getContext();
+        $this->assertSame('John', $context->get('user_name')); // Existing
+        $this->assertSame('John', $context->get('name'));     // Merged
+        $this->assertSame(30, $context->get('age'));          // Merged
+        $this->assertSame('Paris', $context->get('city'));    // Merged
+    }
+
+    public function test_context_remove(): void
+    {
+        $this->kernel->resetContext();
+
+        // Set values via context:set
+        $this->kernel->run(['directive', 'context:set', 'John']);
+
+        // Add age and city via context:merge
+        $this->kernel->run(['directive', 'context:merge']);
+
+        // Vérifier que age existe avant la suppression
+        $context = $this->kernel->getContext();
+        $this->assertTrue($context->hasKey('user_name'));
+        $this->assertTrue($context->hasKey('age'));
+        $this->assertTrue($context->hasKey('city'));
+
+        // Remove age
+        $result = $this->kernel->run(['directive', 'context:remove', 'age']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        $context = $this->kernel->getContext();
+        $this->assertTrue($context->hasKey('user_name'));
+        $this->assertFalse($context->hasKey('age'));
+        $this->assertTrue($context->hasKey('city'));
+    }
+
+    public function test_context_clear(): void
+    {
+        $this->kernel->resetContext();
+
+        // Set values
+        $this->kernel->run(['directive', 'context:set', 'John']);
+        $this->assertFalse($this->kernel->getContext()->isEmpty());
+
+        // Clear
+        $result = $this->kernel->run(['directive', 'context:clear']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+        $this->assertTrue($this->kernel->getContext()->isEmpty());
+    }
+
+    public function test_context_has(): void
+    {
+        $this->kernel->resetContext();
+
+        // Context should not have user_name yet
+        $this->assertFalse($this->kernel->getContext()->hasKey('user_name'));
+
+        // Set value
+        $this->kernel->run(['directive', 'context:set', 'John']);
+
+        // Now it should exist
+        $this->assertTrue($this->kernel->getContext()->hasKey('user_name'));
+        $this->assertSame('John', $this->kernel->getContext()->get('user_name'));
+    }
+
+    public function test_context_pipeline(): void
+    {
+        $this->kernel->resetContext();
+
+        $result = $this->kernel->run(['directive', 'context:pipeline', 'Alice']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        $context = $this->kernel->getContext();
+        $this->assertSame('Alice', $context->get('name'));
+        $this->assertTrue($context->get('validated'));
+        $this->assertTrue($context->get('enriched'));
+        $this->assertNotNull($context->get('timestamp'));
+        $this->assertEquals(3, $context->get('counter'));
+    }
+
+    public function test_context_orchestration(): void
+    {
+        $this->kernel->resetContext();
+
+        $result = $this->kernel->run(['directive', 'context:orchestrate']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        $context = $this->kernel->getContext();
+        $this->assertSame('John', $context->get('name'));
+        $this->assertSame('JOHN', $context->get('processed_user'));
+        $this->assertTrue($context->get('step1_done'));
+        $this->assertTrue($context->get('step2_done'));
+        $this->assertEquals(2, $context->get('steps_completed'));
+    }
+
+    public function test_context_all(): void
+    {
+        $this->kernel->resetContext();
+
+        // Set multiple values
+        $this->kernel->run(['directive', 'context:set', 'John']);
+        $this->kernel->run(['directive', 'context:increment']);
+
+        // Get all context
+        $result = $this->kernel->run(['directive', 'context:all']);
+
+        $this->assertSame(ExitCode::SUCCESS, $result);
+
+        $context = $this->kernel->getContext();
+        $this->assertInstanceOf(MapCollection::class, $context);
+        $this->assertTrue($context->hasKey('user_name'));
+        $this->assertTrue($context->hasKey('counter'));
+        $this->assertSame('John', $context->get('user_name'));
+        $this->assertEquals(2, $context->get('counter'));
+    }
+
+    public function test_context_snapshot_and_restore(): void
+    {
+        $this->kernel->resetContext();
+
+        // Set initial values
+        $this->kernel->run(['directive', 'context:set', 'Alice']);
+        $this->assertSame('Alice', $this->kernel->getContext()->get('user_name'));
+
+        // Take snapshot
+        $snapshot = $this->kernel->getContext();
+
+        // Modify context
+        $this->kernel->run(['directive', 'context:set', 'Bob']);
+        $this->assertSame('Bob', $this->kernel->getContext()->get('user_name'));
+
+        // Restore snapshot
+        $this->kernel->setContext($snapshot);
+
+        $this->assertSame('Alice', $this->kernel->getContext()->get('user_name'));
+        $this->assertEquals(1, $this->kernel->getContext()->get('counter'));
     }
 }

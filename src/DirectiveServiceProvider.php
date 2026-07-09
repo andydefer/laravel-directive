@@ -19,6 +19,10 @@ use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\Directive\Services\DependencyResolverService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveParserService;
+use AndyDefer\Directive\Services\ExecutionStatsLogger;
+use AndyDefer\LaravelJsonl\Contexts\JsonlContext;
+use AndyDefer\LaravelJsonl\JsonlService;
+use AndyDefer\LaravelJsonl\Strategies\TemporalPathStrategy;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use AndyDefer\SignatureParser\Contracts\ParserRegistryInterface;
@@ -111,6 +115,26 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
             return DirectiveDiscoveryService::init(
                 container: $app->make(ContainerInterface::class)
+            );
+        });
+
+        $this->app->singleton(ExecutionStatsLogger::class, function ($app) {
+            $config = $app->make(DirectiveConfigInterface::class);
+            $fileSystem = $app->make(FileSystemInterface::class);
+            $console = $app->make(Console::class);
+
+            $strategy = new TemporalPathStrategy($config->basePath());
+            $jsonlService = new JsonlService(
+                $strategy,
+                $fileSystem,
+                new JsonlContext
+            );
+
+            return new ExecutionStatsLogger(
+                $config,
+                $fileSystem,
+                $jsonlService,
+                $console
             );
         });
     }

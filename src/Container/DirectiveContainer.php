@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Container;
+namespace AndyDefer\Directive;
 
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Configs\DirectiveConfig;
+use AndyDefer\Directive\Container\LaravelContainerAdapter;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
+use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
-use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Discovers\BuiltInDirectiveDiscovery;
 use AndyDefer\Directive\Discovers\VendorDirectiveDiscovery;
 use AndyDefer\Directive\Discovers\WorkspaceDirectiveDiscovery;
@@ -18,148 +19,148 @@ use AndyDefer\Directive\Services\ComposerReaderService;
 use AndyDefer\Directive\Services\DependencyResolverService;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveParserService;
+use AndyDefer\Directive\Services\ExecutionStatsLogger;
+use AndyDefer\LaravelJsonl\Contexts\JsonlContext;
+use AndyDefer\LaravelJsonl\JsonlService;
+use AndyDefer\LaravelJsonl\Strategies\TemporalPathStrategy;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use AndyDefer\SignatureParser\Contracts\ParserRegistryInterface;
 use AndyDefer\SignatureParser\Contracts\SignatureParserInterface;
 use AndyDefer\SignatureParser\SignatureParser;
+use Illuminate\Contracts\Foundation\Application as LaravelApplication;
+use Illuminate\Support\ServiceProvider;
 use PhpParser\Parser;
 use PhpParser\ParserFactory;
 
-/**
- * Complete Directive container with all services pre-registered.
- *
- * Use this for standalone applications or when you want a
- * ready-to-use container without Laravel.
- */
-final class DirectiveContainer extends Container
+final class DirectiveServiceProvider extends ServiceProvider
 {
-    public function __construct(string $basePath = __DIR__)
+    public function register(): void
     {
-        parent::__construct($basePath);
-
         $this->registerConfigs();
         $this->registerCoreServices();
         $this->registerParserComponents();
         $this->registerScannersAndDiscovers();
         $this->registerDiscoveryServices();
-        $this->registerKernel();
+        $this->registerContainerAdapter();
     }
 
-    /**
-     * Register core services.
-     */
-    private function registerCoreServices(): void
+    public function boot(): void
     {
-        $this->singleton(Console::class, new Console);
-        $this->singleton(FileSystemInterface::class, new FileSystemService);
-        $this->singleton(Parser::class, function () {
-            return (new ParserFactory)->createForNewestSupportedVersion();
-        });
+        $this->publishes([
+            __DIR__.'/config/directive.php' => config_path('directive.php'),
+        ], 'directive-config');
     }
 
-    /**
-     * Register configuration services.
-     */
     private function registerConfigs(): void
     {
-        $this->singleton(DirectiveConfigInterface::class, DirectiveConfig::class);
+        $this->app->singleton(DirectiveConfigInterface::class, DirectiveConfig::class);
     }
 
-    /**
-     * Register parser components.
-     */
     private function registerParserComponents(): void
     {
-        $this->singleton(SignatureParser::class, new SignatureParser);
-        $this->singleton(DirectiveParserInterface::class, function (Container $c) {
-            return new DirectiveParserService($c->make(SignatureParser::class));
-        });
-        $this->singleton(ParserRegistryInterface::class, DirectiveParserService::class);
-        $this->singleton(SignatureParserInterface::class, DirectiveParserService::class);
+        $this->app->singleton(SignatureParser::class);
+        $this->app->singleton(DirectiveParserInterface::class, DirectiveParserService::class);
+        $this->app->singleton(ParserRegistryInterface::class, DirectiveParserService::class);
+        $this->app->singleton(SignatureParserInterface::class, DirectiveParserService::class);
     }
 
-    /**
-     * Register scanners and discovers.
-     */
     private function registerScannersAndDiscovers(): void
     {
-        $this->singleton(DirectiveScannerInterface::class, function (Container $c) {
-            return new DirectiveClassScanner(
-                $c->make(FileSystemInterface::class),
-                $c->make(Parser::class)
-            );
-        });
-
-        $this->singleton(DirectiveClassScanner::class, function (Container $c) {
-            return new DirectiveClassScanner(
-                $c->make(FileSystemInterface::class),
-                $c->make(Parser::class)
-            );
-        });
-
-        $this->bind(ComposerReaderService::class, function (Container $c) {
+        $this->app->bind(ComposerReaderService::class, function ($app) {
             return new ComposerReaderService(
-                $c->make(DirectiveConfigInterface::class),
-                $c->make(FileSystemInterface::class)
+                config: $app->make(DirectiveConfigInterface::class),
+                fileSystem: $app->make(FileSystemInterface::class),
             );
         });
 
-        $this->bind(DependencyResolverService::class, function (Container $c) {
+        $this->app->bind(DependencyResolverService::class, function ($app) {
             return new DependencyResolverService(
-                $c->make(ComposerReaderService::class),
-                $c->make(FileSystemInterface::class)
+                composerReader: $app->make(ComposerReaderService::class),
+                fileSystem: $app->make(FileSystemInterface::class),
             );
         });
 
-        $this->singleton(BuiltInDirectiveDiscovery::class, new BuiltInDirectiveDiscovery);
+        $this->app->singleton(Parser::class, function () {
+            return (new ParserFactory)->createForNewestSupportedVersion();
+        });
 
-        $this->singleton(WorkspaceDirectiveDiscovery::class, function (Container $c) {
+        $this->app->singleton(DirectiveScannerInterface::class, function ($app) {
+            $fileSystem = $app->make(FileSystemInterface::class);
+            $parser = $app->make(Parser::class);
+
+            return new DirectiveClassScanner($fileSystem, $parser);
+        });
+
+        $this->app->singleton(BuiltInDirectiveDiscovery::class);
+        $this->app->singleton(WorkspaceDirectiveDiscovery::class, function ($app) {
             return new WorkspaceDirectiveDiscovery(
-                $c->make(FileSystemInterface::class),
-                $c->make(DirectiveScannerInterface::class)
+                $app->make(FileSystemInterface::class),
+                $app->make(DirectiveScannerInterface::class),
             );
         });
 
-        $this->singleton(VendorDirectiveDiscovery::class, function (Container $c) {
+        $this->app->singleton(VendorDirectiveDiscovery::class, function ($app) {
             return new VendorDirectiveDiscovery(
-                $c->make(ComposerReaderService::class),
-                $c->make(DependencyResolverService::class),
-                $c->make(FileSystemInterface::class),
-                $c->make(DirectiveScannerInterface::class)
+                $app->make(ComposerReaderService::class),
+                $app->make(DependencyResolverService::class),
+                $app->make(FileSystemInterface::class),
+                $app->make(DirectiveScannerInterface::class),
             );
         });
     }
 
-    /**
-     * Register discovery services.
-     */
     private function registerDiscoveryServices(): void
     {
-        $this->singleton(DirectiveDiscoveryService::class, function (Container $c) {
+        $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
             return DirectiveDiscoveryService::init(
-                container: $c
+                container: $app->make(ContainerInterface::class)
+            );
+        });
+
+        $this->app->singleton(ExecutionStatsLogger::class, function ($app) {
+            $config = $app->make(DirectiveConfigInterface::class);
+            $fileSystem = $app->make(FileSystemInterface::class);
+            $console = $app->make(Console::class);
+
+            $strategy = new TemporalPathStrategy($config->basePath());
+            $jsonlService = new JsonlService(
+                $strategy,
+                $fileSystem,
+                new JsonlContext
+            );
+
+            return new ExecutionStatsLogger(
+                $config,
+                $fileSystem,
+                $jsonlService,
+                $console
             );
         });
     }
 
-    /**
-     * Register the kernel.
-     */
-    private function registerKernel(): void
+    private function registerCoreServices(): void
     {
-        $this->singleton(DirectiveKernel::class, function (Container $c) {
+        $this->app->bind(FileSystemInterface::class, fn () => new FileSystemService);
+
+        $this->app->singleton(Console::class, fn () => new Console);
+        $this->app->singleton(DirectiveKernel::class, function ($app) {
             return DirectiveKernel::init(
-                container: $c
+                container: $app->make(ContainerInterface::class)
             );
         });
     }
 
     /**
-     * Create a new DirectiveContainer.
+     * Register the Laravel container adapter.
      */
-    public static function create(string $basePath = __DIR__): self
+    private function registerContainerAdapter(): void
     {
-        return new self($basePath);
+        $this->app->singleton(ContainerInterface::class, function ($app) {
+            /** @var LaravelApplication $laravel */
+            $laravel = $app;
+
+            return new LaravelContainerAdapter($laravel);
+        });
     }
 }

@@ -171,6 +171,22 @@ final class DirectiveConfig implements DirectiveConfigInterface
     }
 
     /**
+     * Gets the log base path for execution statistics.
+     *
+     * @return string The log base path
+     */
+    public function getLogBasePath(): string
+    {
+        $path = $this->config->get(self::CONFIG_KEY.'.log_base_path');
+
+        if (is_string($path) && $path !== '') {
+            return $path;
+        }
+
+        return $this->basePath().'/.directive';
+    }
+
+    /**
      * Ensures a value is an array of strings.
      *
      * @param  mixed  $value  The value to validate

@@ -76,4 +76,11 @@ interface DirectiveConfigInterface
      * @return array<int, string> The list of custom source paths
      */
     public function getCustomSources(): array;
+
+    /**
+     * Gets the log base path for execution statistics.
+     *
+     * @return string The log base path
+     */
+    public function getLogBasePath(): string;
 }
