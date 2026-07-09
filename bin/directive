@@ -3,17 +3,21 @@
 
 declare(strict_types=1);
 
+use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Bootstrap\CliBootstrap;
 use AndyDefer\Directive\Exceptions\BootstrapException;
 
+$console = new Console();
+
 try {
     $bootstrap = CliBootstrap::create();
-    exit($bootstrap->run($argv));
+    $exitCode = $bootstrap->run($argv);
+    exit($exitCode);
 } catch (BootstrapException $e) {
-    fwrite(STDERR, "ERROR: {$e->getMessage()}\n");
+    $console->error('Bootstrap Error: ' . $e->getMessage());
     exit(2);
 } catch (\Throwable $e) {
-    fwrite(STDERR, "FATAL: {$e->getMessage()}\n");
-    fwrite(STDERR, $e->getTraceAsString() . "\n");
+    $console->error('Fatal Error: ' . $e->getMessage());
+    $console->line($e->getTraceAsString());
     exit(255);
 }

@@ -73,7 +73,7 @@ final class MyDirective extends AbstractDirective
 
 ## API / Méthodes publiques
 
-### `getLaravel(): Application`
+### `getApplication(): Application`
 
 Récupère l'instance de l'application Laravel.
 
@@ -87,7 +87,7 @@ Récupère l'instance de l'application Laravel.
 ```php
 <?php
 
-$app = $this->getLaravel();
+$app = $this->getApplication();
 $config = $app->make(Config::class);
 ```
 
@@ -821,7 +821,7 @@ Les hooks `beforeExecute()` et `afterExecute()` sont optionnels mais permettent 
 ### Méthodes finales
 
 Les méthodes suivantes sont `final` et ne peuvent pas être surchargées :
-- `getLaravel()`, `getConsole()`, `getParsed()`, `getStructure()`
+- `getApplication()`, `getConsole()`, `getParsed()`, `getStructure()`
 - Toutes les méthodes d'accès aux arguments et flags
 - `run()`, `call()`, `getCalls()`
 - Les méthodes de sortie (`line()`, `info()`, `error()`, etc.)

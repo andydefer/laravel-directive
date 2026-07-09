@@ -4,19 +4,47 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests;
 
+use AndyDefer\Directive\Container\LaravelContainerAdapter;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use Carbon\Carbon;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class IntegrationTestCase extends Orchestra
 {
+    protected LaravelContainerAdapter $laravelContainer;
+
     protected function setUp(): void
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::create(2024, 1, 1, 12, 0, 0));
 
+        $this->laravelContainer = new LaravelContainerAdapter($this->app);
+        $this->laravelContainer->version();
         $this->runDatabaseMigrations();
 
+    }
+
+    /**
+     * Assert that a string does not start with a given prefix.
+     *
+     * @param  string  $prefix  The prefix that should not be at the start
+     * @param  string  $string  The string to check
+     * @param  string  $message  Optional custom message
+     */
+    public static function assertStringNotStartsWith(string $prefix, string $string, string $message = ''): void
+    {
+        if ($message === '') {
+            $message = sprintf(
+                'String "%s" should not start with "%s"',
+                $string,
+                $prefix
+            );
+        }
+
+        parent::assertFalse(
+            str_starts_with($string, $prefix),
+            $message
+        );
     }
 
     protected function tearDown(): void

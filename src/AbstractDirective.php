@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\ConsoleWriter\Console\Console;
+use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveCallRecord;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
-use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
-use Illuminate\Foundation\Application;
 use Throwable;
 
 /**
@@ -43,25 +42,27 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     private static array $executionStack = [];
 
-    protected Application $app;
+    private Console $console;
 
-    protected Console $console;
+    private ParsedSignatureRecord $parsed;
 
-    protected ParsedSignatureRecord $parsed;
-
-    protected SignatureStructureVO $structure;
+    private SignatureStructureVO $structure;
 
     private DirectiveParserService $parser;
 
+    private DirectiveKernel $kernel;
+
     /**
-     * @param  Application  $app  The Laravel application instance
+     * @param  DirectiveKernel  $kernel  The directive kernel
      * @param  string  $query  The query string to execute
      */
-    public function __construct(Application $app, string $query)
-    {
-        $this->app = $app;
-        $this->console = $app->make(Console::class);
-        $this->parser = $app->make(DirectiveParserService::class);
+    public function __construct(
+        DirectiveKernel $kernel,
+        protected readonly string $query = '',
+    ) {
+        $this->kernel = $kernel;
+        $this->console = $this->kernel->getContainer()->make(Console::class);
+        $this->parser = $this->kernel->getContainer()->make(DirectiveParserService::class);
         $this->parsed = $this->parser->parse($this->getSignature(), $query);
         $this->structure = new SignatureStructureVO($this->getSignature());
     }
@@ -69,9 +70,9 @@ abstract class AbstractDirective implements DirectiveInterface
     /**
      * {@inheritdoc}
      */
-    final public function getLaravel(): Application
+    final public function getContainer(): ?ContainerInterface
     {
-        return $this->app;
+        return $this->kernel->getContainer();
     }
 
     /**
@@ -431,8 +432,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     private function findDirective(string $commandName): ?DirectiveMetadataRecord
     {
-        $discovery = $this->app->make(DirectiveDiscoveryService::class);
-        $directives = $discovery->discover();
+        $directives = $this->kernel->discover();
 
         foreach ($directives as $directive) {
             if ($this->matchesCommandName($directive, $commandName)) {
@@ -507,7 +507,7 @@ abstract class AbstractDirective implements DirectiveInterface
         self::$executionStack[] = $stackKey;
 
         try {
-            $instance = $this->app->make($directive->class, ['query' => $query]);
+            $instance = new $directive->class($this->kernel, $query);
             $exitCode = $instance->run();
 
             array_pop(self::$executionStack);

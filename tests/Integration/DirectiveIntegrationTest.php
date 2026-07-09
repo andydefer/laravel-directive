@@ -28,13 +28,9 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
         TestAfterFailingDirective::resetLog();
         TestNestedBeforeAfterDirective::resetLog();
 
-        $this->discovery = $this->app->make(DirectiveDiscoveryService::class);
-        $this->discovery->addSource(getcwd().'/tests/Fixtures/Directives');
+        $this->kernel = DirectiveKernel::init($this->laravelContainer);
 
-        $this->kernel = new DirectiveKernel(
-            $this->app,
-            $this->discovery,
-        );
+        $this->kernel->addSource(getcwd().'/tests/Fixtures/Directives');
 
         ob_start();
     }

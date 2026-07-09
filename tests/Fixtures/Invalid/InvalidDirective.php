@@ -20,7 +20,7 @@ final class InvalidDirective implements DirectiveInterface
         return 'Invalid directive';
     }
 
-    public function getLaravel(): Application
+    public function getContainer(): Application
     {
         throw new \RuntimeException('Invalid directive should not have Laravel');
     }

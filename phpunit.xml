@@ -6,11 +6,7 @@
     colors="true"
 >
     <testsuites>
-        <!-- Tests Unitaires -->
-        <testsuite name="Unit">
-            <directory suffix="Test.php">./tests/Unit</directory>
-        </testsuite>
-
+       
          <!-- Tests d'Intégration -->
         <testsuite name="Integration">
             <directory suffix="Test.php">./tests/Integration</directory>

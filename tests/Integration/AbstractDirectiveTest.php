@@ -5,14 +5,25 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Integration;
 
 use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 
 final class AbstractDirectiveTest extends IntegrationTestCase
 {
+    private DirectiveKernel $kernel;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->kernel = DirectiveKernel::init($this->laravelContainer);
+
+        $this->kernel->addSource(getcwd().'/tests/Fixtures/Directives');
+    }
+
     private function createDirective(string $query): AbstractDirective
     {
-        return new TestConcreteDirective($this->app, $query);
+        return new TestConcreteDirective($this->kernel, $query);
     }
 
     public function test_argument_returns_value(): void
@@ -154,11 +165,11 @@ final class AbstractDirectiveTest extends IntegrationTestCase
         $this->expectOutputRegex('/-{80}/');
     }
 
-    public function test_get_laravel_returns_application(): void
+    public function test_get_application_returns_application(): void
     {
         $directive = $this->createDirective('test-concrete John john@example.com');
 
-        $this->assertSame($this->app, $directive->getLaravel());
+        $this->assertSame($this->laravelContainer, $directive->getContainer());
     }
 
     public function test_run_returns_success_exit_code(): void

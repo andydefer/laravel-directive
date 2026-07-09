@@ -84,7 +84,7 @@ final class ListDirective extends AbstractDirective
      */
     private function discoverDirectives(): DirectiveMetadataCollection
     {
-        $discovery = $this->getLaravel()->make(DirectiveDiscoveryService::class);
+        $discovery = $this->getContainer()->make(DirectiveDiscoveryService::class);
 
         return $discovery->discover()->unique();
     }

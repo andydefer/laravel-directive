@@ -78,7 +78,7 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
     {
         if (! in_array($path, $this->customPaths, true)) {
             $this->customPaths[] = $path;
-            $this->cache = null; // Clear cache when adding paths
+            $this->cache = null;
         }
 
         return $this;
@@ -108,13 +108,14 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
         $directives = [];
         $projectRoot = $this->getProjectRoot();
 
+        // 1. Scanner les chemins par défaut et configurés
         $paths = $this->getScanPaths();
 
         foreach ($paths as $path) {
             $fullPath = $projectRoot.'/'.$path;
 
             if (! $this->fileSystem->isDirectory($fullPath)) {
-                continue;
+                continue; // ✅ Pas d'erreur, on continue
             }
 
             $directives = array_merge(
@@ -122,6 +123,10 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
                 $this->scanner->scan($fullPath, $this->maxDepth)
             );
         }
+
+        // 2. Scanner les custom_sources du projet
+        $customDirectives = $this->scanWorkspaceCustomSources($projectRoot);
+        $directives = array_merge($directives, $customDirectives);
 
         return $directives;
     }
@@ -143,6 +148,38 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
         }
 
         return array_merge($paths, $this->customPaths);
+    }
+
+    /**
+     * Scans custom sources from the workspace configuration.
+     *
+     * @param  string  $projectRoot  The project root directory
+     * @return array<int, string> List of fully qualified class names
+     */
+    private function scanWorkspaceCustomSources(string $projectRoot): array
+    {
+        $directives = [];
+
+        if ($this->config === null) {
+            return $directives;
+        }
+
+        $customSources = $this->config->getCustomSources();
+
+        foreach ($customSources as $source) {
+            $fullPath = $projectRoot.'/'.ltrim($source, '/');
+
+            if (! $this->fileSystem->isDirectory($fullPath)) {
+                continue; // ✅ Pas d'erreur, on continue
+            }
+
+            $directives = array_merge(
+                $directives,
+                $this->scanner->scan($fullPath, $this->maxDepth)
+            );
+        }
+
+        return $directives;
     }
 
     /**

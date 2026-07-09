@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Bootstrap;
 
-use AndyDefer\Directive\Cli\CliRunner;
+use AndyDefer\Directive\Container\LaravelContainerAdapter;
+use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Exceptions\BootstrapException;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Foundation\Application;
@@ -37,9 +38,10 @@ final readonly class CliBootstrap
      */
     public function run(array $arguments): int
     {
-        $runner = $this->app->make(CliRunner::class);
+        $adapter = new LaravelContainerAdapter($this->app);
+        $kernel = DirectiveKernel::init($adapter);
 
-        return $runner->run($arguments);
+        return $kernel->run($arguments)->value;
     }
 
     /**

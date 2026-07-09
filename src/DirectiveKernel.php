@@ -5,27 +5,44 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
+use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
-use Illuminate\Foundation\Application;
+use ReflectionClass;
 
 /**
  * The core kernel that orchestrates directive execution.
  *
- * Responsible for discovering directives, resolving the appropriate
- * directive for a given command, and executing it.
+ * Extends DirectiveDiscoveryService to inherit all discovery capabilities
+ * and adds execution methods.
  */
-final class DirectiveKernel
+final class DirectiveKernel extends DirectiveDiscoveryService
 {
     /**
-     * @param  Application  $app  The Laravel application instance
-     * @param  DirectiveDiscoveryService  $discovery  The directive discovery service
+     * @param  ContainerInterface  $container  The container instance
      */
-    public function __construct(
-        private readonly Application $app,
-        private readonly DirectiveDiscoveryService $discovery,
-    ) {}
+    private function __construct(
+        private readonly ContainerInterface $container,
+    ) {
+        parent::__construct($container);
+    }
+
+    /**
+     * Initialize the kernel with a container.
+     */
+    public static function init(ContainerInterface $container): self
+    {
+        return new self($container);
+    }
+
+    /**
+     * Get the container instance.
+     */
+    public function getContainer(): ContainerInterface
+    {
+        return $this->container;
+    }
 
     /**
      * Executes the kernel with the given command-line arguments.
@@ -45,10 +62,45 @@ final class DirectiveKernel
     }
 
     /**
-     * Checks if no command was provided.
+     * Execute a directive by its fully qualified class name.
      *
-     * @param  array<int, string>  $argv  The command-line arguments
-     * @return bool True if no command was provided, false otherwise
+     * @param  class-string<AbstractDirective>  $fqcn  The fully qualified class name
+     * @param  array<int, string>  $argv  The arguments (without the directive name)
+     * @return ExitCode The exit code
+     */
+    public function runDirective(string $fqcn, array $argv = []): ExitCode
+    {
+        // Register the directive (subject to validation)
+        $this->addDirective($fqcn);
+
+        // Extract the command name from the signature
+        $reflection = new ReflectionClass($fqcn);
+        $instance = $reflection->newInstanceWithoutConstructor();
+        $signature = $instance->getSignature();
+        $parts = explode(' ', $signature);
+        $commandName = $parts[0];
+
+        // Build the full argv array
+        $fullArgv = array_merge(['directive', $commandName], $argv);
+
+        return $this->run($fullArgv);
+    }
+
+    /**
+     * Execute a directive by its full query string.
+     *
+     * @param  string  $query  The full query string (e.g., "greet John")
+     * @return ExitCode The exit code
+     */
+    public function runSignature(string $query): ExitCode
+    {
+        $argv = array_merge(['directive'], explode(' ', $query));
+
+        return $this->run($argv);
+    }
+
+    /**
+     * Checks if no command was provided.
      */
     private function isMissingCommand(array $argv): bool
     {
@@ -57,8 +109,6 @@ final class DirectiveKernel
 
     /**
      * Executes the default help directive.
-     *
-     * @return ExitCode The exit code
      */
     private function executeHelpDirective(): ExitCode
     {
@@ -68,7 +118,6 @@ final class DirectiveKernel
     /**
      * Parses the command-line arguments into command name and query.
      *
-     * @param  array<int, string>  $argv  The command-line arguments
      * @return array{0: string, 1: string} The command name and query
      */
     private function parseArguments(array $argv): array
@@ -82,14 +131,10 @@ final class DirectiveKernel
 
     /**
      * Executes a directive by name with the given query.
-     *
-     * @param  string  $commandName  The command name to execute
-     * @param  string  $query  The query string
-     * @return ExitCode The exit code
      */
     private function executeDirective(string $commandName, string $query): ExitCode
     {
-        $directives = $this->discovery->discover();
+        $directives = $this->discover();
 
         $directive = $this->findDirective($directives, $commandName);
 
@@ -102,10 +147,6 @@ final class DirectiveKernel
 
     /**
      * Finds a directive by command name or alias.
-     *
-     * @param  DirectiveMetadataCollection  $directives  The collection of directives
-     * @param  string  $commandName  The command name to find
-     * @return DirectiveMetadataRecord|null The directive metadata, or null if not found
      */
     private function findDirective(DirectiveMetadataCollection $directives, string $commandName): ?DirectiveMetadataRecord
     {
@@ -124,10 +165,6 @@ final class DirectiveKernel
 
     /**
      * Checks if a directive matches a command name.
-     *
-     * @param  DirectiveMetadataRecord  $directive  The directive metadata
-     * @param  string  $commandName  The command name to check
-     * @return bool True if matches, false otherwise
      */
     private function matchesCommandName(DirectiveMetadataRecord $directive, string $commandName): bool
     {
@@ -139,12 +176,8 @@ final class DirectiveKernel
 
     /**
      * Checks if a directive matches a command alias.
-     *
-     * @param  object  $directive  The directive metadata
-     * @param  string  $commandName  The command name to check
-     * @return bool True if matches, false otherwise
      */
-    private function matchesAlias(object $directive, string $commandName): bool
+    private function matchesAlias(DirectiveMetadataRecord $directive, string $commandName): bool
     {
         foreach ($directive->aliases as $alias) {
             if ($alias === $commandName) {
@@ -157,16 +190,10 @@ final class DirectiveKernel
 
     /**
      * Instantiates and runs a directive.
-     *
-     * @param  DirectiveMetadataRecord  $directive  The directive metadata
-     * @param  string  $query  The query string
-     * @return ExitCode The exit code
      */
     private function instantiateAndRun(DirectiveMetadataRecord $directive, string $query): ExitCode
     {
-        $instance = $this->app->make($directive->class, [
-            'query' => $query,
-        ]);
+        $instance = new $directive->class($this, $query);
 
         return $instance->run();
     }

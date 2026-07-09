@@ -10,7 +10,6 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
-use Illuminate\Foundation\Application;
 
 /**
  * Contract for all directive implementations.
@@ -21,11 +20,11 @@ use Illuminate\Foundation\Application;
 interface DirectiveInterface
 {
     /**
-     * Gets the Laravel application instance.
+     * Gets the container instance.
      *
-     * @return Application The application instance
+     * @return ContainerInterface|null The container instance
      */
-    public function getLaravel(): Application;
+    public function getContainer(): ?ContainerInterface;
 
     /**
      * Gets the console output handler.

@@ -22,15 +22,10 @@ final class DirectiveKernelTest extends IntegrationTestCase
         // Capturer les sorties console
         ob_start();
 
-        $this->discovery = $this->app->make(DirectiveDiscoveryService::class);
+        $this->kernel = DirectiveKernel::init($this->laravelContainer);
 
         // Ajouter le chemin des fixtures
-        $this->discovery->addSource(getcwd().'/tests/Fixtures/Directives');
-
-        $this->kernel = new DirectiveKernel(
-            $this->app,
-            $this->discovery,
-        );
+        $this->kernel->addSource(getcwd().'/tests/Fixtures/Directives');
     }
 
     protected function tearDown(): void

@@ -6,7 +6,9 @@ namespace AndyDefer\Directive;
 
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Configs\DirectiveConfig;
+use AndyDefer\Directive\Container\LaravelContainerAdapter;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
+use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
 use AndyDefer\Directive\Discovers\BuiltInDirectiveDiscovery;
@@ -22,6 +24,7 @@ use AndyDefer\PhpServices\Services\FileSystemService;
 use AndyDefer\SignatureParser\Contracts\ParserRegistryInterface;
 use AndyDefer\SignatureParser\Contracts\SignatureParserInterface;
 use AndyDefer\SignatureParser\SignatureParser;
+use Illuminate\Contracts\Foundation\Application as LaravelApplication;
 use Illuminate\Support\ServiceProvider;
 use PhpParser\Parser;
 use PhpParser\ParserFactory;
@@ -31,10 +34,11 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerConfigs();
+        $this->registerCoreServices();
         $this->registerParserComponents();
         $this->registerScannersAndDiscovers();
         $this->registerDiscoveryServices();
-        $this->registerCoreServices();
+        $this->registerContainerAdapter();
     }
 
     public function boot(): void
@@ -47,7 +51,6 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerConfigs(): void
     {
         $this->app->singleton(DirectiveConfigInterface::class, DirectiveConfig::class);
-
     }
 
     private function registerParserComponents(): void
@@ -77,6 +80,7 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->singleton(Parser::class, function () {
             return (new ParserFactory)->createForNewestSupportedVersion();
         });
+
         $this->app->singleton(DirectiveScannerInterface::class, function ($app) {
             $fileSystem = $app->make(FileSystemInterface::class);
             $parser = $app->make(Parser::class);
@@ -105,15 +109,8 @@ final class DirectiveServiceProvider extends ServiceProvider
     private function registerDiscoveryServices(): void
     {
         $this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
-            return new DirectiveDiscoveryService(
-                builtInSource: $app->make(BuiltInDirectiveDiscovery::class),
-                workspaceSource: $app->make(WorkspaceDirectiveDiscovery::class),
-                vendorSource: $app->make(VendorDirectiveDiscovery::class),
-                parser: $app->make(DirectiveParserInterface::class),
-                scanner: $app->make(DirectiveClassScanner::class),
-                fileSystem: $app->make(FileSystemInterface::class),
-                config: $app->make(DirectiveConfigInterface::class),
-                maxDepth: $app->make(DirectiveConfigInterface::class)->getMaxDepth(),
+            return DirectiveDiscoveryService::init(
+                container: $app->make(ContainerInterface::class)
             );
         });
     }
@@ -123,10 +120,23 @@ final class DirectiveServiceProvider extends ServiceProvider
         $this->app->bind(FileSystemInterface::class, fn () => new FileSystemService);
 
         $this->app->singleton(Console::class, fn () => new Console);
+        $this->app->singleton(DirectiveKernel::class, function ($app) {
+            return DirectiveKernel::init(
+                container: $app->make(ContainerInterface::class)
+            );
+        });
+    }
 
-        $this->app->singleton(DirectiveKernel::class, fn ($app) => new DirectiveKernel(
-            $app,
-            $app->make(DirectiveDiscoveryService::class),
-        ));
+    /**
+     * Register the Laravel container adapter.
+     */
+    private function registerContainerAdapter(): void
+    {
+        $this->app->singleton(ContainerInterface::class, function ($app) {
+            /** @var LaravelApplication $laravel */
+            $laravel = $app;
+
+            return new LaravelContainerAdapter($laravel);
+        });
     }
 }
