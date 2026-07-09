@@ -2,522 +2,546 @@
 
 ## Description
 
-Service responsable de l'analyse syntaxique des signatures de directives et de la transformation des arguments en paramètres typés. Il convertit une ligne de commande brute en une structure utilisable par les directives.
+Service de parsing et de validation des signatures de directives. Il agit comme un wrapper autour du `SignatureParser`, fournissant une interface unifiée pour toutes les opérations de parsing : validation des signatures, parsing des requêtes, et gestion des parsers personnalisés.
 
-## Hiérarchie
+## Hiérarchie / Implémentations
 
 ```
-DirectiveParserService
-    ├── ParameterParserContext (stratégies de parsing)
-    ├── ParameterOrderValidatorService (validation d'ordre)
-    ├── ParameterExtractorService (extraction des paramètres)
-    ├── OptionParserService (parsing des options)
-    ├── ArgumentApplierService (application des arguments)
-    └── ArgumentSplitterService (séparation des arguments variadiques)
+ParserRegistryInterface
+    └── SignatureParserInterface
+        └── DirectiveParserInterface
+            └── DirectiveParserService (final)
 ```
 
 ## Rôle principal
 
-Ce service analyse une signature de directive et une liste d'arguments bruts pour produire une structure typée contenant les arguments, options et arguments variadiques.
-
----
+Centraliser toutes les opérations de parsing de signatures dans une interface unique. Le service permet de :
+1. Parser les requêtes utilisateur contre une signature
+2. Valider la syntaxe des signatures
+3. Gérer un registre de parsers personnalisés
+4. Extraire les éléments d'une signature ou d'une requête
 
 ## Installation
 
+### Dépendances
+
 ```bash
-composer require andydefer/laravel-directive
+# Le service dépend du package SignatureParser
+composer require andydefer/signature-parser
 ```
 
----
+### Configuration dans le conteneur
+
+```php
+// Dans le service provider
+$this->app->singleton(DirectiveParserInterface::class, function ($app) {
+    return new DirectiveParserService(
+        new SignatureParser()
+    );
+});
+```
 
 ## API / Méthodes publiques
 
-### `parse(string $signature, StringTypedCollection $argv): ParsedDirectiveRecord`
+### `parse(string $signature, string $query): ParsedSignatureRecord`
 
-Analyse une signature et ses arguments.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$signature` | `string` | Signature de la directive |
-| `$argv` | `StringTypedCollection` | Collection des arguments bruts |
-
-**Retourne :** `ParsedDirectiveRecord` - Structure contenant arguments, options et arguments variadiques
-
-**Exceptions :** `InvalidArgumentException` - Signature invalide ou nombre d'arguments incorrect
-
-**Exemple :**
-```php
-$service = new DirectiveParserService();
-$argv = new StringTypedCollection();
-$argv->add('John', '--role=admin');
-
-$result = $service->parse('user:create {name} {--role=}', $argv);
-$parsed = $service->toResult($result);
-
-echo $parsed->arguments->get('name');   // 'John'
-echo $parsed->options->get('role');     // 'admin'
-```
-
-### `extractHelp(string $signature): ParsedParameterCollection`
-
-Extrait les informations d'aide d'une signature.
+Parse une requête utilisateur contre une définition de signature.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$signature` | `string` | Signature de la directive |
+| `$signature` | `string` | La définition de la signature (ex: `"user:create {name} {--admin}"`) |
+| `$query` | `string` | La requête à parser (ex: `"John --admin"`) |
 
-**Retourne :** `ParsedParameterCollection` - Collection des paramètres avec métadonnées (nom, type, requis, défaut)
+**Retourne :** `ParsedSignatureRecord` - Les données parsées (arguments, flags, etc.)
 
-**Exemple :**
-```php
-$help = $service->extractHelp('user:create {name} {email} {--role=admin}');
-foreach ($help as $param) {
-    echo $param->name;           // 'name', 'email', 'role'
-    echo $param->type->value;    // 'argument', 'argument', 'option'
-    echo $param->required;       // true, true, false
-    echo $param->default;        // null, null, 'admin'
-}
-```
-
-### `toResult(ParsedDirectiveRecord $parsed): ParsedResultRecord`
-
-Convertit un enregistrement parsé en résultat utilisable avec collections typées.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$parsed` | `ParsedDirectiveRecord` | Enregistrement parsé |
-
-**Retourne :** `ParsedResultRecord` - Résultat avec `ParsedArgumentCollection`, `ParsedOptionCollection` et `StringTypedCollection` pour variadiques
+**Exceptions :** Aucune
 
 **Exemple :**
 ```php
-$parsed = $service->parse($signature, $argv);
-$result = $service->toResult($parsed);
+<?php
 
-// Accès aux arguments
-$name = $result->arguments->get('name');
-
-// Accès aux options
-$role = $result->options->get('role');
-$isVerbose = $result->options->isTrue('verbose');
-
-// Accès aux arguments variadiques
-foreach ($result->variadic_arguments as $file) {
-    echo $file;
-}
-```
-
-### `toJson(ParsedDirectiveRecord $parsed): string`
-
-Convertit un enregistrement parsé en JSON.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$parsed` | `ParsedDirectiveRecord` | Enregistrement parsé |
-
-**Retourne :** `string` - Représentation JSON
-
-**Exemple :**
-```php
-$json = $service->toJson($parsed);
-// {"arguments":{"name":"John"},"options":{"role":"admin"},"variadic_arguments":[]}
+$result = $parser->parse('user:create {name} {--admin}', 'John --admin');
+// ParsedSignatureRecord avec les données
 ```
 
 ---
 
-## Syntaxe des signatures
+### `validate(string $signature, string $query): ValidationResultRecord`
 
-### Ordre obligatoire des paramètres
+Valide une requête contre une signature.
 
-> **⚠️ L'ordre des paramètres dans la signature est STRICT et obligatoire.**
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | La définition de la signature |
+| `$query` | `string` | La requête à valider |
 
-```
-{arguments requis} → {arguments avec valeur par défaut} → {arguments optionnels} → {arguments variadiques} → {options}
-```
+**Retourne :** `ValidationResultRecord` - Résultat de la validation
 
-| Ordre | Type | Syntaxe | Exemple | Consomme une valeur ? |
-|-------|------|---------|---------|----------------------|
-| 1 | Argument requis | `{name}` | `{first_name} {last_name}` | ✅ Oui (obligatoire) |
-| 2 | Argument avec valeur par défaut | `{role=user}` | `{role=admin} {status=active}` | ✅ Oui (surcharge possible) |
-| 3 | Argument optionnel | `{count?}` | `{limit?} {offset?}` | ❌ Non (reste null) |
-| 4 | Argument variadique | `{files*}` | `{files*} {tags*}` | ✅ Oui (tous les restants) |
-| 5 | Option flag | `{--force}` | `{--verbose} {--quiet}` | ❌ Non |
-| 6 | Option avec valeur | `{--role=}` | `{--format=} {--output=}` | ❌ Non |
-| 7 | Option avec valeur par défaut | `{--format=json}` | `{--level=info}` | ❌ Non |
+**Exceptions :** Aucune
 
-### Règles importantes
-
-| Règle | Explication |
-|-------|-------------|
-| **Ordre strict** | Les types doivent apparaître dans l'ordre défini ci-dessus |
-| **Un seul variadic** | Un seul argument variadique `{files*}` est autorisé par signature |
-| **Variadic après optionnels** | L'argument variadique doit être placé APRÈS les arguments optionnels |
-| **Options toujours à la fin** | Toutes les options doivent être placées APRÈS tous les arguments |
-
----
-
-## Types de paramètres détaillés
-
-### 1. Argument requis `{name}`
-
-Arguments positionnels obligatoires.
-
+**Exemple :**
 ```php
-// Signature
-public function getSignature(): string
-{
-    return 'user:create {first_name} {last_name}';
-}
+<?php
 
-// Commande
-./directive user:create John Doe
-
-// Résultat
-$first_name = 'John';  // obligatoire
-$last_name = 'Doe';    // obligatoire
-```
-
-### 2. Argument avec valeur par défaut `{role=user}`
-
-Arguments positionnels qui peuvent être surchargés.
-
-```php
-// Signature
-public function getSignature(): string
-{
-    return 'user:list {limit=10}';
-}
-
-// Commande sans valeur
-./directive user:list
-// $limit = 10 (valeur par défaut)
-
-// Commande avec valeur
-./directive user:list 25
-// $limit = 25 (valeur surchargée)
-```
-
-### 3. Argument optionnel `{count?}`
-
-Arguments positionnels optionnels. Ne consomment PAS de valeur.
-
-```php
-// Signature
-public function getSignature(): string
-{
-    return 'user:create {name?}';
-}
-
-// Commande avec valeur
-./directive user:create John
-// $name = null (l'argument optionnel ne consomme pas la valeur)
-
-// Commande sans valeur
-./directive user:create
-// $name = null
-```
-
-> **⚠️ Important :** Les arguments optionnels ne consomment pas de valeur. Les valeurs passées sont automatiquement dirigées vers l'argument variadique s'il existe.
-
-### 4. Argument variadique `{files*}`
-
-Capture tous les arguments restants après les autres arguments.
-
-```php
-// Signature
-public function getSignature(): string
-{
-    return 'process {name} {files*}';
-}
-
-// Commande
-./directive process John file1.txt file2.txt file3.txt
-
-// Résultat
-$name = 'John';                    // argument requis
-$files = ['file1.txt', 'file2.txt', 'file3.txt'];  // variadique
-```
-
-**Syntaxe avec crochets (recommandée pour la lisibilité) :**
-
-```bash
-# Sans crochets
-./directive process John file1.txt file2.txt file3.txt
-
-# Avec crochets (plus clair)
-./directive process John [file1.txt, file2.txt, file3.txt]
-```
-
-### 5. Option flag `{--force}`
-
-Option sans valeur, présente ou absente.
-
-```php
-// Signature
-public function getSignature(): string
-{
-    return 'cache:clear {--force}';
-}
-
-// Commande
-./directive cache:clear --force
-
-// Résultat
-$force = true;  // true si présent
-```
-
-### 6. Option avec valeur `{--role=}`
-
-Option qui attend une valeur.
-
-```php
-// Signature
-public function getSignature(): string
-{
-    return 'user:create {name} {--role=}';
-}
-
-// Commande
-./directive user:create John --role=admin
-
-// Résultat
-$name = 'John';
-$role = 'admin';
-```
-
-### 7. Option avec valeur par défaut `{--format=json}`
-
-Option avec valeur par défaut si non spécifiée.
-
-```php
-// Signature
-public function getSignature(): string
-{
-    return 'export {--format=json}';
-}
-
-// Commande sans valeur
-./directive export
-// $format = 'json'
-
-// Commande avec valeur
-./directive export --format=csv
-// $format = 'csv'
+$result = $parser->validate('user:create {name}', '');
+// ValidationResultRecord avec isValid = false
 ```
 
 ---
 
-## Exemples complets de signatures
+### `isValid(string $signature, string $query): bool`
 
-### Signature valide
+Vérifie rapidement si une requête est valide.
 
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | La définition de la signature |
+| `$query` | `string` | La requête à vérifier |
+
+**Retourne :** `bool` - `true` si la requête est valide, `false` sinon
+
+**Exceptions :** Aucune
+
+**Exemple :**
 ```php
-// ✅ Tous les types dans le bon ordre
-public function getSignature(): string
-{
-    return 'backup {source} {destination} {level=full} {options?} {excludes*} {--compress} {--format=zip} {--verbose}';
-}
-```
+<?php
 
-| Ordre | Type | Paramètre |
-|-------|------|-----------|
-| 1 | Argument requis | `{source}` |
-| 2 | Argument requis | `{destination}` |
-| 3 | Argument avec défaut | `{level=full}` |
-| 4 | Argument optionnel | `{options?}` |
-| 5 | Argument variadique | `{excludes*}` |
-| 6 | Option flag | `{--compress}` |
-| 7 | Option avec défaut | `{--format=zip}` |
-| 8 | Option flag | `{--verbose}` |
-
-### Signatures invalides
-
-```php
-// ❌ Option avant argument
-public function getSignature(): string
-{
-    return '{--force} {name}';
-}
-
-// ❌ Argument requis après optionnel
-public function getSignature(): string
-{
-    return '{name?} {email}';
-}
-
-// ❌ Argument avec défaut après optionnel
-public function getSignature(): string
-{
-    return '{name?} {role=user}';
-}
-
-// ❌ Variadic avant optionnel
-public function getSignature(): string
-{
-    return '{files*} {limit?}';
-}
-
-// ❌ Option variadique (non supporté)
-public function getSignature(): string
-{
-    return '{--exclude*}';
+if ($parser->isValid('user:create {name}', 'John')) {
+    echo "Requête valide";
 }
 ```
 
 ---
+
+### `getValidationErrors(string $signature, string $query): StringTypedCollection`
+
+Récupère les erreurs de validation.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | La définition de la signature |
+| `$query` | `string` | La requête validée |
+
+**Retourne :** `StringTypedCollection` - Collection des messages d'erreur
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+$errors = $parser->getValidationErrors('user:create {name}', '');
+
+foreach ($errors as $error) {
+    echo "❌ " . $error . PHP_EOL;
+}
+```
+
+---
+
+### `validateSignature(string $signature): ValidationResultRecord`
+
+Valide une définition de signature.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | La définition de la signature à valider |
+
+**Retourne :** `ValidationResultRecord` - Résultat de la validation
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+$result = $parser->validateSignature('user:create {name}');
+// Vérifie la syntaxe de la signature
+```
+
+---
+
+### `isSignatureValid(string $signature): bool`
+
+Vérifie rapidement si une signature est syntaxiquement valide.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | La définition de la signature à vérifier |
+
+**Retourne :** `bool` - `true` si la signature est valide, `false` sinon
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+if ($parser->isSignatureValid('user:create {name}')) {
+    echo "Signature valide";
+}
+```
+
+---
+
+### `addParser(ParserInterface $parser): self`
+
+Ajoute un parser personnalisé au registre.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$parser` | `ParserInterface` | Le parser à ajouter |
+
+**Retourne :** `self` - L'instance courante (fluent interface)
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+$parser->addParser(new CustomParser());
+```
+
+---
+
+### `removeParser(string $parserClass): self`
+
+Retire un parser du registre.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$parserClass` | `string` | Le nom de classe du parser à retirer |
+
+**Retourne :** `self` - L'instance courante (fluent interface)
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+$parser->removeParser(CustomParser::class);
+```
+
+---
+
+### `getParsers(): array`
+
+Récupère tous les parsers enregistrés.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| Aucun | - | - |
+
+**Retourne :** `array<int, ParserInterface>` - Liste des parsers enregistrés
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+$parsers = $parser->getParsers();
+foreach ($parsers as $p) {
+    echo get_class($p) . PHP_EOL;
+}
+```
+
+---
+
+### `extractSignatureElements(string $signature): StringTypedCollection`
+
+Extrait les éléments individuels d'une signature.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | La signature à analyser |
+
+**Retourne :** `StringTypedCollection` - Collection des éléments
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+$elements = $parser->extractSignatureElements('user:create {name} {--admin}');
+// ['user:create', '{name}', '{--admin}']
+```
+
+---
+
+### `extractQueryElements(string $query): StringTypedCollection`
+
+Extrait les éléments individuels d'une requête.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$query` | `string` | La requête à analyser |
+
+**Retourne :** `StringTypedCollection` - Collection des éléments
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+$elements = $parser->extractQueryElements('John --admin');
+// ['John', '--admin']
+```
+
+## Format des signatures
+
+### Syntaxe de base
+
+```
+commande {argument} {argument?} {argument=default} {--flag} {--flag=value} {arguments*}
+```
+
+### Éléments supportés
+
+| Élément | Syntaxe | Exemple |
+|---------|---------|---------|
+| Arguments requis | `{nom}` | `{name}` |
+| Arguments optionnels | `{nom?}` | `{name?}` |
+| Arguments par défaut | `{nom=default}` | `{name=John}` |
+| Flags (booléens) | `{--nom}` | `{--admin}` |
+| Flags avec valeur | `{--nom=valeur}` | `{--format=gzip}` |
+| Arguments variadiques | `{nom*}` | `{files*}` |
+
+### Exemples de signatures
+
+```php
+// Simple
+'list'
+
+// Avec argument
+'user:create {name}'
+
+// Avec arguments multiples
+'user:create {name} {email} {--admin}'
+
+// Avec arguments optionnels et flags
+'backup {file?} {--force} {--compression=gzip}'
+
+// Avec arguments variadiques
+'copy {source*} {--recursive}'
+```
 
 ## Cas d'utilisation
 
-### Cas 1 : Directive de création d'utilisateur
+### Cas 1 : Parsing d'une requête utilisateur
 
 ```php
-final class UserCreateDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'user:create {first_name} {last_name} {--role=user} {--notify}';
-    }
+<?php
 
-    public function execute(): ExitCode
-    {
-        $firstName = $this->argument('first_name');
-        $lastName = $this->argument('last_name');
-        $role = $this->option('role') ?? 'user';
-        $notify = $this->option('notify') ?? false;
+$parser = app(DirectiveParserInterface::class);
+$signature = 'backup {file?} {--force} {--compression=gzip}';
 
-        $this->info("User {$firstName} {$lastName} created with role {$role}");
-        
-        if ($notify) {
-            $this->info("Notification sent");
-        }
+// Requête utilisateur : "backup database.sql --force"
+$result = $parser->parse($signature, 'backup database.sql --force');
 
-        return ExitCode::SUCCESS;
-    }
-}
+// Accès aux arguments
+$file = $result->required->get('file') ?? $result->default->get('file');
+$force = $result->flags->get('force');
+$compression = $result->flags->get('compression');
 
-// Commande: ./directive user:create John Doe --role=admin --notify
-// Sortie: User John Doe created with role admin
-//         Notification sent
+echo "Fichier: " . ($file ?? 'aucun') . PHP_EOL;
+echo "Force: " . ($force ? 'oui' : 'non') . PHP_EOL;
+echo "Compression: " . ($compression ?? 'gzip') . PHP_EOL;
 ```
 
-### Cas 2 : Directive avec arguments variadiques
+### Cas 2 : Validation interactive
 
 ```php
-final class ProcessFilesDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'process {name} {files*} {--verbose}';
-    }
+<?php
 
+class InteractiveDirective extends AbstractDirective
+{
     public function execute(): ExitCode
     {
-        $name = $this->argument('name');
-        $files = $this->getVariadicArguments();
-        $isVerbose = $this->option('verbose') ?? false;
-
-        $this->info("Processing files for {$name}");
+        $parser = $this->getParser();
         
-        foreach ($files as $file) {
-            $this->line("  - {$file}");
-            if ($isVerbose) {
-                $this->info("    Done");
+        // Valider la requête
+        $result = $parser->validate($this->getSignature(), $this->getQuery());
+        
+        if (!$result->isValid()) {
+            foreach ($result->getErrors() as $error) {
+                $this->error($error);
             }
+            return ExitCode::INVALID_ARGUMENT;
         }
+        
+        // Si valide, parser
+        $parsed = $parser->parse($this->getSignature(), $this->getQuery());
+        // ... utiliser les données
+    }
+}
+```
 
-        return ExitCode::SUCCESS;
+### Cas 3 : Extensions avec parsers personnalisés
+
+```php
+<?php
+
+use AndyDefer\SignatureParser\Contracts\ParserInterface;
+
+class CustomParser implements ParserInterface
+{
+    public function parse(string $signature, string $query): ParsedSignatureRecord
+    {
+        // Logique de parsing personnalisée
     }
 }
 
-// Commande: ./directive process John [file1.txt, file2.txt, file3.txt] --verbose
+$parser = app(DirectiveParserInterface::class);
+$parser->addParser(new CustomParser());
+
+// Le parser personnalisé est maintenant disponible
 ```
 
-### Cas 3 : Utilisation directe du service
+### Cas 4 : Extraction et analyse
 
 ```php
-// Pour tester ou manipuler manuellement
-$service = new DirectiveParserService();
-$argv = new StringTypedCollection();
-$argv->add('John', '--role=admin');
+<?php
 
-$result = $service->parse('user:create {name} {--role=}', $argv);
-$parsed = $service->toResult($parsed);
+$parser = app(DirectiveParserInterface::class);
 
-$name = $parsed->arguments->get('name');      // 'John'
-$role = $parsed->options->get('role');        // 'admin'
-$isActive = $parsed->options->isTrue('active'); // false
+// Extraire les éléments pour analyse
+$signatureElements = $parser->extractSignatureElements('user:create {name} {--admin}');
+$queryElements = $parser->extractQueryElements('John --admin');
+
+echo "Signature elements: " . $signatureElements->join(', ') . PHP_EOL;
+echo "Query elements: " . $queryElements->join(', ') . PHP_EOL;
 ```
-
----
 
 ## Flux d'exécution
 
 ```
-parse(signature, argv)
+DirectiveParserService::parse($signature, $query)
     │
-    ├── 1. ArgumentSplitterService.split(argv)
-    │       ├── [ → début des variadiques
-    │       ├── , → séparateur
-    │       └── ] → fin des variadiques
-    │
-    ├── 2. ParameterOrderValidatorService.validate(signature)
-    │       ├── required (1) → default (2) → optional (3) → variadic (4) → option (5)
-    │
-    ├── 3. ParameterExtractorService.extract(signature)
-    │
-    ├── 4. Séparation options / arguments normaux
-    │       ├── OptionParserService.isOption() → options
-    │       └── → arguments normaux
-    │
-    ├── 5. OptionParserService.parseOptions() → parse les options
-    │
-    ├── 6. ArgumentApplierService.apply()
-    │       ├── required → consomme une valeur
-    │       ├── default → utilise défaut ou consomme
-    │       ├── optional → ne consomme PAS
-    │       └── variadic → consomme tous les restants
-    │
-    └── 7. → ParsedDirectiveRecord
+    └── $this->parser->parse($signature, $query)
+        │
+        ├── Validation de la signature
+        ├── Parsing des arguments
+        │   ├── Arguments requis → required
+        │   ├── Arguments optionnels → default
+        │   ├── Arguments variadiques → variadic
+        │   └── Flags → flags
+        ├── Validation de la requête
+        │   ├── Présence des arguments requis
+        │   ├── Types des flags
+        │   └── Valeurs par défaut
+        │
+        └── Retourne ParsedSignatureRecord
+            ├── required (TypedRecord)
+            ├── default (TypedRecord)
+            ├── variadic (VariadicCollection)
+            ├── flags (FlagCollection)
+            └── source (string)
 ```
-
----
 
 ## Gestion des erreurs
 
-| Situation | Exception | Message |
-|-----------|-----------|---------|
-| Argument requis manquant | `InvalidArgumentException` | `Not enough arguments (missing: "name")` |
-| Trop d'arguments (sans variadic) | `InvalidArgumentException` | `Too many arguments provided` |
-| Option invalide | `InvalidArgumentException` | `Unknown option: --xxx` |
-| Ordre des paramètres invalide | `InvalidArgumentException` | `Invalid signature format: required arguments must come before arguments with default values. Problem with: {name}` |
-| Option avec valeur mal formée | `InvalidArgumentException` | `Invalid option format: --role` |
+| Situation | Comportement | Message |
+|-----------|--------------|---------|
+| Signature invalide | `ValidationResultRecord` avec `isValid = false` | `Invalid signature: {message}` |
+| Requête invalide | `ValidationResultRecord` avec `isValid = false` | `Missing required argument: {name}` |
+| Argument manquant | `ValidationResultRecord` avec `isValid = false` | `Required argument "{name}" is missing` |
+| Format de flag invalide | `ValidationResultRecord` avec `isValid = false` | `Invalid flag format: {flag}` |
+| Type inattendu | `ValidationResultRecord` avec `isValid = false` | `Unexpected token: {token}` |
 
----
+### Messages d'erreur typiques
 
-## Types supportés - Récapitulatif
+```php
+// Signature invalide
+"Invalid signature: Missing closing brace"
 
-| Type | Syntaxe | Consomme une valeur ? | Supporté |
-|------|---------|----------------------|----------|
-| Argument requis | `{name}` | ✅ Oui (obligatoire) | ✅ |
-| Argument avec valeur par défaut | `{role=user}` | ✅ Oui (surcharge possible) | ✅ |
-| Argument optionnel | `{count?}` | ❌ Non | ✅ |
-| Argument variadique | `{files*}` | ✅ Oui (tous les restants) | ✅ |
-| Option flag | `{--force}` | ❌ Non | ✅ |
-| Option avec valeur | `{--role=}` | ❌ Non | ✅ |
-| Option avec valeur par défaut | `{--format=json}` | ❌ Non | ✅ |
-| Option variadique | `{--exclude*}` | N/A | ❌ Non supporté |
+// Argument requis manquant
+"Required argument 'name' is missing"
 
----
+// Flag invalide
+"Invalid flag format: --admin=value should be --admin=value"
+
+// Token inattendu
+"Unexpected token: '--force' at position 5"
+```
+
+## Intégration
+
+Le `DirectiveParserService` s'intègre avec :
+
+| Composant | Utilisation |
+|-----------|-------------|
+| `SignatureParser` | Parsing des signatures et requêtes |
+| `AbstractDirective` | Parsing des arguments et flags |
+| `DirectiveDiscoveryService` | Validation des signatures réservées |
+| `ParserInterface` | Extensibilité via parsers personnalisés |
+
+### Utilisation dans AbstractDirective
+
+```php
+abstract class AbstractDirective
+{
+    private DirectiveParserService $parser;
+    
+    public function __construct(Application $app, string $query)
+    {
+        $this->parser = $app->make(DirectiveParserService::class);
+        $this->parsed = $this->parser->parse($this->getSignature(), $query);
+    }
+}
+```
+
+## Performance
+
+| Métrique | Valeur | Description |
+|----------|--------|-------------|
+| Complexité | O(n) | n = nombre d'éléments à parser |
+| Temps typique | 1-5ms | Parsing simple |
+| Mémoire | < 1KB | Données parsées |
+| Cache | ❌ Non | Parsing à chaque appel |
+
+### Facteurs de performance
+
+1. **Longueur de la signature** : Plus la signature est complexe, plus le parsing est lent
+2. **Nombre d'arguments** : Plus d'arguments → plus de temps de parsing
+3. **Flags** : Les flags avec valeurs ajoutent de la complexité
+4. **Parsers personnalisés** : Des parsers complexes peuvent ralentir le processus
+
+### Optimisations
+
+```php
+class CachedParserService
+{
+    private array $parseCache = [];
+    private array $validateCache = [];
+    
+    public function parse(string $signature, string $query): ParsedSignatureRecord
+    {
+        $key = md5($signature . '|' . $query);
+        
+        if (isset($this->parseCache[$key])) {
+            return $this->parseCache[$key];
+        }
+        
+        $result = $this->parser->parse($signature, $query);
+        $this->parseCache[$key] = $result;
+        return $result;
+    }
+}
+```
 
 ## Compatibilité
 
-| Version PHP | Support |
-|-------------|---------|
-| PHP 8.1+ | ✅ Complet |
-| PHP 8.2+ | ✅ Complet |
-| PHP 8.3+ | ✅ Complet |
-
----
+| Version | Support | Notes |
+|---------|---------|-------|
+| PHP 8.1+ | ✅ Complet | - |
+| PHP 8.2+ | ✅ Complet | - |
+| PHP 8.3+ | ✅ Complet | - |
+| SignatureParser 1.x | ✅ Complet | - |
 
 ## Exemple complet
 
@@ -527,62 +551,144 @@ parse(signature, argv)
 declare(strict_types=1);
 
 use AndyDefer\Directive\Services\DirectiveParserService;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\SignatureParser\SignatureParser;
 
-// 1. Créer le service
-$parser = new DirectiveParserService();
+// Créer le parser
+$parser = new DirectiveParserService(new SignatureParser());
 
-// 2. Définir la signature
-$signature = 'backup {source} {destination} {compress?} {excludes*} {--format=zip} {--verbose}';
+// 1. Définir une signature
+$signature = 'user:create {name} {email?} {--admin} {--role=user} {tags*}';
 
-// 3. Simuler des arguments de ligne de commande
-$argv = new StringTypedCollection();
-$argv->add('/home/user/data');
-$argv->add('/backup/');
-$argv->add('--format=tar');
-$argv->add('[', 'temp,', 'cache,', 'logs', ']');
-$argv->add('--verbose');
-
-// 4. Parser
-$result = $parser->parse($signature, $argv);
-$parsed = $parser->toResult($result);
-
-// 5. Utiliser les résultats
-echo "Source: " . $parsed->arguments->get('source') . "\n";        // /home/user/data
-echo "Destination: " . $parsed->arguments->get('destination') . "\n";  // /backup/
-echo "Format: " . $parsed->options->get('format') . "\n";           // tar (surclasse zip)
-echo "Verbose: " . ($parsed->options->isTrue('verbose') ? 'yes' : 'no') . "\n";  // yes
-
-echo "Excludes:\n";
-foreach ($parsed->variadic_arguments as $exclude) {
-    echo "  - {$exclude}\n";  // temp, cache, logs
+// 2. Valider la signature
+$validation = $parser->validateSignature($signature);
+if (!$validation->isValid()) {
+    foreach ($validation->getErrors() as $error) {
+        echo "❌ " . $error . PHP_EOL;
+    }
+    exit(1);
 }
 
-// 6. Exporter en JSON
-$json = $parser->toJson($result);
-echo $json;
-// {"arguments":{"source":"\/home\/user\/data","destination":"\/backup\/"},"options":{"format":"tar","verbose":true},"variadic_arguments":["temp","cache","logs"]}
+echo "✅ Signature valide\n\n";
 
-// 7. Extraire l'aide
-$help = $parser->extractHelp($signature);
-foreach ($help as $param) {
-    echo "{$param->name} ({$param->type->value})";
-    if ($param->required) echo " [required]";
-    if ($param->default !== null) echo " [default: {$param->default}]";
-    echo "\n";
+// 3. Parser différentes requêtes
+$queries = [
+    'user:create John john@example.com --admin --role=admin',
+    'user:create Jane --admin tags:php,tags:laravel',
+    'user:create Bob --role=editor'
+];
+
+foreach ($queries as $query) {
+    echo "Requête: " . $query . PHP_EOL;
+    
+    // Valider la requête
+    if (!$parser->isValid($signature, $query)) {
+        $errors = $parser->getValidationErrors($signature, $query);
+        echo "  ❌ Erreurs:\n";
+        foreach ($errors as $error) {
+            echo "    - " . $error . PHP_EOL;
+        }
+        continue;
+    }
+    
+    // Parser la requête
+    $result = $parser->parse($signature, $query);
+    
+    echo "  ✅ Parse réussi:\n";
+    echo "    Name: " . ($result->required->get('name') ?? 'non fourni') . PHP_EOL;
+    echo "    Email: " . ($result->default->get('email') ?? 'non fourni') . PHP_EOL;
+    echo "    Admin: " . ($result->flags->get('admin') ? 'oui' : 'non') . PHP_EOL;
+    echo "    Role: " . ($result->flags->get('role') ?? 'user') . PHP_EOL;
+    
+    $tags = $result->variadic->getAllValues();
+    if (!empty($tags)) {
+        echo "    Tags: " . implode(', ', $tags) . PHP_EOL;
+    }
+    
+    echo PHP_EOL;
 }
-// source (argument) [required]
-// destination (argument) [required]
-// compress (argument) [default: null]
-// excludes (variadic_argument)
-// format (option) [default: zip]
-// verbose (option)
+
+// 4. Extraire les éléments
+$elements = $parser->extractSignatureElements($signature);
+echo "Éléments de la signature:\n";
+foreach ($elements as $element) {
+    echo "  - " . $element . PHP_EOL;
+}
+
+// 5. Gérer les parsers personnalisés
+class MyCustomParser implements ParserInterface
+{
+    public function parse(string $signature, string $query): ParsedSignatureRecord
+    {
+        // Logique personnalisée
+    }
+}
+
+$parser->addParser(new MyCustomParser());
+$parsers = $parser->getParsers();
+echo "Parsers enregistrés: " . count($parsers) . PHP_EOL;
 ```
 
-## Voir aussi
+## Notes techniques
 
-- [`AbstractDirective`](abstract-directive.md) - Classe de base des directives
-- [`DirectiveInteractionService`](directive-interaction-service.md) - Service d'interaction utilisateur
-- [`ParameterCollection`](../collections/parameter-collection.md) - Collection typée pour paramètres
-- [`ParsedResultRecord`](../records/parsed-result-record.md) - Record de résultat parsé
+### Syntaxe de signature détaillée
+
+```php
+// Arguments requis - doivent être présents
+{name}
+
+// Arguments optionnels - peuvent être omis
+{name?}
+
+// Arguments avec valeur par défaut - utilisés si omis
+{name=default}
+
+// Flags booléens - présence = true, absence = false
+{--flag}
+
+// Flags avec valeur - doivent être spécifiés
+{--flag=value}
+
+// Arguments variadiques - peuvent apparaître plusieurs fois
+{tags*}
+```
+
+### Validation des types
+
+Le parser supporte la validation des types à l'avenir via des annotations :
+
+```php
+// Proposition future
+{name:string}   // Doit être une chaîne
+{age:int}       // Doit être un entier
+{active:bool}   // Doit être un booléen
+```
+
+### Gestion des espaces
+
+Les arguments avec espaces peuvent être entre guillemets :
+
+```php
+// Requête: user:create "John Doe"
+// L'argument name sera "John Doe"
+```
+
+### Chaînage des méthodes
+
+```php
+$parser
+    ->addParser(new CustomParser())
+    ->parse($signature, $query);
+```
+
+### Extensibilité
+
+Le service permet d'ajouter des parsers personnalisés pour des besoins spécifiques :
+
+```php
+// Parser pour des formats de date personnalisés
+$parser->addParser(new DateParser());
+
+// Parser pour des expressions régulières
+$parser->addParser(new RegexParser());
+```
 ---

@@ -36,7 +36,6 @@ abstract class IntegrationTestCase extends Orchestra
         ]);
 
         $app['config']->set('cache.default', 'array');
-        $app['config']->set('view.compiled', __DIR__.'/storage/framework/views');
         $app['config']->set('directive.path', __DIR__.'/Fixtures/Directives');
     }
 
@@ -54,7 +53,7 @@ abstract class IntegrationTestCase extends Orchestra
 
     protected function runDatabaseMigrations(): void
     {
-        $migrationPath = __DIR__.'/database/migrations';
+        $migrationPath = __DIR__.'/Fixtures/database/migrations';
 
         if (is_dir($migrationPath)) {
             $this->loadMigrationsFrom($migrationPath);

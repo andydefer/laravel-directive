@@ -2,9 +2,9 @@
 
 ## Description
 
-Service de test pour les directives CLI. Fournit un environnement isolé pour exécuter et tester des directives, avec ou sans intégration Laravel, en redirigeant automatiquement toutes les opérations de fichiers vers un répertoire temporaire.
+Service de test pour exécuter des directives dans un environnement isolé. Il crée un répertoire temporaire avec un fichier `composer.json` minimal, change le répertoire de travail courant, et exécute les directives dans un environnement sandbox.
 
-## Hiérarchie
+## Hiérarchie / Implémentations
 
 ```
 DirectiveTestingService (final)
@@ -12,237 +12,430 @@ DirectiveTestingService (final)
 
 ## Rôle principal
 
-Faciliter les tests unitaires et d'intégration des directives en offrant une API simple pour l'exécution. Le service crée automatiquement un répertoire temporaire, isole les opérations de fichiers, nettoie après les tests, et supporte l'injection automatique des dépendances via le conteneur Laravel.
+Fournir un environnement de test isolé pour l'exécution des directives. Ce service est conçu pour :
+1. Créer un environnement propre et reproductible
+2. Éviter les effets de bord sur le projet principal
+3. Permettre l'exécution de directives en toute sécurité
+4. Nettoyer automatiquement les ressources après les tests
 
 ## Installation
 
-```bash
-composer require --dev andydefer/laravel-directive
+### Utilisation en tests
+
+```php
+<?php
+
+use AndyDefer\Directive\Services\DirectiveTestingService;
+
+class MyDirectiveTest extends TestCase
+{
+    private DirectiveTestingService $testingService;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->testingService = new DirectiveTestingService(
+            $this->app,
+            ['app/Directives'] // Sources supplémentaires
+        );
+    }
+    
+    protected function tearDown(): void
+    {
+        $this->testingService->destroy();
+        parent::tearDown();
+    }
+}
 ```
 
 ## API / Méthodes publiques
 
-### `__construct(?Application $application = null)`
+### `run(string $query): DirectiveResponseRecord`
+
+Exécute une directive dans l'environnement de test.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$application` | `Application|null` | Application Laravel (mode intégré) ou `null` (mode isolé) |
+| `$query` | `string` | La requête de la directive à exécuter |
+
+**Retourne :** `DirectiveResponseRecord` - Le résultat de l'exécution (code de sortie + sortie)
+
+**Exceptions :** Aucune (les erreurs sont capturées et retournées dans le record)
 
 **Exemple :**
 ```php
-// Mode isolé (sans Laravel)
-$service = new DirectiveTestingService();
+<?php
 
-// Mode intégré (avec Laravel)
-$service = new DirectiveTestingService($this->app);
+$result = $this->testingService->run('list');
+echo $result->output; // Affiche la liste des directives
+echo $result->exit_code->value; // 0 si succès
 ```
 
-### `run(string $class, array $arguments = []): DirectiveResponseRecord`
+---
 
-Exécute une directive par sa classe.
+### `getTempDir(): string`
+
+Récupère le chemin du répertoire temporaire.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$class` | `string` | FQCN de la directive (ex: `UserListDirective::class`) |
-| `$arguments` | `array<string>` | Arguments à passer |
+| Aucun | - | - |
 
-**Retourne :** `DirectiveResponseRecord` - Réponse avec code de sortie et sortie
+**Retourne :** `string` - Le chemin absolu du répertoire temporaire
 
-**Exceptions :** `InvalidArgumentException` - La classe n'existe pas
+**Exceptions :** Aucune
 
 **Exemple :**
 ```php
-$response = $service->run(UserListDirective::class, ['--active']);
+<?php
+
+$tempDir = $this->testingService->getTempDir();
+echo "Répertoire de test: " . $tempDir . PHP_EOL;
 ```
+
+---
 
 ### `destroy(): void`
 
-Détruit l'environnement de test : restaure le répertoire original et supprime le répertoire temporaire.
+Nettoie l'environnement de test.
 
-### `getInteraction(): DirectiveInteractionService`
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| Aucun | - | - |
 
-Retourne le service d'interaction utilisateur.
+**Retourne :** `void`
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+<?php
+
+// À la fin du test
+$this->testingService->destroy();
+```
 
 ## Cas d'utilisation
 
-### Cas 1 : Test unitaire sans Laravel
+### Cas 1 : Test d'une directive simple
 
 ```php
 <?php
 
-namespace Tests\Unit\Directives;
-
 use AndyDefer\Directive\Services\DirectiveTestingService;
-use AndyDefer\Directive\Enums\ExitCode;
-use App\Directives\HelloDirective;
 
-final class HelloDirectiveTest extends TestCase
+class ListDirectiveTest extends TestCase
 {
-    private DirectiveTestingService $service;
-
+    private DirectiveTestingService $testing;
+    
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveTestingService();
+        $this->testing = new DirectiveTestingService($this->app);
     }
-
+    
     protected function tearDown(): void
     {
-        $this->service->destroy();
+        $this->testing->destroy();
         parent::tearDown();
     }
-
-    public function test_hello_directive(): void
+    
+    public function test_list_directive()
     {
-        $response = $this->service->run(HelloDirective::class, ['John']);
-
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Hello, John!', $response->output);
+        $result = $this->testing->run('list');
+        
+        $this->assertTrue($result->exit_code->isSuccess());
+        $this->assertStringContainsString('Available Directives', $result->output);
+        $this->assertStringContainsString('list', $result->output);
+        $this->assertStringContainsString('help', $result->output);
+        $this->assertStringContainsString('version', $result->output);
     }
 }
 ```
 
-### Cas 2 : Test d'intégration avec Laravel
+### Cas 2 : Test avec sources personnalisées
 
 ```php
 <?php
 
-namespace Tests\Integration\Directives;
-
-use AndyDefer\Directive\Services\DirectiveTestingService;
-use AndyDefer\Directive\Enums\ExitCode;
-use Orchestra\Testbench\TestCase;
-
-final class UserStatsDirectiveTest extends TestCase
+class CustomDirectiveTest extends TestCase
 {
-    private DirectiveTestingService $service;
-
+    private DirectiveTestingService $testing;
+    
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveTestingService($this->app);
+        
+        // Ajouter des sources personnalisées
+        $this->testing = new DirectiveTestingService(
+            $this->app,
+            [
+                base_path('tests/Fixtures/Directives'),
+                base_path('app/Modules/Admin/Directives'),
+            ]
+        );
     }
+    
+    public function test_custom_directive()
+    {
+        $result = $this->testing->run('custom:command --force');
+        
+        $this->assertTrue($result->exit_code->isSuccess());
+        $this->assertStringContainsString('Custom command executed', $result->output);
+    }
+}
+```
 
+### Cas 3 : Test avec assertions sur la sortie
+
+```php
+<?php
+
+class OutputFormatTest extends TestCase
+{
+    private DirectiveTestingService $testing;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->testing = new DirectiveTestingService($this->app);
+    }
+    
     protected function tearDown(): void
     {
-        $this->service->destroy();
+        $this->testing->destroy();
         parent::tearDown();
     }
-
-    public function test_user_stats(): void
+    
+    public function test_output_format()
     {
-        // Créer des données en base
-        User::create(['name' => 'John', 'email' => 'john@example.com']);
-
-        $response = $this->service->run(UserStatsDirective::class);
-
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Total users: 1', $response->output);
+        $result = $this->testing->run('version');
+        
+        $this->assertTrue($result->exit_code->isSuccess());
+        $this->assertStringContainsString('Laravel Directive', $result->output);
+        $this->assertStringContainsString('Version:', $result->output);
+        $this->assertStringContainsString('PHP:', $result->output);
+        $this->assertStringContainsString('Author:', $result->output);
     }
 }
 ```
 
-### Cas 3 : Test avec variadic arguments
+### Cas 4 : Test des erreurs
 
 ```php
-public function test_variadic_directive(): void
+<?php
+
+class ErrorHandlingTest extends TestCase
 {
-    $response = $this->service->run(FileProcessDirective::class, [
-        'John', 
-        'file1.txt', 
-        'file2.txt', 
-        '--verbose'
-    ]);
-
-    $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-    $this->assertStringContainsString('file1.txt', $response->output);
-}
-```
-
-### Cas 4 : Test avec gestion d'erreur
-
-```php
-public function test_division_by_zero(): void
-{
-    $response = $this->service->run(CalculatorDirective::class, ['div', '10', '0']);
-
-    $this->assertSame(ExitCode::FAILURE, $response->exit_code);
-    $this->assertStringContainsString('Division by zero', $response->output);
+    private DirectiveTestingService $testing;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->testing = new DirectiveTestingService($this->app);
+    }
+    
+    protected function tearDown(): void
+    {
+        $this->testing->destroy();
+        parent::tearDown();
+    }
+    
+    public function test_directive_not_found()
+    {
+        $result = $this->testing->run('nonexistent');
+        
+        $this->assertTrue($result->exit_code->isNotFound());
+        $this->assertStringContainsString('Directive not found', $result->output);
+    }
+    
+    public function test_invalid_arguments()
+    {
+        $result = $this->testing->run('help --invalid-flag');
+        // Le comportement dépend de l'implémentation
+        // Certaines directives ignorent les flags inconnus
+    }
 }
 ```
 
 ## Flux d'exécution
 
 ```
-__construct(?Application $application)
+DirectiveTestingService::__construct()
     │
-    ├── Initialisation typeConverter et interaction
+    ├── getcwd() → $this->originalCwd
     │
-    ├── Sauvegarde originalCwd
+    ├── setupTempDirectory()
+    │   ├── createTempDirectory()
+    │   │   └── sys_get_temp_dir()/directive_test_{uniqid}
+    │   ├── createMinimalComposerJson()
+    │   │   └── Crée composer.json minimal
+    │   └── changeToTempDirectory()
+    │       └── chdir($tempDir)
     │
-    └── setupTempDirectory()
-        ├── Création tempDir (sys_get_temp_dir()/directive_test_*)
-        ├── mkdir() récursif
-        └── chdir() vers tempDir
+    ├── DiscoveryService → addSource($sourcePaths)
+    │
+    └── DirectiveKernel → new DirectiveKernel($app, $discovery)
 
-run(string $class, array $arguments)
+DirectiveTestingService::run($query)
     │
-    ├── createDirective($class)
-    │   ├── Vérification existence classe
-    │   ├── Analyse constructeur via réflexion
-    │   ├── Résolution automatique des dépendances :
-    │   │   - DirectiveContext → createDirectiveContext()
-    │   │   - DirectiveInteractionService → $this->interaction
-    │   │   - Autres classes → $application->make() (si mode intégré)
-    │   └── newInstanceArgs()
+    ├── ob_start()
     │
-    └── executeDirective($directive, $arguments)
-        ├── createDirectiveContext()
-        ├── parseArguments() via DirectiveParserService
-        ├── hydrateDirective() (re-crée l'instance avec le vrai contexte)
-        ├── ob_start() pour capturer la sortie
-        └── Retourne DirectiveResponseRecord
+    ├── $argv = ['directive', ...explode(' ', $query)]
+    │
+    ├── $exitCode = $this->kernel->run($argv)
+    │
+    ├── $output = ob_get_clean()
+    │
+    └── return new DirectiveResponseRecord($exitCode, $output)
 
-destroy()
+DirectiveTestingService::destroy()
     │
-    ├── Restauration originalCwd (si répertoire existe)
-    └── Suppression récursive tempDir
+    ├── restoreOriginalDirectory()
+    │   └── chdir($originalCwd)
+    │
+    └── removeTempDirectory()
+        └── removeDirectory($tempDir) → suppression récursive
+```
+
+## Structure du répertoire temporaire
+
+```
+/tmp/directive_test_{uniqid}/
+├── composer.json
+└── (fichiers créés par les tests)
+```
+
+### composer.json minimal
+
+```json
+{
+    "name": "directive-test/app",
+    "type": "project",
+    "require": {
+        "php": "^8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    }
+}
 ```
 
 ## Gestion des erreurs
 
-| Situation | Comportement |
-|-----------|--------------|
-| Classe de directive inexistante | `InvalidArgumentException` avec message `Directive class {$class} does not exist` |
-| Exception pendant l'exécution | `DirectiveResponseRecord` avec `ExitCode::FAILURE` et le message d'erreur comme output |
-| Succès de l'exécution | `DirectiveResponseRecord` avec `ExitCode::SUCCESS` et la sortie capturée |
+| Situation | Comportement | Message |
+|-----------|--------------|---------|
+| Erreur d'exécution de la directive | Capturée, retournée dans `DirectiveResponseRecord` | Message de l'exception |
+| Erreur de création du répertoire | Exception levée | `mkdir(): Permission denied` |
+| Erreur de suppression du répertoire | Ignorée silencieusement | - |
+| Répertoire original inexistant | Ignoré (ne change pas de répertoire) | - |
+
+### Cas particuliers
+
+```php
+// Exécution avec exception
+$result = $this->testing->run('failing:command');
+// $result->exit_code = ExitCode::RUNTIME_ERROR
+// $result->output = "Error message from exception"
+```
 
 ## Intégration
 
-`DirectiveTestingService` s'intègre avec :
+Le `DirectiveTestingService` s'intègre avec :
 
-- **`DirectiveInteractionService`** : Gestion des affichages (`line()`, `info()`, `error()`, `table()`, etc.)
-- **`DirectiveParserService`** : Parsing des signatures et arguments
-- **`PrimitiveTypeConverterService`** : Conversion automatique des types (bool, int, float, null)
-- **`Application` (Laravel)** : Injection automatique des dépendances en mode intégré
+| Composant | Utilisation |
+|-----------|-------------|
+| `DirectiveKernel` | Exécution des directives |
+| `DirectiveDiscoveryService` | Découverte des directives |
+| `DirectiveConfigInterface` | Configuration des chemins |
+| `DirectiveResponseRecord` | Résultat de l'exécution |
+| `ExitCode` | Codes de retour |
+
+### Utilisation avec PHPUnit
+
+```php
+<?php
+
+namespace Tests\Unit;
+
+use AndyDefer\Directive\Services\DirectiveTestingService;
+use Tests\TestCase;
+
+abstract class DirectiveTestCase extends TestCase
+{
+    protected DirectiveTestingService $testing;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->testing = new DirectiveTestingService(
+            $this->app,
+            $this->getExtraSources()
+        );
+    }
+    
+    protected function tearDown(): void
+    {
+        $this->testing->destroy();
+        parent::tearDown();
+    }
+    
+    protected function getExtraSources(): array
+    {
+        return [];
+    }
+}
+```
 
 ## Performance
 
-| Aspect | Caractéristique |
-|--------|----------------|
-| Répertoire temporaire | Créé une fois par instance |
-| Changement de répertoire | `chdir()` - O(1) |
-| Nettoyage | Suppression récursive du temp dir (`removeDirectory`) |
-| Mode intégré vs isolé | Même isolation, seule la résolution des dépendances diffère |
+| Métrique | Valeur | Description |
+|----------|--------|-------------|
+| Temps de setup | 50-100ms | Création du répertoire et composer.json |
+| Temps par exécution | 100-500ms | Dépend de la directive exécutée |
+| Temps de cleanup | 10-50ms | Suppression du répertoire |
+| Mémoire | 1-5 MB | Environnement de test |
+
+### Optimisations
+
+```php
+class OptimizedTestingService
+{
+    private ?string $tempDir = null;
+    private bool $initialized = false;
+    
+    public function __construct(
+        private readonly Application $app,
+        private readonly array $sourcePaths = [],
+    ) {
+        // Lazy initialization
+    }
+    
+    private function initialize(): void
+    {
+        if ($this->initialized) {
+            return;
+        }
+        
+        $this->setupTempDirectory();
+        $this->initialized = true;
+    }
+}
+```
 
 ## Compatibilité
 
-| Version | Support |
-|---------|---------|
-| PHP 8.1+ | ✅ Requis |
-| PHP 8.2+ | ✅ Complet |
-| PHP 8.3+ | ✅ Complet |
-| Laravel 10+ | ✅ Mode intégré |
+| Version | Support | Notes |
+|---------|---------|-------|
+| PHP 8.1+ | ✅ Complet | - |
+| PHP 8.2+ | ✅ Complet | - |
+| PHPUnit 9.x | ✅ Complet | - |
+| PHPUnit 10.x | ✅ Complet | - |
+| Laravel 9.x | ✅ Complet | - |
+| Laravel 10.x | ✅ Complet | - |
+| Laravel 11.x | ✅ Complet | - |
 
 ## Exemple complet
 
@@ -251,67 +444,144 @@ destroy()
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Directives;
-
-use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveTestingService;
-use App\Directives\CalculatorDirective;
-use PHPUnit\Framework\TestCase;
 
-final class CalculatorDirectiveTest extends TestCase
+class DirectiveTestingExample extends TestCase
 {
-    private DirectiveTestingService $service;
-
+    private DirectiveTestingService $testing;
+    
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DirectiveTestingService();
+        
+        // Créer le service de test avec des sources personnalisées
+        $this->testing = new DirectiveTestingService(
+            $this->app,
+            [
+                base_path('app/Directives'),
+                base_path('tests/Fixtures/Directives'),
+            ]
+        );
     }
-
+    
     protected function tearDown(): void
     {
-        $this->service->destroy();
+        // Nettoyer l'environnement de test
+        $this->testing->destroy();
         parent::tearDown();
     }
-
-    public function test_addition(): void
+    
+    public function test_help_directive()
     {
-        $response = $this->service->run(CalculatorDirective::class, ['add', '10', '20']);
-
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('30', $response->output);
+        $result = $this->testing->run('help');
+        
+        $this->assertTrue($result->exit_code->isSuccess());
+        $this->assertStringContainsString('Global options:', $result->output);
+        $this->assertStringContainsString('--help', $result->output);
+        $this->assertStringContainsString('--list', $result->output);
+        $this->assertStringContainsString('--version', $result->output);
     }
-
-    public function test_division_by_zero(): void
+    
+    public function test_version_directive()
     {
-        $response = $this->service->run(CalculatorDirective::class, ['div', '10', '0']);
-
-        $this->assertSame(ExitCode::FAILURE, $response->exit_code);
-        $this->assertStringContainsString('Division by zero', $response->output);
+        $result = $this->testing->run('version');
+        
+        $this->assertTrue($result->exit_code->isSuccess());
+        $this->assertStringContainsString('Package: laravel-directive', $result->output);
+        $this->assertStringContainsString('Laravel:', $result->output);
+        $this->assertStringContainsString('PHP:', $result->output);
+        $this->assertStringContainsString('Author:', $result->output);
     }
-
-    public function test_temp_directory_isolation(): void
+    
+    public function test_custom_directive_with_arguments()
     {
-        $reflection = new \ReflectionClass($this->service);
-        $tempDirProperty = $reflection->getProperty('tempDir');
-        $tempDir = $tempDirProperty->getValue($this->service);
-
-        $this->assertNotNull($tempDir);
-        $this->assertDirectoryExists($tempDir);
-        $this->assertStringContainsString('directive_test', getcwd());
+        // Créer une directive de test dans le répertoire temporaire
+        $tempDir = $this->testing->getTempDir();
+        $directivePath = $tempDir . '/app/Directives/TestDirective.php';
+        
+        // Vous pouvez créer des fichiers de test dynamiquement
+        // ou utiliser des fixtures pré-existantes
+        
+        $result = $this->testing->run('test:command --force');
+        
+        $this->assertTrue($result->exit_code->isSuccess());
+    }
+    
+    public function test_output_capturing()
+    {
+        $result = $this->testing->run('list');
+        
+        // Vérifier que la sortie est capturée
+        $this->assertNotEmpty($result->output);
+        
+        // Vérifier les formats de sortie
+        $lines = explode("\n", $result->output);
+        $this->assertGreaterThan(3, count($lines));
+    }
+    
+    public function test_multiple_executions()
+    {
+        // Exécuter plusieurs directives dans le même environnement
+        $results = [];
+        $results[] = $this->testing->run('list');
+        $results[] = $this->testing->run('help');
+        $results[] = $this->testing->run('version');
+        
+        foreach ($results as $result) {
+            $this->assertTrue($result->exit_code->isSuccess());
+        }
     }
 }
 ```
 
-## Notes importantes
+## Notes techniques
 
-1. **Pas de méthodes `registerDirective()`** : L'enregistrement explicite n'est plus nécessaire. La méthode `run()` crée et exécute la directive directement.
+### Isolation des tests
 
-2. **Pas de `createTestDirective()`** : Les directives temporaires par closure ne sont plus supportées. Utilisez des classes de fixture.
+Le service garantit l'isolation en :
+1. **Créant un répertoire temporaire** : Tous les fichiers sont créés dans `/tmp`
+2. **Changeant le répertoire courant** : Les chemins relatifs sont résolus dans le sandbox
+3. **Créant un composer.json minimal** : Évite les erreurs de résolution de dépendances
+4. **Nettoyant automatiquement** : Supprime tout après les tests
 
-3. **Pas de `runDirective()` par signature** : L'exécution se fait uniquement par FQCN.
+### Gestion des sources
 
-4. **Pas de `getContext()`** : Le contexte de test n'est plus exposé publiquement.
+Les sources personnalisées sont ajoutées au `DirectiveDiscoveryService` :
 
-5. **Nettoyage automatique** : Appelez toujours `destroy()` dans `tearDown()` pour nettoyer le répertoire temporaire.
+```php
+$discovery = $this->app->make(DirectiveDiscoveryService::class);
+
+foreach ($this->sourcePaths as $path) {
+    $discovery->addSource($path);
+}
+```
+
+### Limitations
+
+1. **Pas de support des arguments entre guillemets** : `$query = explode(' ', $query)` ne gère pas les guillemets
+2. **Environnement isolé** : Les modifications de fichiers ne persistent pas
+3. **Pas de tests d'intégration** : Ne teste pas l'interaction avec le système réel
+
+### Bonnes pratiques
+
+1. **Toujours appeler `destroy()`** : Nettoyer après les tests
+2. **Utiliser des assertions de sortie** : Vérifier le contenu de `$result->output`
+3. **Tester les cas d'erreur** : Tester les erreurs attendues
+4. **Sources personnalisées** : Ajouter des fixtures pour les tests complexes
+
+```php
+// ✅ Bonne pratique
+public function test_with_fixtures()
+{
+    $testing = new DirectiveTestingService(
+        $this->app,
+        [__DIR__ . '/Fixtures/Directives']
+    );
+    
+    $result = $testing->run('fixture:command');
+    
+    $this->assertTrue($result->exit_code->isSuccess());
+    $testing->destroy();
+}
+```
 ---

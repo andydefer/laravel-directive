@@ -1,302 +1,243 @@
-# CliRunner - Référence Technique
+# CliBootstrap - Référence Technique
 
 ## Description
 
-Point d'entrée principal pour l'exécution des directives en ligne de commande. Initialise le conteneur de services, découvre les directives dans le système de fichiers, et exécute la commande demandée.
+Classe responsable du démarrage complet de l'application Laravel pour l'exécution des commandes Directive en CLI. Elle gère le chargement de l'environnement, l'autoloader Composer, la création de l'application, l'enregistrement des providers et le bootstrapping.
 
-## Hiérarchie
+## Hiérarchie / Implémentations
 
 ```
-CliRunner (final)
-    ├── Container (Laravel/Illuminate Container)
-    ├── DirectiveKernel (noyau d'exécution)
-    └── Services : RenderDispatcher, InputDispatcher, DiscoveryService, ExecutionService
+final readonly class CliBootstrap
 ```
+
+- **Final** : Ne peut pas être étendue
+- **Readonly** : Toutes les propriétés sont en lecture seule
 
 ## Rôle principal
 
-Servir de point d'entrée unique pour l'application CLI. Configure automatiquement tous les services nécessaires (découverte, parsing, hydratation, exécution) et exécute la directive demandée avec les arguments fournis.
+Servir de point d'entrée unique pour le lancement de l'application Laravel en mode CLI. Elle encapsule toute la logique de démarrage nécessaire pour que les directives puissent s'exécuter dans un contexte Laravel complet, même sans serveur web.
 
 ## Installation
 
+Cette classe est utilisée automatiquement par le point d'entrée CLI du package.
+
 ```bash
+# Le package est installé via Composer
 composer require andydefer/laravel-directive
 ```
 
 ## API / Méthodes publiques
 
-### `__construct(): void`
+### `run(array $arguments): int`
 
-Constructeur du runner. Initialise le conteneur et détecte automatiquement le chemin des directives.
-
-**Détection du chemin des directives :**
-1. `getcwd() . '/app/Directives'`
-2. `getcwd() . '/directives'`
-3. `getcwd() . '/src/Directives'`
-
-**Exemple :**
-```php
-$runner = new CliRunner();
-```
-
-### `run(array $argv): int`
-
-Exécute une directive à partir des arguments de ligne de commande.
+Exécute le runner CLI avec les arguments fournis.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$argv` | `array<string>` | Arguments de la ligne de commande (le premier élément est généralement le nom du script) |
+| `$arguments` | `array<int, string>` | Les arguments de la ligne de commande (ex: `['directive', 'list']`) |
 
-**Retourne :** `int` - Code de sortie (`0` = succès, `>0` = erreur)
+**Retourne :** `int` - Le code de sortie (0 = succès, >0 = erreur)
+
+**Exceptions :** Aucune exception directe, mais la méthode peut propager les exceptions du `CliRunner`
 
 **Exemple :**
 ```php
-// Dans un script CLI (ex: bin/directive)
-#!/usr/bin/env php
 <?php
 
-require_once __DIR__ . '/../vendor/autoload.php';
+$bootstrap = CliBootstrap::create();
+$exitCode = $bootstrap->run(['directive', 'list']);
+```
 
-use AndyDefer\Directive\Cli\CliRunner;
+---
 
-$runner = new CliRunner();
-exit($runner->run($argv));
+### `create(): self`
+
+Crée une instance de `CliBootstrap` avec une application Laravel entièrement bootstrappée.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| Aucun | - | - |
+
+**Retourne :** `self` - Une nouvelle instance configurée
+
+**Exceptions :** `BootstrapException` - Si une étape du bootstrap échoue (autoloader manquant, fichier bootstrap introuvable, etc.)
+
+**Exemple :**
+```php
+<?php
+
+$bootstrap = CliBootstrap::create();
+// L'application est maintenant prête à exécuter des directives
 ```
 
 ## Cas d'utilisation
 
-### Cas 1 : Script CLI standard
+### Cas 1 : Lancement d'une directive simple
+
+```php
+<?php
+
+use AndyDefer\Directive\Bootstrap\CliBootstrap;
+
+// Créer le bootstrap avec l'application chargée
+$bootstrap = CliBootstrap::create();
+
+// Exécuter la directive "list"
+$exitCode = $bootstrap->run(['directive', 'list']);
+
+// Vérifier le résultat
+if ($exitCode === 0) {
+    echo "Commande exécutée avec succès";
+}
+```
+
+### Cas 2 : Intégration dans un script personnalisé
 
 ```php
 #!/usr/bin/env php
 <?php
 
-require_once __DIR__ . '/../vendor/autoload.php';
+use AndyDefer\Directive\Bootstrap\CliBootstrap;
 
-use AndyDefer\Directive\Cli\CliRunner;
-
-$runner = new CliRunner();
-exit($runner->run($argv));
+try {
+    $bootstrap = CliBootstrap::create();
+    $exitCode = $bootstrap->run($argv);
+    exit($exitCode);
+} catch (Exception $e) {
+    echo "Erreur : " . $e->getMessage() . PHP_EOL;
+    exit(1);
+}
 ```
 
-### Cas 2 : Exécution d'une directive
+### Cas 3 : Exécution avec arguments complexes
 
-```bash
-# Afficher l'aide
-./directive --help
+```php
+<?php
 
-# Lister les directives disponibles
-./directive --list
+$bootstrap = CliBootstrap::create();
 
-# Afficher la version
-./directive --version
+// Arguments avec option et valeur
+$args = [
+    'directive',
+    'db:backup',
+    '--force',
+    '--compression=gzip',
+    '--format=sql'
+];
 
-# Exécuter une directive
-./directive user-create "John Doe" john@example.com
-
-# Exécuter une directive avec option
-./directive user-create "Jane Doe" jane@example.com --admin
-
-# Exécuter une directive avec option courte
-./directive cache-clear -f
-
-# Exécuter une directive via son alias
-./directive users  # si 'users' est alias de 'user-list'
-```
-
-### Cas 3 : Structure de projet recommandée
-
-```
-project/
-├── bin/
-│   └── directive          # Script d'entrée CLI
-├── app/
-│   └── Directives/        # Vos directives
-│       ├── UserCreateDirective.php
-│       ├── CacheClearDirective.php
-│       └── ...
-├── bootstrap/
-│   └── app.php            # Optionnel (pour Laravel)
-├── config/
-│   └── app.php            # Optionnel (pour Laravel)
-└── vendor/
+$exitCode = $bootstrap->run($args);
 ```
 
 ## Flux d'exécution
 
 ```
-run($argv)
+CliBootstrap::create()
     │
-    ├── 1. Enregistrement des services de base
-    │       ├── RenderDispatcher (singleton)
-    │       ├── InputDispatcher (singleton)
-    │       ├── LaravelBootstrapperContext (singleton)
-    │       ├── DirectiveDiscoveryContext (singleton)
-    │       ├── SignatureValidationService (singleton)
-    │       └── DirectiveInteractionService (singleton)
+    ├── loadEnvironment()
+    │   └── .env → putenv()
     │
-    ├── 2. Construction du noyau (buildKernel)
-    │       ├── EnvDirectiveConfig (configuration)
-    │       ├── DirectiveParserService (parser)
-    │       ├── DirectiveHydratorService (hydrateur)
-    │       ├── DirectiveDiscoveryService (découverte)
-    │       ├── DirectiveRendererService (rendu)
-    │       └── DirectiveExecutionService (exécution)
+    ├── loadAutoloader()
+    │   ├── vendor/autoload.php → require_once
+    │   └── vendor/autoload.php (package) → require_once
     │
-    ├── 3. Exécution du noyau
-    │       └── DirectiveKernel::run($argv)
+    ├── createApplication()
+    │   ├── bootstrap/app.php → require
+    │   └── Vérifie instanceof Application
     │
-    └── 4. Retour du code de sortie
+    ├── registerProviders()
+    │   ├── resolveProvidersFromStorage()
+    │   │   └── storage/framework/providers.php
+    │   ├── resolveProvidersFromConfig()
+    │   │   └── config/app.php → providers[]
+    │   └── filterValidProviders()
+    │
+    ├── bootApplication()
+    │   └── Kernel::bootstrap()
+    │
+    └── new self($app)
+
+CliBootstrap::run($argv)
+    │
+    ├── $this->app->make(CliRunner::class)
+    └── $runner->run($arguments)
 ```
-
-## Détection des directives
-
-Le runner recherche les directives dans l'ordre suivant :
-
-| Chemin | Description |
-|--------|-------------|
-| `./app/Directives` | Structure Laravel standard (recommandée) |
-| `./directives` | Structure alternative simple |
-| `./src/Directives` | Structure pour packages |
-
-Les directives doivent :
-- Être dans le namespace `App\Directives`
-- Étendre `AbstractDirective`
-- Implémenter `getSignature()`, `getDescription()` et `execute()`
 
 ## Gestion des erreurs
 
-| Situation | Code retour | Message |
-|-----------|-------------|---------|
-| Directive trouvée et exécutée avec succès | `0` | Sortie de la directive |
-| Directive trouvée mais échoue | `1` | Message d'erreur |
-| Directive non trouvée | `3` | `Directive not found: {name}` |
-| Arguments invalides | `4` | Message d'erreur du parser |
-| Commande d'aide | `0` | Liste des directives |
-| Commande de version | `0` | Version du système |
-| Commande de liste | `0` | Liste des directives |
+| Situation | Exception | Message |
+|-----------|-----------|---------|
+| Autoloader non trouvé | `BootstrapException` | `Autoloader not found at [PATH]. Run 'composer install' first.` |
+| Fichier bootstrap Laravel manquant | `BootstrapException` | `Laravel bootstrap file not found at [PATH].` |
+| Bootstrap ne retourne pas une instance de `Application` | `BootstrapException` | `Bootstrap file must return an instance of Illuminate\Contracts\Foundation\Application` |
+| Répertoire courant non déterminable | `RuntimeException` | `Unable to determine current working directory` |
 
 ## Intégration
 
-`CliRunner` s'intègre avec :
+La classe `CliBootstrap` s'intègre avec les composants suivants :
 
-- **`DirectiveKernel`** : Noyau d'exécution
-- **`Container`** : Conteneur de services (Illuminate Container)
-- **`EnvDirectiveConfig`** : Configuration basée sur les variables d'environnement
-- **`LaravelBootstrapperContext`** : Contexte pour le bootstrap Laravel
-- **`DirectiveDiscoveryService`** : Découverte automatique des directives
+- **`Paths`** : Utilisée pour résoudre tous les chemins de fichiers
+- **`CliRunner`** : Construite via le conteneur et exécutée avec les arguments
+- **Application Laravel** : Créée et bootstrappée via le conteneur
+- **Service Providers** : Chargés depuis le stockage et la configuration
 
 ## Performance
 
-| Aspect | Caractéristique |
-|--------|----------------|
-| Première exécution | Initialisation complète des services (~20-30ms) |
-| Exécution suivante | Nouvelle instance = nouvelle initialisation |
-| Découverte | Parcours du répertoire des directives (O(n) fichiers) |
-| Mémoire | Conteneur + services + directive exécutée |
+- **Temps de chargement** : ~200-500ms (dépend du nombre de providers)
+- **Mémoire** : ~4-8 MB (application Laravel chargée)
+- **Cache** : Utilise le fichier `storage/framework/providers.php` pour accélérer le chargement des providers
+- **Optimisation** : Le bootstrap est effectué une seule fois par instance
 
-## Configuration d'environnement
+### Points d'attention
 
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `DIRECTIVE_PATH` | Chemin personnalisé des directives | Détection automatique |
-| `DIRECTIVE_DEBUG` | Mode debug (affiche plus d'informations) | `false` |
+- Le chargement de l'environnement `.env` utilise `putenv()` qui peut être désactivé sur certains environnements
+- Les providers sont chargés depuis deux sources (storage + config) ce qui peut causer des doublons si mal configuré
 
 ## Compatibilité
 
 | Version | Support |
 |---------|---------|
-| PHP 8.1+ | ✅ Requis |
+| PHP 8.1+ | ✅ Complet |
 | PHP 8.2+ | ✅ Complet |
-| PHP 8.3+ | ✅ Complet |
-| Laravel 10+ | ✅ Intégration optionnelle |
+| Laravel 9.x | ✅ Testé |
+| Laravel 10.x | ✅ Testé |
+| Laravel 11.x | ✅ Testé |
 
 ## Exemple complet
-
-### 1. Créer une directive
-
-```php
-<?php
-// app/Directives/GreetDirective.php
-
-namespace App\Directives;
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-
-final class GreetDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'greet {name} {--formal}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Greet someone';
-    }
-
-    public function execute(): ExitCode
-    {
-        $name = $this->argument('name');
-        $formal = $this->option('formal');
-        
-        if ($formal) {
-            $this->info("Good day to you, {$name}!");
-        } else {
-            $this->line("Hello, {$name}!");
-        }
-        
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-### 2. Créer le script CLI
 
 ```php
 #!/usr/bin/env php
 <?php
-// bin/directive
 
-use AndyDefer\Directive\Cli\CliRunner;
+declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+use AndyDefer\Directive\Bootstrap\CliBootstrap;
+use AndyDefer\Directive\Exceptions\BootstrapException;
 
-$runner = new CliRunner();
-exit($runner->run($argv));
+try {
+    // Créer le bootstrap
+    $bootstrap = CliBootstrap::create();
+    
+    // Exécuter avec les arguments reçus
+    $exitCode = $bootstrap->run($argv);
+    
+    // Terminer avec le code approprié
+    exit($exitCode);
+    
+} catch (BootstrapException $e) {
+    // Erreur de bootstrap
+    fwrite(STDERR, "❌ Bootstrap error: " . $e->getMessage() . PHP_EOL);
+    exit(1);
+    
+} catch (Throwable $e) {
+    // Erreur inattendue
+    fwrite(STDERR, "💥 Unexpected error: " . $e->getMessage() . PHP_EOL);
+    exit(1);
+}
 ```
 
-### 3. Rendre exécutable
+## Notes de sécurité
 
-```bash
-chmod +x bin/directive
-```
+⚠️ **Important** : Cette classe utilise `putenv()` pour charger les variables d'environnement. Assurez-vous que cette fonction n'est pas désactivée dans votre environnement (souvent le cas dans les environnements de production avec `disable_functions`).
 
-### 4. Utilisation
-
-```bash
-# Aide
-./bin/directive --help
-
-# Liste des directives
-./bin/directive --list
-
-# Exécution simple
-./bin/directive greet John
-
-# Exécution avec option
-./bin/directive greet Jane --formal
-
-# Version
-./bin/directive --version
-```
-
-## Voir aussi
-
-- [`DirectiveKernel`](directive-kernel.md) - Noyau d'exécution
-- [`DirectiveDiscoveryService`](directive-discovery-service.md) - Découverte des directives
-- [`DirectiveExecutionService`](directive-execution-service.md) - Service d'exécution
-- [`DirectiveHydratorService`](directive-hydrator-service.md) - Hydratation des directives
-- [`DirectiveParserService`](directive-parser-service.md) - Parsing des signatures
+⚠️ **Provider Storage** : Le fichier `storage/framework/providers.php` doit être accessible en lecture. Si le fichier n'existe pas, les providers seront chargés depuis la configuration `config/app.php`.
 ---
