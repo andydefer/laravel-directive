@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Discovers;
 
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
@@ -106,7 +107,7 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
     private function doDiscover(): array
     {
         $directives = [];
-        $projectRoot = $this->getProjectRoot();
+        $projectRoot = Paths::projectRoot();
 
         // 1. Scanner les chemins par défaut et configurés
         $paths = $this->getScanPaths();
@@ -180,23 +181,5 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
         }
 
         return $directives;
-    }
-
-    /**
-     * Gets the project root directory.
-     *
-     * @return string The project root path
-     *
-     * @throws \RuntimeException If the current working directory cannot be determined
-     */
-    private function getProjectRoot(): string
-    {
-        $cwd = getcwd();
-
-        if ($cwd === false) {
-            throw new \RuntimeException('Unable to determine current working directory');
-        }
-
-        return $cwd;
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Integration\Services;
 
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveTestingService;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
@@ -18,7 +19,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
 
         $this->service = new DirectiveTestingService(
             $this->app,
-            [getcwd().'/tests/Fixtures/Directives'],
+            [Paths::projectRoot().'/tests/Fixtures/Directives'],
         );
 
     }
@@ -191,7 +192,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
 
         $newService = new DirectiveTestingService(
             $this->app,
-            [getcwd().'/tests/Fixtures/Directives'],
+            [Paths::projectRoot().'/tests/Fixtures/Directives'],
         );
 
         $reflection = new \ReflectionClass($newService);
@@ -210,11 +211,11 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
 
         $service1 = new DirectiveTestingService(
             $this->app,
-            [getcwd().'/tests/Fixtures/Directives'],
+            [Paths::projectRoot().'/tests/Fixtures/Directives'],
         );
         $service2 = new DirectiveTestingService(
             $this->app,
-            [getcwd().'/tests/Fixtures/Directives'],
+            [Paths::projectRoot().'/tests/Fixtures/Directives'],
         );
 
         $reflection = new \ReflectionClass(DirectiveTestingService::class);

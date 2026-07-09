@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Container;
 
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Contracts\ContainerInterface;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
@@ -41,7 +42,7 @@ abstract class Container implements ContainerInterface
 
     public function __construct(string $basePath = '')
     {
-        $this->basePath = $basePath ?: getcwd();
+        $this->basePath = $basePath ?: Paths::projectRoot();
 
         $this->singleton(ContainerInterface::class, $this);
 

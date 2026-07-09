@@ -14,6 +14,11 @@ namespace AndyDefer\Directive\Bootstrap;
 final class Paths
 {
     /**
+     * Cached project root.
+     */
+    private static ?string $projectRoot = null;
+
+    /**
      * The default file name for environment configuration.
      */
     private const ENV_FILE = '.env';
@@ -52,13 +57,36 @@ final class Paths
      */
     public static function projectRoot(): string
     {
+        if (self::$projectRoot !== null) {
+            return self::$projectRoot;
+        }
+
         $cwd = getcwd();
 
         if ($cwd === false) {
             throw new \RuntimeException('Unable to determine current working directory');
         }
 
-        return $cwd;
+        $directory = realpath($cwd);
+
+        while ($directory !== false) {
+            $composer = $directory.DIRECTORY_SEPARATOR.'composer.json';
+            $vendor = $directory.DIRECTORY_SEPARATOR.'vendor';
+
+            if (is_file($composer) && is_dir($vendor)) {
+                return self::$projectRoot = $directory;
+            }
+
+            $parent = dirname($directory);
+
+            if ($parent === $directory) {
+                break;
+            }
+
+            $directory = $parent;
+        }
+
+        return self::$projectRoot = $cwd;
     }
 
     /**

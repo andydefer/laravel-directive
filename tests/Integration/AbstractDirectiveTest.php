@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Integration;
 
 use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
@@ -22,7 +23,7 @@ final class AbstractDirectiveTest extends IntegrationTestCase
         // Capturer les sorties console
 
         $this->kernel = DirectiveKernel::init($this->laravelContainer);
-        $this->kernel->addSource(getcwd().'/tests/Fixtures/Directives');
+        $this->kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
         $this->kernel->resetContext();
     }
 

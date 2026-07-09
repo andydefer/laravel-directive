@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Integration;
 
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\ExecutionStatsRecord;
@@ -26,7 +27,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $this->kernel = DirectiveKernel::init($this->laravelContainer);
 
         // Ajouter le chemin des fixtures
-        $this->kernel->addSource(getcwd().'/tests/Fixtures/Directives');
+        $this->kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
 
         // Répertoire temporaire pour les logs
         $this->logBasePath = sys_get_temp_dir().'/directive_kernel_logs_'.uniqid();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Integration;
 
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveTestingService;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
@@ -18,7 +19,7 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
         $this->service = new DirectiveTestingService(
             $this->app,
-            [getcwd().'/tests/Fixtures/Directives'],
+            [Paths::projectRoot().'/tests/Fixtures/Directives'],
         );
     }
 

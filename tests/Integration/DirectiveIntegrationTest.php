@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Unit;
 
+use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -30,7 +31,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
         $this->kernel = DirectiveKernel::init($this->laravelContainer);
 
-        $this->kernel->addSource(getcwd().'/tests/Fixtures/Directives');
+        $this->kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
 
         ob_start();
     }
