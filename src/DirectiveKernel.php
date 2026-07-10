@@ -16,6 +16,7 @@ use AndyDefer\Directive\Services\ExecutionStatsLogger;
 use AndyDefer\DomainStructures\Utils\MapCollection;
 use AndyDefer\StorageKit\Storage\MemoryStorage;
 use ReflectionClass;
+use Throwable;
 
 final class DirectiveKernel extends DirectiveDiscoveryService
 {
@@ -42,8 +43,30 @@ final class DirectiveKernel extends DirectiveDiscoveryService
     ) {
         parent::__construct($container);
         $this->context = new MapCollection;
-        $this->logger = $this->container->make(ExecutionStatsLogger::class);
-        $this->bkTree = new BKTree(new MemoryStorage, 'directive_suggestions');
+
+        try {
+            $this->logger = $this->container->make(ExecutionStatsLogger::class);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'logger_resolution',
+                'Failed to resolve ExecutionStatsLogger from container',
+                $e->getMessage(),
+                []
+            );
+            throw $e;
+        }
+
+        try {
+            $this->bkTree = new BKTree(new MemoryStorage, 'directive_suggestions');
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'bk_tree_initialization',
+                'Failed to initialize BKTree for directive suggestions',
+                $e->getMessage(),
+                []
+            );
+            throw $e;
+        }
     }
 
     public static function init(Container $container): self
@@ -87,42 +110,84 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
     public function setLogBasePath(string $path): self
     {
-        $this->logger->setBasePath($path);
+        try {
+            $this->logger->setBasePath($path);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'set_log_base_path',
+                'Failed to set log base path: '.$path,
+                $e->getMessage(),
+                ['path' => $path]
+            );
+        }
 
         return $this;
     }
 
     public function run(array $argv): ExitCode
     {
-        if ($this->isMissingCommand($argv)) {
-            return $this->executeHelpDirective();
+        try {
+            if ($this->isMissingCommand($argv)) {
+                return $this->executeHelpDirective();
+            }
+
+            [$commandName, $query] = $this->parseArguments($argv);
+
+            return $this->executeDirective($commandName, $query);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'run_execution',
+                'Failed to execute command',
+                $e->getMessage(),
+                ['argv' => $argv]
+            );
+
+            return ExitCode::RUNTIME_ERROR;
         }
-
-        [$commandName, $query] = $this->parseArguments($argv);
-
-        return $this->executeDirective($commandName, $query);
     }
 
     public function runDirective(string $fqcn, array $argv = []): ExitCode
     {
-        $this->addDirective($fqcn);
+        try {
+            $this->addDirective($fqcn);
 
-        $reflection = new ReflectionClass($fqcn);
-        $instance = $reflection->newInstanceWithoutConstructor();
-        $signature = $instance->getSignature();
-        $parts = explode(' ', $signature);
-        $commandName = $parts[0];
+            $reflection = new ReflectionClass($fqcn);
+            $instance = $reflection->newInstanceWithoutConstructor();
+            $signature = $instance->getSignature();
+            $parts = explode(' ', $signature);
+            $commandName = $parts[0];
 
-        $fullArgv = array_merge(['directive', $commandName], $argv);
+            $fullArgv = array_merge(['directive', $commandName], $argv);
 
-        return $this->run($fullArgv);
+            return $this->run($fullArgv);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'run_directive',
+                'Failed to run directive: '.$fqcn,
+                $e->getMessage(),
+                ['fqcn' => $fqcn, 'argv' => $argv]
+            );
+
+            return ExitCode::RUNTIME_ERROR;
+        }
     }
 
     public function runSignature(string $query): ExitCode
     {
-        $argv = array_merge(['directive'], explode(' ', $query));
+        try {
+            $argv = array_merge(['directive'], explode(' ', $query));
 
-        return $this->run($argv);
+            return $this->run($argv);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'run_signature',
+                'Failed to run signature: '.$query,
+                $e->getMessage(),
+                ['query' => $query]
+            );
+
+            return ExitCode::RUNTIME_ERROR;
+        }
     }
 
     private function isMissingCommand(array $argv): bool
@@ -132,7 +197,18 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
     private function executeHelpDirective(): ExitCode
     {
-        return $this->executeDirective('help', 'help');
+        try {
+            return $this->executeDirective('help', 'help');
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'execute_help',
+                'Failed to execute help directive',
+                $e->getMessage(),
+                []
+            );
+
+            return ExitCode::RUNTIME_ERROR;
+        }
     }
 
     private function parseArguments(array $argv): array
@@ -146,50 +222,72 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
     private function executeDirective(string $commandName, string $query): ExitCode
     {
-        $directives = $this->getDirectives();
+        try {
+            $directives = $this->getDirectives();
 
-        $directive = $this->findDirective($directives, $commandName);
+            $directive = $this->findDirective($directives, $commandName);
 
-        if ($directive === null) {
-            /** @var Console $console */
-            $console = $this->container->make(Console::class);
-            $console->error("Directive not found: {$commandName}");
+            if ($directive === null) {
+                /** @var Console $console */
+                $console = $this->container->make(Console::class);
+                $console->error("Directive not found: {$commandName}");
 
-            $suggestions = $this->getSuggestions($commandName);
-            if (! empty($suggestions)) {
-                $console->line('');
-                $console->info('💡 Did you mean:');
-                foreach ($suggestions as $suggestion) {
-                    $console->line("  • {$suggestion}");
+                $suggestions = $this->getSuggestions($commandName);
+                if (! empty($suggestions)) {
+                    $console->line('');
+                    $console->info('💡 Did you mean:');
+                    foreach ($suggestions as $suggestion) {
+                        $console->line("  • {$suggestion}");
+                    }
                 }
+
+                return ExitCode::NOT_FOUND;
             }
 
-            return ExitCode::NOT_FOUND;
+            $this->startTime = microtime(true);
+            $this->startMemory = memory_get_usage();
+
+            $exitCode = $this->instantiateAndRun($directive, $query);
+
+            $this->logExecution($directive, $commandName, $exitCode);
+
+            return $exitCode;
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'execute_directive',
+                'Failed to execute directive: '.$commandName,
+                $e->getMessage(),
+                ['command' => $commandName, 'query' => $query]
+            );
+
+            return ExitCode::RUNTIME_ERROR;
         }
-
-        $this->startTime = microtime(true);
-        $this->startMemory = memory_get_usage();
-
-        $exitCode = $this->instantiateAndRun($directive, $query);
-
-        $this->logExecution($directive, $commandName, $exitCode);
-
-        return $exitCode;
     }
 
     private function getDirectives(): DirectiveMetadataCollection
     {
-        if (empty($this->directivesCache)) {
-            $this->directivesCache = $this->discover()->toArray();
-            $this->initializeBKTree();
-        }
+        try {
+            if (empty($this->directivesCache)) {
+                $this->directivesCache = $this->discover()->toArray();
+                $this->initializeBKTree();
+            }
 
-        $collection = new DirectiveMetadataCollection;
-        foreach ($this->directivesCache as $directive) {
-            $collection->add($directive);
-        }
+            $collection = new DirectiveMetadataCollection;
+            foreach ($this->directivesCache as $directive) {
+                $collection->add($directive);
+            }
 
-        return $collection;
+            return $collection;
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'get_directives',
+                'Failed to get directives from cache',
+                $e->getMessage(),
+                []
+            );
+
+            return new DirectiveMetadataCollection;
+        }
     }
 
     private function getSuggestions(string $commandName, int $limit = 5): array
@@ -201,7 +299,14 @@ final class DirectiveKernel extends DirectiveDiscoveryService
                 fn ($result) => $result->word,
                 $results->toArray()
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'get_suggestions',
+                'Failed to get suggestions for command: '.$commandName,
+                $e->getMessage(),
+                ['command' => $commandName, 'limit' => $limit]
+            );
+
             return [];
         }
     }
@@ -217,8 +322,13 @@ final class DirectiveKernel extends DirectiveDiscoveryService
                 $this->indexDirective($directive);
             }
             $this->bkTreeInitialized = true;
-        } catch (\Throwable $e) {
-            // Silently ignore initialization errors
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'initialize_bk_tree',
+                'Failed to initialize BKTree with directives',
+                $e->getMessage(),
+                ['directives_count' => count($this->directivesCache)]
+            );
         }
     }
 
@@ -232,45 +342,68 @@ final class DirectiveKernel extends DirectiveDiscoveryService
             foreach ($directive->aliases as $alias) {
                 $this->bkTree->insert($alias);
             }
-        } catch (\Throwable $e) {
-            // Silently ignore indexing errors
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'index_directive',
+                'Failed to index directive in BKTree: '.$directive->signature,
+                $e->getMessage(),
+                ['signature' => $directive->signature, 'class' => $directive->class]
+            );
         }
     }
 
     private function logExecution(DirectiveMetadataRecord $directive, string $commandName, ExitCode $exitCode): void
     {
-        $duration = microtime(true) - $this->startTime;
-        $memoryUsed = memory_get_usage() - $this->startMemory;
-        $peakMemory = memory_get_peak_usage();
+        try {
+            $duration = microtime(true) - $this->startTime;
+            $memoryUsed = memory_get_usage() - $this->startMemory;
+            $peakMemory = memory_get_peak_usage();
 
-        $record = new ExecutionStatsRecord(
-            command: $commandName,
-            directiveClass: $directive->class,
-            signature: $directive->signature,
-            exitCode: $exitCode,
-            duration: $duration,
-            memoryUsage: $memoryUsed,
-            peakMemoryUsage: $peakMemory,
-            callsCount: 0,
-            error: $this->lastError,
-        );
+            $record = new ExecutionStatsRecord(
+                command: $commandName,
+                directiveClass: $directive->class,
+                signature: $directive->signature,
+                exitCode: $exitCode,
+                duration: $duration,
+                memoryUsage: $memoryUsed,
+                peakMemoryUsage: $peakMemory,
+                callsCount: 0,
+                error: $this->lastError,
+            );
 
-        $this->lastStats = $record;
-        $this->lastError = null;
+            $this->lastStats = $record;
+            $this->lastError = null;
 
-        $this->logger->log($record, $this->context);
+            $this->logger->log($record, $this->context);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'log_execution',
+                'Failed to log execution for directive: '.$commandName,
+                $e->getMessage(),
+                ['command' => $commandName, 'exit_code' => $exitCode->value]
+            );
+        }
     }
 
     private function findDirective(DirectiveMetadataCollection $directives, string $commandName): ?DirectiveMetadataRecord
     {
-        foreach ($directives as $directive) {
-            if ($this->matchesCommandName($directive, $commandName)) {
-                return $directive;
-            }
+        try {
+            foreach ($directives as $directive) {
+                if ($this->matchesCommandName($directive, $commandName)) {
+                    return $directive;
+                }
 
-            if ($this->matchesAlias($directive, $commandName)) {
-                return $directive;
+                if ($this->matchesAlias($directive, $commandName)) {
+                    return $directive;
+                }
             }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'find_directive',
+                'Failed to find directive: '.$commandName,
+                $e->getMessage(),
+                ['command' => $commandName]
+            );
         }
 
         return null;
@@ -278,18 +411,38 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
     private function matchesCommandName(DirectiveMetadataRecord $directive, string $commandName): bool
     {
-        $signatureParts = explode(' ', $directive->signature);
-        $directiveName = $signatureParts[0];
+        try {
+            $signatureParts = explode(' ', $directive->signature);
+            $directiveName = $signatureParts[0];
 
-        return $directiveName === $commandName;
+            return $directiveName === $commandName;
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'matches_command_name',
+                'Failed to match command name: '.$commandName,
+                $e->getMessage(),
+                ['command' => $commandName, 'signature' => $directive->signature]
+            );
+
+            return false;
+        }
     }
 
     private function matchesAlias(DirectiveMetadataRecord $directive, string $commandName): bool
     {
-        foreach ($directive->aliases as $alias) {
-            if ($alias === $commandName) {
-                return true;
+        try {
+            foreach ($directive->aliases as $alias) {
+                if ($alias === $commandName) {
+                    return true;
+                }
             }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'matches_alias',
+                'Failed to match alias: '.$commandName,
+                $e->getMessage(),
+                ['command' => $commandName]
+            );
         }
 
         return false;
@@ -297,8 +450,19 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
     private function instantiateAndRun(DirectiveMetadataRecord $directive, string $query): ExitCode
     {
-        $instance = new $directive->class($this, $query);
+        try {
+            $instance = new $directive->class($this, $query);
 
-        return $instance->run();
+            return $instance->run();
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'instantiate_and_run',
+                'Failed to instantiate and run directive: '.$directive->class,
+                $e->getMessage(),
+                ['class' => $directive->class, 'query' => $query]
+            );
+
+            return ExitCode::RUNTIME_ERROR;
+        }
     }
 }

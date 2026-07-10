@@ -18,11 +18,15 @@ use AndyDefer\Directive\Enums\DiscoverySource;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Utils\ListCollection;
+use AndyDefer\DomainStructures\Utils\MapCollection;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use AndyDefer\SignatureParser\SignatureParser;
 use PhpParser\ParserFactory;
 use ReflectionClass;
+use ReflectionException;
+use Throwable;
 
 /**
  * Discovers and manages directive classes from multiple sources.
@@ -99,6 +103,11 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     private int $maxDepth = 3;
 
     /**
+     * @var ListCollection<MapCollection> Collection of problems encountered during discovery
+     */
+    private ListCollection $problems;
+
+    /**
      * @param  Container  $container  The container instance
      */
     protected function __construct(
@@ -115,11 +124,21 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         $this->onlyPrefixes = new StringTypedCollection;
         $this->excludedPrefixes = new StringTypedCollection;
         $this->maxDepth = 3;
+        $this->problems = new ListCollection;
 
         // Initialize custom sources from config
-        $config = $this->getConfig();
-        foreach ($config->getCustomSources() as $source) {
-            $this->customSources->add($source);
+        try {
+            $config = $this->getConfig();
+            foreach ($config->getCustomSources() as $source) {
+                $this->customSources->add($source);
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'config_loading',
+                'Failed to load custom sources from configuration',
+                $e->getMessage(),
+                ['config_key' => 'custom_sources']
+            );
         }
     }
 
@@ -157,7 +176,14 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     {
         try {
             return $this->container->make(DirectiveParserInterface::class);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'parser_resolution',
+                'Failed to resolve DirectiveParserInterface from container, using fallback',
+                $e->getMessage(),
+                ['fallback' => 'DirectiveParserService with SignatureParser']
+            );
+
             return new DirectiveParserService(new SignatureParser);
         }
     }
@@ -169,7 +195,13 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     {
         try {
             return $this->container->make(DirectiveScannerInterface::class);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'scanner_resolution',
+                'Failed to resolve DirectiveScannerInterface from container, using fallback',
+                $e->getMessage(),
+                ['fallback' => 'DirectiveClassScanner']
+            );
             $fileSystem = $this->getFileSystem();
             $parser = (new ParserFactory)->createForNewestSupportedVersion();
 
@@ -184,7 +216,14 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     {
         try {
             return $this->container->make(FileSystemInterface::class);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'filesystem_resolution',
+                'Failed to resolve FileSystemInterface from container, using fallback',
+                $e->getMessage(),
+                ['fallback' => 'FileSystemService']
+            );
+
             return new FileSystemService;
         }
     }
@@ -194,8 +233,58 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      */
     protected function getConfig(): DirectiveConfigInterface
     {
-        return $this->container->make(DirectiveConfigInterface::class);
+        try {
+            return $this->container->make(DirectiveConfigInterface::class);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'config_resolution',
+                'Failed to resolve DirectiveConfigInterface from container',
+                $e->getMessage(),
+                []
+            );
+            throw $e;
+        }
     }
+
+    /**
+     * Add a problem to the problems collection.
+     *
+     * @param  string  $key  Unique identifier for the problem
+     * @param  string  $context  Human-readable description of the problem context
+     * @param  string  $message  The error message
+     * @param  array<string, mixed>  $contextData  Additional context data
+     */
+    protected function addProblem(string $key, string $context, string $message, array $contextData = []): void
+    {
+        $this->problems = $this->problems->add(MapCollection::from([
+            'key' => $key,
+            'context' => $context,
+            'message' => $message,
+            'context_data' => $contextData,
+            'timestamp' => date('Y-m-d H:i:s'),
+        ]));
+    }
+
+    /**
+     * Get all problems encountered during discovery.
+     *
+     * @return ListCollection<MapCollection> Collection of problem records
+     */
+    public function getProblems(): ListCollection
+    {
+        return $this->problems;
+    }
+
+    /**
+     * Clear all problems.
+     */
+    public function clearProblems(): self
+    {
+        $this->problems = new ListCollection;
+
+        return $this;
+    }
+
     // ==================== SOURCE MANAGEMENT ====================
 
     /**
@@ -622,14 +711,24 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      */
     public function addDirective(string $class, bool $force = false): self
     {
-        if (! is_subclass_of($class, AbstractDirective::class)) {
-            throw new \InvalidArgumentException(
-                sprintf('Class "%s" must extend %s', $class, AbstractDirective::class)
-            );
-        }
+        try {
+            if (! is_subclass_of($class, AbstractDirective::class)) {
+                throw new \InvalidArgumentException(
+                    sprintf('Class "%s" must extend %s', $class, AbstractDirective::class)
+                );
+            }
 
-        if (! $this->registeredDirectives->contains($class)) {
-            $this->registeredDirectives->add($class);
+            if (! $this->registeredDirectives->contains($class)) {
+                $this->registeredDirectives->add($class);
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'add_directive',
+                'Failed to add directive class: '.$class,
+                $e->getMessage(),
+                ['class' => $class, 'force' => $force]
+            );
+            throw $e;
         }
 
         return $this;
@@ -644,7 +743,16 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     public function addDirectives(array $classes, bool $force = false): self
     {
         foreach ($classes as $class) {
-            $this->addDirective($class, $force);
+            try {
+                $this->addDirective($class, $force);
+            } catch (Throwable $e) {
+                $this->addProblem(
+                    'add_directives',
+                    'Failed to add directive class: '.$class,
+                    $e->getMessage(),
+                    ['class' => $class, 'force' => $force]
+                );
+            }
         }
 
         return $this;
@@ -657,27 +765,72 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     {
         $this->collection = new DirectiveMetadataCollection;
 
-        // 1. Registered directives (priority)
-        $this->discoverRegisteredDirectives();
-
-        // 2. Built-in directives
-        if (! $this->isSourceIgnored(DiscoverySource::BUILTIN)) {
-            $this->discoverBuiltInDirectives();
+        try {
+            // 1. Registered directives (priority)
+            $this->discoverRegisteredDirectives();
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_registered',
+                'Failed to discover registered directives',
+                $e->getMessage(),
+                []
+            );
         }
 
-        // 3. Workspace directives
-        if (! $this->isSourceIgnored(DiscoverySource::WORKSPACE)) {
-            $this->discoverWorkspaceDirectives();
+        try {
+            // 2. Built-in directives
+            if (! $this->isSourceIgnored(DiscoverySource::BUILTIN)) {
+                $this->discoverBuiltInDirectives();
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_builtin',
+                'Failed to discover built-in directives',
+                $e->getMessage(),
+                []
+            );
         }
 
-        // 4. Vendor directives
-        if (! $this->isSourceIgnored(DiscoverySource::VENDOR)) {
-            $this->discoverVendorDirectives();
+        try {
+            // 3. Workspace directives
+            if (! $this->isSourceIgnored(DiscoverySource::WORKSPACE)) {
+                $this->discoverWorkspaceDirectives();
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_workspace',
+                'Failed to discover workspace directives',
+                $e->getMessage(),
+                []
+            );
         }
 
-        // 5. Custom sources
-        if (! $this->isSourceIgnored(DiscoverySource::CUSTOM)) {
-            $this->discoverCustomDirectives();
+        try {
+            // 4. Vendor directives
+            if (! $this->isSourceIgnored(DiscoverySource::VENDOR)) {
+                $this->discoverVendorDirectives();
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_vendor',
+                'Failed to discover vendor directives',
+                $e->getMessage(),
+                []
+            );
+        }
+
+        try {
+            // 5. Custom sources
+            if (! $this->isSourceIgnored(DiscoverySource::CUSTOM)) {
+                $this->discoverCustomDirectives();
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_custom',
+                'Failed to discover custom directives',
+                $e->getMessage(),
+                []
+            );
         }
 
         return $this->collection->uniqueByClass();
@@ -703,29 +856,58 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
 
     public function addReservedSignature(string $signature): self
     {
-        $config = $this->getConfig();
-        $reserved = $config->getReservedSignatures();
-        $reserved[] = $signature;
-        $config->setReservedSignatures($reserved);
+        try {
+            $config = $this->getConfig();
+            $reserved = $config->getReservedSignatures();
+            $reserved[] = $signature;
+            $config->setReservedSignatures($reserved);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'add_reserved_signature',
+                'Failed to add reserved signature: '.$signature,
+                $e->getMessage(),
+                ['signature' => $signature]
+            );
+        }
 
         return $this;
     }
 
     public function removeReservedSignature(string $signature): self
     {
-        $config = $this->getConfig();
-        $reserved = array_filter(
-            $config->getReservedSignatures(),
-            fn (string $s): bool => $s !== $signature
-        );
-        $config->setReservedSignatures(array_values($reserved));
+        try {
+            $config = $this->getConfig();
+            $reserved = array_filter(
+                $config->getReservedSignatures(),
+                fn (string $s): bool => $s !== $signature
+            );
+            $config->setReservedSignatures(array_values($reserved));
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'remove_reserved_signature',
+                'Failed to remove reserved signature: '.$signature,
+                $e->getMessage(),
+                ['signature' => $signature]
+            );
+        }
 
         return $this;
     }
 
     public function getReservedSignatures(): array
     {
-        return $this->getConfig()->getReservedSignatures();
+        try {
+            return $this->getConfig()->getReservedSignatures();
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'get_reserved_signatures',
+                'Failed to get reserved signatures',
+                $e->getMessage(),
+                []
+            );
+
+            return [];
+        }
     }
 
     // ==================== PRIVATE METHODS ====================
@@ -733,121 +915,234 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     private function discoverRegisteredDirectives(): void
     {
         foreach ($this->registeredDirectives as $class) {
-            $this->addDirectiveFromFqcn($class, true);
+            try {
+                $this->addDirectiveFromFqcn($class, true);
+            } catch (Throwable $e) {
+                $this->addProblem(
+                    'discover_registered_class',
+                    'Failed to add registered directive: '.$class,
+                    $e->getMessage(),
+                    ['class' => $class]
+                );
+            }
         }
     }
 
     private function discoverBuiltInDirectives(): void
     {
-        $source = new BuiltInDirectiveDiscovery;
-        $fqcns = $source->discover();
+        try {
+            $source = new BuiltInDirectiveDiscovery;
+            $fqcns = $source->discover();
 
-        foreach ($fqcns as $fqcn) {
-            $this->addDirectiveFromFqcn($fqcn, true);
+            foreach ($fqcns as $fqcn) {
+                try {
+                    $this->addDirectiveFromFqcn($fqcn, true);
+                } catch (Throwable $e) {
+                    $this->addProblem(
+                        'discover_builtin_class',
+                        'Failed to add built-in directive: '.$fqcn,
+                        $e->getMessage(),
+                        ['class' => $fqcn]
+                    );
+                }
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_builtin_source',
+                'Failed to discover built-in directives',
+                $e->getMessage(),
+                []
+            );
         }
     }
 
     private function discoverWorkspaceDirectives(): void
     {
-        $source = new WorkspaceDirectiveDiscovery(
-            $this->getFileSystem(),
-            $this->getScanner(),
-            $this->getConfig(),
-            $this->maxDepth
-        );
+        try {
+            $source = new WorkspaceDirectiveDiscovery(
+                $this->getFileSystem(),
+                $this->getScanner(),
+                $this->getConfig(),
+                $this->maxDepth
+            );
 
-        $fqcns = $source->discover();
+            $fqcns = $source->discover();
 
-        foreach ($fqcns as $fqcn) {
-            $this->addDirectiveFromFqcn($fqcn, false);
+            foreach ($fqcns as $fqcn) {
+                try {
+                    $this->addDirectiveFromFqcn($fqcn, false);
+                } catch (Throwable $e) {
+                    $this->addProblem(
+                        'discover_workspace_class',
+                        'Failed to add workspace directive: '.$fqcn,
+                        $e->getMessage(),
+                        ['class' => $fqcn]
+                    );
+                }
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_workspace_source',
+                'Failed to discover workspace directives',
+                $e->getMessage(),
+                []
+            );
         }
     }
 
     private function discoverVendorDirectives(): void
     {
-        $config = $this->getConfig();
-        $fileSystem = $this->getFileSystem();
+        try {
+            $config = $this->getConfig();
+            $fileSystem = $this->getFileSystem();
 
-        $composerReader = new ComposerReaderService($config, $fileSystem);
-        $dependencyResolver = new DependencyResolverService($composerReader, $fileSystem);
+            $composerReader = new ComposerReaderService($config, $fileSystem);
+            $dependencyResolver = new DependencyResolverService($composerReader, $fileSystem);
 
-        $source = new VendorDirectiveDiscovery(
-            $composerReader,
-            $dependencyResolver,
-            $fileSystem,
-            $this->getScanner(),
-            $this->maxDepth
-        );
+            $source = new VendorDirectiveDiscovery(
+                $composerReader,
+                $dependencyResolver,
+                $fileSystem,
+                $this->getScanner(),
+                $this->maxDepth
+            );
 
-        $fqcns = $source->discover();
+            $fqcns = $source->discover();
 
-        foreach ($fqcns as $fqcn) {
-            $this->addDirectiveFromFqcn($fqcn, false);
+            foreach ($fqcns as $fqcn) {
+                try {
+                    $this->addDirectiveFromFqcn($fqcn, false);
+                } catch (Throwable $e) {
+                    $this->addProblem(
+                        'discover_vendor_class',
+                        'Failed to add vendor directive: '.$fqcn,
+                        $e->getMessage(),
+                        ['class' => $fqcn]
+                    );
+                }
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_vendor_source',
+                'Failed to discover vendor directives',
+                $e->getMessage(),
+                []
+            );
         }
     }
 
     private function discoverCustomDirectives(): void
     {
-        $fileSystem = $this->getFileSystem();
-        $scanner = $this->getScanner();
+        try {
+            $fileSystem = $this->getFileSystem();
+            $scanner = $this->getScanner();
 
-        foreach ($this->customSources as $directory) {
-            if ($this->ignoredPaths->contains($directory)) {
-                continue;
+            foreach ($this->customSources as $directory) {
+                if ($this->ignoredPaths->contains($directory)) {
+                    continue;
+                }
+
+                if (! $fileSystem->isDirectory($directory)) {
+                    $this->addProblem(
+                        'custom_source_not_directory',
+                        'Custom source path is not a directory: '.$directory,
+                        'Path does not exist or is not a directory',
+                        ['path' => $directory]
+                    );
+
+                    continue;
+                }
+
+                try {
+                    $fqcns = $scanner->scan($directory, $this->maxDepth);
+
+                    foreach ($fqcns as $fqcn) {
+                        try {
+                            $this->addDirectiveFromFqcn($fqcn, false);
+                        } catch (Throwable $e) {
+                            $this->addProblem(
+                                'discover_custom_class',
+                                'Failed to add custom directive: '.$fqcn,
+                                $e->getMessage(),
+                                ['class' => $fqcn, 'directory' => $directory]
+                            );
+                        }
+                    }
+                } catch (Throwable $e) {
+                    $this->addProblem(
+                        'discover_custom_directory',
+                        'Failed to scan custom directory: '.$directory,
+                        $e->getMessage(),
+                        ['directory' => $directory]
+                    );
+                }
             }
-
-            if (! $fileSystem->isDirectory($directory)) {
-                continue;
-            }
-
-            $fqcns = $scanner->scan($directory, $this->maxDepth);
-
-            foreach ($fqcns as $fqcn) {
-                $this->addDirectiveFromFqcn($fqcn, false);
-            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'discover_custom_source',
+                'Failed to discover custom directives',
+                $e->getMessage(),
+                []
+            );
         }
     }
 
     private function addDirectiveFromFqcn(string $fqcn, bool $force = false): void
     {
-        $reflection = new ReflectionClass($fqcn);
+        try {
+            $reflection = new ReflectionClass($fqcn);
 
-        if (! $this->isValidDirectiveClass($reflection)) {
-            return;
+            if (! $this->isValidDirectiveClass($reflection)) {
+                return;
+            }
+
+            $instance = $reflection->newInstanceWithoutConstructor();
+            $signature = $instance->getSignature();
+
+            $parts = explode(' ', $signature);
+            $baseSignature = $parts[0];
+
+            // Check if directive is ignored
+            if ($this->ignoredDirectives->contains($baseSignature)) {
+                return;
+            }
+
+            // Check reserved signatures
+            if (! $force && $this->isReservedSignature($signature)) {
+                return;
+            }
+
+            // Check namespace filters
+            if (! $this->passesNamespaceFilters($fqcn)) {
+                return;
+            }
+
+            // Check prefix filters
+            if (! $this->passesPrefixFilters($signature)) {
+                return;
+            }
+
+            $this->collection->add(new DirectiveMetadataRecord(
+                signature: $signature,
+                class: $fqcn,
+                description: $instance->getDescription(),
+                aliases: $instance->getAliases(),
+            ));
+        } catch (ReflectionException $e) {
+            $this->addProblem(
+                'reflection_error',
+                'Failed to reflect class: '.$fqcn,
+                $e->getMessage(),
+                ['class' => $fqcn]
+            );
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'add_directive_fqcn',
+                'Failed to add directive: '.$fqcn,
+                $e->getMessage(),
+                ['class' => $fqcn, 'force' => $force]
+            );
         }
-
-        $instance = $reflection->newInstanceWithoutConstructor();
-        $signature = $instance->getSignature();
-
-        $parts = explode(' ', $signature);
-        $baseSignature = $parts[0];
-
-        // Check if directive is ignored
-        if ($this->ignoredDirectives->contains($baseSignature)) {
-            return;
-        }
-
-        // Check reserved signatures
-        if (! $force && $this->isReservedSignature($signature)) {
-            return;
-        }
-
-        // Check namespace filters
-        if (! $this->passesNamespaceFilters($fqcn)) {
-            return;
-        }
-
-        // Check prefix filters
-        if (! $this->passesPrefixFilters($signature)) {
-            return;
-        }
-
-        $this->collection->add(new DirectiveMetadataRecord(
-            signature: $signature,
-            class: $fqcn,
-            description: $instance->getDescription(),
-            aliases: $instance->getAliases(),
-        ));
     }
 
     private function isValidDirectiveClass(ReflectionClass $reflection): bool
@@ -861,61 +1156,94 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
 
     private function isReservedSignature(string $signature): bool
     {
-        $parsed = $this->getParser()->parse($signature, '');
-        $commandName = $parsed->source;
+        try {
+            $parsed = $this->getParser()->parse($signature, '');
+            $commandName = $parsed->source;
 
-        return in_array($commandName, $this->getConfig()->getReservedSignatures(), true);
+            return in_array($commandName, $this->getConfig()->getReservedSignatures(), true);
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'reserved_signature_check',
+                'Failed to check reserved signature: '.$signature,
+                $e->getMessage(),
+                ['signature' => $signature]
+            );
+
+            return false;
+        }
     }
 
     private function passesNamespaceFilters(string $fqcn): bool
     {
-        // If only namespaces are defined, the class must be in one of them
-        if ($this->onlyNamespaces->isNotEmpty()) {
-            $passed = false;
-            foreach ($this->onlyNamespaces as $namespace) {
-                if (str_starts_with($fqcn, $namespace)) {
-                    $passed = true;
-                    break;
+        try {
+            // If only namespaces are defined, the class must be in one of them
+            if ($this->onlyNamespaces->isNotEmpty()) {
+                $passed = false;
+                foreach ($this->onlyNamespaces as $namespace) {
+                    if (str_starts_with($fqcn, $namespace)) {
+                        $passed = true;
+                        break;
+                    }
+                }
+                if (! $passed) {
+                    return false;
                 }
             }
-            if (! $passed) {
-                return false;
-            }
-        }
 
-        // Check excluded namespaces
-        foreach ($this->excludedNamespaces as $namespace) {
-            if (str_starts_with($fqcn, $namespace)) {
-                return false;
+            // Check excluded namespaces
+            foreach ($this->excludedNamespaces as $namespace) {
+                if (str_starts_with($fqcn, $namespace)) {
+                    return false;
+                }
             }
-        }
 
-        return true;
+            return true;
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'namespace_filter',
+                'Failed to apply namespace filters for: '.$fqcn,
+                $e->getMessage(),
+                ['class' => $fqcn]
+            );
+
+            return false;
+        }
     }
 
     private function passesPrefixFilters(string $signature): bool
     {
-        // If only prefixes are defined, the signature must start with one of them
-        if ($this->onlyPrefixes->isNotEmpty()) {
-            $passed = false;
-            foreach ($this->onlyPrefixes as $prefix) {
-                if (str_starts_with($signature, $prefix)) {
-                    $passed = true;
-                    break;
+        try {
+            // If only prefixes are defined, the signature must start with one of them
+            if ($this->onlyPrefixes->isNotEmpty()) {
+                $passed = false;
+                foreach ($this->onlyPrefixes as $prefix) {
+                    if (str_starts_with($signature, $prefix)) {
+                        $passed = true;
+                        break;
+                    }
+                }
+                if (! $passed) {
+                    return false;
                 }
             }
-            if (! $passed) {
-                return false;
-            }
-        }
 
-        // Check excluded prefixes
-        foreach ($this->excludedPrefixes as $prefix) {
-            if (str_starts_with($signature, $prefix)) {
-                return false;
+            // Check excluded prefixes
+            foreach ($this->excludedPrefixes as $prefix) {
+                if (str_starts_with($signature, $prefix)) {
+                    return false;
+                }
             }
-        }
 
-        return true;
+            return true;
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'prefix_filter',
+                'Failed to apply prefix filters for: '.$signature,
+                $e->getMessage(),
+                ['signature' => $signature]
+            );
+
+            return false;
+        }
     }
 }

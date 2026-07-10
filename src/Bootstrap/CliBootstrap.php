@@ -41,7 +41,9 @@ final readonly class CliBootstrap
         $adapter = new LaravelContainerAdapter($this->app);
         $kernel = DirectiveKernel::init($adapter);
 
-        return $kernel->run($arguments)->value;
+        $code = $kernel->run($arguments)->value;
+
+        return $code;
     }
 
     /**
