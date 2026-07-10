@@ -269,13 +269,12 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         $line = $caller['line'] ?? 0;
 
         // Nettoyer le chemin du fichier pour le rendre plus lisible
-        $shortFile = $this->getShortFilePath($file);
 
         // Formatage du message avec la localisation
         $enhancedMessage = sprintf(
             '%s (in %s on line %d)',
             $message,
-            $shortFile,
+            $file,
             $line
         );
 
@@ -286,7 +285,6 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
             'context_data' => $contextData,
             'timestamp' => Carbon::now()->format('Y-m-d H:i:s'),
             'file' => $file,
-            'file_short' => $shortFile,
             'line' => $line,
             'caller_function' => $caller['function'] ?? null,
             'caller_class' => $caller['class'] ?? null,
