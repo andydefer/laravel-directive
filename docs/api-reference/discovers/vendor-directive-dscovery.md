@@ -8,7 +8,8 @@ Source de découverte des directives dans les packages vendors. Scanne les packa
 
 ```
 DiscoverySourceInterface
-    └── VendorDirectiveDiscovery
+    └── AbstractDiscovery
+        └── VendorDirectiveDiscovery
 ```
 
 ## Rôle principal
@@ -20,11 +21,12 @@ DiscoverySourceInterface
 - Lire les fichiers `config/directive.php` des packages pour des sources personnalisées
 - Résoudre les dépendances récursivement
 - Analyser les packages avec une profondeur de scan configurable
+- Hériter des fonctionnalités de suivi des problèmes via `AbstractDiscovery`
 
 ## Installation
 
 ```bash
-composer require andydefer/directive
+composer require andydefer/laravel-directive
 ```
 
 ### Dépendances
@@ -33,6 +35,7 @@ composer require andydefer/directive
 - `DependencyResolverInterface` - Résolution des dépendances
 - `FileSystemInterface` - Opérations sur le système de fichiers
 - `DirectiveScannerInterface` - Scan des classes de directives
+- `AbstractDiscovery` - Classe de base avec gestion des problèmes
 - PHP 8.1+
 
 ## API / Méthodes publiques
@@ -68,7 +71,7 @@ Découvre les directives dans tous les packages vendors.
 
 **Retourne :** `array<int, string>` - Liste des FQCN des directives trouvées
 
-**Exceptions :** Aucune (les erreurs sont silencieusement ignorées)
+**Exceptions :** Aucune (les erreurs sont silencieusement ignorées et ajoutées comme problèmes)
 
 **Exemple :**
 ```php
@@ -82,6 +85,35 @@ foreach ($directives as $class) {
 // Vendor\Package\Directives\CustomDirective
 // AnotherVendor\Package\Directives\AnotherDirective
 ```
+
+---
+
+### `getProblems(): ListCollection` (hérité de AbstractDiscovery)
+
+Retourne la collection des problèmes rencontrés lors de la découverte.
+
+**Retourne :** `ListCollection` - Collection des problèmes
+
+**Exemple :**
+```php
+$vendorDiscovery = new VendorDirectiveDiscovery(...);
+$directives = $vendorDiscovery->discover();
+$problems = $vendorDiscovery->getProblems();
+
+if ($problems->isNotEmpty()) {
+    foreach ($problems as $problem) {
+        echo $problem->get('message') . "\n";
+    }
+}
+```
+
+---
+
+### `clearProblems(): self` (hérité de AbstractDiscovery)
+
+Efface tous les problèmes.
+
+**Retourne :** `self` - Instance fluide
 
 ---
 
@@ -203,6 +235,28 @@ $directives = $discoveryService
 echo "Total directives (incluant vendors): " . $directives->count() . "\n";
 ```
 
+### Cas 6 : Suivi des problèmes de découverte
+
+```php
+<?php
+
+$vendorDiscovery = new VendorDirectiveDiscovery(...);
+$directives = $vendorDiscovery->discover();
+
+$problems = $vendorDiscovery->getProblems();
+
+if ($problems->isNotEmpty()) {
+    echo "Problèmes rencontrés:\n";
+    foreach ($problems as $problem) {
+        $key = $problem->get('key');
+        $context = $problem->get('context');
+        $message = $problem->get('message');
+        echo "  ❌ [$key] $context\n";
+        echo "     $message\n";
+    }
+}
+```
+
 ---
 
 ## Flux d'exécution
@@ -259,20 +313,40 @@ Pour chaque mapping namespace => path
     └── Ajouter les classes trouvées
 ```
 
+### Gestion des problèmes
+
+```
+En cas d'erreur à chaque étape
+    ↓
+addProblem()
+    ├── key: identifiant unique
+    ├── context: description du contexte
+    ├── message: message d'erreur
+    └── context_data: données additionnelles
+    ↓
+Continuer l'exécution (ne pas bloquer)
+    ↓
+Les problèmes sont collectés et accessibles via getProblems()
+```
+
 ---
 
 ## Gestion des erreurs
 
-| Situation | Comportement |
-|-----------|--------------|
-| Package inexistant | Ignoré |
-| composer.json manquant | Ignoré |
-| JSON invalide | Ignoré |
-| Fichier de config invalide | Ignoré |
-| Répertoire inexistant | Ignoré |
-| Erreur de parsing PHP | Ignorée par le scanner |
+| Situation | Clé du problème | Contexte | Données |
+|-----------|-----------------|----------|---------|
+| Échec de résolution des packages | `resolve_packages` | `Failed to resolve vendor packages` | - |
+| Échec de scan d'un package | `scan_package` | `Failed to scan package: {package}` | `package` |
+| Échec de scan d'un package (général) | `scan_package_error` | `Failed to scan package: {package}` | `package` |
+| Échec de scan des chemins autoload | `scan_autoload_paths` | `Failed to scan autoload paths for package: {package}` | `package` |
+| Échec de scan d'un chemin PSR-4 | `scan_autoload_path` | `Failed to scan autoload path: {path}` | `package`, `path`, `namespace` |
+| Échec de scan des sources personnalisées | `scan_custom_sources` | `Failed to scan custom sources for package: {package}` | `package` |
+| Échec de scan d'une source personnalisée | `scan_custom_source` | `Failed to scan custom source: {path}` | `package`, `source`, `full_path` |
+| Source personnalisée non répertoire | `custom_source_not_directory` | `Custom source path is not a directory: {path}` | `package`, `source`, `full_path` |
+| Échec de lecture de composer.json | `read_composer_json` | `Failed to read composer.json for package: {package}` | `composer_path` |
+| Échec d'extraction des sources custom | `extract_custom_sources` | `Failed to extract custom sources from config: {path}` | `config_path` |
 
-**Aucune exception n'est levée.** Toutes les erreurs sont gérées silencieusement.
+**Aucune exception n'est levée.** Les erreurs sont capturées et ajoutées comme problèmes.
 
 ---
 
@@ -299,6 +373,16 @@ private function discoverVendorDirectives(): void
     );
     
     $fqcns = $source->discover();
+    
+    // Récupérer les problèmes de la source
+    foreach ($source->getProblems() as $problem) {
+        $this->addProblem(
+            'vendor_' . $problem->get('key'),
+            $problem->get('context'),
+            $problem->get('message'),
+            $problem->get('context_data')->toArray()
+        );
+    }
     
     foreach ($fqcns as $fqcn) {
         $this->addDirectiveFromFqcn($fqcn, false);
@@ -495,7 +579,22 @@ echo "Total packages scannés: " . count($composerReader->getAllDependencies()) 
 echo "Packages avec directives: " . count($packageMap) . "\n";
 echo "Directives totales: " . count($directives) . "\n";
 
-// 8. Analyse des chemins
+// 8. Problèmes rencontrés
+$problems = $vendorDiscovery->getProblems();
+if ($problems->isNotEmpty()) {
+    echo "\n=== Problèmes rencontrés ===\n";
+    foreach ($problems as $problem) {
+        $key = $problem->get('key');
+        $context = $problem->get('context');
+        $message = $problem->get('message');
+        $timestamp = $problem->get('timestamp');
+        echo "  ❌ [$key] $context\n";
+        echo "     $message\n";
+        echo "     Time: $timestamp\n";
+    }
+}
+
+// 9. Analyse des chemins
 echo "\n=== Analyse des structures ===\n";
 
 $packagesScanned = 0;
@@ -523,7 +622,7 @@ foreach ($composerReader->getPackageNames() as $package) {
 echo "\nPackages avec autoload PSR-4: $packagesScanned\n";
 echo "Chemins Directives trouvés: $pathsFound\n";
 
-// 9. Configuration personnalisée
+// 10. Configuration personnalisée
 echo "\n=== Configuration personnalisée ===\n";
 
 $packagesWithConfig = 0;
@@ -548,13 +647,14 @@ foreach ($composerReader->getPackageNames() as $package) {
 
 echo "\nPackages avec configuration: $packagesWithConfig\n";
 
-// 10. Vérification des directives intégrées
+// 11. Vérification des directives intégrées
 echo "\n=== Vérification des directives intégrées ===\n";
 $expected = [
     'AndyDefer\Directive\BuiltIn\ListDirective',
     'AndyDefer\Directive\BuiltIn\HelpDirective',
     'AndyDefer\Directive\BuiltIn\VersionDirective',
     'AndyDefer\Directive\BuiltIn\CleanLogsDirective',
+    'AndyDefer\Directive\BuiltIn\KernelAuditDirective',
 ];
 
 foreach ($expected as $expectedClass) {
@@ -566,6 +666,7 @@ foreach ($expected as $expectedClass) {
 ## Voir aussi
 
 - `DiscoverySourceInterface` - Interface de source de découverte
+- `AbstractDiscovery` - Classe de base avec gestion des problèmes
 - `DirectiveClassScanner` - Scanner des classes
 - `ComposerReaderService` - Lecture de composer.json
 - `DependencyResolverService` - Résolution des dépendances

@@ -19,12 +19,13 @@
 7. [Découverte automatique](#découverte-automatique)
 8. [Journalisation JSONL](#journalisation-jsonl)
 9. [Suggestions de commandes](#suggestions-de-commandes)
-10. [Directives intégrées](#directives-intégrées)
-11. [Mode autonome (sans Laravel)](#mode-autonome-sans-laravel)
-12. [Tests des directives](#tests-des-directives)
-13. [Cas d'usage concrets](#cas-dusage-concrets)
-14. [Bonnes pratiques](#bonnes-pratiques)
-15. [Référence des commandes](#référence-des-commandes)
+10. [Mode verbose et débogage](#mode-verbose-et-débogage)
+11. [Directives intégrées](#directives-intégrées)
+12. [Mode autonome (sans Laravel)](#mode-autonome-sans-laravel)
+13. [Tests des directives](#tests-des-directives)
+14. [Cas d'usage concrets](#cas-dusage-concrets)
+15. [Bonnes pratiques](#bonnes-pratiques)
+16. [Référence des commandes](#référence-des-commandes)
 
 ---
 
@@ -53,6 +54,7 @@ Avec Artisan, chaque commande est isolée. Pas de contexte partagé. Les appels 
 # Un pipeline de déploiement en une seule commande
 ./vendor/bin/directive deploy staging --skip-tests
 ```
+
 ---
 
 ## Première directive
@@ -507,7 +509,7 @@ return [
         'modules/core/src/Directives',
     ],
     'max_depth' => 4,
-    'reserved' => ['help', 'list', 'version'],
+    'reserved' => ['help', 'list', 'version', 'clean-logs', 'kernel:audit'],
 ];
 ```
 
@@ -533,9 +535,24 @@ $kernel->excludePrefix('admin:');
 
 // Ignorer une directive spécifique
 $kernel->ignoreDirective('deprecated:command');
+```
 
-// Mode silencieux
-$kernel->silent(true);
+### Système de problèmes
+
+Le système de découverte collecte automatiquement les problèmes rencontrés (chemins inexistants, erreurs de parsing, etc.).
+
+```php
+$kernel->discover();
+
+// Récupérer les problèmes
+$problems = $kernel->getProblems();
+
+foreach ($problems as $problem) {
+    $key = $problem->get('key');
+    $context = $problem->get('context');
+    $message = $problem->get('message');
+    echo "[$key] $context: $message\n";
+}
 ```
 
 ### Exemple de découverte
@@ -684,6 +701,67 @@ public function getAliases(): StringTypedCollection
 
 ---
 
+## Mode verbose et débogage
+
+Le mode verbose affiche automatiquement les problèmes rencontrés après chaque exécution.
+
+### Activation
+
+```bash
+# Activer le mode verbose pour une commande
+./vendor/bin/directive kernel:audit --verbose
+
+# Activer globalement dans le code
+$kernel->verbose(true);
+
+# Désactiver
+$kernel->verbose(false);
+```
+
+### Affichage des problèmes
+
+```php
+$kernel->verbose(true);
+$kernel->run(['directive', 'non-existent-command']);
+
+// Sortie :
+// === 1 Problem(s) Encountered ===
+// [directive_not_found] Directive not found: non-existent-command | 2026-07-10 15:43:45 |
+// {
+//   "command": "non-existent-command",
+//   "query": "non-existent-command"
+// }
+// === End of Problems ===
+```
+
+### Audit du noyau
+
+La directive `kernel:audit` fournit un rapport détaillé du système.
+
+```bash
+# Audit standard
+./vendor/bin/directive kernel:audit
+
+# Audit avec détails
+./vendor/bin/directive kernel:audit --verbose
+
+# Audit avec format liste
+./vendor/bin/directive kernel:audit --format=list
+```
+
+### Utilisation en développement
+
+```php
+// Dans un environnement de développement
+if (app()->environment('local')) {
+    $kernel->verbose(true);
+}
+
+$kernel->run($argv);
+```
+
+---
+
 ## Directives intégrées
 
 ### `help` - Aide
@@ -726,6 +804,19 @@ public function getAliases(): StringTypedCollection
 
 # Mode verbeux
 ./vendor/bin/directive clean-logs 30 --verbose
+```
+
+### `kernel:audit` - Audit du noyau
+
+```bash
+# Audit standard
+./vendor/bin/directive kernel:audit
+
+# Audit avec détails
+./vendor/bin/directive kernel:audit --verbose
+
+# Audit avec alias
+./vendor/bin/directive audit
 ```
 
 ---
@@ -786,7 +877,7 @@ class DirectiveServiceProvider extends ServiceProvider
 
 ## Tests des directives
 
-`DirectiveTestingService` permet de tester les directives en isolation.
+`DirectiveTestingService` permet de tester les directives en isolation avec support du mode verbose.
 
 ### Configuration des tests
 
@@ -809,9 +900,12 @@ class GreetDirectiveTest extends TestCase
         parent::setUp();
 
         $container = DirectiveContainer::create(__DIR__);
+        
+        // Activer le mode verbose pour les tests (par défaut)
         $this->testing = new DirectiveTestingService(
             $container,
-            [__DIR__ . '/../app/Directives']
+            [__DIR__ . '/../app/Directives'],
+            true // verbose = true
         );
     }
 
@@ -827,30 +921,19 @@ class GreetDirectiveTest extends TestCase
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello, John', $response->output);
+        $this->assertTrue(count($response->problems->toArray()) > 0);
     }
 
-    public function test_greet_directive_with_formal_option(): void
+    public function test_unknown_command_returns_problems(): void
     {
-        $response = $this->testing->run('greet John --formal');
+        $response = $this->testing->run('unknown-command');
 
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Good day, John', $response->output);
-    }
-
-    public function test_greet_directive_with_alias(): void
-    {
-        $response = $this->testing->run('hello John');
-
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Hello, John', $response->output);
-    }
-
-    public function test_greet_directive_handles_missing_argument(): void
-    {
-        $response = $this->testing->run('greet');
-
-        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exit_code);
-        $this->assertStringContainsString('Missing required parameter', $response->output);
+        $this->assertSame(ExitCode::NOT_FOUND, $response->exit_code);
+        $this->assertFalse(count($response->problems->toArray()) > 0);
+        
+        $firstProblem = $response->problems->first();
+        $this->assertArrayHasKey('key', $firstProblem);
+        $this->assertArrayHasKey('message', $firstProblem);
     }
 }
 ```
@@ -885,6 +968,17 @@ public function test_deploy_pipeline_completes_successfully(): void
     $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     $this->assertStringContainsString('Deployment completed', $response->output);
 }
+```
+
+### Désactivation du mode verbose dans les tests
+
+```php
+// Désactiver le mode verbose pour les tests
+$testing = new DirectiveTestingService($container, [], false);
+
+// Ou via le kernel
+$kernel = $testing->getKernel();
+$kernel->verbose(false);
 ```
 
 ---
@@ -1144,13 +1238,25 @@ $kernel->setLogBasePath('/var/log/directive');
 $summary = $kernel->getLogger()->getSummary();
 ```
 
-### ✅ Tests
+### ✅ Mode verbose en développement
 
 ```php
-// Utiliser DirectiveTestingService pour les tests
-$testing = new DirectiveTestingService($container);
-$response = $testing->run('deploy staging');
-$this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+// Activer le mode verbose en développement
+if (app()->environment('local')) {
+    $kernel->verbose(true);
+}
+
+$kernel->run($argv);
+```
+
+### ✅ Utiliser l'audit pour le débogage
+
+```bash
+# Vérifier l'état du système
+./vendor/bin/directive kernel:audit
+
+# Avec détails
+./vendor/bin/directive kernel:audit --verbose
 ```
 
 ---
@@ -1163,6 +1269,7 @@ $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 | `./vendor/bin/directive list` | Liste toutes les directives |
 | `./vendor/bin/directive version` | Affiche la version |
 | `./vendor/bin/directive clean-logs [days]` | Nettoie les logs |
+| `./vendor/bin/directive kernel:audit` | Audit du noyau |
 | `./vendor/bin/directive {directive} [args]` | Exécute une directive |
 
 ### Options globales

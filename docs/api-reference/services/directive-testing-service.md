@@ -2,15 +2,15 @@
 
 ## Description
 
-Service d'isolation et de test des directives dans un environnement temporaire. Permet d'exécuter des directives de manière isolée avec un conteneur dédié et un répertoire de travail autonome.
+Service de test des directives dans un environnement isolé. Crée un répertoire temporaire avec un `composer.json` minimal et exécute les directives dans ce contexte isolé.
 
 ## Hiérarchie / Implémentations
 
 ```
-DirectiveTestingService (Service de test)
+DirectiveTestingService
     ├── DirectiveKernel (noyau d'exécution)
     ├── Container (conteneur de dépendances)
-    └── Environnement temporaire
+    └── Environnement temporaire (isolation)
 ```
 
 ## Rôle principal
@@ -20,19 +20,22 @@ DirectiveTestingService (Service de test)
 - Exécuter des directives dans un environnement isolé
 - Créer automatiquement un répertoire temporaire avec un `composer.json` minimal
 - Capturer la sortie et le code de retour des directives
+- Récupérer les problèmes rencontrés via le noyau
 - Nettoyer automatiquement les ressources après les tests
 - Ajouter des sources personnalisées pour les tests
 
 ## Installation
 
 ```bash
-composer require andydefer/directive --dev
+composer require andydefer/laravel-directive --dev
 ```
 
 ### Dépendances
 
 - `Container` ou `LaravelApplication` - Conteneur de dépendances
 - `DirectiveKernel` - Noyau d'exécution
+- `TestHelper` - Helper pour la création du composer.json
+- `Sequential` - Collection séquentielle pour les problèmes
 - PHP 8.1+
 
 ## API / Méthodes publiques
@@ -45,6 +48,8 @@ composer require andydefer/directive --dev
 | `$sourcePaths` | `array<int, string>` | Sources supplémentaires à scanner |
 
 **Retourne :** `void`
+
+**Exceptions :** `Throwable` - Si la création du répertoire temporaire échoue
 
 **Exemple :**
 ```php
@@ -59,13 +64,13 @@ $testingService = new DirectiveTestingService(
 
 ### `run(string $query): DirectiveResponseRecord`
 
-Exécute une directive dans l'environnement de test.
+Exécute une directive à partir d'une requête complète.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$query` | `string` | Requête complète à exécuter |
+| `$query` | `string` | Requête complète (ex: `"greet John --formal"`) |
 
-**Retourne :** `DirectiveResponseRecord` - Enregistrement de la réponse (code + sortie)
+**Retourne :** `DirectiveResponseRecord` - Enregistrement de la réponse (code + sortie + problèmes)
 
 **Exceptions :** Aucune (les exceptions sont capturées et retournées dans le record)
 
@@ -73,11 +78,53 @@ Exécute une directive dans l'environnement de test.
 ```php
 $response = $testingService->run('greet John --formal');
 
-if ($response->exitCode === ExitCode::SUCCESS) {
+if ($response->exit_code === ExitCode::SUCCESS) {
     echo "Success: " . $response->output . "\n";
 } else {
     echo "Error: " . $response->output . "\n";
 }
+```
+
+---
+
+### `runDirective(string $fqcn, array $argv = []): DirectiveResponseRecord`
+
+Exécute une directive par son nom de classe complet (FQCN).
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$fqcn` | `class-string<AbstractDirective>` | Nom de classe complet |
+| `$argv` | `array<int, string>` | Arguments (sans le nom de la directive) |
+
+**Retourne :** `DirectiveResponseRecord` - Enregistrement de la réponse
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+$response = $testingService->runDirective(
+    GreetDirective::class,
+    ['John', '--formal']
+);
+```
+
+---
+
+### `runSignature(string $query): DirectiveResponseRecord`
+
+Exécute une directive par sa signature.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$query` | `string` | Signature (ex: `"greet John --formal"`) |
+
+**Retourne :** `DirectiveResponseRecord` - Enregistrement de la réponse
+
+**Exceptions :** Aucune
+
+**Exemple :**
+```php
+$response = $testingService->runSignature('greet John --formal');
 ```
 
 ---
@@ -157,7 +204,7 @@ final class GreetDirectiveTest extends TestCase
     {
         $response = $this->testingService->run('greet John');
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello, John', $response->output);
     }
     
@@ -165,7 +212,7 @@ final class GreetDirectiveTest extends TestCase
     {
         $response = $this->testingService->run('greet John --formal');
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Good day, John', $response->output);
     }
 }
@@ -210,7 +257,7 @@ final class CustomDirectiveTest extends TestCase
     {
         $response = $this->testingService->run('test-custom param');
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     }
 }
 ```
@@ -248,7 +295,7 @@ final class ContextAwareDirectiveTest extends TestCase
         // Vérifier que le contexte est accessible
         $response = $this->testingService->run('context:get');
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('John', $response->output);
         
         // Modifier le contexte
@@ -288,7 +335,7 @@ final class ErrorHandlingTest extends TestCase
     {
         $response = $this->testingService->run('unknown-command');
         
-        $this->assertSame(ExitCode::NOT_FOUND, $response->exitCode);
+        $this->assertSame(ExitCode::NOT_FOUND, $response->exit_code);
         $this->assertStringContainsString('Directive not found', $response->output);
     }
     
@@ -296,7 +343,7 @@ final class ErrorHandlingTest extends TestCase
     {
         $response = $this->testingService->run('test-directive');
         
-        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exitCode);
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exit_code);
         $this->assertStringContainsString('Missing required parameter', $response->output);
     }
     
@@ -304,7 +351,7 @@ final class ErrorHandlingTest extends TestCase
     {
         $response = $this->testingService->run('test-circular');
         
-        $this->assertSame(ExitCode::CONFLICT, $response->exitCode);
+        $this->assertSame(ExitCode::CONFLICT, $response->exit_code);
     }
 }
 ```
@@ -340,8 +387,54 @@ final class FileOperationTest extends TestCase
     {
         $response = $this->testingService->run('file:read test.txt');
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello World', $response->output);
+    }
+}
+```
+
+### Cas 6 : Test avec la méthode runDirective
+
+```php
+<?php
+
+final class DirectFqcnTest extends TestCase
+{
+    private DirectiveTestingService $testingService;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        $container = DirectiveContainer::create(__DIR__);
+        $this->testingService = new DirectiveTestingService($container);
+    }
+    
+    protected function tearDown(): void
+    {
+        $this->testingService->destroy();
+        parent::tearDown();
+    }
+    
+    public function test_run_directive_by_fqcn(): void
+    {
+        $response = $this->testingService->runDirective(
+            TestGreetingDirective::class,
+            ['Alice']
+        );
+        
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Hello, Alice!', $response->output);
+    }
+    
+    public function test_run_directive_by_fqcn_without_args(): void
+    {
+        $response = $this->testingService->runDirective(
+            TestGreetingDirective::class
+        );
+        
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Hello, World!', $response->output);
     }
 }
 ```
@@ -369,16 +462,18 @@ Initialiser DirectiveKernel
     ↓
 Ajouter les sourcePaths au kernel
     ↓
-run($query)
+run($query) / runDirective($fqcn, $argv) / runSignature($query)
     ↓
 ob_start() (capture de la sortie)
     ↓
-Kernel->run(['directive', ...$query])
+Kernel->run() / runDirective() / runSignature()
     ├── Découverte des directives
     ├── Exécution de la directive
     └── Retour du code de sortie
     ↓
 ob_get_clean() (récupération de la sortie)
+    ↓
+Récupérer les problèmes du kernel
     ↓
 Retourner DirectiveResponseRecord
 ```
@@ -435,7 +530,7 @@ abstract class DirectiveTestCase extends TestCase
     protected function assertDirectiveSuccess(string $query, string $expectedOutput = ''): void
     {
         $response = $this->testingService->run($query);
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         
         if ($expectedOutput !== '') {
             $this->assertStringContainsString($expectedOutput, $response->output);
@@ -445,7 +540,7 @@ abstract class DirectiveTestCase extends TestCase
     protected function assertDirectiveError(string $query, ExitCode $code): void
     {
         $response = $this->testingService->run($query);
-        $this->assertSame($code, $response->exitCode);
+        $this->assertSame($code, $response->exit_code);
     }
 }
 ```
@@ -478,7 +573,7 @@ afterEach(function () {
 test('greet directive works', function () {
     $response = $this->testingService->run('greet John');
     
-    expect($response->exitCode)->toBe(ExitCode::SUCCESS)
+    expect($response->exit_code)->toBe(ExitCode::SUCCESS)
         ->and($response->output)->toContain('Hello, John');
 });
 ```
@@ -590,7 +685,7 @@ final class CompleteExampleTest extends TestCase
     {
         $response = $this->testingService->run('test-directive John john@example.com');
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertNotEmpty($response->output);
         
         echo "Output: " . $response->output . "\n";
@@ -602,7 +697,7 @@ final class CompleteExampleTest extends TestCase
             'test-directive John john@example.com json --force --verbose'
         );
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('force', $response->output);
     }
     
@@ -612,7 +707,7 @@ final class CompleteExampleTest extends TestCase
             'test-directive John john@example.com file1.txt file2.txt file3.txt'
         );
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('3 files', $response->output);
     }
     
@@ -622,7 +717,7 @@ final class CompleteExampleTest extends TestCase
         
         // 1. Définir le contexte
         $response = $this->testingService->run('context:set John');
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         
         // 2. Vérifier le contexte
         $response = $this->testingService->run('context:get');
@@ -644,9 +739,9 @@ final class CompleteExampleTest extends TestCase
         
         foreach ($testCases as [$query, $expectedCode]) {
             $response = $this->testingService->run($query);
-            $this->assertSame($expectedCode, $response->exitCode);
+            $this->assertSame($expectedCode, $response->exit_code);
             
-            if ($response->exitCode !== ExitCode::SUCCESS) {
+            if ($response->exit_code !== ExitCode::SUCCESS) {
                 $this->assertNotEmpty($response->output);
             }
         }
@@ -657,7 +752,7 @@ final class CompleteExampleTest extends TestCase
         // Cette directive doit exister dans Fixtures/Directives
         $response = $this->testingService->run('fixture-test');
         
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     }
     
     public function test_access_to_temp_directory(): void
@@ -671,19 +766,17 @@ final class CompleteExampleTest extends TestCase
         $this->assertDirectoryDoesNotExist($tempDir . '/vendor');
     }
     
-    public function test_kernel_configuration(): void
+    public function test_problems_collection(): void
     {
-        $kernel = $this->testingService->getKernel();
+        $response = $this->testingService->runDirective('NonExistentDirective');
         
-        // Configurer le noyau
-        $kernel
-            ->ignoreSource(DiscoverySource::VENDOR)
-            ->onlyNamespace('App\\Commands\\')
-            ->setMaxDepth(5);
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exit_code);
+        $this->assertFalse($response->problems->isEmpty());
         
-        // La configuration est prise en compte lors de l'exécution
-        $response = $this->testingService->run('list');
-        $this->assertSame(ExitCode::SUCCESS, $response->exitCode);
+        $firstProblem = $response->problems->first();
+        $this->assertArrayHasKey('key', $firstProblem);
+        $this->assertArrayHasKey('message', $firstProblem);
+        $this->assertArrayHasKey('context', $firstProblem);
     }
 }
 ```
@@ -695,3 +788,4 @@ final class CompleteExampleTest extends TestCase
 - `ExitCode` - Énumération des codes de sortie
 - `Container` - Conteneur de dépendances
 - `LaravelContainerAdapter` - Adaptateur pour Laravel
+- `Sequential` - Collection séquentielle pour les problèmes

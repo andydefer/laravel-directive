@@ -8,7 +8,8 @@ Source de découverte des directives intégrées au package. Fournit les directi
 
 ```
 DiscoverySourceInterface
-    └── BuiltInDirectiveDiscovery
+    └── AbstractDiscovery
+        └── BuiltInDirectiveDiscovery
 ```
 
 ## Rôle principal
@@ -17,18 +18,19 @@ DiscoverySourceInterface
 
 - Fournir les directives intégrées du package
 - Servir de source de base pour le système de directives
-- Être extensible via l'interface `DiscoverySourceInterface`
-- Garantir la disponibilité des commandes essentielles (help, list, version, clean-logs)
+- Hériter des fonctionnalités de suivi des problèmes via `AbstractDiscovery`
+- Garantir la disponibilité des commandes essentielles (help, list, version, clean-logs, kernel:audit)
 
 ## Installation
 
 ```bash
-composer require andydefer/directive
+composer require andydefer/laravel-directive
 ```
 
 ### Dépendances
 
 - `DiscoverySourceInterface` - Interface de source de découverte
+- `AbstractDiscovery` - Classe de base avec gestion des problèmes
 - PHP 8.1+
 
 ## API / Méthodes publiques
@@ -53,7 +55,37 @@ foreach ($directives as $directive) {
 // Built-in: AndyDefer\Directive\BuiltIn\HelpDirective
 // Built-in: AndyDefer\Directive\BuiltIn\VersionDirective
 // Built-in: AndyDefer\Directive\BuiltIn\CleanLogsDirective
+// Built-in: AndyDefer\Directive\BuiltIn\KernelAuditDirective
 ```
+
+---
+
+### `getProblems(): ListCollection` (hérité de AbstractDiscovery)
+
+Retourne la collection des problèmes rencontrés lors de la découverte.
+
+**Retourne :** `ListCollection` - Collection des problèmes
+
+**Exemple :**
+```php
+$discovery = new BuiltInDirectiveDiscovery();
+$directives = $discovery->discover();
+$problems = $discovery->getProblems();
+
+if ($problems->isNotEmpty()) {
+    foreach ($problems as $problem) {
+        echo $problem->get('message') . "\n";
+    }
+}
+```
+
+---
+
+### `clearProblems(): self` (hérité de AbstractDiscovery)
+
+Efface tous les problèmes.
+
+**Retourne :** `self` - Instance fluide
 
 ---
 
@@ -62,17 +94,15 @@ foreach ($directives as $directive) {
 ### 1. ListDirective - Liste des directives
 Affiche toutes les directives disponibles avec leurs descriptions et signatures.
 
-**Signature :** `list {--format} {--short}`
+**Signature :** `list`
 
-**Options :**
-- `--format` - Format de sortie (table, json, csv)
-- `--short` - Affichage condensé
+**Alias :** `ls`, `-l`, `--list`
 
 **Exemple :**
 ```bash
-directive list
-directive list --format=json
-directive list --short
+./bin/directive list
+./bin/directive ls
+./bin/directive -l
 ```
 
 ---
@@ -80,16 +110,15 @@ directive list --short
 ### 2. HelpDirective - Aide
 Affiche l'aide détaillée d'une directive spécifique ou une aide générale.
 
-**Signature :** `help {command?}`
+**Signature :** `help`
 
-**Arguments :**
-- `command` - Nom de la directive à documenter (optionnel)
+**Alias :** `-h`, `--help`
 
 **Exemple :**
 ```bash
-directive help
-directive help greet
-directive help list
+./bin/directive help
+./bin/directive help greet
+./bin/directive -h
 ```
 
 ---
@@ -97,15 +126,14 @@ directive help list
 ### 3. VersionDirective - Version
 Affiche la version du package et des dépendances.
 
-**Signature :** `version {--verbose}`
+**Signature :** `version`
 
-**Options :**
-- `--verbose` - Affiche les versions détaillées des dépendances
+**Alias :** `-v`, `--version`
 
 **Exemple :**
 ```bash
-directive version
-directive version --verbose
+./bin/directive version
+./bin/directive -v
 ```
 
 ---
@@ -113,19 +141,43 @@ directive version --verbose
 ### 4. CleanLogsDirective - Nettoyage des logs
 Supprime les logs de directives datant de plus de X jours.
 
-**Signature :** `clean-logs {days=30} {--dry-run}`
+**Signature :** `clean-directive-logs {days=30} {--dry-run} {--verbose}`
+
+**Alias :** `log-directive-clean`, `ldc`
 
 **Arguments :**
 - `days` - Nombre de jours à conserver (défaut: 30)
 
 **Options :**
 - `--dry-run` - Simulation sans suppression réelle
+- `--verbose` - Affichage détaillé
 
 **Exemple :**
 ```bash
-directive clean-logs
-directive clean-logs 7
-directive clean-logs 14 --dry-run
+./bin/directive clean-directive-logs
+./bin/directive clean-directive-logs 7
+./bin/directive clean-directive-logs 14 --dry-run
+./bin/directive ldc --verbose
+```
+
+---
+
+### 5. KernelAuditDirective - Audit du noyau
+Affiche un rapport d'audit du système de découverte avec les métriques et les problèmes.
+
+**Signature :** `kernel:audit {--verbose} {--format=table}`
+
+**Alias :** `audit`
+
+**Options :**
+- `--verbose` - Affiche les détails des données contextuelles
+- `--format` - Format de sortie (table ou list)
+
+**Exemple :**
+```bash
+./bin/directive kernel:audit
+./bin/directive kernel:audit --verbose
+./bin/directive audit --format=list
 ```
 
 ---
@@ -146,7 +198,8 @@ $kernel = DirectiveKernel::init($container);
 $kernel->run(['directive', 'help']);
 $kernel->run(['directive', 'list']);
 $kernel->run(['directive', 'version']);
-$kernel->run(['directive', 'clean-logs']);
+$kernel->run(['directive', 'clean-directive-logs']);
+$kernel->run(['directive', 'kernel:audit']);
 ```
 
 ### Cas 2 : Extension avec des directives personnalisées
@@ -172,6 +225,7 @@ class ExtendedBuiltInDiscovery extends BuiltInDirectiveDiscovery
 
 $discovery = new ExtendedBuiltInDiscovery();
 $allDirectives = $discovery->discover();
+// Contient les 5 directives intégrées + les 2 personnalisées
 ```
 
 ### Cas 3 : Utilisation dans un service de découverte
@@ -205,6 +259,7 @@ $expected = [
     'AndyDefer\Directive\BuiltIn\HelpDirective',
     'AndyDefer\Directive\BuiltIn\VersionDirective',
     'AndyDefer\Directive\BuiltIn\CleanLogsDirective',
+    'AndyDefer\Directive\BuiltIn\KernelAuditDirective',
 ];
 
 foreach ($expected as $expectedClass) {
@@ -231,7 +286,7 @@ $filtered = array_filter($allDirectives, function($class) use ($excluded) {
 });
 
 echo "Directives intégrées (filtrées): " . count($filtered) . "\n";
-// ListDirective, HelpDirective, VersionDirective
+// ListDirective, HelpDirective, VersionDirective, KernelAuditDirective
 ```
 
 ---
@@ -245,7 +300,8 @@ Retourner le tableau $builtInDirectives
     ├── ListDirective::class
     ├── HelpDirective::class
     ├── VersionDirective::class
-    └── CleanLogsDirective::class
+    ├── CleanLogsDirective::class
+    └── KernelAuditDirective::class
     ↓
 Utilisation dans DirectiveDiscoveryService
     ↓
@@ -262,6 +318,7 @@ DirectiveDiscoveryService::discover()
 discoverBuiltInDirectives()
     ├── new BuiltInDirectiveDiscovery()
     ├── discover() → [ListDirective, HelpDirective, ...]
+    ├── Récupérer les problèmes de la source
     └── addDirectiveFromFqcn() pour chaque classe
     ↓
 discoverWorkspaceDirectives()
@@ -277,7 +334,7 @@ Collection complète des directives
 
 ## Gestion des erreurs
 
-Aucune exception n'est levée par cette classe.
+Aucune exception n'est levée par cette classe. Les problèmes sont hérités de `AbstractDiscovery`.
 
 | Situation | Comportement |
 |-----------|--------------|
@@ -298,8 +355,8 @@ $discoveryService = DirectiveDiscoveryService::init($container);
 $directives = $discoveryService->discover();
 
 // Vérifier la présence d'une directive intégrée
-$hasHelp = $directives->some(function($directive) {
-    return $directive->class === HelpDirective::class;
+$hasAudit = $directives->some(function($directive) {
+    return $directive->class === KernelAuditDirective::class;
 });
 ```
 
@@ -309,10 +366,11 @@ $hasHelp = $directives->some(function($directive) {
 $kernel = DirectiveKernel::init($container);
 
 // Les directives intégrées sont disponibles immédiatement
-$kernel->run(['directive', 'help']);        // ✅
-$kernel->run(['directive', 'list']);        // ✅
-$kernel->run(['directive', 'version']);     // ✅
-$kernel->run(['directive', 'clean-logs']);  // ✅
+$kernel->run(['directive', 'help']);           // ✅
+$kernel->run(['directive', 'list']);           // ✅
+$kernel->run(['directive', 'version']);        // ✅
+$kernel->run(['directive', 'clean-directive-logs']); // ✅
+$kernel->run(['directive', 'kernel:audit']);   // ✅
 ```
 
 ### Personnalisation de l'ordre de découverte
@@ -340,8 +398,8 @@ $directives = $discoveryService->discover();
 
 | Opération | Complexité | Détails |
 |-----------|------------|---------|
-| `discover()` | O(1) | Retourne un tableau fixe |
-| Intégration dans le discovery | O(1) | Ajout de 4 classes |
+| `discover()` | O(1) | Retourne un tableau fixe de 5 éléments |
+| Intégration dans le discovery | O(1) | Ajout de 5 classes |
 
 **Optimisations :**
 - Le tableau est défini statiquement (pas de calcul)
@@ -399,7 +457,7 @@ $kernel->run(['directive', 'help']);
 
 // 3b. List
 echo "\n--- List (short) ---\n";
-$kernel->run(['directive', 'list', '--short']);
+$kernel->run(['directive', 'list']);
 
 // 3c. Version
 echo "\n--- Version ---\n";
@@ -407,7 +465,11 @@ $kernel->run(['directive', 'version']);
 
 // 3d. Clean Logs (dry-run)
 echo "\n--- Clean Logs (dry-run) ---\n";
-$kernel->run(['directive', 'clean-logs', '--dry-run']);
+$kernel->run(['directive', 'clean-directive-logs', '--dry-run']);
+
+// 3e. Kernel Audit
+echo "\n--- Kernel Audit ---\n";
+$kernel->run(['directive', 'kernel:audit']);
 
 // 4. Découverte via le service
 echo "\n=== Découverte via DirectiveDiscoveryService ===\n";
@@ -442,7 +504,7 @@ echo "Directives personnalisées: " . ($totalCount - $builtInCount) . "\n";
 
 // 6. Vérification des fonctionnalités
 echo "\n=== Vérification des fonctionnalités ===\n";
-$commands = ['help', 'list', 'version', 'clean-logs'];
+$commands = ['help', 'list', 'version', 'clean-directive-logs', 'kernel:audit'];
 
 foreach ($commands as $command) {
     $result = $kernel->run(['directive', $command]);
@@ -450,7 +512,13 @@ foreach ($commands as $command) {
     echo "$status $command\n";
 }
 
-// 7. Création d'une source de découverte personnalisée
+// 7. Audit avec mode verbose
+echo "\n=== Audit en mode verbose ===\n";
+$kernel->verbose(true);
+$kernel->run(['directive', 'kernel:audit', '--verbose']);
+$kernel->verbose(false);
+
+// 8. Création d'une source de découverte personnalisée
 echo "\n=== Création d'une source personnalisée ===\n";
 
 class ExtendedBuiltInDiscovery extends BuiltInDirectiveDiscovery
@@ -480,8 +548,10 @@ foreach ($all as $class) {
 ## Voir aussi
 
 - `DiscoverySourceInterface` - Interface de source de découverte
+- `AbstractDiscovery` - Classe de base avec gestion des problèmes
 - `DirectiveDiscoveryService` - Service de découverte
 - `ListDirective` - Directive de listing
 - `HelpDirective` - Directive d'aide
 - `VersionDirective` - Directive de version
 - `CleanLogsDirective` - Directive de nettoyage des logs
+- `KernelAuditDirective` - Directive d'audit du noyau

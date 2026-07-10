@@ -8,7 +8,8 @@ Source de découverte des directives dans l'espace de travail de l'application. 
 
 ```
 DiscoverySourceInterface
-    └── WorkspaceDirectiveDiscovery
+    └── AbstractDiscovery
+        └── WorkspaceDirectiveDiscovery
 ```
 
 ## Rôle principal
@@ -20,11 +21,12 @@ DiscoverySourceInterface
 - Lire les sources personnalisées depuis la configuration du package
 - Mettre en cache les résultats pour optimiser les performances
 - Scanner l'arborescence avec une profondeur configurable
+- Hériter des fonctionnalités de suivi des problèmes via `AbstractDiscovery`
 
 ## Installation
 
 ```bash
-composer require andydefer/directive
+composer require andydefer/laravel-directive
 ```
 
 ### Dépendances
@@ -32,6 +34,7 @@ composer require andydefer/directive
 - `FileSystemInterface` - Opérations sur le système de fichiers
 - `DirectiveScannerInterface` - Scanner des classes de directives
 - `DirectiveConfigInterface` - Configuration du package (optionnel)
+- `AbstractDiscovery` - Classe de base avec gestion des problèmes
 - PHP 8.1+
 
 ## API / Méthodes publiques
@@ -65,7 +68,7 @@ Découvre les directives dans l'espace de travail.
 
 **Retourne :** `array<int, string>` - Liste des FQCN des directives trouvées
 
-**Exceptions :** `RuntimeException` - Si le répertoire courant ne peut être déterminé
+**Exceptions :** Aucune (les erreurs sont capturées et ajoutées comme problèmes)
 
 **Exemple :**
 ```php
@@ -118,6 +121,35 @@ $workspaceDiscovery->addPaths([
     'packages/core/src/Directives',
 ]);
 ```
+
+---
+
+### `getProblems(): ListCollection` (hérité de AbstractDiscovery)
+
+Retourne la collection des problèmes rencontrés lors de la découverte.
+
+**Retourne :** `ListCollection` - Collection des problèmes
+
+**Exemple :**
+```php
+$workspaceDiscovery = new WorkspaceDirectiveDiscovery(...);
+$directives = $workspaceDiscovery->discover();
+$problems = $workspaceDiscovery->getProblems();
+
+if ($problems->isNotEmpty()) {
+    foreach ($problems as $problem) {
+        echo $problem->get('message') . "\n";
+    }
+}
+```
+
+---
+
+### `clearProblems(): self` (hérité de AbstractDiscovery)
+
+Efface tous les problèmes.
+
+**Retourne :** `self` - Instance fluide
 
 ---
 
@@ -244,6 +276,28 @@ $directives = $discoveryService
 echo "Directives workspace: " . $directives->count() . "\n";
 ```
 
+### Cas 6 : Suivi des problèmes de découverte
+
+```php
+<?php
+
+$workspaceDiscovery = new WorkspaceDirectiveDiscovery(...);
+$directives = $workspaceDiscovery->discover();
+
+$problems = $workspaceDiscovery->getProblems();
+
+if ($problems->isNotEmpty()) {
+    echo "Problèmes rencontrés:\n";
+    foreach ($problems as $problem) {
+        $key = $problem->get('key');
+        $context = $problem->get('context');
+        $message = $problem->get('message');
+        echo "  ❌ [$key] $context\n";
+        echo "     $message\n";
+    }
+}
+```
+
 ---
 
 ## Flux d'exécution
@@ -257,7 +311,7 @@ Vérifier le cache
     ↓
 doDiscover()
     ↓
-getProjectRoot() → getcwd()
+Paths::projectRoot() → getcwd()
     ↓
 getScanPaths()
     ├── DEFAULT_PATHS (src/Directives, app/Directives)
@@ -287,19 +341,38 @@ Mettre en cache les résultats
 Retourner le tableau des FQCN
 ```
 
+### Gestion des problèmes
+
+```
+En cas d'erreur à chaque étape
+    ↓
+addProblem()
+    ├── key: identifiant unique
+    ├── context: description du contexte
+    ├── message: message d'erreur
+    └── context_data: données additionnelles
+    ↓
+Continuer l'exécution (ne pas bloquer)
+    ↓
+Les problèmes sont collectés et accessibles via getProblems()
+```
+
 ---
 
 ## Gestion des erreurs
 
-| Situation | Comportement |
-|-----------|--------------|
-| Répertoire inexistant | Ignoré (continuation) |
-| Aucun répertoire trouvé | Retourne un tableau vide |
-| Erreur de parsing PHP | Ignorée par le scanner |
-| CWD impossible | `RuntimeException` |
+| Situation | Clé du problème | Contexte | Données |
+|-----------|-----------------|----------|---------|
+| Échec global de découverte | `workspace_discovery` | `Failed to discover workspace directives` | - |
+| Échec de la découverte interne | `workspace_do_discover` | `Failed to perform workspace discovery` | - |
+| Échec de scan d'un chemin | `scan_workspace_path` | `Failed to scan workspace path: {path}` | `path`, `full_path` |
+| Échec de scan des sources custom | `scan_workspace_custom_sources` | `Failed to scan workspace custom sources` | - |
+| Échec de scan d'une source custom | `scan_workspace_custom_source` | `Failed to scan workspace custom source: {path}` | `source`, `full_path` |
+| Source custom non répertoire | `workspace_custom_source_not_directory` | `Workspace custom source path is not a directory: {path}` | `source`, `full_path` |
+| Échec de lecture de la config | `get_config_paths` | `Failed to get directories from config` | - |
+| Échec de récupération des sources custom | `get_workspace_custom_sources` | `Failed to get custom sources from config` | - |
 
-**Exceptions :**
-- `RuntimeException` - Si `getcwd()` échoue
+**Aucune exception n'est levée.** Les erreurs sont capturées et ajoutées comme problèmes.
 
 ---
 
@@ -319,6 +392,16 @@ private function discoverWorkspaceDirectives(): void
     );
     
     $fqcns = $source->discover();
+    
+    // Récupérer les problèmes de la source
+    foreach ($source->getProblems() as $problem) {
+        $this->addProblem(
+            'workspace_' . $problem->get('key'),
+            $problem->get('context'),
+            $problem->get('message'),
+            $problem->get('context_data')->toArray()
+        );
+    }
     
     foreach ($fqcns as $fqcn) {
         $this->addDirectiveFromFqcn($fqcn, false);
@@ -502,11 +585,10 @@ foreach ($namespaceMap as $namespace => $classes) {
 // 6. Chemins scannés
 echo "=== Chemins scannés ===\n";
 
-// Chemins par défaut + configuration + personnalisés
 $paths = array_merge(
     ['src/Directives', 'app/Directives'],
     $config->getDirectories(),
-    $workspaceDiscovery->customPaths // Note: propriété privée, utilisez getter si disponible
+    $workspaceDiscovery->customPaths
 );
 
 $uniquePaths = array_unique($paths);
@@ -533,10 +615,24 @@ echo "Nombre de chemins configurés: " . count(array_unique($paths)) . "\n";
 echo "Nombre de sources personnalisées: " . count($customSources) . "\n";
 echo "Nombre de directives trouvées: " . count($directives) . "\n";
 
-// 9. Vérification des classes
+// 9. Problèmes rencontrés
+$problems = $workspaceDiscovery->getProblems();
+if ($problems->isNotEmpty()) {
+    echo "\n=== Problèmes rencontrés ===\n";
+    foreach ($problems as $problem) {
+        $key = $problem->get('key');
+        $context = $problem->get('context');
+        $message = $problem->get('message');
+        $timestamp = $problem->get('timestamp');
+        echo "  ❌ [$key] $context\n";
+        echo "     $message\n";
+        echo "     Time: $timestamp\n";
+    }
+}
+
+// 10. Vérification des classes
 echo "\n=== Vérification des classes ===\n";
 if (count($directives) > 0) {
-    // Vérifier que les classes existent
     $valid = 0;
     $invalid = 0;
     
@@ -553,7 +649,7 @@ if (count($directives) > 0) {
     echo "Classes invalides: $invalid\n";
 }
 
-// 10. Test de cache
+// 11. Test de cache
 echo "\n=== Test du cache ===\n";
 $startTime = microtime(true);
 $firstResult = $workspaceDiscovery->discover();
@@ -572,6 +668,7 @@ echo "Même résultat: " . ($firstResult === $secondResult ? '✅' : '❌') . "\
 ## Voir aussi
 
 - `DiscoverySourceInterface` - Interface de source de découverte
+- `AbstractDiscovery` - Classe de base avec gestion des problèmes
 - `DirectiveClassScanner` - Scanner des classes
 - `DirectiveConfigInterface` - Configuration du package
 - `VendorDirectiveDiscovery` - Découverte dans les vendors

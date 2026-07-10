@@ -2,7 +2,7 @@
 
 ## Description
 
-Noyau d'exécution du système de directives. Orchestre la découverte, l'instanciation et l'exécution des commandes avec un système de suggestions intelligent basé sur un arbre BK-tree.
+Noyau d'exécution du système de directives. Orchestre la découverte, l'instanciation et l'exécution des commandes avec un système de suggestions intelligent basé sur un arbre BK-tree et un système de suivi des problèmes.
 
 ## Hiérarchie / Implémentations
 
@@ -16,17 +16,17 @@ DirectiveDiscoveryService
 `DirectiveKernel` est le point d'entrée central du package Directive. Il permet de :
 
 - Découvrir automatiquement toutes les directives disponibles (hérite de `DirectiveDiscoveryService`)
-- Exécuter les commandes avec leurs arguments
+- Exécuter les commandes avec leurs arguments via trois méthodes d'appel
 - Fournir des suggestions de commandes via BK-tree (distance de Levenshtein)
 - Gérer le contexte partagé entre les directives
 - Journaliser les statistiques d'exécution au format JSONL
-- Détecter les erreurs et les enregistrer
+- Suivre et afficher les problèmes rencontrés (mode verbose)
 - Mettre en cache les directives pour des performances optimales
 
 ## Installation
 
 ```bash
-composer require andydefer/directive
+composer require andydefer/laravel-directive
 ```
 
 ### Dépendances
@@ -50,6 +50,8 @@ Initialise le noyau avec un conteneur.
 
 **Retourne :** `self` - Instance du noyau
 
+**Exceptions :** `Throwable` - Si le logger ou le BK-tree ne peut être initialisé
+
 **Exemple :**
 ```php
 $container = DirectiveContainer::create();
@@ -68,7 +70,7 @@ Exécute une commande à partir des arguments en ligne de commande.
 
 **Retourne :** `ExitCode` - Code de sortie (SUCCESS, NOT_FOUND, RUNTIME_ERROR, etc.)
 
-**Exceptions :** Aucune
+**Exceptions :** Aucune (les erreurs sont capturées et transformées en problèmes)
 
 **Exemple :**
 ```php
@@ -89,6 +91,8 @@ Exécute une directive par son nom de classe complet.
 
 **Retourne :** `ExitCode` - Code de sortie
 
+**Exceptions :** Aucune (les erreurs sont capturées)
+
 **Exemple :**
 ```php
 $exitCode = $kernel->runDirective(
@@ -108,6 +112,8 @@ Exécute une directive à partir d'une chaîne de requête.
 | `$query` | `string` | Requête complète (ex: `"greet John --formal"`) |
 
 **Retourne :** `ExitCode` - Code de sortie
+
+**Exceptions :** Aucune
 
 **Exemple :**
 ```php
@@ -217,6 +223,71 @@ $kernel->setLogBasePath('/var/log/directive');
 
 ---
 
+### `verbose(bool $enabled = true): self`
+
+Active ou désactive le mode verbose.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$enabled` | `bool` | Activer le mode verbose |
+
+**Retourne :** `self` - Instance fluide
+
+**Exemple :**
+```php
+$kernel->verbose(true); // Affiche les problèmes après l'exécution
+```
+
+---
+
+### `withOutput(): self`
+
+Désactive le mode verbose (alias de `verbose(false)`).
+
+**Retourne :** `self` - Instance fluide
+
+---
+
+### `withoutOutput(): self`
+
+Active le mode verbose (alias de `verbose(true)`).
+
+**Retourne :** `self` - Instance fluide
+
+---
+
+### `isVerbose(): bool`
+
+Vérifie si le mode verbose est activé.
+
+**Retourne :** `bool` - `true` si le mode verbose est activé
+
+---
+
+### `getProblems(): ListCollection`
+
+Retourne la liste des problèmes rencontrés.
+
+**Retourne :** `ListCollection` - Collection des problèmes
+
+**Exemple :**
+```php
+$problems = $kernel->getProblems();
+foreach ($problems as $problem) {
+    echo $problem->get('message') . "\n";
+}
+```
+
+---
+
+### `clearProblems(): self`
+
+Efface tous les problèmes.
+
+**Retourne :** `self` - Instance fluide
+
+---
+
 ## Cas d'utilisation
 
 ### Cas 1 : Exécution d'une commande simple
@@ -294,7 +365,27 @@ $exitCode = $kernel->run(['directive', 'lst']);
 //   • version
 ```
 
-### Cas 5 : Intégration dans un script personnalisé
+### Cas 5 : Mode verbose pour déboguer
+
+```php
+<?php
+
+$kernel->verbose(true);
+
+// Exécute une commande qui échoue
+$kernel->run(['directive', 'non-existent-command']);
+
+// Sortie en mode verbose :
+// === 1 Problem(s) Encountered ===
+// [directive_not_found] Directive not found: non-existent-command | 2026-07-10 15:43:45 |
+// {
+//   "command": "non-existent-command",
+//   "query": "non-existent-command"
+// }
+// === End of Problems ===
+```
+
+### Cas 6 : Intégration dans un script personnalisé
 
 ```php
 #!/usr/bin/env php
@@ -313,6 +404,9 @@ $kernel = DirectiveKernel::init($container);
 
 // Ajouter des sources personnalisées
 $kernel->addCustomSource('/src/Directives');
+
+// Activer le mode verbose pour le débogage
+$kernel->verbose(true);
 
 // Exécuter les arguments passés au script
 $exitCode = $kernel->run($argv);
@@ -351,7 +445,16 @@ findDirective()
     │   └── logExecution()
     └── Non trouvé → suggestions BK-tree
         ├── search($commandName, 2, 5)
-        └── Afficher les suggestions
+        ├── Afficher les suggestions
+        ├── addProblem('directive_not_found')
+        └── displayProblems() (si verbose)
+    ↓
+displayProblems() (si verbose)
+    ├── Afficher le nombre de problèmes
+    ├── Pour chaque problème
+    │   ├── Afficher la clé, le contexte et la date
+    │   └── Afficher les données contextuelles en JSON
+    └── Afficher la fin de la liste
     ↓
 Retourner ExitCode
 ```
@@ -378,6 +481,23 @@ getSuggestions($commandName, 2, 5)
 ---
 
 ## Gestion des erreurs
+
+### Système de problèmes
+
+Le noyau utilise un système de suivi des problèmes pour enregistrer les erreurs rencontrées.
+
+| Type de problème | Clé | Contexte | Données |
+|------------------|-----|----------|---------|
+| Directive non trouvée | `directive_not_found` | `Directive not found: {command}` | `command`, `query` |
+| Échec d'exécution | `execute_directive` | `Failed to execute directive: {command}` | `command`, `query` |
+| Échec de `run()` | `run_execution` | `Failed to execute command` | `argv` |
+| Échec de `runDirective()` | `run_directive` | `Failed to run directive: {fqcn}` | `fqcn`, `argv` |
+| Échec de `runSignature()` | `run_signature` | `Failed to run signature: {query}` | `query` |
+| Échec du logger | `logger_resolution` | `Failed to resolve ExecutionStatsLogger` | - |
+| Échec du BK-tree | `bk_tree_initialization` | `Failed to initialize BKTree` | - |
+| Indexation BK-tree | `index_directive` | `Failed to index directive in BKTree` | `signature`, `class` |
+
+### Codes de sortie
 
 | Situation | ExitCode | Message |
 |-----------|----------|---------|
@@ -434,6 +554,15 @@ class CustomContainer extends Container
 
 $container = new CustomContainer('/path/to/project');
 $kernel = DirectiveKernel::init($container);
+```
+
+### Avec DirectiveTestingService
+
+```php
+$testingService = new DirectiveTestingService($container, [], true); // verbose activé
+$kernel = $testingService->getKernel();
+$response = $testingService->run('greet John');
+// Les problèmes sont disponibles dans $response->problems
 ```
 
 ---
@@ -497,7 +626,10 @@ $container = DirectiveContainer::create(__DIR__);
 // 2. Initialisation du noyau
 $kernel = DirectiveKernel::init($container);
 
-// 3. Configuration du contexte initial
+// 3. Activation du mode verbose pour le débogage
+$kernel->verbose(true);
+
+// 4. Configuration du contexte initial
 $initialContext = MapCollection::from([
     'environment' => 'development',
     'user_id' => 42,
@@ -505,30 +637,30 @@ $initialContext = MapCollection::from([
 ]);
 $kernel->setContext($initialContext);
 
-// 4. Configuration du chemin de logs personnalisé
+// 5. Configuration du chemin de logs personnalisé
 $kernel->setLogBasePath('/var/log/directive');
 
-// 5. Configuration de la découverte
+// 6. Configuration de la découverte
 $kernel
     ->addSource(__DIR__ . '/src/Directives')
     ->addSource(__DIR__ . '/app/Commands')
     ->ignoreSource(DiscoverySource::VENDOR)
     ->onlyNamespace('App\\Directives\\');
 
-// 6. Exécution des commandes
+// 7. Exécution des commandes
 echo "=== Test de différentes commandes ===\n\n";
 
-// 6a. Aide
+// 7a. Aide
 echo "--- Help ---\n";
 $kernel->run(['directive', 'help']);
 echo "\n";
 
-// 6b. Liste des directives
+// 7b. Liste des directives
 echo "--- List ---\n";
 $kernel->run(['directive', 'list']);
 echo "\n";
 
-// 6c. Exécution d'une directive avec arguments
+// 7c. Exécution d'une directive avec arguments
 echo "--- Test Directive ---\n";
 $exitCode = $kernel->run([
     'directive',
@@ -539,17 +671,17 @@ $exitCode = $kernel->run([
 ]);
 echo "Exit code: " . $exitCode->value . " (" . $exitCode->getLabel() . ")\n\n";
 
-// 6d. Test des suggestions
+// 7d. Test des suggestions
 echo "--- Suggestions ---\n";
 $kernel->run(['directive', 'lst']); // 'list' mal tapé
 echo "\n";
 
-// 6e. Test avec runSignature
+// 7e. Test avec runSignature
 echo "--- Run Signature ---\n";
 $kernel->runSignature('greet Alice --formal');
 echo "\n";
 
-// 6f. Test avec runDirective
+// 7f. Test avec runDirective
 echo "--- Run Directive by FQCN ---\n";
 $kernel->runDirective(
     'AndyDefer\\Directive\\BuiltIn\\VersionDirective',
@@ -557,7 +689,7 @@ $kernel->runDirective(
 );
 echo "\n";
 
-// 7. Récupération des statistiques
+// 8. Récupération des statistiques
 $stats = $kernel->getLastStats();
 if ($stats) {
     echo "=== Dernière exécution ===\n";
@@ -569,23 +701,25 @@ if ($stats) {
     echo "Succès: " . ($stats->exitCode->isSuccess() ? '✅' : '❌') . "\n";
 }
 
-// 8. Récupération du contexte final
+// 9. Récupération des problèmes (mode verbose)
+$problems = $kernel->getProblems();
+if ($problems->isNotEmpty()) {
+    echo "\n=== Problèmes rencontrés ===\n";
+    foreach ($problems as $problem) {
+        echo "  ❌ " . $problem->get('key') . "\n";
+        echo "     " . $problem->get('context') . "\n";
+        echo "     " . $problem->get('message') . "\n";
+    }
+}
+
+// 10. Récupération du contexte final
 $finalContext = $kernel->getContext();
 echo "\n=== Contexte final ===\n";
 print_r($finalContext->toArray());
 
-// 9. Vérification des suggestions
-echo "\n=== Suggestions disponibles ===\n";
-$directives = $kernel->getDirectives();
-$names = [];
-foreach ($directives as $directive) {
-    $parts = explode(' ', $directive->signature);
-    $names[] = $parts[0];
-}
-echo "Commandes disponibles: " . implode(', ', $names) . "\n";
-
-// 10. Nettoyage
+// 11. Nettoyage
 $kernel->resetContext();
+$kernel->clearProblems();
 $kernel->setLogBasePath('.directive');
 echo "\n✅ Kernel réinitialisé\n";
 ```
