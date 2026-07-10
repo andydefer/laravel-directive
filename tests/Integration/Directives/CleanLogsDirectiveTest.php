@@ -140,7 +140,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
                         $this->dumpDirectoryContents($fullPath);
                     } else {
                         $size = filesize($fullPath);
-                        $mtime = date('Y-m-d H:i:s', filemtime($fullPath));
+                        $mtime = Carbon::createFromTimestamp(filemtime($fullPath))->format('Y-m-d H:i:s');
                     }
                 }
             }

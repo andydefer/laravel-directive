@@ -9,6 +9,8 @@ use AndyDefer\Directive\Configs\DirectiveConfig;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
+use AndyDefer\Directive\Contracts\Services\ComposerReaderInterface;
+use AndyDefer\Directive\Contracts\Services\DependencyResolverInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Discovers\BuiltInDirectiveDiscovery;
@@ -123,13 +125,15 @@ final class DirectiveServiceRegistrar
                 $container->make(FileSystemInterface::class)
             );
         });
+        $this->container->alias(ComposerReaderService::class, ComposerReaderInterface::class);
 
         $this->container->singleton(DependencyResolverService::class, function ($container) {
             return new DependencyResolverService(
-                $container->make(ComposerReaderService::class),
+                $container->make(ComposerReaderInterface::class),
                 $container->make(FileSystemInterface::class)
             );
         });
+        $this->container->alias(DependencyResolverService::class, DependencyResolverInterface::class);
 
         $this->container->singleton(DirectiveScannerInterface::class, function ($container) {
             return new DirectiveClassScanner(
@@ -145,14 +149,15 @@ final class DirectiveServiceRegistrar
         $this->container->singleton(WorkspaceDirectiveDiscovery::class, function ($container) {
             return new WorkspaceDirectiveDiscovery(
                 $container->make(FileSystemInterface::class),
-                $container->make(DirectiveScannerInterface::class)
+                $container->make(DirectiveScannerInterface::class),
+                $container->make(DirectiveConfigInterface::class)
             );
         });
 
         $this->container->singleton(VendorDirectiveDiscovery::class, function ($container) {
             return new VendorDirectiveDiscovery(
-                $container->make(ComposerReaderService::class),
-                $container->make(DependencyResolverService::class),
+                $container->make(ComposerReaderInterface::class),
+                $container->make(DependencyResolverInterface::class),
                 $container->make(FileSystemInterface::class),
                 $container->make(DirectiveScannerInterface::class)
             );

@@ -20,9 +20,11 @@ use AndyDefer\Directive\Scanners\DirectiveClassScanner;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\DomainStructures\Utils\MapCollection;
+use AndyDefer\DomainStructures\Utils\StrictAssociative;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use AndyDefer\SignatureParser\SignatureParser;
+use Carbon\Carbon;
 use PhpParser\ParserFactory;
 use ReflectionClass;
 use ReflectionException;
@@ -256,12 +258,12 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      */
     protected function addProblem(string $key, string $context, string $message, array $contextData = []): void
     {
-        $this->problems = $this->problems->add(MapCollection::from([
+        $this->problems = $this->problems->add(StrictAssociative::from([
             'key' => $key,
             'context' => $context,
             'message' => $message,
             'context_data' => $contextData,
-            'timestamp' => date('Y-m-d H:i:s'),
+            'timestamp' => Carbon::now()->format('Y-m-d H:i:s'),
         ]));
     }
 
@@ -933,6 +935,14 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         try {
             $source = new BuiltInDirectiveDiscovery;
             $fqcns = $source->discover();
+            foreach ($source->getProblems() as $problem) {
+                $this->addProblem(
+                    'builtin_'.$problem->get('key'),
+                    $problem->get('context'),
+                    $problem->get('message'),
+                    $problem->get('context_data')->toArray()
+                );
+            }
 
             foreach ($fqcns as $fqcn) {
                 try {
@@ -967,6 +977,14 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
             );
 
             $fqcns = $source->discover();
+            foreach ($source->getProblems() as $problem) {
+                $this->addProblem(
+                    'workspace_'.$problem->get('key'),
+                    $problem->get('context'),
+                    $problem->get('message'),
+                    $problem->get('context_data')->toArray()
+                );
+            }
 
             foreach ($fqcns as $fqcn) {
                 try {
@@ -1008,6 +1026,15 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
             );
 
             $fqcns = $source->discover();
+
+            foreach ($source->getProblems() as $problem) {
+                $this->addProblem(
+                    'vendor_'.$problem->get('key'),
+                    $problem->get('context'),
+                    $problem->get('message'),
+                    $problem->get('context_data')->toArray()
+                );
+            }
 
             foreach ($fqcns as $fqcn) {
                 try {

@@ -18,6 +18,8 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestGreetingDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
+use AndyDefer\DomainStructures\Utils\ListCollection;
+use AndyDefer\DomainStructures\Utils\StrictAssociative;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
@@ -62,10 +64,8 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
             }
         }');
 
-        // Create a mock application
         $appMock = $this->createMock(Container::class);
 
-        // Create mocks for services
         $parserMock = $this->createMock(DirectiveParserInterface::class);
         $scannerMock = $this->createMock(DirectiveScannerInterface::class);
         $fileSystemMock = $this->createMock(FileSystemInterface::class);
@@ -77,7 +77,6 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $configMock->method('getComposerPath')->willReturn($tempDir.'/composer.json');
         $configMock->method('basePath')->willReturn($tempDir);
 
-        // Configure app mock to return services
         $appMock->method('make')->willReturnCallback(function ($class) use ($parserMock, $scannerMock, $fileSystemMock, $configMock) {
             return match ($class) {
                 DirectiveParserInterface::class => $parserMock,
@@ -448,14 +447,12 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 
     public function test_enable_directive_restores_directive(): void
     {
-        // Utiliser le vrai service, pas le mock
         $service = $this->app->make(DirectiveDiscoveryService::class);
         $service->addSource($this->fixturesPath);
         $service->ignoreSource(DiscoverySource::VENDOR);
 
         $fullSignature = 'test-echo {message=?} {extra=?}';
 
-        // Verify present
         $result = $service->discover();
         $found = false;
         foreach ($result as $directive) {
@@ -466,7 +463,6 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         }
         $this->assertTrue($found, 'Directive should be present initially');
 
-        // Ignore with base signature
         $service->ignoreDirective('test-echo');
         $result = $service->discover();
         $found = false;
@@ -478,7 +474,6 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         }
         $this->assertFalse($found, 'Directive should be ignored');
 
-        // Enable with base signature
         $service->enableDirective('test-echo');
         $result = $service->discover();
         $found = false;
@@ -806,11 +801,9 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
     {
         $service = $this->app->make(DirectiveDiscoveryService::class);
 
-        // Nettoyer les sources existantes avant le test
         $reflection = new \ReflectionClass($service);
         $property = $reflection->getProperty('customSources');
 
-        // Créer une nouvelle collection vide
         $emptyCollection = new StringTypedCollection;
         $property->setValue($service, $emptyCollection);
 
@@ -873,5 +866,165 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 
         $this->assertNotSame($firstCollection, $secondCollection);
         $this->assertEquals($firstCollection->count(), $secondCollection->count());
+    }
+
+    // ==================== PROBLEMS TESTS ====================
+
+    public function test_get_problems_returns_empty_collection_initially(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+        $problems = $service->getProblems();
+
+        $this->assertInstanceOf(ListCollection::class, $problems);
+        $this->assertTrue($problems->isEmpty());
+    }
+
+    public function test_problems_are_recorded_when_container_resolution_fails(): void
+    {
+        $service = $this->createFreshDiscoveryService();
+
+        $problems = $service->getProblems();
+        $this->assertInstanceOf(ListCollection::class, $problems);
+    }
+
+    public function test_problems_are_recorded_when_discovery_fails(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+
+        // Force une erreur en ajoutant un chemin invalide
+        $service->addSource('/invalid/path/that/does/not/exist');
+
+        $service->discover();
+
+        $problems = $service->getProblems();
+        $this->assertInstanceOf(ListCollection::class, $problems);
+    }
+
+    public function test_problem_contains_required_fields(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('addProblem');
+        $method->invoke($service, 'test_key', 'Test context', 'Test message', ['extra' => 'data']);
+
+        $problems = $service->getProblems();
+        $this->assertFalse($problems->isEmpty());
+
+        $problem = $problems->first();
+        $this->assertInstanceOf(StrictAssociative::class, $problem);
+
+        $this->assertTrue($problem->has('key'));
+        $this->assertTrue($problem->has('context'));
+        $this->assertTrue($problem->has('message'));
+        $this->assertTrue($problem->has('context_data'));
+        $this->assertTrue($problem->has('timestamp'));
+
+        $this->assertSame('test_key', $problem->get('key'));
+        $this->assertSame('Test context', $problem->get('context'));
+        $this->assertSame('Test message', $problem->get('message'));
+        $this->assertSame(['extra' => 'data'], $problem->get('context_data')->toArray());
+    }
+
+    public function test_clear_problems_empties_collection(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('addProblem');
+        $method->invoke($service, 'test_key', 'Test context', 'Test message');
+
+        $this->assertFalse($service->getProblems()->isEmpty());
+
+        $service->clearProblems();
+
+        $this->assertTrue($service->getProblems()->isEmpty());
+    }
+
+    public function test_problems_are_recorded_for_custom_source_not_directory(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+        $service->addSource('/path/that/is/not/a/directory');
+
+        $service->discover();
+
+        $problems = $service->getProblems();
+        $found = false;
+        foreach ($problems as $problem) {
+            if ($problem->get('key') === 'custom_source_not_directory') {
+                $found = true;
+                $this->assertStringContainsString('not a directory', $problem->get('context'));
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Problem for non-directory custom source not found');
+    }
+
+    public function test_problems_are_recorded_for_invalid_directive_class(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+
+        try {
+            $service->addDirective(\stdClass::class);
+        } catch (\InvalidArgumentException $e) {
+            // Exception attendue
+        }
+
+        $problems = $service->getProblems();
+        $found = false;
+        foreach ($problems as $problem) {
+            if ($problem->get('key') === 'add_directive') {
+                $found = true;
+                $this->assertStringContainsString('must extend', $problem->get('message'));
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Problem for invalid directive class not found');
+    }
+
+    public function test_multiple_problems_are_collected(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+
+        // Ajouter plusieurs problèmes
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('addProblem');
+        $method->invoke($service, 'problem_1', 'Context 1', 'Message 1');
+        $method->invoke($service, 'problem_2', 'Context 2', 'Message 2');
+        $method->invoke($service, 'problem_3', 'Context 3', 'Message 3');
+
+        $problems = $service->getProblems();
+        $this->assertCount(3, $problems);
+
+        $keys = [];
+        foreach ($problems as $problem) {
+            $keys[] = $problem->get('key');
+        }
+        $this->assertContains('problem_1', $keys);
+        $this->assertContains('problem_2', $keys);
+        $this->assertContains('problem_3', $keys);
+    }
+
+    public function test_problem_context_data_contains_relevant_information(): void
+    {
+        $service = $this->app->make(DirectiveDiscoveryService::class);
+
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('addProblem');
+        $method->invoke($service, 'test_key', 'Test context', 'Test message', [
+            'class' => 'TestClass',
+            'path' => '/test/path',
+            'command' => 'test-command',
+        ]);
+
+        $problem = $service->getProblems()->first();
+        $contextData = $problem->get('context_data');
+
+        $this->assertArrayHasKey('class', $contextData);
+        $this->assertArrayHasKey('path', $contextData);
+        $this->assertArrayHasKey('command', $contextData);
+        $this->assertSame('TestClass', $contextData['class']);
+        $this->assertSame('/test/path', $contextData['path']);
+        $this->assertSame('test-command', $contextData['command']);
     }
 }

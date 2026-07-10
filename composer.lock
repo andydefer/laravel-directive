@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7ce2086233438fb0b336407b6ee35e15",
+    "content-hash": "cd6acca5d7920049820874090e15bf95",
     "packages": [
         {
             "name": "andydefer/algo-kit",
@@ -161,16 +161,16 @@
         },
         {
             "name": "andydefer/php-console",
-            "version": "v1.3.0",
+            "version": "v1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/php-console.git",
-                "reference": "7f3a26f538e3e883f090ebfcd85a4bab54d5d909"
+                "reference": "9f599b74f3bdfa6ec39543f3d326e2de53f48970"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/php-console/zipball/7f3a26f538e3e883f090ebfcd85a4bab54d5d909",
-                "reference": "7f3a26f538e3e883f090ebfcd85a4bab54d5d909",
+                "url": "https://api.github.com/repos/andydefer/php-console/zipball/9f599b74f3bdfa6ec39543f3d326e2de53f48970",
+                "reference": "9f599b74f3bdfa6ec39543f3d326e2de53f48970",
                 "shasum": ""
             },
             "require": {
@@ -202,9 +202,9 @@
             "description": "A simple and elegant console output writer for PHP with styled components",
             "support": {
                 "issues": "https://github.com/andydefer/php-console/issues",
-                "source": "https://github.com/andydefer/php-console/tree/v1.3.0"
+                "source": "https://github.com/andydefer/php-console/tree/v1.4.0"
             },
-            "time": "2026-07-09T15:32:38+00:00"
+            "time": "2026-07-10T13:51:35+00:00"
         },
         {
             "name": "andydefer/php-jsonl",

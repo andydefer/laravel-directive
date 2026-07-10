@@ -157,7 +157,7 @@ final class CleanLogsDirective extends AbstractDirective
             $isFile = $file->isFile();
             $extension = $file->getExtension();
             $mTime = $file->getMTime();
-            $mTimeFormatted = date('Y-m-d H:i:s', $mTime);
+            $mTimeFormatted = Carbon::createFromTimestamp($mTime)->format('Y-m-d H:i:s');
 
             echo '🔍 [getFilesToDelete]   - isFile: '.($isFile ? 'true' : 'false')."\n";
             echo "🔍 [getFilesToDelete]   - extension: '{$extension}'\n";

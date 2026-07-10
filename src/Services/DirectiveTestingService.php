@@ -9,6 +9,8 @@ use AndyDefer\Directive\Container\LaravelContainerAdapter;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
+use AndyDefer\Directive\Tests\Helpers\TestHelper;
+use AndyDefer\DomainStructures\Utils\Sequential;
 use Illuminate\Contracts\Foundation\Application as LaravelApplication;
 use Throwable;
 
@@ -38,7 +40,6 @@ final class DirectiveTestingService
                 ? new LaravelContainerAdapter($this->container)
                 : $this->container;
 
-        // Ajouter les sources AVANT de créer le kernel
         $this->kernel = DirectiveKernel::init($adapter);
 
         foreach ($this->sourcePaths as $path) {
@@ -61,11 +62,19 @@ final class DirectiveTestingService
             $exitCode = $this->kernel->run($argv);
             $output = ob_get_clean();
 
-            return new DirectiveResponseRecord($exitCode, $output);
+            return new DirectiveResponseRecord(
+                exit_code: $exitCode,
+                output: $output,
+                problems: Sequential::from($this->kernel->getProblems()->toArray()),
+            );
         } catch (Throwable $e) {
             ob_end_clean();
 
-            return new DirectiveResponseRecord(ExitCode::RUNTIME_ERROR, $e->getMessage());
+            return new DirectiveResponseRecord(
+                exit_code: ExitCode::RUNTIME_ERROR,
+                output: $e->getMessage(),
+                problems: Sequential::from($this->kernel->getProblems()->toArray()),
+            );
         }
     }
 
@@ -84,11 +93,19 @@ final class DirectiveTestingService
             $exitCode = $this->kernel->runDirective($fqcn, $argv);
             $output = ob_get_clean();
 
-            return new DirectiveResponseRecord($exitCode, $output);
+            return new DirectiveResponseRecord(
+                exit_code: $exitCode,
+                output: $output,
+                problems: Sequential::from($this->kernel->getProblems()->toArray()),
+            );
         } catch (Throwable $e) {
             ob_end_clean();
 
-            return new DirectiveResponseRecord(ExitCode::RUNTIME_ERROR, $e->getMessage());
+            return new DirectiveResponseRecord(
+                exit_code: ExitCode::RUNTIME_ERROR,
+                output: $e->getMessage(),
+                problems: Sequential::from($this->kernel->getProblems()->toArray()),
+            );
         }
     }
 
@@ -106,11 +123,19 @@ final class DirectiveTestingService
             $exitCode = $this->kernel->runSignature($query);
             $output = ob_get_clean();
 
-            return new DirectiveResponseRecord($exitCode, $output);
+            return new DirectiveResponseRecord(
+                exit_code: $exitCode,
+                output: $output,
+                problems: Sequential::from($this->kernel->getProblems()->toArray()),
+            );
         } catch (Throwable $e) {
             ob_end_clean();
 
-            return new DirectiveResponseRecord(ExitCode::RUNTIME_ERROR, $e->getMessage());
+            return new DirectiveResponseRecord(
+                exit_code: ExitCode::RUNTIME_ERROR,
+                output: $e->getMessage(),
+                problems: Sequential::from($this->kernel->getProblems()->toArray()),
+            );
         }
     }
 
@@ -145,20 +170,7 @@ final class DirectiveTestingService
 
     private function createMinimalComposerJson(): void
     {
-        $composerJson = <<<'JSON'
-{
-    "name": "directive-test/app",
-    "type": "project",
-    "require": {
-        "php": "^8.1"
-    },
-    "autoload": {
-        "psr-4": {
-            "App\\": "app/"
-        }
-    }
-}
-JSON;
+        $composerJson = TestHelper::createComposerJsonContent();
 
         file_put_contents($this->tempDir.'/composer.json', $composerJson);
     }

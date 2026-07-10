@@ -12,6 +12,7 @@ use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestGreetingDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
+use AndyDefer\DomainStructures\Utils\ListCollection;
 
 final class DirectiveTestingServiceTest extends IntegrationTestCase
 {
@@ -351,5 +352,126 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
 
         $service1->destroy();
         $service2->destroy();
+    }
+
+    // ==================== PROBLEMS TESTS ====================
+
+    public function test_run_returns_problems_when_error_occurs(): void
+    {
+        $response = $this->service->runDirective('NonExistentDirective');
+
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exit_code);
+        $this->assertFalse($response->problems->isEmpty());
+    }
+
+    public function test_run_problems_sequential_contains_problem_records(): void
+    {
+        $response = $this->service->runDirective('NonExistentDirective');
+
+        $problems = $response->problems;
+        $this->assertFalse($problems->isEmpty());
+
+        $firstProblem = $problems->first();
+        $this->assertIsArray($firstProblem);
+        $this->assertArrayHasKey('key', $firstProblem);
+        $this->assertArrayHasKey('context', $firstProblem);
+        $this->assertArrayHasKey('message', $firstProblem);
+        $this->assertArrayHasKey('context_data', $firstProblem);
+        $this->assertArrayHasKey('timestamp', $firstProblem);
+    }
+
+    public function test_run_problems_contain_fqcn_context(): void
+    {
+        $response = $this->service->runDirective('NonExistentDirective');
+
+        $problems = $response->problems;
+        $this->assertFalse($problems->isEmpty());
+
+        $found = false;
+        foreach ($problems as $problem) {
+            if ($problem['key'] === 'run_directive') {
+                $found = true;
+                $this->assertArrayHasKey('fqcn', $problem['context_data']);
+                $this->assertStringContainsString('NonExistentDirective', $problem['context_data']['fqcn']);
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Problem with run_directive key not found');
+    }
+
+    public function test_run_signature_returns_problems_on_error(): void
+    {
+        $response = $this->service->runSignature('non-existent-command');
+
+        $this->assertSame(ExitCode::NOT_FOUND, $response->exit_code);
+    }
+
+    public function test_run_problems_are_persisted_across_multiple_calls(): void
+    {
+        $response1 = $this->service->runDirective('NonExistentDirective1');
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response1->exit_code);
+        $count1 = $response1->problems->count();
+
+        $response2 = $this->service->runDirective('NonExistentDirective2');
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response2->exit_code);
+        $count2 = $response2->problems->count();
+
+        $this->assertGreaterThanOrEqual($count1, $count2);
+    }
+
+    public function test_run_successful_directive_returns_empty_problems(): void
+    {
+        $response = $this->service->run('greeting Alice');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertTrue($response->problems->isEmpty());
+    }
+
+    public function test_run_directive_problems_contain_timestamp(): void
+    {
+        $response = $this->service->runDirective('NonExistentDirective');
+
+        $problems = $response->problems;
+        $this->assertFalse($problems->isEmpty());
+
+        $firstProblem = $problems->first();
+        $this->assertArrayHasKey('timestamp', $firstProblem);
+        $this->assertIsString($firstProblem['timestamp']);
+        $this->assertMatchesRegularExpression('/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/', $firstProblem['timestamp']);
+    }
+
+    public function test_run_directive_problems_contain_human_readable_context(): void
+    {
+        $response = $this->service->runDirective('NonExistentDirective');
+
+        $problems = $response->problems;
+        $this->assertFalse($problems->isEmpty());
+
+        foreach ($problems as $problem) {
+            $this->assertArrayHasKey('context', $problem);
+            $this->assertIsString($problem['context']);
+            $this->assertNotEmpty($problem['context']);
+            $this->assertGreaterThan(10, strlen($problem['context']));
+        }
+    }
+
+    public function test_run_multiple_errors_accumulate_problems(): void
+    {
+        $this->service->runDirective('NonExistentDirective1');
+        $this->service->runDirective('NonExistentDirective2');
+        $this->service->runDirective('NonExistentDirective3');
+
+        $response = $this->service->runDirective('NonExistentDirective4');
+
+        $problems = $response->problems;
+        $this->assertGreaterThanOrEqual(4, $problems->count());
+    }
+
+    public function test_run_kernel_problems_are_accessible_via_getter(): void
+    {
+        $kernel = $this->service->getKernel();
+
+        $problems = $kernel->getProblems();
+        $this->assertInstanceOf(ListCollection::class, $problems);
     }
 }

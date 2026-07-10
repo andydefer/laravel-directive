@@ -6,9 +6,9 @@ namespace AndyDefer\Directive\Discovers;
 
 use AndyDefer\Directive\BuiltIn\CleanLogsDirective;
 use AndyDefer\Directive\BuiltIn\HelpDirective;
+use AndyDefer\Directive\BuiltIn\KernelAuditDirective;
 use AndyDefer\Directive\BuiltIn\ListDirective;
 use AndyDefer\Directive\BuiltIn\VersionDirective;
-use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
 
 /**
  * Discovery source for built-in directives.
@@ -18,7 +18,7 @@ use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
  * - HelpDirective: Displays help information
  * - VersionDirective: Shows version information
  */
-final class BuiltInDirectiveDiscovery implements DiscoverySourceInterface
+final class BuiltInDirectiveDiscovery extends AbstractDiscovery
 {
     /**
      * The list of built-in directive class names.
@@ -30,6 +30,7 @@ final class BuiltInDirectiveDiscovery implements DiscoverySourceInterface
         HelpDirective::class,
         VersionDirective::class,
         CleanLogsDirective::class,
+        KernelAuditDirective::class,
     ];
 
     /**

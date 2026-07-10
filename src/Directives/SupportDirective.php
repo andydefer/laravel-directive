@@ -12,7 +12,7 @@ final class SupportDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'support {--all}';
+        return 'built:support';
     }
 
     public function getAliases(): StringTypedCollection

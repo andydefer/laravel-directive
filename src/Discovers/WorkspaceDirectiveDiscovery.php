@@ -6,9 +6,9 @@ namespace AndyDefer\Directive\Discovers;
 
 use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
-use AndyDefer\Directive\Contracts\DiscoverySourceInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
+use Throwable;
 
 /**
  * Discovery source for workspace directives.
@@ -17,7 +17,7 @@ use AndyDefer\PhpServices\Contracts\FileSystemInterface;
  * By default, it looks in `src/Directives` and `app/Directives`,
  * but can be configured to scan custom paths.
  */
-final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
+final class WorkspaceDirectiveDiscovery extends AbstractDiscovery
 {
     /**
      * Default directories to scan for directives within the application.
@@ -52,7 +52,9 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
         private readonly DirectiveScannerInterface $scanner,
         private readonly ?DirectiveConfigInterface $config = null,
         private readonly int $maxDepth = 3,
-    ) {}
+    ) {
+        parent::__construct();
+    }
 
     /**
      * Discovers directives from the application's workspace.
@@ -65,7 +67,17 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
             return $this->cache;
         }
 
-        $this->cache = $this->doDiscover();
+        try {
+            $this->cache = $this->doDiscover();
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'workspace_discovery',
+                'Failed to discover workspace directives',
+                $e->getMessage(),
+                []
+            );
+            $this->cache = [];
+        }
 
         return $this->cache;
     }
@@ -107,27 +119,55 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
     private function doDiscover(): array
     {
         $directives = [];
-        $projectRoot = Paths::projectRoot();
 
-        // 1. Scanner les chemins par défaut et configurés
-        $paths = $this->getScanPaths();
+        try {
+            $projectRoot = Paths::projectRoot();
 
-        foreach ($paths as $path) {
-            $fullPath = $projectRoot.'/'.$path;
+            // 1. Scanner les chemins par défaut et configurés
+            $paths = $this->getScanPaths();
 
-            if (! $this->fileSystem->isDirectory($fullPath)) {
-                continue; // ✅ Pas d'erreur, on continue
+            foreach ($paths as $path) {
+                $fullPath = $projectRoot.'/'.$path;
+
+                if (! $this->fileSystem->isDirectory($fullPath)) {
+                    continue;
+                }
+
+                try {
+                    $directives = array_merge(
+                        $directives,
+                        $this->scanner->scan($fullPath, $this->maxDepth)
+                    );
+                } catch (Throwable $e) {
+                    $this->addProblem(
+                        'scan_workspace_path',
+                        'Failed to scan workspace path: '.$fullPath,
+                        $e->getMessage(),
+                        ['path' => $path, 'full_path' => $fullPath]
+                    );
+                }
             }
 
-            $directives = array_merge(
-                $directives,
-                $this->scanner->scan($fullPath, $this->maxDepth)
+            // 2. Scanner les custom_sources du projet
+            try {
+                $customDirectives = $this->scanWorkspaceCustomSources($projectRoot);
+                $directives = array_merge($directives, $customDirectives);
+            } catch (Throwable $e) {
+                $this->addProblem(
+                    'scan_workspace_custom_sources',
+                    'Failed to scan workspace custom sources',
+                    $e->getMessage(),
+                    []
+                );
+            }
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'workspace_do_discover',
+                'Failed to perform workspace discovery',
+                $e->getMessage(),
+                []
             );
         }
-
-        // 2. Scanner les custom_sources du projet
-        $customDirectives = $this->scanWorkspaceCustomSources($projectRoot);
-        $directives = array_merge($directives, $customDirectives);
 
         return $directives;
     }
@@ -142,9 +182,18 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
         $paths = self::DEFAULT_PATHS;
 
         if ($this->config !== null) {
-            $configPaths = $this->config->getDirectories();
-            if (! empty($configPaths)) {
-                $paths = $configPaths;
+            try {
+                $configPaths = $this->config->getDirectories();
+                if (! empty($configPaths)) {
+                    $paths = $configPaths;
+                }
+            } catch (Throwable $e) {
+                $this->addProblem(
+                    'get_config_paths',
+                    'Failed to get directories from config',
+                    $e->getMessage(),
+                    []
+                );
             }
         }
 
@@ -165,18 +214,43 @@ final class WorkspaceDirectiveDiscovery implements DiscoverySourceInterface
             return $directives;
         }
 
-        $customSources = $this->config->getCustomSources();
+        try {
+            $customSources = $this->config->getCustomSources();
 
-        foreach ($customSources as $source) {
-            $fullPath = $projectRoot.'/'.ltrim($source, '/');
+            foreach ($customSources as $source) {
+                $fullPath = $projectRoot.'/'.ltrim($source, '/');
 
-            if (! $this->fileSystem->isDirectory($fullPath)) {
-                continue; // ✅ Pas d'erreur, on continue
+                if (! $this->fileSystem->isDirectory($fullPath)) {
+                    $this->addProblem(
+                        'workspace_custom_source_not_directory',
+                        'Workspace custom source path is not a directory: '.$fullPath,
+                        'Path does not exist or is not a directory',
+                        ['source' => $source, 'full_path' => $fullPath]
+                    );
+
+                    continue;
+                }
+
+                try {
+                    $directives = array_merge(
+                        $directives,
+                        $this->scanner->scan($fullPath, $this->maxDepth)
+                    );
+                } catch (Throwable $e) {
+                    $this->addProblem(
+                        'scan_workspace_custom_source',
+                        'Failed to scan workspace custom source: '.$fullPath,
+                        $e->getMessage(),
+                        ['source' => $source, 'full_path' => $fullPath]
+                    );
+                }
             }
-
-            $directives = array_merge(
-                $directives,
-                $this->scanner->scan($fullPath, $this->maxDepth)
+        } catch (Throwable $e) {
+            $this->addProblem(
+                'get_workspace_custom_sources',
+                'Failed to get custom sources from config',
+                $e->getMessage(),
+                []
             );
         }
 

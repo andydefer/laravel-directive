@@ -10,6 +10,7 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\ExecutionStatsRecord;
 use AndyDefer\Directive\Services\ExecutionStatsLogger;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
+use AndyDefer\DomainStructures\Utils\ListCollection;
 use Carbon\Carbon;
 
 final class DirectiveKernelTest extends IntegrationTestCase
@@ -26,20 +27,16 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         $this->kernel = DirectiveKernel::init($this->laravelContainer);
 
-        // Ajouter le chemin des fixtures
         $this->kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
 
-        // Répertoire temporaire pour les logs
         $this->logBasePath = sys_get_temp_dir().'/directive_kernel_logs_'.uniqid();
         $this->kernel->setLogBasePath($this->logBasePath);
     }
 
     protected function tearDown(): void
     {
-        // Nettoyer le buffer de sortie
         ob_end_clean();
 
-        // Nettoyer les logs
         if (is_dir($this->logBasePath)) {
             $this->removeDirectory($this->logBasePath);
         }
@@ -229,18 +226,15 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_context_shared_between_directives(): void
     {
-        // Execute directive that sets context
         $result = $this->kernel->run(['directive', 'context:set', 'John']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
-        // Check context was set
         $context = $this->kernel->getContext();
         $this->assertTrue($context->hasKey('user_name'));
         $this->assertSame('John', $context->get('user_name'));
         $this->assertSame(1, $context->get('counter'));
 
-        // Execute directive that uses context
         $result = $this->kernel->run(['directive', 'context:get']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
@@ -248,22 +242,18 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_context_increment_and_decrement(): void
     {
-        // Start with counter = 0
         $this->kernel->resetContext();
 
-        // Increment
         $result = $this->kernel->run(['directive', 'context:increment']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
         $this->assertSame(1, $this->kernel->getContext()->get('counter'));
 
-        // Increment by 5
         $result = $this->kernel->run(['directive', 'context:increment', '5']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
         $this->assertSame(6, $this->kernel->getContext()->get('counter'));
 
-        // Decrement by 2
         $result = $this->kernel->run(['directive', 'context:decrement', '2']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
@@ -288,14 +278,12 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        // Set some values
         $context = $this->kernel->getContext()
             ->put('name', 'John')
             ->put('age', 30)
             ->put('city', 'Paris');
         $this->kernel->setContext($context);
 
-        // Remove one
         $result = $this->kernel->run(['directive', 'context:remove', 'age']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
@@ -310,7 +298,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        // Set some values
         $context = $this->kernel->getContext()
             ->put('name', 'John')
             ->put('age', 30)
@@ -319,7 +306,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         $this->assertFalse($this->kernel->getContext()->isEmpty());
 
-        // Clear
         $result = $this->kernel->run(['directive', 'context:clear']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
@@ -330,16 +316,13 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        // Set initial values
         $context = $this->kernel->getContext()
             ->put('name', 'Alice')
             ->put('age', 30);
         $this->kernel->setContext($context);
 
-        // Take snapshot
         $snapshot = $this->kernel->getContext();
 
-        // Modify context
         $context = $this->kernel->getContext()
             ->put('name', 'Bob')
             ->put('city', 'Paris');
@@ -348,7 +331,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $this->assertSame('Bob', $this->kernel->getContext()->get('name'));
         $this->assertTrue($this->kernel->getContext()->hasKey('city'));
 
-        // Restore snapshot
         $this->kernel->setContext($snapshot);
 
         $this->assertSame('Alice', $this->kernel->getContext()->get('name'));
@@ -371,11 +353,9 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        // Set multiple values via directives
         $this->kernel->run(['directive', 'context:set', 'John']);
         $this->kernel->run(['directive', 'context:increment']);
 
-        // Get complete context
         $result = $this->kernel->runSignature('context:all');
 
         $this->assertSame(ExitCode::SUCCESS, $result);
@@ -383,12 +363,10 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_context_is_isolated_per_execution(): void
     {
-        // First execution
         $this->kernel->resetContext();
         $this->kernel->run(['directive', 'context:set', 'John']);
         $this->assertSame('John', $this->kernel->getContext()->get('user_name'));
 
-        // Reset and new execution
         $this->kernel->resetContext();
         $this->kernel->run(['directive', 'context:set', 'Jane']);
         $this->assertSame('Jane', $this->kernel->getContext()->get('user_name'));
@@ -399,7 +377,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        // Parent directive that calls children
         $result = $this->kernel->run(['directive', 'context:orchestrate']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
@@ -468,7 +445,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        // Set context then execute
         $this->kernel->run(['directive', 'context:set', 'John']);
         $result = $this->kernel->run(['directive', 'test-directive', 'Jane', 'jane@example.com']);
 
@@ -480,7 +456,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $content = file_get_contents($logFile);
         $lines = explode("\n", trim($content));
 
-        // Trouver la ligne du log (dernière ligne)
         $lastLine = end($lines);
         $data = json_decode($lastLine, true);
 
@@ -536,7 +511,6 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         $this->assertFileExists($filePath);
 
-        // Nettoyer
         if (is_dir($newBasePath)) {
             $this->removeDirectory($newBasePath);
         }
@@ -578,9 +552,150 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         $lastStats = $this->kernel->getLastStats();
 
-        // Les métriques devraient être positives
         $this->assertGreaterThan(0, $lastStats->duration);
         $this->assertGreaterThanOrEqual(0, $lastStats->memoryUsage);
         $this->assertGreaterThanOrEqual(0, $lastStats->peakMemoryUsage);
+    }
+
+    // ==================== PROBLEMS TESTS ====================
+
+    public function test_kernel_problems_are_empty_initially(): void
+    {
+        $problems = $this->kernel->getProblems();
+        $this->assertInstanceOf(ListCollection::class, $problems);
+        $this->assertTrue($problems->isEmpty());
+    }
+
+    public function test_kernel_records_problem_when_execution_fails(): void
+    {
+        $this->kernel->runDirective('NonExistentDirectiveClass');
+
+        $problems = $this->kernel->getProblems();
+        $this->assertInstanceOf(ListCollection::class, $problems);
+        $this->assertFalse($problems->isEmpty());
+    }
+
+    public function test_kernel_clear_problems_empties_collection(): void
+    {
+        $this->kernel->runDirective('NonExistentDirectiveClass');
+
+        $this->assertFalse($this->kernel->getProblems()->isEmpty());
+
+        $this->kernel->clearProblems();
+        $this->assertTrue($this->kernel->getProblems()->isEmpty());
+    }
+
+    public function test_kernel_problem_contains_command_context(): void
+    {
+        $this->kernel->runDirective('NonExistentDirectiveClass');
+
+        $problems = $this->kernel->getProblems();
+        $this->assertFalse($problems->isEmpty());
+
+        $found = false;
+        foreach ($problems as $problem) {
+            if ($problem->get('key') === 'run_directive' || $problem->get('key') === 'instantiate_and_run') {
+                $found = true;
+                $contextData = $problem->get('context_data');
+
+                if (isset($contextData['fqcn'])) {
+                    $this->assertStringContainsString('NonExistentDirectiveClass', $contextData['fqcn']);
+                } elseif (isset($contextData['class'])) {
+                    $this->assertStringContainsString('NonExistentDirectiveClass', $contextData['class']);
+                } else {
+                    $this->fail('No class or fqcn key found in context_data');
+                }
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Problem with context not found');
+    }
+
+    public function test_kernel_problem_when_directive_instantiation_fails(): void
+    {
+        $result = $this->kernel->runDirective('NonExistentDirectiveClass');
+
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
+
+        $problems = $this->kernel->getProblems();
+        $this->assertFalse($problems->isEmpty());
+
+        $found = false;
+        foreach ($problems as $problem) {
+            $key = $problem->get('key');
+            if ($key === 'run_directive' || $key === 'instantiate_and_run') {
+                $found = true;
+                $contextData = $problem->get('context_data');
+
+                if (isset($contextData['fqcn'])) {
+                    $this->assertStringContainsString('NonExistentDirectiveClass', $contextData['fqcn']);
+                } elseif (isset($contextData['class'])) {
+                    $this->assertStringContainsString('NonExistentDirectiveClass', $contextData['class']);
+                } else {
+                    $this->fail('No class or fqcn key found in context_data');
+                }
+                break;
+            }
+        }
+        $this->assertTrue($found, 'Problem for failed instantiation not found');
+    }
+
+    public function test_kernel_problem_timestamp_is_recorded(): void
+    {
+        $this->kernel->runDirective('NonExistentDirectiveClass');
+
+        $problems = $this->kernel->getProblems();
+        $this->assertFalse($problems->isEmpty());
+
+        $problem = $problems->first();
+        $this->assertTrue($problem->has('timestamp'));
+
+        $timestamp = $problem->get('timestamp');
+        $this->assertIsString($timestamp);
+        $this->assertMatchesRegularExpression('/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/', $timestamp);
+    }
+
+    public function test_kernel_problems_persist_across_executions(): void
+    {
+        $this->kernel->runDirective('NonExistentDirectiveClass1');
+        $firstCount = $this->kernel->getProblems()->count();
+
+        $this->kernel->runDirective('NonExistentDirectiveClass2');
+        $secondCount = $this->kernel->getProblems()->count();
+
+        $this->assertGreaterThanOrEqual($firstCount, $secondCount);
+        $this->assertGreaterThan(0, $firstCount);
+    }
+
+    public function test_kernel_problem_keys_are_unique_identifiers(): void
+    {
+        $this->kernel->runDirective('NonExistentDirectiveClass');
+
+        $problems = $this->kernel->getProblems();
+        $this->assertFalse($problems->isEmpty());
+
+        $keys = [];
+        foreach ($problems as $problem) {
+            $key = $problem->get('key');
+            $this->assertIsString($key);
+            $this->assertNotEmpty($key);
+            $keys[] = $key;
+        }
+        $this->assertNotContains('', $keys);
+    }
+
+    public function test_kernel_problem_context_is_human_readable(): void
+    {
+        $this->kernel->runDirective('NonExistentDirectiveClass');
+
+        $problems = $this->kernel->getProblems();
+        $this->assertFalse($problems->isEmpty());
+
+        foreach ($problems as $problem) {
+            $context = $problem->get('context');
+            $this->assertIsString($context);
+            $this->assertNotEmpty($context);
+            $this->assertGreaterThan(10, strlen($context));
+        }
     }
 }
