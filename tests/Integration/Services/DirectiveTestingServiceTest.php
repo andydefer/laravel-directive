@@ -7,6 +7,10 @@ namespace AndyDefer\Directive\Tests\Integration\Services;
 use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Services\DirectiveTestingService;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
+use AndyDefer\Directive\Tests\Fixtures\Directives\TestGreetingDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 
 final class DirectiveTestingServiceTest extends IntegrationTestCase
@@ -29,6 +33,8 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
         $this->service->destroy();
         parent::tearDown();
     }
+
+    // ==================== run() TESTS ====================
 
     public function test_run_returns_success_for_concrete_directive(): void
     {
@@ -147,6 +153,121 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
 
         $this->assertSame(ExitCode::NOT_FOUND, $response->exit_code);
     }
+
+    // ==================== runSignature() TESTS ====================
+
+    public function test_run_signature_returns_success_for_greeting(): void
+    {
+        $response = $this->service->runSignature('greeting Alice');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Hello, Alice!', $response->output);
+    }
+
+    public function test_run_signature_returns_success_for_calculator(): void
+    {
+        $response = $this->service->runSignature('calculator add 10 5');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('15', $response->output);
+    }
+
+    public function test_run_signature_returns_success_for_echo_with_message(): void
+    {
+        $response = $this->service->runSignature('test-echo Hello^World');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Hello World', $response->output);
+    }
+
+    public function test_run_signature_returns_success_for_variadic_with_flags(): void
+    {
+        $response = $this->service->runSignature('test-variadic John [file1.txt, file2.txt] --verbose');
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Name: John', $response->output);
+        $this->assertStringContainsString('file1.txt', $response->output);
+        $this->assertStringContainsString('file2.txt', $response->output);
+        $this->assertStringContainsString('Verbose mode enabled', $response->output);
+    }
+
+    public function test_run_signature_returns_not_found_for_nonexistent(): void
+    {
+        $response = $this->service->runSignature('unknown-command');
+
+        $this->assertSame(ExitCode::NOT_FOUND, $response->exit_code);
+    }
+
+    // ==================== runDirective() TESTS ====================
+
+    public function test_run_directive_with_fqcn_returns_success(): void
+    {
+        $response = $this->service->runDirective(TestGreetingDirective::class, ['Alice']);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Hello, Alice!', $response->output);
+    }
+
+    public function test_run_directive_with_fqcn_and_default_arguments(): void
+    {
+        $response = $this->service->runDirective(TestGreetingDirective::class);
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Hello, World!', $response->output);
+    }
+
+    public function test_run_directive_with_fqcn_and_multiple_arguments(): void
+    {
+        $response = $this->service->runDirective(
+            TestConcreteDirective::class,
+            ['John', 'john@example.com', 'json', 'file1.txt', 'file2.txt', '--force', '--verbose']
+        );
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+    }
+
+    public function test_run_directive_with_fqcn_and_flags(): void
+    {
+        $response = $this->service->runDirective(
+            TestEchoDirective::class,
+            ['Hello^World']
+        );
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('Hello World', $response->output);
+    }
+
+    public function test_run_directive_with_fqcn_calculator(): void
+    {
+        $response = $this->service->runDirective(
+            TestCalculatorDirective::class,
+            ['add', '10', '5']
+        );
+
+        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        $this->assertStringContainsString('15', $response->output);
+    }
+
+    public function test_run_directive_with_fqcn_calculator_error(): void
+    {
+        $response = $this->service->runDirective(
+            TestCalculatorDirective::class,
+            ['div', '10', '0']
+        );
+
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exit_code);
+        $this->assertStringContainsString('Division by zero', $response->output);
+    }
+
+    public function test_run_directive_with_fqcn_unknown_directive(): void
+    {
+        // Une classe qui n'existe pas
+        $response = $this->service->runDirective('NonExistentDirective');
+
+        $this->assertSame(ExitCode::RUNTIME_ERROR, $response->exit_code);
+    }
+
+    // ==================== ENVIRONMENT TESTS ====================
 
     public function test_temp_directory_is_created(): void
     {

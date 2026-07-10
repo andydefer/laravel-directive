@@ -47,7 +47,10 @@ final class DirectiveTestingService
     }
 
     /**
-     * Runs a directive in the testing environment.
+     * Runs a directive from a query string.
+     *
+     * @param  string  $query  The full query (e.g., "greet John --formal")
+     * @return DirectiveResponseRecord The response record
      */
     public function run(string $query): DirectiveResponseRecord
     {
@@ -56,6 +59,51 @@ final class DirectiveTestingService
         try {
             $argv = ['directive', ...explode(' ', $query)];
             $exitCode = $this->kernel->run($argv);
+            $output = ob_get_clean();
+
+            return new DirectiveResponseRecord($exitCode, $output);
+        } catch (Throwable $e) {
+            ob_end_clean();
+
+            return new DirectiveResponseRecord(ExitCode::RUNTIME_ERROR, $e->getMessage());
+        }
+    }
+
+    /**
+     * Runs a directive by its FQCN (Fully Qualified Class Name).
+     *
+     * @param  class-string  $fqcn  The fully qualified class name
+     * @param  array<int, string>  $argv  The arguments
+     * @return DirectiveResponseRecord The response record
+     */
+    public function runDirective(string $fqcn, array $argv = []): DirectiveResponseRecord
+    {
+        ob_start();
+
+        try {
+            $exitCode = $this->kernel->runDirective($fqcn, $argv);
+            $output = ob_get_clean();
+
+            return new DirectiveResponseRecord($exitCode, $output);
+        } catch (Throwable $e) {
+            ob_end_clean();
+
+            return new DirectiveResponseRecord(ExitCode::RUNTIME_ERROR, $e->getMessage());
+        }
+    }
+
+    /**
+     * Runs a directive by its signature.
+     *
+     * @param  string  $query  The signature (e.g., "greet John --formal")
+     * @return DirectiveResponseRecord The response record
+     */
+    public function runSignature(string $query): DirectiveResponseRecord
+    {
+        ob_start();
+
+        try {
+            $exitCode = $this->kernel->runSignature($query);
             $output = ob_get_clean();
 
             return new DirectiveResponseRecord($exitCode, $output);
