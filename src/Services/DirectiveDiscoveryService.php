@@ -90,11 +90,6 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     private StringTypedCollection $excludedPrefixes;
 
     /**
-     * Whether silent mode is enabled.
-     */
-    private bool $silent = false;
-
-    /**
      * Whether auto-discovery is enabled.
      */
     private bool $autoDiscoveryEnabled = true;
@@ -256,7 +251,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      * @param  string  $message  The error message
      * @param  array<string, mixed>  $contextData  Additional context data
      */
-    protected function addProblem(string $key, string $context, string $message, array $contextData = []): void
+    public function addProblem(string $key, string $context, string $message, array $contextData = []): void
     {
         $this->problems = $this->problems->add(StrictAssociative::from([
             'key' => $key,
@@ -578,46 +573,6 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         return $this;
     }
 
-    // ==================== SILENT MODE ====================
-
-    /**
-     * Enable or disable silent mode.
-     */
-    public function silent(bool $enabled = true): self
-    {
-        $this->silent = $enabled;
-
-        return $this;
-    }
-
-    /**
-     * Enable output (disable silent mode).
-     */
-    public function withOutput(): self
-    {
-        $this->silent = false;
-
-        return $this;
-    }
-
-    /**
-     * Disable output (enable silent mode).
-     */
-    public function withoutOutput(): self
-    {
-        $this->silent = true;
-
-        return $this;
-    }
-
-    /**
-     * Check if silent mode is enabled.
-     */
-    public function isSilent(): bool
-    {
-        return $this->silent;
-    }
-
     // ==================== AUTO-DISCOVERY ====================
 
     /**
@@ -670,7 +625,6 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         $this->excludedNamespaces = new StringTypedCollection;
         $this->onlyPrefixes = new StringTypedCollection;
         $this->excludedPrefixes = new StringTypedCollection;
-        $this->silent = false;
         $this->autoDiscoveryEnabled = true;
         $this->maxDepth = 3;
 
@@ -1135,7 +1089,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
             }
 
             // Check reserved signatures
-            if (! $force && $this->isReservedSignature($signature)) {
+            if (! $force && $this->isReservedSignature($signature, $fqcn)) {
                 return;
             }
 
@@ -1181,7 +1135,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         return $reflection->isSubclassOf(AbstractDirective::class);
     }
 
-    private function isReservedSignature(string $signature): bool
+    private function isReservedSignature(string $signature, string $fqcn): bool
     {
         try {
             $parsed = $this->getParser()->parse($signature, '');
@@ -1191,7 +1145,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         } catch (Throwable $e) {
             $this->addProblem(
                 'reserved_signature_check',
-                'Failed to check reserved signature: '.$signature,
+                'Failed to check reserved signature: '.$signature." of $fqcn",
                 $e->getMessage(),
                 ['signature' => $signature]
             );

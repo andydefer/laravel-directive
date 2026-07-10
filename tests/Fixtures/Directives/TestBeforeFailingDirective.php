@@ -13,7 +13,7 @@ final class TestBeforeFailingDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'test-before-failing';
+        return 'test:before-failing';
     }
 
     public function getDescription(): string

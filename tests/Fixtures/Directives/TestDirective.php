@@ -11,7 +11,7 @@ final class TestDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-directive {name} {email} {format=zip} {files*} {--force} {--verbose}';
+        return 'test:directive {name} {email} {format=zip} {files*} {--force} {--verbose}';
     }
 
     public function getDescription(): string

@@ -13,7 +13,7 @@ final class TestVariadicDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-variadic {name} {files*} {--verbose}';
+        return 'test:variadic {name} {files*} {--verbose}';
     }
 
     public function getDescription(): string

@@ -40,7 +40,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
     public function test_run_returns_success_for_concrete_directive(): void
     {
 
-        $response = $this->service->run('test-concrete John john@example.com');
+        $response = $this->service->run('test:concrete John john@example.com');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
     }
@@ -48,7 +48,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
     public function test_run_returns_success_for_echo_directive(): void
     {
 
-        $response = $this->service->run('test-echo Hello^World');
+        $response = $this->service->run('test:echo Hello^World');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello World', $response->output);
@@ -57,7 +57,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
     public function test_run_returns_success_for_echo_directive_with_default_message(): void
     {
 
-        $response = $this->service->run('test-echo');
+        $response = $this->service->run('test:echo');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello World', $response->output);
@@ -66,7 +66,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
     public function test_run_returns_success_for_variadic_directive(): void
     {
 
-        $response = $this->service->run('test-variadic John [file1.txt, file2.txt] --verbose');
+        $response = $this->service->run('test:variadic John [file1.txt, file2.txt] --verbose');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Name: John', $response->output);
@@ -175,7 +175,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
 
     public function test_run_signature_returns_success_for_echo_with_message(): void
     {
-        $response = $this->service->runSignature('test-echo Hello^World');
+        $response = $this->service->runSignature('test:echo Hello^World');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Hello World', $response->output);
@@ -183,7 +183,7 @@ final class DirectiveTestingServiceTest extends IntegrationTestCase
 
     public function test_run_signature_returns_success_for_variadic_with_flags(): void
     {
-        $response = $this->service->runSignature('test-variadic John [file1.txt, file2.txt] --verbose');
+        $response = $this->service->runSignature('test:variadic John [file1.txt, file2.txt] --verbose');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Name: John', $response->output);

@@ -13,7 +13,7 @@ final class TestNestedBeforeAfterDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'test-nested-before-after';
+        return 'test:nested-before-after';
     }
 
     public function getDescription(): string
@@ -42,7 +42,7 @@ final class TestNestedBeforeAfterDirective extends AbstractDirective
         self::$log .= 'parent-execute-';
         $this->info('Parent execute hook executed');
 
-        $this->call('test-before-after');
+        $this->call('test:before-after');
 
         return ExitCode::SUCCESS;
     }

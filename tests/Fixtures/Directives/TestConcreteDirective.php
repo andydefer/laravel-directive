@@ -11,7 +11,7 @@ class TestConcreteDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-concrete {name} {email} {format=zip} {files*} {--force} {--verbose}';
+        return 'test:concrete {name} {email} {format=zip} {files*} {--force} {--verbose}';
     }
 
     public function getDescription(): string

@@ -26,7 +26,7 @@ final class CleanLogsDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'clean-directive-logs {days=30} {--dry-run} {--verbose}';
+        return 'clean:directive-logs {days=30} {--dry-run} {--verbose}';
     }
 
     public function getDescription(): string

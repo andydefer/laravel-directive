@@ -156,7 +156,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
         $directive = new CleanLogsDirective($this->service->getKernel(), '');
         $signature = $directive->getSignature();
 
-        $this->assertStringContainsString('clean-directive-logs', $signature);
+        $this->assertStringContainsString('clean:directive-logs', $signature);
         $this->assertStringContainsString('days=', $signature);
         $this->assertStringContainsString('--dry-run', $signature);
         $this->assertStringContainsString('--verbose', $signature);
@@ -187,7 +187,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
     public function test_dry_run_with_no_files(): void
     {
 
-        $response = $this->service->run('clean-directive-logs --dry-run');
+        $response = $this->service->run('clean:directive-logs --dry-run');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('No log files to delete', $this->stripAnsi($response->output));
@@ -204,7 +204,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs --dry-run --verbose');
+        $response = $this->service->run('clean:directive-logs --dry-run --verbose');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -222,7 +222,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->createLogFile(60);
 
-        $response = $this->service->run('clean-directive-logs --dry-run --verbose');
+        $response = $this->service->run('clean:directive-logs --dry-run --verbose');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -238,7 +238,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
         $this->createLogFile(60);
         $this->createLogFile(60, '11');
 
-        $response = $this->service->run('clean-directive-logs --dry-run --verbose');
+        $response = $this->service->run('clean:directive-logs --dry-run --verbose');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -262,7 +262,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs --dry-run');
+        $response = $this->service->run('clean:directive-logs --dry-run');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -281,7 +281,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs 7 --dry-run');
+        $response = $this->service->run('clean:directive-logs 7 --dry-run');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -300,7 +300,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs 15 --dry-run');
+        $response = $this->service->run('clean:directive-logs 15 --dry-run');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -315,7 +315,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->createLogFile(31);
 
-        $response = $this->service->run('clean-directive-logs invalid --dry-run');
+        $response = $this->service->run('clean:directive-logs invalid --dry-run');
 
         $this->assertSame(ExitCode::INVALID_ARGUMENT, $response->exit_code);
         $this->assertStringContainsString('Days must be a valid number', $this->stripAnsi($response->output));
@@ -334,7 +334,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs 30');
+        $response = $this->service->run('clean:directive-logs 30');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -352,7 +352,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
         $this->createLogFile(60);
         $this->createLogFile(60, '11');
 
-        $response = $this->service->run('clean-directive-logs 30 --verbose');
+        $response = $this->service->run('clean:directive-logs 30 --verbose');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -378,7 +378,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs 30');
+        $response = $this->service->run('clean:directive-logs 30');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 
@@ -410,7 +410,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs 30 --verbose');
+        $response = $this->service->run('clean:directive-logs 30 --verbose');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -444,7 +444,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
         // ✅ VÉRIFIER que le chemin est bon
 
         // ✅ Exécuter la commande
-        $response = $this->service->run('clean-directive-logs 30');
+        $response = $this->service->run('clean:directive-logs 30');
 
         // ✅ Afficher la sortie pour debug
 
@@ -467,7 +467,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
         $this->app['config']->set('directive.log_base_path', '/nonexistent/path/'.uniqid());
 
         $service = new DirectiveTestingService($this->app);
-        $response = $service->run('clean-directive-logs --dry-run');
+        $response = $service->run('clean:directive-logs --dry-run');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('No log files to delete', $this->stripAnsi($response->output));
@@ -487,7 +487,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
         file_put_contents($corruptedFile, 'invalid json{');
         $this->assertFileExists($corruptedFile);
 
-        $response = $this->service->run('clean-directive-logs 30');
+        $response = $this->service->run('clean:directive-logs 30');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
@@ -518,7 +518,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
 
         $this->dumpDirectoryContents($this->tempDir);
 
-        $response = $this->service->run('clean-directive-logs 30');
+        $response = $this->service->run('clean:directive-logs 30');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 

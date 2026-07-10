@@ -44,7 +44,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_executes_directive(): void
     {
-        $result = $this->kernel->run(['directive', 'test-directive John john@example.com']);
+        $result = $this->kernel->run(['directive', 'test:directive John john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
@@ -86,25 +86,25 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_detects_circular_calls(): void
     {
-        $result = $this->kernel->run(['directive', 'test-circular']);
+        $result = $this->kernel->run(['directive', 'test:circular']);
 
         $this->assertSame(ExitCode::CONFLICT, $result);
     }
 
     public function test_executes_calls_recursively(): void
     {
-        $result = $this->kernel->run(['directive', 'test-call']);
+        $result = $this->kernel->run(['directive', 'test:call']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_before_hook_executes_before_execute(): void
     {
-        $result = $this->kernel->run(['directive', 'test-before-after']);
+        $result = $this->kernel->run(['directive', 'test:before-after']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
-        $directive = $this->app->make(TestBeforeAfterDirective::class, ['query' => 'test-before-after']);
+        $directive = $this->app->make(TestBeforeAfterDirective::class, ['query' => 'test:before-after']);
         $this->assertStringStartsWith('before-', $directive->getLog());
         $this->assertStringContainsString('execute-', $directive->getLog());
         $this->assertStringEndsWith('after-0', $directive->getLog());
@@ -112,11 +112,11 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_before_hook_failure_returns_runtime_error(): void
     {
-        $result = $this->kernel->run(['directive', 'test-before-failing']);
+        $result = $this->kernel->run(['directive', 'test:before-failing']);
 
         $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
 
-        $directive = $this->app->make(TestBeforeFailingDirective::class, ['query' => 'test-before-failing']);
+        $directive = $this->app->make(TestBeforeFailingDirective::class, ['query' => 'test:before-failing']);
         $this->assertStringStartsWith('before-', $directive->getLog());
         $this->assertStringNotContainsString('execute-', $directive->getLog());
         $this->assertStringNotContainsString('after-', $directive->getLog());
@@ -124,11 +124,11 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
 
     public function test_execute_hook_failure_returns_runtime_error_and_after_is_called(): void
     {
-        $result = $this->kernel->run(['directive', 'test-after-failing']);
+        $result = $this->kernel->run(['directive', 'test:after-failing']);
 
         $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
 
-        $directive = $this->app->make(TestAfterFailingDirective::class, ['query' => 'test-after-failing']);
+        $directive = $this->app->make(TestAfterFailingDirective::class, ['query' => 'test:after-failing']);
         $this->assertStringStartsWith('before-', $directive->getLog());
         $this->assertStringContainsString('execute-', $directive->getLog());
         $this->assertStringContainsString('after-', $directive->getLog());
@@ -139,7 +139,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
         TestBeforeAfterDirective::resetLog();
         TestNestedBeforeAfterDirective::resetLog();
 
-        $result = $this->kernel->run(['directive', 'test-nested-before-after']);
+        $result = $this->kernel->run(['directive', 'test:nested-before-after']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 

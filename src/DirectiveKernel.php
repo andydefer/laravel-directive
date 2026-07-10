@@ -30,6 +30,12 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
     private float $startTime;
 
+    /**
+     * Whether verbose mode is enabled.
+     * When enabled, problems are displayed as logs after execution.
+     */
+    private bool $verbose = false;
+
     private int $startMemory;
 
     private BKTree $bkTree;
@@ -133,7 +139,13 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
             [$commandName, $query] = $this->parseArguments($argv);
 
-            return $this->executeDirective($commandName, $query);
+            $exitCode = $this->executeDirective($commandName, $query);
+
+            if ($this->verbose) {
+                $this->displayProblems();
+            }
+
+            return $exitCode;
         } catch (Throwable $e) {
             $this->addProblem(
                 'run_execution',
@@ -141,6 +153,10 @@ final class DirectiveKernel extends DirectiveDiscoveryService
                 $e->getMessage(),
                 ['argv' => $argv]
             );
+
+            if ($this->verbose) {
+                $this->displayProblems();
+            }
 
             return ExitCode::RUNTIME_ERROR;
         }
@@ -159,7 +175,13 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
             $fullArgv = array_merge(['directive', $commandName], $argv);
 
-            return $this->run($fullArgv);
+            $exitCode = $this->run($fullArgv);
+
+            if ($this->verbose) {
+                $this->displayProblems();
+            }
+
+            return $exitCode;
         } catch (Throwable $e) {
             $this->addProblem(
                 'run_directive',
@@ -167,6 +189,10 @@ final class DirectiveKernel extends DirectiveDiscoveryService
                 $e->getMessage(),
                 ['fqcn' => $fqcn, 'argv' => $argv]
             );
+
+            if ($this->verbose) {
+                $this->displayProblems();
+            }
 
             return ExitCode::RUNTIME_ERROR;
         }
@@ -177,7 +203,13 @@ final class DirectiveKernel extends DirectiveDiscoveryService
         try {
             $argv = array_merge(['directive'], explode(' ', $query));
 
-            return $this->run($argv);
+            $exitCode = $this->run($argv);
+
+            if ($this->verbose) {
+                $this->displayProblems();
+            }
+
+            return $exitCode;
         } catch (Throwable $e) {
             $this->addProblem(
                 'run_signature',
@@ -185,6 +217,10 @@ final class DirectiveKernel extends DirectiveDiscoveryService
                 $e->getMessage(),
                 ['query' => $query]
             );
+
+            if ($this->verbose) {
+                $this->displayProblems();
+            }
 
             return ExitCode::RUNTIME_ERROR;
         }
@@ -240,6 +276,14 @@ final class DirectiveKernel extends DirectiveDiscoveryService
                         $console->line("  • {$suggestion}");
                     }
                 }
+
+                // ✅ Ajouter un problème
+                $this->addProblem(
+                    'directive_not_found',
+                    'Directive not found: '.$commandName,
+                    'No directive matching the command name was found',
+                    ['command' => $commandName, 'query' => $query]
+                );
 
                 return ExitCode::NOT_FOUND;
             }
@@ -464,5 +508,83 @@ final class DirectiveKernel extends DirectiveDiscoveryService
 
             return ExitCode::RUNTIME_ERROR;
         }
+    }
+
+    // ==================== VERBOSE MODE ====================
+
+    /**
+     * Enable or disable verbose mode.
+     * When enabled, problems are displayed as logs after execution.
+     */
+    public function verbose(bool $enabled = true): self
+    {
+        $this->verbose = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Enable output (disable verbose mode).
+     */
+    public function withOutput(): self
+    {
+        $this->verbose = false;
+
+        return $this;
+    }
+
+    /**
+     * Disable output (enable verbose mode).
+     */
+    public function withoutOutput(): self
+    {
+        $this->verbose = true;
+
+        return $this;
+    }
+
+    /**
+     * Check if verbose mode is enabled.
+     */
+    public function isVerbose(): bool
+    {
+        return $this->verbose;
+    }
+
+    /**
+     * Display all problems encountered during execution using console logs.
+     */
+    private function displayProblems(): void
+    {
+        $problems = $this->getProblems();
+
+        if ($problems->isEmpty()) {
+            return;
+        }
+
+        /** @var Console $console */
+        $console = $this->container->make(Console::class);
+
+        $console->logError('=== '.$problems->count().' Problem(s) Encountered ===');
+
+        foreach ($problems as $problem) {
+            $key = $problem->get('key');
+            $context = $problem->get('context');
+            $message = $problem->get('message');
+            $contextData = $problem->get('context_data');
+            $timestamp = $problem->get('timestamp');
+
+            $logMessage = sprintf(
+                '[%s] %s | %s |',
+                $key,
+                $context,
+                $timestamp
+            );
+            $console->logError($logMessage);
+            $console->json($contextData->toArray());
+
+        }
+
+        $console->logError('=== End of Problems ===');
     }
 }

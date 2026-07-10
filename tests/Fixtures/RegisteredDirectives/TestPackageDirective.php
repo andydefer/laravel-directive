@@ -19,7 +19,7 @@ final class TestPackageDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'test-package';
+        return 'test:package';
     }
 
     public function getDescription(): string

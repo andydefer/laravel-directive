@@ -12,7 +12,7 @@ final class SupportDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'built:support';
+        return 'support {--all}';
     }
 
     public function getAliases(): StringTypedCollection
@@ -68,8 +68,8 @@ final class SupportDirective extends AbstractDirective
         $this->line('👤 About Andy Kani');
         $this->separator('-', 30);
         $this->line('  Fullstack Developer');
-        $this->line('  PHP • JS/TS • Kotlin');
-        $this->line('  React • Vue • Laravel • Symfony');
+        $this->line('  PHP   • JS/TS • Kotlin');
+        $this->line('  React • Vue   • Laravel');
         $this->line('  DevOps enthusiast');
         $this->newLine();
 

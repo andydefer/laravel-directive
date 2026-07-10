@@ -11,7 +11,7 @@ final class TestCircularDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-circular';
+        return 'test:circular';
     }
 
     public function getDescription(): string
@@ -22,7 +22,7 @@ final class TestCircularDirective extends AbstractDirective
     protected function execute(): ExitCode
     {
         $this->info('Circular directive started');
-        $this->call('test-circular'); // S'appelle lui-même → boucle infinie
+        $this->call('test:circular'); // S'appelle lui-même → boucle infinie
         $this->info('Circular directive finished');
 
         return ExitCode::SUCCESS;

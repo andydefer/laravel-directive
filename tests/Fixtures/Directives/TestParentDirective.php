@@ -11,7 +11,7 @@ final class TestParentDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-parent';
+        return 'test:parent';
     }
 
     public function getDescription(): string

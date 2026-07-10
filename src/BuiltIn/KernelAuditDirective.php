@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\BuiltIn;
 
 use AndyDefer\ConsoleWriter\Console\Components\KeyValue;
-use AndyDefer\ConsoleWriter\Console\Components\Metric;
 use AndyDefer\ConsoleWriter\Console\Components\TableList;
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\AbstractDirective;
@@ -17,6 +16,7 @@ use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\DomainStructures\Utils\MapCollection;
+use AndyDefer\DomainStructures\Utils\StrictAssociative;
 
 /**
  * Built-in directive that audits the discovery system and displays problems.
@@ -25,7 +25,6 @@ use AndyDefer\DomainStructures\Utils\MapCollection;
  * - All problems encountered during discovery
  * - The current discovery configuration
  * - Statistics about discovered directives
- * - System metrics
  *
  * @example
  * ./bin/directive kernel:audit
@@ -36,8 +35,6 @@ final class KernelAuditDirective extends AbstractDirective
 {
     private const METRICS_THRESHOLD_WARNING = 5;
 
-    private const METRICS_THRESHOLD_CRITICAL = 10;
-
     public function getSignature(): string
     {
         return 'kernel:audit {--verbose} {--format=table}';
@@ -45,6 +42,8 @@ final class KernelAuditDirective extends AbstractDirective
 
     public function getDescription(): string
     {
+        StrictAssociative::class;
+
         return 'Audit the kernel discovery system and display problems and metrics';
     }
 
@@ -62,9 +61,6 @@ final class KernelAuditDirective extends AbstractDirective
         $console = $this->getConsole();
 
         $this->displayHeader($console);
-
-        // 1. Display system metrics
-        $this->displayMetrics($console, $kernel);
 
         // 2. Display discovery problems
         $problems = $kernel->getProblems();
@@ -88,41 +84,6 @@ final class KernelAuditDirective extends AbstractDirective
         $console->separator('=', 60);
         $console->title('🔍 Kernel Audit Report');
         $console->separator('=', 60);
-        $console->newLine();
-    }
-
-    private function displayMetrics(Console $console, DirectiveDiscoveryService $kernel): void
-    {
-        $directives = $kernel->discover();
-        $problems = $kernel->getProblems();
-
-        $console->info('📊 System Metrics');
-        $console->separator('-', 40);
-
-        $metrics = [
-            'Directives' => $directives->count(),
-            'Problems' => $problems->count(),
-            'Sources' => $this->getEnabledSourcesCount($kernel),
-            'Max Depth' => $kernel->getMaxDepth(),
-        ];
-
-        $colors = [
-            'Directives' => $directives->count() > 0 ? 'green' : 'yellow',
-            'Problems' => $problems->count() === 0 ? 'green' : ($problems->count() <= self::METRICS_THRESHOLD_WARNING ? 'yellow' : 'red'),
-            'Sources' => $this->getEnabledSourcesCount($kernel) > 0 ? 'green' : 'yellow',
-            'Max Depth' => $kernel->getMaxDepth() <= 3 ? 'green' : 'yellow',
-        ];
-
-        foreach ($metrics as $label => $value) {
-            $color = $colors[$label] ?? 'white';
-            $console->line(Metric::render($label, (string) $value, $color));
-        }
-
-        $console->newLine();
-
-        // Render metrics as inline
-        $console->line('  '.Metric::renderInline('Directives', (string) $directives->count()));
-        $console->line('  '.Metric::renderInline('Problems', (string) $problems->count(), $problems->count() === 0 ? 'green' : 'red'));
         $console->newLine();
     }
 
@@ -150,7 +111,7 @@ final class KernelAuditDirective extends AbstractDirective
         $headers = ListCollection::from(['Key', 'Context', 'Message', 'Timestamp']);
 
         if ($verbose) {
-            $headers->add('Context Data');
+            $headers = $headers->add('Context Data');
         }
 
         $rows = new ListCollection;
@@ -165,14 +126,11 @@ final class KernelAuditDirective extends AbstractDirective
 
             if ($verbose) {
                 $contextData = $problem->get('context_data');
-                if ($contextData && $contextData->isNotEmpty()) {
-                    $row->add(json_encode($contextData->toArray()));
-                } else {
-                    $row->add('N/A');
-                }
+                $row = $row->add(! empty($contextData) ? json_encode($contextData->toArray()) : 'N/A');
             }
 
-            $rows->add($row);
+            // ✅ Réassigner $rows avec la nouvelle instance
+            $rows = $rows->add($row);
         }
 
         echo TableList::renderWithTitle($headers, $rows, '📋 Discovery Problems');
@@ -197,7 +155,7 @@ final class KernelAuditDirective extends AbstractDirective
         }
     }
 
-    private function displayStatistics(Console $console, DirectiveDiscoveryService $kernel, bool $verbose): void
+    private function displayStatistics(Console $console, DirectiveKernel $kernel, bool $verbose): void
     {
         $directives = $kernel->discover();
 
@@ -211,7 +169,7 @@ final class KernelAuditDirective extends AbstractDirective
             'Problems found' => $kernel->getProblems()->count(),
             'Sources enabled' => $this->getEnabledSourcesCount($kernel),
             'Auto-discovery' => $kernel->isAutoDiscoveryEnabled() ? '✅ Enabled' : '❌ Disabled',
-            'Silent mode' => $kernel->isSilent() ? '✅ Enabled' : '❌ Disabled',
+            'Silent mode' => $kernel->isVerbose() ? '✅ Enabled' : '❌ Disabled',
             'Max depth' => $kernel->getMaxDepth(),
         ]);
 
@@ -256,7 +214,7 @@ final class KernelAuditDirective extends AbstractDirective
             'Version' => $container->version() ?? 'N/A',
             'Max depth' => $kernel->getMaxDepth(),
             'Auto-discovery' => $kernel->isAutoDiscoveryEnabled() ? 'Enabled' : 'Disabled',
-            'Silent mode' => $kernel->isSilent() ? 'Enabled' : 'Disabled',
+            'Silent mode' => $kernel->isVerbose() ? 'Enabled' : 'Disabled',
         ]);
 
         echo KeyValue::renderWithValueColor($data, 'yellow');

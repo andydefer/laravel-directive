@@ -107,7 +107,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 
         $found = false;
         foreach ($result as $directive) {
-            if (str_contains($directive->signature, 'test-echo')) {
+            if (str_contains($directive->signature, 'test:echo')) {
                 $found = true;
                 $this->assertSame(TestEchoDirective::class, $directive->class);
                 $this->assertInstanceOf(StringTypedCollection::class, $directive->aliases);
@@ -178,7 +178,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 
         $found = false;
         foreach ($signatures as $signature) {
-            if (str_contains($signature, 'test-echo')) {
+            if (str_contains($signature, 'test:echo')) {
                 $found = true;
                 break;
             }
@@ -421,12 +421,12 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service = $this->app->make(DirectiveDiscoveryService::class);
         $service->addSource($this->fixturesPath);
 
-        $service->ignoreDirective('test-echo');
+        $service->ignoreDirective('test:echo');
 
         $result = $service->discover();
 
         foreach ($result as $directive) {
-            $this->assertFalse(str_contains($directive->signature, 'test-echo'));
+            $this->assertFalse(str_contains($directive->signature, 'test:echo'));
         }
     }
 
@@ -435,13 +435,13 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service = $this->app->make(DirectiveDiscoveryService::class);
         $service->addSource($this->fixturesPath);
 
-        $service->ignoreDirectives(['test-echo', 'test-variadic']);
+        $service->ignoreDirectives(['test:echo', 'test:variadic']);
 
         $result = $service->discover();
 
         foreach ($result as $directive) {
-            $this->assertFalse(str_contains($directive->signature, 'test-echo'));
-            $this->assertFalse(str_contains($directive->signature, 'test-variadic'));
+            $this->assertFalse(str_contains($directive->signature, 'test:echo'));
+            $this->assertFalse(str_contains($directive->signature, 'test:variadic'));
         }
     }
 
@@ -451,7 +451,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service->addSource($this->fixturesPath);
         $service->ignoreSource(DiscoverySource::VENDOR);
 
-        $fullSignature = 'test-echo {message=?} {extra=?}';
+        $fullSignature = 'test:echo {message=?} {extra=?}';
 
         $result = $service->discover();
         $found = false;
@@ -463,7 +463,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         }
         $this->assertTrue($found, 'Directive should be present initially');
 
-        $service->ignoreDirective('test-echo');
+        $service->ignoreDirective('test:echo');
         $result = $service->discover();
         $found = false;
         foreach ($result as $directive) {
@@ -474,7 +474,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         }
         $this->assertFalse($found, 'Directive should be ignored');
 
-        $service->enableDirective('test-echo');
+        $service->enableDirective('test:echo');
         $result = $service->discover();
         $found = false;
         foreach ($result as $directive) {
@@ -490,10 +490,10 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
     {
         $service = $this->app->make(DirectiveDiscoveryService::class);
 
-        $this->assertFalse($service->isDirectiveIgnored('test-echo'));
+        $this->assertFalse($service->isDirectiveIgnored('test:echo'));
 
-        $service->ignoreDirective('test-echo');
-        $this->assertTrue($service->isDirectiveIgnored('test-echo'));
+        $service->ignoreDirective('test:echo');
+        $this->assertTrue($service->isDirectiveIgnored('test:echo'));
     }
 
     // ==================== NEW TESTS FOR NAMESPACE FILTERING ====================
@@ -584,12 +584,12 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service = $this->app->make(DirectiveDiscoveryService::class);
         $service->addSource($this->fixturesPath);
 
-        $service->onlyPrefix('test-');
+        $service->onlyPrefix('test:');
 
         $result = $service->discover();
 
         foreach ($result as $directive) {
-            $this->assertStringStartsWith('test-', $directive->signature);
+            $this->assertStringStartsWith('test:', $directive->signature);
         }
     }
 
@@ -598,13 +598,13 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service = $this->app->make(DirectiveDiscoveryService::class);
         $service->addSource($this->fixturesPath);
 
-        $service->onlyPrefixes(['test-', 'greeting']);
+        $service->onlyPrefixes(['test:', 'greeting']);
 
         $result = $service->discover();
 
         foreach ($result as $directive) {
             $isValid = false;
-            foreach (['test-', 'greeting'] as $prefix) {
+            foreach (['test:', 'greeting'] as $prefix) {
                 if (str_starts_with($directive->signature, $prefix)) {
                     $isValid = true;
                     break;
@@ -619,13 +619,13 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service = $this->app->make(DirectiveDiscoveryService::class);
         $service->addSource($this->fixturesPath);
 
-        $service->excludePrefix('test-');
+        $service->excludePrefix('test:');
 
         $result = $service->discover();
 
         foreach ($result as $directive) {
             $this->assertFalse(
-                str_starts_with($directive->signature, 'test-')
+                str_starts_with($directive->signature, 'test:')
             );
         }
     }
@@ -635,57 +635,18 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service = $this->app->make(DirectiveDiscoveryService::class);
         $service->addSource($this->fixturesPath);
 
-        $service->excludePrefixes(['test-', 'greeting']);
+        $service->excludePrefixes(['test:', 'greeting']);
 
         $result = $service->discover();
 
         foreach ($result as $directive) {
             $this->assertFalse(
-                str_starts_with($directive->signature, 'test-')
+                str_starts_with($directive->signature, 'test:')
             );
             $this->assertFalse(
                 str_starts_with($directive->signature, 'greeting')
             );
         }
-    }
-
-    // ==================== NEW TESTS FOR SILENT MODE ====================
-
-    public function test_silent_mode_enabled(): void
-    {
-        $service = $this->app->make(DirectiveDiscoveryService::class);
-        $service->silent(true);
-
-        $this->assertTrue($service->isSilent());
-
-        $service->discover();
-        $this->expectOutputString('');
-    }
-
-    public function test_silent_mode_disabled(): void
-    {
-        $service = $this->app->make(DirectiveDiscoveryService::class);
-        $service->silent(false);
-
-        $this->assertFalse($service->isSilent());
-    }
-
-    public function test_with_output_disables_silent_mode(): void
-    {
-        $service = $this->app->make(DirectiveDiscoveryService::class);
-        $service->silent(true);
-        $service->withOutput();
-
-        $this->assertFalse($service->isSilent());
-    }
-
-    public function test_without_output_enables_silent_mode(): void
-    {
-        $service = $this->app->make(DirectiveDiscoveryService::class);
-        $service->silent(false);
-        $service->withoutOutput();
-
-        $this->assertTrue($service->isSilent());
     }
 
     // ==================== NEW TESTS FOR AUTO-DISCOVERY ====================
@@ -749,20 +710,18 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $service
             ->ignoreSource(DiscoverySource::VENDOR)
             ->ignorePath('/some/path')
-            ->ignoreDirective('test-echo')
+            ->ignoreDirective('test:echo')
             ->onlyNamespace('App\\')
             ->excludeNamespace('App\\Deprecated\\')
-            ->onlyPrefix('test-')
+            ->onlyPrefix('test:')
             ->excludePrefix('deprecated-')
-            ->silent(true)
             ->disableAutoDiscovery()
             ->setMaxDepth(5);
 
         $service->resetConfig();
 
         $this->assertFalse($service->isSourceIgnored(DiscoverySource::VENDOR));
-        $this->assertFalse($service->isDirectiveIgnored('test-echo'));
-        $this->assertFalse($service->isSilent());
+        $this->assertFalse($service->isDirectiveIgnored('test:echo'));
         $this->assertTrue($service->isAutoDiscoveryEnabled());
         $this->assertEquals(3, $service->getMaxDepth());
     }
@@ -776,9 +735,9 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 
         $service
             ->ignoreSource(DiscoverySource::VENDOR)
-            ->ignoreDirective('test-echo')
+            ->ignoreDirective('test:echo')
             ->onlyNamespace('AndyDefer\\Directive\\Tests\\Fixtures\\Directives\\')
-            ->onlyPrefix('test-')
+            ->onlyPrefix('test:')
             ->setMaxDepth(2);
 
         $result = $service->discover();
@@ -789,9 +748,9 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
                 $directive->class
             );
 
-            $this->assertStringStartsWith('test-', $directive->signature);
+            $this->assertStringStartsWith('test:', $directive->signature);
 
-            $this->assertFalse(str_contains($directive->signature, 'test-echo'));
+            $this->assertFalse(str_contains($directive->signature, 'test:echo'));
         }
     }
 
@@ -1014,7 +973,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $method->invoke($service, 'test_key', 'Test context', 'Test message', [
             'class' => 'TestClass',
             'path' => '/test/path',
-            'command' => 'test-command',
+            'command' => 'test:command',
         ]);
 
         $problem = $service->getProblems()->first();
@@ -1025,6 +984,6 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
         $this->assertArrayHasKey('command', $contextData);
         $this->assertSame('TestClass', $contextData['class']);
         $this->assertSame('/test/path', $contextData['path']);
-        $this->assertSame('test-command', $contextData['command']);
+        $this->assertSame('test:command', $contextData['command']);
     }
 }

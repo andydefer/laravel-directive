@@ -13,7 +13,7 @@ final class TestAfterFailingDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'test-after-failing';
+        return 'test:after-failing';
     }
 
     public function getDescription(): string

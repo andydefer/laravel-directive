@@ -31,7 +31,7 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_parent_directive_executes_child_directives(): void
     {
-        $response = $this->service->run('test-parent');
+        $response = $this->service->run('test:parent');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Parent directive started', $response->output);
@@ -51,7 +51,7 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_child_output_appears_after_parent_execution(): void
     {
-        $response = $this->service->run('test-parent');
+        $response = $this->service->run('test:parent');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
 
@@ -79,7 +79,7 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_multiple_executions_are_independent(): void
     {
-        $response1 = $this->service->run('test-parent');
+        $response1 = $this->service->run('test:parent');
         $this->assertSame(ExitCode::SUCCESS, $response1->exit_code);
         $this->assertStringContainsString('15', $response1->output);
         $this->assertStringContainsString('8', $response1->output);
@@ -116,7 +116,7 @@ final class DirectiveCallIntegrationTest extends IntegrationTestCase
 
     public function test_nested_calls_execute_in_correct_order(): void
     {
-        $response = $this->service->run('test-nested-before-after');
+        $response = $this->service->run('test:nested-before-after');
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         $this->assertStringContainsString('Parent before hook executed', $response->output);

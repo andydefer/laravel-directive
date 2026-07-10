@@ -115,91 +115,91 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_run_with_valid_directive_returns_success(): void
     {
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_aliases(): void
     {
-        $result = $this->kernel->run(['directive', 'test-echo', 'Hello']);
+        $result = $this->kernel->run(['directive', 'test:echo', 'Hello']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_options(): void
     {
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', '--force']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com', '--force']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_verbose(): void
     {
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', '--verbose']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com', '--verbose']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_files(): void
     {
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', 'file1.txt', 'file2.txt']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com', 'file1.txt', 'file2.txt']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_format(): void
     {
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com', 'json']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com', 'json']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_calls(): void
     {
-        $result = $this->kernel->run(['directive', 'test-call']);
+        $result = $this->kernel->run(['directive', 'test:call']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_before_after(): void
     {
-        $result = $this->kernel->run(['directive', 'test-before-after']);
+        $result = $this->kernel->run(['directive', 'test:before-after']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_before_failing(): void
     {
-        $result = $this->kernel->run(['directive', 'test-before-failing']);
+        $result = $this->kernel->run(['directive', 'test:before-failing']);
 
         $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
     }
 
     public function test_run_directive_with_after_failing(): void
     {
-        $result = $this->kernel->run(['directive', 'test-after-failing']);
+        $result = $this->kernel->run(['directive', 'test:after-failing']);
 
         $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
     }
 
     public function test_run_directive_with_nested_before_after(): void
     {
-        $result = $this->kernel->run(['directive', 'test-nested-before-after']);
+        $result = $this->kernel->run(['directive', 'test:nested-before-after']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
 
     public function test_run_directive_with_circular_dependency(): void
     {
-        $result = $this->kernel->run(['directive', 'test-circular']);
+        $result = $this->kernel->run(['directive', 'test:circular']);
 
         $this->assertSame(ExitCode::CONFLICT, $result);
     }
 
     public function test_run_directive_with_signature(): void
     {
-        $result = $this->kernel->runSignature('test-directive John john@example.com');
+        $result = $this->kernel->runSignature('test:directive John john@example.com');
 
         $this->assertSame(ExitCode::SUCCESS, $result);
     }
@@ -394,7 +394,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
@@ -409,7 +409,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $this->assertArrayHasKey('payload', $data);
 
         $payload = $data['payload'];
-        $this->assertSame('test-directive', $payload['command']);
+        $this->assertSame('test:directive', $payload['command']);
         $this->assertStringContainsString('TestDirective', $payload['directive_class']);
         $this->assertSame(0, $payload['exit_code']);
         $this->assertTrue($payload['success']);
@@ -422,7 +422,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $result = $this->kernel->run(['directive', 'test-after-failing']);
+        $result = $this->kernel->run(['directive', 'test:after-failing']);
 
         $this->assertSame(ExitCode::RUNTIME_ERROR, $result);
 
@@ -446,7 +446,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $this->kernel->resetContext();
 
         $this->kernel->run(['directive', 'context:set', 'John']);
-        $result = $this->kernel->run(['directive', 'test-directive', 'Jane', 'jane@example.com']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'Jane', 'jane@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
@@ -472,14 +472,14 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
         $lastStats = $this->kernel->getLastStats();
 
         $this->assertInstanceOf(ExecutionStatsRecord::class, $lastStats);
-        $this->assertSame('test-directive', $lastStats->command);
+        $this->assertSame('test:directive', $lastStats->command);
         $this->assertStringContainsString('TestDirective', $lastStats->directiveClass);
         $this->assertSame(ExitCode::SUCCESS, $lastStats->exitCode);
         $this->assertGreaterThan(0, $lastStats->duration);
@@ -500,7 +500,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         $this->kernel->setLogBasePath($newBasePath);
 
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
@@ -520,9 +520,9 @@ final class DirectiveKernelTest extends IntegrationTestCase
     {
         $this->kernel->resetContext();
 
-        $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
-        $this->kernel->run(['directive', 'test-echo', 'Hello']);
-        $this->kernel->run(['directive', 'test-directive', 'Jane', 'jane@example.com']);
+        $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com']);
+        $this->kernel->run(['directive', 'test:echo', 'Hello']);
+        $this->kernel->run(['directive', 'test:directive', 'Jane', 'jane@example.com']);
 
         $logFile = $this->getLogFilePath();
         $this->assertFileExists($logFile);
@@ -538,15 +538,15 @@ final class DirectiveKernelTest extends IntegrationTestCase
             $commands[] = $data['payload']['command'];
         }
 
-        $this->assertContains('test-directive', $commands);
-        $this->assertContains('test-echo', $commands);
+        $this->assertContains('test:directive', $commands);
+        $this->assertContains('test:echo', $commands);
     }
 
     public function test_kernel_logs_performance_metrics(): void
     {
         $this->kernel->resetContext();
 
-        $result = $this->kernel->run(['directive', 'test-directive', 'John', 'john@example.com']);
+        $result = $this->kernel->run(['directive', 'test:directive', 'John', 'john@example.com']);
 
         $this->assertSame(ExitCode::SUCCESS, $result);
 
@@ -697,5 +697,179 @@ final class DirectiveKernelTest extends IntegrationTestCase
             $this->assertNotEmpty($context);
             $this->assertGreaterThan(10, strlen($context));
         }
+    }
+
+    // ==================== VERBOSE MODE TESTS ====================
+
+    public function test_verbose_mode_disabled_by_default(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+
+        $this->assertFalse($kernel->isVerbose());
+    }
+
+    public function test_verbose_mode_can_be_enabled(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        $this->assertTrue($kernel->isVerbose());
+    }
+
+    public function test_verbose_mode_can_be_disabled(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+        $kernel->verbose(false);
+
+        $this->assertFalse($kernel->isVerbose());
+    }
+
+    public function test_verbose_mode_with_output_disables_verbose(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+        $kernel->withOutput();
+
+        $this->assertFalse($kernel->isVerbose());
+    }
+
+    public function test_verbose_mode_without_output_enables_verbose(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(false);
+        $kernel->withoutOutput();
+
+        $this->assertTrue($kernel->isVerbose());
+    }
+
+    public function test_verbose_mode_does_not_display_problems_when_none_exist(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'help']);
+        $output = ob_get_clean();
+
+        $this->assertStringNotContainsString('Problem(s) Encountered', $output);
+    }
+
+    public function test_verbose_mode_displays_problems_when_they_exist(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'non-existent-command']);
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('Problem(s) Encountered', $output);
+    }
+
+    public function test_verbose_mode_displays_problems_in_log_format(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'non-existent-command']);
+        $output = ob_get_clean();
+
+        // ✅ Le format est: [directive_not_found] Directive not found: non-existent-command | 2024-01-01 12:00:00 |
+        $this->assertMatchesRegularExpression('/\[directive_not_found\].*\|.*\|.*/', $output);
+    }
+
+    public function test_verbose_mode_displays_problem_key_context_message_and_timestamp(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'non-existent-command']);
+        $output = ob_get_clean();
+
+        // ✅ Le key est présent
+        $this->assertStringContainsString('directive_not_found', $output);
+        // ✅ Le context est présent
+        $this->assertStringContainsString('Directive not found: non-existent-command', $output);
+        // ✅ La date est présente
+        $this->assertStringContainsString('2024-01-01', $output);
+    }
+
+    public function test_verbose_mode_displays_problems_with_context_data(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'non-existent-command']);
+        $output = ob_get_clean();
+
+        // ✅ Le contexte data contient "command" et "query"
+        $this->assertStringContainsString('"command"', $output);
+        $this->assertStringContainsString('"query"', $output);
+        $this->assertStringContainsString('non-existent-command', $output);
+    }
+
+    public function test_verbose_mode_displays_end_of_problems_marker(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'non-existent-command']);
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('End of Problems', $output);
+    }
+
+    public function test_verbose_mode_problems_count_is_displayed(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'non-existent-command']);
+        $output = ob_get_clean();
+
+        $this->assertMatchesRegularExpression('/=== \d+ Problem\(s\) Encountered ===/', $output);
+    }
+
+    public function test_verbose_mode_works_with_run_directive(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->runDirective('NonExistentDirective');
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('Problem(s) Encountered', $output);
+        $this->assertStringContainsString('run_directive', $output);
+    }
+
+    public function test_verbose_mode_preserves_problems_in_response_record(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        $kernel->run(['directive', 'non-existent-command']);
+
+        $problems = $kernel->getProblems();
+        $this->assertFalse($problems->isEmpty());
+    }
+
+    public function test_verbose_mode_logs_use_error_level(): void
+    {
+        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel->verbose(true);
+
+        ob_start();
+        $kernel->run(['directive', 'non-existent-command']);
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('ERROR', $output);
     }
 }

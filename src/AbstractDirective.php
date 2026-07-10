@@ -445,6 +445,14 @@ abstract class AbstractDirective implements DirectiveInterface
         } catch (Throwable $e) {
             $this->error('Error in before hook: '.$e->getMessage());
 
+            // ✅ Ajouter un problème dans le kernel
+            $this->kernel->addProblem(
+                'directive_before_hook',
+                'Failed to execute before hook for directive: '.static::class,
+                $e->getMessage(),
+                ['class' => static::class, 'query' => $this->query]
+            );
+
             return ExitCode::RUNTIME_ERROR;
         }
 
@@ -465,6 +473,14 @@ abstract class AbstractDirective implements DirectiveInterface
         } catch (Throwable $e) {
             $this->afterExecute(ExitCode::RUNTIME_ERROR);
             $this->error('Error in execute hook: '.$e->getMessage());
+
+            // ✅ Ajouter un problème dans le kernel
+            $this->kernel->addProblem(
+                'directive_execute_hook',
+                'Failed to execute directive: '.static::class,
+                $e->getMessage(),
+                ['class' => static::class, 'query' => $this->query]
+            );
 
             return ExitCode::RUNTIME_ERROR;
         }
@@ -503,11 +519,27 @@ abstract class AbstractDirective implements DirectiveInterface
         if ($directive === null) {
             $this->console->error("Directive not found: {$commandName}");
 
+            // ✅ Ajouter un problème dans le kernel
+            $this->kernel->addProblem(
+                'call_directive_not_found',
+                'Internal call directive not found: '.$commandName,
+                'No directive matching the command name was found for internal call',
+                ['command' => $commandName, 'query' => $query]
+            );
+
             return ExitCode::NOT_FOUND;
         }
 
         if ($this->isCircularCall($directive, $query)) {
             $this->console->alertWarning("Circular call detected: {$query}");
+
+            // ✅ Ajouter un problème dans le kernel
+            $this->kernel->addProblem(
+                'circular_call_detected',
+                'Circular call detected for directive: '.$directive->class,
+                'Circular dependency detected in directive calls',
+                ['class' => $directive->class, 'query' => $query]
+            );
 
             return ExitCode::CONFLICT;
         }
@@ -620,6 +652,14 @@ abstract class AbstractDirective implements DirectiveInterface
         } catch (Throwable $e) {
             array_pop(self::$executionStack);
             $this->console->error('Error executing call: '.$e->getMessage());
+
+            // ✅ Ajouter un problème dans le kernel
+            $this->kernel->addProblem(
+                'execute_call_instance',
+                'Failed to execute internal call for directive: '.$directive->class,
+                $e->getMessage(),
+                ['class' => $directive->class, 'query' => $query]
+            );
 
             return ExitCode::RUNTIME_ERROR;
         }

@@ -13,7 +13,7 @@ final class TestBeforeAfterDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'test-before-after';
+        return 'test:before-after';
     }
 
     public function getDescription(): string

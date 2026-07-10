@@ -184,30 +184,6 @@ interface DirectiveDiscoveryInterface
      */
     public function excludePrefixes(array $prefixes): self;
 
-    // ==================== SILENT MODE ====================
-
-    /**
-     * Enable or disable silent mode.
-     *
-     * @param  bool  $enabled  Whether silent mode should be enabled
-     */
-    public function silent(bool $enabled = true): self;
-
-    /**
-     * Enable output (disable silent mode).
-     */
-    public function withOutput(): self;
-
-    /**
-     * Disable output (enable silent mode).
-     */
-    public function withoutOutput(): self;
-
-    /**
-     * Check if silent mode is enabled.
-     */
-    public function isSilent(): bool;
-
     // ==================== AUTO-DISCOVERY ====================
 
     /**

@@ -11,7 +11,7 @@ final class TestCallDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'test-call';
+        return 'test:call';
     }
 
     public function getDescription(): string

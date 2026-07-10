@@ -538,7 +538,7 @@ PHP
     {
         return self::createDirective(
             className: 'TestCallDirective',
-            signature: 'test-call',
+            signature: 'test:call',
             description: 'Test directive with calls',
             executeContent: <<<'PHP'
 $this->info('Test call directive started');
@@ -554,7 +554,7 @@ PHP
     {
         return self::createDirective(
             className: 'TestConcreteDirective',
-            signature: 'test-concrete {name} {email} {format=zip} {files*} {--force} {--verbose}',
+            signature: 'test:concrete {name} {email} {format=zip} {files*} {--force} {--verbose}',
             description: 'Test concrete directive for AbstractDirective tests',
             executeContent: <<<'PHP'
 $name = $this->argument('name');
@@ -569,7 +569,7 @@ PHP
     {
         return self::createDirective(
             className: 'TestEchoDirective',
-            signature: 'test-echo {message=?} {extra=?}',
+            signature: 'test:echo {message=?} {extra=?}',
             description: 'Test echo directive',
             aliases: ['echo'],
             executeContent: <<<'PHP'
@@ -601,7 +601,7 @@ PHP
     {
         return self::createDirective(
             className: 'TestDirective',
-            signature: 'test-directive {name} {email} {format=zip} {files*} {--force} {--verbose}',
+            signature: 'test:directive {name} {email} {format=zip} {files*} {--force} {--verbose}',
             description: 'Test directive',
             executeContent: <<<'PHP'
 $name = $this->argument('name');
