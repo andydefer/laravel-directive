@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Tests\Helpers;
+namespace AndyDefer\Directive\Helpers;
 
 final class TestHelper
 {

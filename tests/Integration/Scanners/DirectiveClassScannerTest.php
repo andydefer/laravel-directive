@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Unit\Scanners;
 
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
-use AndyDefer\Directive\Tests\Helpers\TestHelper;
+use AndyDefer\Directive\Helpers\TestHelper;
 use AndyDefer\Directive\Tests\IntegrationTestCase;
 
 final class DirectiveClassScannerTest extends IntegrationTestCase
