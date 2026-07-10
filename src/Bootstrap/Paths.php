@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Bootstrap;
 
+use AndyDefer\Directive\Enums\PathContextType;
+
 /**
  * Centralized path resolution for the Directive CLI bootstrap.
  *
@@ -51,25 +53,35 @@ final class Paths
     /**
      * Gets the absolute path to the project root directory.
      *
+     * @param  PathContextType  $context  The context type to use for path resolution
      * @return string The project root path
      *
      * @throws \RuntimeException If the current working directory cannot be determined
      */
-    public static function projectRoot(): string
+    public static function projectRoot(PathContextType $context = PathContextType::FILE_DIRECTORY): string
     {
+        $cacheKey = $context->value;
+
         if (self::$projectRoot !== null) {
             return self::$projectRoot;
         }
 
-        $cwd = getcwd();
+        $base = match ($context) {
+            PathContextType::FILE_DIRECTORY => __DIR__,
+            PathContextType::WORKING_DIRECTORY => getcwd(),
+        };
 
-        if ($cwd === false) {
-            throw new \RuntimeException('Unable to determine current working directory');
+        if ($base === false) {
+            throw new \RuntimeException('Unable to determine base directory');
         }
 
-        $directory = realpath($cwd);
+        $directory = realpath($base);
 
-        while ($directory !== false) {
+        if ($directory === false) {
+            throw new \RuntimeException('Unable to resolve real path for: '.$base);
+        }
+
+        while ($directory !== false && $directory !== '') {
             $composer = $directory.DIRECTORY_SEPARATOR.'composer.json';
             $vendor = $directory.DIRECTORY_SEPARATOR.'vendor';
 
@@ -86,7 +98,7 @@ final class Paths
             $directory = $parent;
         }
 
-        return self::$projectRoot = $cwd;
+        return self::$projectRoot = $base;
     }
 
     /**
