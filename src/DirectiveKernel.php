@@ -575,16 +575,46 @@ final class DirectiveKernel extends DirectiveDiscoveryService
             $timestamp = $problem->get('timestamp');
 
             $logMessage = sprintf(
-                '[%s] %s | %s |',
+                '[%s] %s | %s | %s',
                 $key,
                 $context,
-                $timestamp
+                $timestamp,
+                $message
             );
             $console->logError($logMessage);
-            $console->json($contextData->toArray());
 
+            // ✅ Affichage sécurisé des données de contexte
+            $this->displayContextData($console, $contextData);
         }
 
         $console->logError('=== End of Problems ===');
+    }
+
+    /**
+     * Display context data safely in JSON format.
+     *
+     * @param  Console  $console  The console instance
+     * @param  mixed  $contextData  The context data to display
+     */
+    private function displayContextData(Console $console, mixed $contextData): void
+    {
+        if ($contextData === null) {
+            return;
+        }
+
+        try {
+            $arrayData = match (true) {
+                is_array($contextData) => $contextData,
+                is_object($contextData) && method_exists($contextData, 'toArray') => $contextData->toArray(),
+                is_object($contextData) => (array) $contextData,
+                default => ['value' => $contextData],
+            };
+
+            if (! empty($arrayData)) {
+                $console->json($arrayData);
+            }
+        } catch (Throwable $e) {
+            $console->logWarning('Unable to display context data: '.$e->getMessage());
+        }
     }
 }

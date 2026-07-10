@@ -8,7 +8,6 @@ use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\DirectiveKernel;
-use AndyDefer\DomainStructures\Normalizers\NormalizerChain;
 
 $console = new Console;
 
