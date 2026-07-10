@@ -566,55 +566,64 @@ final class DirectiveKernel extends DirectiveDiscoveryService
         $console = $this->container->make(Console::class);
 
         $console->logError('=== '.$problems->count().' Problem(s) Encountered ===');
+        $console->line();
 
-        foreach ($problems as $problem) {
-            $key = $problem->get('key');
-            $context = $problem->get('context');
-            $message = $problem->get('message');
-            $contextData = $problem->get('context_data');
-            $timestamp = $problem->get('timestamp');
+        foreach ($problems as $index => $problem) {
+            if ($index > 0) {
+                $console->line('---');
+            }
 
-            $logMessage = sprintf(
-                '[%s] %s | %s | %s',
-                $key,
-                $context,
-                $timestamp,
-                $message
-            );
-            $console->logError($logMessage);
+            // Construire l'objet problème complet
+            $problemData = [
+                'key' => $problem->get('key'),
+                'context' => $problem->get('context'),
+                'message' => $problem->get('message'),
+                'timestamp' => $problem->get('timestamp'),
+                'context_data' => $this->normalizeContextData($problem->get('context_data')),
+            ];
 
-            // ✅ Affichage sécurisé des données de contexte
-            $this->displayContextData($console, $contextData);
+            // Afficher en JSON avec indentation
+            $console->json($problemData);
         }
 
+        $console->line();
         $console->logError('=== End of Problems ===');
     }
 
     /**
-     * Display context data safely in JSON format.
-     *
-     * @param  Console  $console  The console instance
-     * @param  mixed  $contextData  The context data to display
+     * Normalize context data for JSON display.
      */
-    private function displayContextData(Console $console, mixed $contextData): void
+    private function normalizeContextData(mixed $contextData): mixed
     {
         if ($contextData === null) {
-            return;
+            return null;
         }
 
-        try {
-            $arrayData = match (true) {
-                is_array($contextData) => $contextData,
-                is_object($contextData) && method_exists($contextData, 'toArray') => $contextData->toArray(),
-                is_object($contextData) => (array) $contextData,
-                default => ['value' => $contextData],
-            };
+        if (is_scalar($contextData)) {
+            return $contextData;
+        }
 
-            if (! empty($arrayData)) {
-                $console->json($arrayData);
+        if (is_array($contextData)) {
+            return array_map([$this, 'normalizeContextData'], $contextData);
+        }
+
+        if (is_object($contextData)) {
+            if (method_exists($contextData, 'toArray')) {
+                return $this->normalizeContextData($contextData->toArray());
             }
-        } catch (Throwable $e) {
-            $console->logWarning('Unable to display context data: '.$e->getMessage());
+
+            // Convertir l'objet en tableau standard
+            $arrayData = (array) $contextData;
+            $cleanData = [];
+            foreach ($arrayData as $key => $value) {
+                $cleanKey = preg_replace('/^\0(?:.*)\0/', '', $key);
+                $cleanKey = preg_replace('/^\0/', '', $cleanKey);
+                $cleanData[$cleanKey] = $this->normalizeContextData($value);
+            }
+
+            return $cleanData;
         }
+
+        return ['type' => gettype($contextData), 'value' => (string) $contextData];
     }
 }

@@ -777,8 +777,18 @@ final class DirectiveKernelTest extends IntegrationTestCase
         $kernel->run(['directive', 'non-existent-command']);
         $output = ob_get_clean();
 
-        // ✅ Le format est: [directive_not_found] Directive not found: non-existent-command | 2024-01-01 12:00:00 |
-        $this->assertMatchesRegularExpression('/\[directive_not_found\].*\|.*\|.*/', $output);
+        // Vérifier que le message d'erreur est présent
+        $this->assertStringContainsString('Directive not found: non-existent-command', $output);
+
+        // ✅ CORRECTION : assertStringContainsString au lieu de assertMatchesRegularExpression
+        $this->assertStringContainsString('"command"', $output);
+        $this->assertStringContainsString('"non-existent-command"', $output);
+        $this->assertStringContainsString('"query"', $output);
+        $this->assertStringContainsString('"non-existent-command"', $output);
+
+        // Vérifier les entêtes et pieds de page
+        $this->assertStringContainsString('Problem(s) Encountered', $output);
+        $this->assertStringContainsString('End of Problems', $output);
     }
 
     public function test_verbose_mode_displays_problem_key_context_message_and_timestamp(): void
