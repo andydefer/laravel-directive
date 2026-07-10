@@ -881,7 +881,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
 
         $this->assertSame('test_key', $problem->get('key'));
         $this->assertSame('Test context', $problem->get('context'));
-        $this->assertSame('Test message', $problem->get('message'));
+        $this->assertStringContainsString('Test message', $problem->get('message'));
         $this->assertSame(['extra' => 'data'], $problem->get('context_data')->toArray());
     }
 

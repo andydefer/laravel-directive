@@ -250,16 +250,62 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      * @param  string  $context  Human-readable description of the problem context
      * @param  string  $message  The error message
      * @param  array<string, mixed>  $contextData  Additional context data
+     * @param  int  $backtraceOffset  Offset in the backtrace to find the caller
      */
-    public function addProblem(string $key, string $context, string $message, array $contextData = []): void
-    {
+    public function addProblem(
+        string $key,
+        string $context,
+        string $message,
+        array $contextData = [],
+        int $backtraceOffset = 1
+    ): void {
+        // Récupérer la trace d'appel en ignorant les arguments pour la performance
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+
+        // Trouver l'appelant réel (skip les appels internes)
+        $caller = $trace[$backtraceOffset] ?? end($trace);
+
+        $file = $caller['file'] ?? 'unknown file';
+        $line = $caller['line'] ?? 0;
+
+        // Nettoyer le chemin du fichier pour le rendre plus lisible
+        $shortFile = $this->getShortFilePath($file);
+
+        // Formatage du message avec la localisation
+        $enhancedMessage = sprintf(
+            '%s (in %s on line %d)',
+            $message,
+            $shortFile,
+            $line
+        );
+
         $this->problems = $this->problems->add(StrictAssociative::from([
             'key' => $key,
             'context' => $context,
-            'message' => $message,
+            'message' => $enhancedMessage,
             'context_data' => $contextData,
             'timestamp' => Carbon::now()->format('Y-m-d H:i:s'),
+            'file' => $file,
+            'file_short' => $shortFile,
+            'line' => $line,
+            'caller_function' => $caller['function'] ?? null,
+            'caller_class' => $caller['class'] ?? null,
         ]));
+    }
+
+    /**
+     * Get a shorter, more readable file path.
+     */
+    private function getShortFilePath(string $file): string
+    {
+        // Remplacer le chemin complet par un chemin relatif
+        $projectRoot = dirname(__DIR__, 2); // Ajustez selon votre structure
+
+        if (str_starts_with($file, $projectRoot)) {
+            return substr($file, strlen($projectRoot) + 1);
+        }
+
+        return basename($file);
     }
 
     /**
