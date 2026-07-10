@@ -267,6 +267,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
 
         $file = $caller['file'] ?? 'unknown file';
         $line = $caller['line'] ?? 0;
+        $shortFile = $this->getShortFilePath($file);
 
         // Nettoyer le chemin du fichier pour le rendre plus lisible
 
@@ -274,7 +275,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         $enhancedMessage = sprintf(
             '%s (in %s on line %d)',
             $message,
-            $file,
+            $shortFile,
             $line
         );
 
@@ -292,18 +293,26 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     }
 
     /**
-     * Get a shorter, more readable file path.
+     * Get a shorter, more readable file path (truncate vendor path).
      */
     private function getShortFilePath(string $file): string
     {
-        // Remplacer le chemin complet par un chemin relatif
-        $projectRoot = dirname(__DIR__, 2); // Ajustez selon votre structure
+        // Trouver la position de '/vendor/' dans le chemin
+        $vendorPos = strpos($file, '/vendor/');
 
-        if (str_starts_with($file, $projectRoot)) {
-            return substr($file, strlen($projectRoot) + 1);
+        if ($vendorPos !== false) {
+            // Garder seulement le chemin à partir du dossier avant vendor
+            // Ex: /home/andy-kani/pro/sites/packages/laravel-task/vendor/...
+            // devient .../laravel-task/vendor/...
+            $pathBeforeVendor = substr($file, 0, $vendorPos);
+            $lastDir = basename($pathBeforeVendor);
+            $vendorPath = substr($file, $vendorPos);
+
+            return '.../'.$lastDir.$vendorPath;
         }
 
-        return basename($file);
+        // Si pas de vendor, garder le chemin complet
+        return $file;
     }
 
     /**
