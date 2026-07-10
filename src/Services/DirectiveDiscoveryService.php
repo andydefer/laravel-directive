@@ -256,7 +256,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         string $key,
         string $context,
         string $message,
-        array $contextData = [],
+        mixed $contextData = [],
         int $backtraceOffset = 1
     ): void {
         // Récupérer la trace d'appel en ignorant les arguments pour la performance
@@ -947,7 +947,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
                     'builtin_'.$problem->get('key'),
                     $problem->get('context'),
                     $problem->get('message'),
-                    $problem->get('context_data')->toArray()
+                    $problem->get('context_data')
                 );
             }
 
@@ -989,7 +989,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
                     'workspace_'.$problem->get('key'),
                     $problem->get('context'),
                     $problem->get('message'),
-                    $problem->get('context_data')->toArray()
+                    $problem->get('context_data')
                 );
             }
 
@@ -1039,7 +1039,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
                     'vendor_'.$problem->get('key'),
                     $problem->get('context'),
                     $problem->get('message'),
-                    $problem->get('context_data')->toArray()
+                    $problem->get('context_data')
                 );
             }
 
