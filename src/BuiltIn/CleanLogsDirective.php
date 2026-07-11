@@ -31,7 +31,7 @@ final class CleanLogsDirective extends AbstractDirective
 
     public function getDescription(): string
     {
-        return 'Remove old execution log files that exceed the retention period';
+        return 'Remove old execution log files that exceed the retention period ';
     }
 
     public function getAliases(): StringTypedCollection

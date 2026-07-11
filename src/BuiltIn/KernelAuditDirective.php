@@ -37,7 +37,7 @@ final class KernelAuditDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'kernel:audit {--verbose} {--format=table}';
+        return 'kernel:audit {format=table} {--verbose}';
     }
 
     public function getDescription(): string
