@@ -35,80 +35,80 @@ use Throwable;
  */
 class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
 {
-    private const MIN_DEPTH = 2;
+    protected const MIN_DEPTH = 2;
 
-    private const MAX_DEPTH = 7;
+    protected const MAX_DEPTH = 7;
 
     /**
      * The collection of discovered directive metadata.
      */
-    private DirectiveMetadataCollection $collection;
+    protected DirectiveMetadataCollection $collection;
 
     /**
      * Custom source directories to scan for directives.
      */
-    private StringTypedCollection $customSources;
+    protected StringTypedCollection $customSources;
 
     /**
      * Registered directive class names.
      */
-    private StringTypedCollection $registeredDirectives;
+    protected StringTypedCollection $registeredDirectives;
 
     /**
      * Ignored sources.
      */
-    private StringTypedCollection $ignoredSources;
+    protected StringTypedCollection $ignoredSources;
 
     /**
      * Ignored paths.
      */
-    private StringTypedCollection $ignoredPaths;
+    protected StringTypedCollection $ignoredPaths;
 
     /**
      * Ignored directive signatures.
      */
-    private StringTypedCollection $ignoredDirectives;
+    protected StringTypedCollection $ignoredDirectives;
 
     /**
      * Only namespaces to include.
      */
-    private StringTypedCollection $onlyNamespaces;
+    protected StringTypedCollection $onlyNamespaces;
 
     /**
      * Excluded namespaces.
      */
-    private StringTypedCollection $excludedNamespaces;
+    protected StringTypedCollection $excludedNamespaces;
 
     /**
      * Only prefixes to include.
      */
-    private StringTypedCollection $onlyPrefixes;
+    protected StringTypedCollection $onlyPrefixes;
 
     /**
      * Excluded prefixes.
      */
-    private StringTypedCollection $excludedPrefixes;
+    protected StringTypedCollection $excludedPrefixes;
 
     /**
      * Whether auto-discovery is enabled.
      */
-    private bool $autoDiscoveryEnabled = true;
+    protected bool $autoDiscoveryEnabled = true;
 
     /**
      * Maximum directory scanning depth.
      */
-    private int $maxDepth = 3;
+    protected int $maxDepth = 3;
 
     /**
      * @var ListCollection<MapCollection> Collection of problems encountered during discovery
      */
-    private ListCollection $problems;
+    protected ListCollection $problems;
 
     /**
      * @param  Container  $container  The container instance
      */
     protected function __construct(
-        private readonly Container $container,
+        protected Container $container,
     ) {
         $this->collection = new DirectiveMetadataCollection;
         $this->customSources = new StringTypedCollection;
@@ -142,16 +142,16 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Initialize the discovery service with a container.
      */
-    public static function init(Container $container): self
+    public static function init(Container $container): static
     {
-        return new self($container);
+        return new static($container);
     }
 
     /**
      * Set the maximum scanning depth.
      * Clamped between MIN_DEPTH and MAX_DEPTH.
      */
-    public function setMaxDepth(int $depth): self
+    public function setMaxDepth(int $depth): static
     {
         $this->maxDepth = max(self::MIN_DEPTH, min(self::MAX_DEPTH, $depth));
 
@@ -328,7 +328,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Clear all problems.
      */
-    public function clearProblems(): self
+    public function clearProblems(): static
     {
         $this->problems = new ListCollection;
 
@@ -342,7 +342,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      *
      * @param  DiscoverySource|string  $source  The source to ignore
      */
-    public function ignoreSource(DiscoverySource|string $source): self
+    public function ignoreSource(DiscoverySource|string $source): static
     {
         $value = $source instanceof DiscoverySource ? $source->value : $source;
 
@@ -358,7 +358,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      *
      * @param  array<DiscoverySource|string>  $sources  The sources to ignore
      */
-    public function ignoreSources(array $sources): self
+    public function ignoreSources(array $sources): static
     {
         foreach ($sources as $source) {
             $this->ignoreSource($source);
@@ -372,7 +372,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      *
      * @param  DiscoverySource|string  $source  The source to enable
      */
-    public function enableSource(DiscoverySource|string $source): self
+    public function enableSource(DiscoverySource|string $source): static
     {
         $value = $source instanceof DiscoverySource ? $source->value : $source;
 
@@ -388,7 +388,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      *
      * @param  array<DiscoverySource|string>  $sources  The sources to enable
      */
-    public function enableSources(array $sources): self
+    public function enableSources(array $sources): static
     {
         foreach ($sources as $source) {
             $this->enableSource($source);
@@ -414,7 +414,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Ignore a path.
      */
-    public function ignorePath(string $path): self
+    public function ignorePath(string $path): static
     {
         if (! $this->ignoredPaths->contains($path)) {
             $this->ignoredPaths->add($path);
@@ -426,7 +426,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Ignore multiple paths.
      */
-    public function ignorePaths(array $paths): self
+    public function ignorePaths(array $paths): static
     {
         foreach ($paths as $path) {
             $this->ignorePath($path);
@@ -438,7 +438,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Enable a previously ignored path.
      */
-    public function enablePath(string $path): self
+    public function enablePath(string $path): static
     {
         $this->ignoredPaths = $this->ignoredPaths->filter(
             fn (string $p): bool => $p !== $path
@@ -450,7 +450,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Enable multiple paths.
      */
-    public function enablePaths(array $paths): self
+    public function enablePaths(array $paths): static
     {
         foreach ($paths as $path) {
             $this->enablePath($path);
@@ -464,7 +464,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Ignore a directive by signature.
      */
-    public function ignoreDirective(string $signature): self
+    public function ignoreDirective(string $signature): static
     {
         $parts = explode(' ', $signature);
         $baseSignature = $parts[0];
@@ -479,7 +479,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Ignore multiple directives by signature.
      */
-    public function ignoreDirectives(array $signatures): self
+    public function ignoreDirectives(array $signatures): static
     {
         foreach ($signatures as $signature) {
             $this->ignoreDirective($signature);
@@ -491,7 +491,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Enable a previously ignored directive.
      */
-    public function enableDirective(string $signature): self
+    public function enableDirective(string $signature): static
     {
         $parts = explode(' ', $signature);
         $baseSignature = $parts[0];
@@ -506,7 +506,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Enable multiple directives.
      */
-    public function enableDirectives(array $signatures): self
+    public function enableDirectives(array $signatures): static
     {
         foreach ($signatures as $signature) {
             $this->enableDirective($signature);
@@ -531,7 +531,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Add a namespace to the only-namespaces list.
      */
-    public function onlyNamespace(string $namespace): self
+    public function onlyNamespace(string $namespace): static
     {
         if (! $this->onlyNamespaces->contains($namespace)) {
             $this->onlyNamespaces->add($namespace);
@@ -543,7 +543,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Add multiple namespaces to the only-namespaces list.
      */
-    public function onlyNamespaces(array $namespaces): self
+    public function onlyNamespaces(array $namespaces): static
     {
         foreach ($namespaces as $namespace) {
             $this->onlyNamespace($namespace);
@@ -555,7 +555,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Exclude a namespace.
      */
-    public function excludeNamespace(string $namespace): self
+    public function excludeNamespace(string $namespace): static
     {
         if (! $this->excludedNamespaces->contains($namespace)) {
             $this->excludedNamespaces->add($namespace);
@@ -567,7 +567,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Exclude multiple namespaces.
      */
-    public function excludeNamespaces(array $namespaces): self
+    public function excludeNamespaces(array $namespaces): static
     {
         foreach ($namespaces as $namespace) {
             $this->excludeNamespace($namespace);
@@ -581,7 +581,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Add a prefix to the only-prefixes list.
      */
-    public function onlyPrefix(string $prefix): self
+    public function onlyPrefix(string $prefix): static
     {
         if (! $this->onlyPrefixes->contains($prefix)) {
             $this->onlyPrefixes->add($prefix);
@@ -593,7 +593,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Add multiple prefixes to the only-prefixes list.
      */
-    public function onlyPrefixes(array $prefixes): self
+    public function onlyPrefixes(array $prefixes): static
     {
         foreach ($prefixes as $prefix) {
             $this->onlyPrefix($prefix);
@@ -605,7 +605,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Exclude a prefix.
      */
-    public function excludePrefix(string $prefix): self
+    public function excludePrefix(string $prefix): static
     {
         if (! $this->excludedPrefixes->contains($prefix)) {
             $this->excludedPrefixes->add($prefix);
@@ -617,7 +617,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Exclude multiple prefixes.
      */
-    public function excludePrefixes(array $prefixes): self
+    public function excludePrefixes(array $prefixes): static
     {
         foreach ($prefixes as $prefix) {
             $this->excludePrefix($prefix);
@@ -631,7 +631,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Disable auto-discovery.
      */
-    public function disableAutoDiscovery(): self
+    public function disableAutoDiscovery(): static
     {
         $this->autoDiscoveryEnabled = false;
 
@@ -641,7 +641,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Enable auto-discovery.
      */
-    public function enableAutoDiscovery(): self
+    public function enableAutoDiscovery(): static
     {
         $this->autoDiscoveryEnabled = true;
 
@@ -651,7 +651,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Alias for disableAutoDiscovery.
      */
-    public function manualOnly(): self
+    public function manualOnly(): static
     {
         return $this->disableAutoDiscovery();
     }
@@ -669,7 +669,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Reset all filters to default.
      */
-    public function resetConfig(): self
+    public function resetConfig(): static
     {
         $this->ignoredSources = new StringTypedCollection;
         $this->ignoredPaths = new StringTypedCollection;
@@ -689,7 +689,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Add a custom source directory to scan for directives.
      */
-    public function addSource(string $directory): self
+    public function addSource(string $directory): static
     {
         if (! $this->customSources->contains($directory)) {
             $this->customSources->add($directory);
@@ -701,7 +701,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Add multiple custom source directories.
      */
-    public function addSources(array $directories): self
+    public function addSources(array $directories): static
     {
         foreach ($directories as $directory) {
             $this->addSource($directory);
@@ -718,7 +718,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      *
      * @throws \InvalidArgumentException If the class does not extend AbstractDirective
      */
-    public function addDirective(string $class, bool $force = false): self
+    public function addDirective(string $class, bool $force = false): static
     {
         try {
             if (! is_subclass_of($class, AbstractDirective::class)) {
@@ -749,7 +749,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
      * @param  array<class-string<AbstractDirective>>  $classes  Array of directive class names
      * @param  bool  $force  Whether to bypass reserved signature check
      */
-    public function addDirectives(array $classes, bool $force = false): self
+    public function addDirectives(array $classes, bool $force = false): static
     {
         foreach ($classes as $class) {
             try {
@@ -863,7 +863,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
 
     // ==================== RESERVED SIGNATURES ====================
 
-    public function addReservedSignature(string $signature): self
+    public function addReservedSignature(string $signature): static
     {
         try {
             $config = $this->getConfig();
@@ -882,7 +882,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
         return $this;
     }
 
-    public function removeReservedSignature(string $signature): self
+    public function removeReservedSignature(string $signature): static
     {
         try {
             $config = $this->getConfig();

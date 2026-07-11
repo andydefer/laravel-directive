@@ -25,7 +25,7 @@ interface DirectiveDiscoveryInterface
      *
      * @throws \InvalidArgumentException If the source is invalid
      */
-    public function ignoreSource(DiscoverySource|string $source): self;
+    public function ignoreSource(DiscoverySource|string $source): static;
 
     /**
      * Ignore multiple sources.
@@ -34,21 +34,21 @@ interface DirectiveDiscoveryInterface
      *
      * @throws \InvalidArgumentException If any source is invalid
      */
-    public function ignoreSources(array $sources): self;
+    public function ignoreSources(array $sources): static;
 
     /**
      * Enable a previously ignored source.
      *
      * @param  DiscoverySource|string  $source  The source to enable
      */
-    public function enableSource(DiscoverySource|string $source): self;
+    public function enableSource(DiscoverySource|string $source): static;
 
     /**
      * Enable multiple sources.
      *
      * @param  array<int, DiscoverySource|string>  $sources  The sources to enable
      */
-    public function enableSources(array $sources): self;
+    public function enableSources(array $sources): static;
 
     /**
      * Check if a source is ignored.
@@ -64,28 +64,28 @@ interface DirectiveDiscoveryInterface
      *
      * @param  string  $path  The path to ignore
      */
-    public function ignorePath(string $path): self;
+    public function ignorePath(string $path): static;
 
     /**
      * Ignore multiple paths.
      *
      * @param  array<int, string>  $paths  The paths to ignore
      */
-    public function ignorePaths(array $paths): self;
+    public function ignorePaths(array $paths): static;
 
     /**
      * Enable a previously ignored path.
      *
      * @param  string  $path  The path to enable
      */
-    public function enablePath(string $path): self;
+    public function enablePath(string $path): static;
 
     /**
      * Enable multiple paths.
      *
      * @param  array<int, string>  $paths  The paths to enable
      */
-    public function enablePaths(array $paths): self;
+    public function enablePaths(array $paths): static;
 
     // ==================== DIRECTIVE MANAGEMENT ====================
 
@@ -94,28 +94,28 @@ interface DirectiveDiscoveryInterface
      *
      * @param  string  $signature  The directive signature to ignore
      */
-    public function ignoreDirective(string $signature): self;
+    public function ignoreDirective(string $signature): static;
 
     /**
      * Ignore multiple directives by signature.
      *
      * @param  array<int, string>  $signatures  The directive signatures to ignore
      */
-    public function ignoreDirectives(array $signatures): self;
+    public function ignoreDirectives(array $signatures): static;
 
     /**
      * Enable a previously ignored directive.
      *
      * @param  string  $signature  The directive signature to enable
      */
-    public function enableDirective(string $signature): self;
+    public function enableDirective(string $signature): static;
 
     /**
      * Enable multiple directives.
      *
      * @param  array<int, string>  $signatures  The directive signatures to enable
      */
-    public function enableDirectives(array $signatures): self;
+    public function enableDirectives(array $signatures): static;
 
     /**
      * Check if a directive is ignored.
@@ -131,28 +131,28 @@ interface DirectiveDiscoveryInterface
      *
      * @param  string  $namespace  The namespace to include
      */
-    public function onlyNamespace(string $namespace): self;
+    public function onlyNamespace(string $namespace): static;
 
     /**
      * Add multiple namespaces to the only-namespaces list.
      *
      * @param  array<int, string>  $namespaces  The namespaces to include
      */
-    public function onlyNamespaces(array $namespaces): self;
+    public function onlyNamespaces(array $namespaces): static;
 
     /**
      * Exclude a namespace.
      *
      * @param  string  $namespace  The namespace to exclude
      */
-    public function excludeNamespace(string $namespace): self;
+    public function excludeNamespace(string $namespace): static;
 
     /**
      * Exclude multiple namespaces.
      *
      * @param  array<int, string>  $namespaces  The namespaces to exclude
      */
-    public function excludeNamespaces(array $namespaces): self;
+    public function excludeNamespaces(array $namespaces): static;
 
     // ==================== PREFIX FILTERING ====================
 
@@ -161,45 +161,45 @@ interface DirectiveDiscoveryInterface
      *
      * @param  string  $prefix  The prefix to include
      */
-    public function onlyPrefix(string $prefix): self;
+    public function onlyPrefix(string $prefix): static;
 
     /**
      * Add multiple prefixes to the only-prefixes list.
      *
      * @param  array<int, string>  $prefixes  The prefixes to include
      */
-    public function onlyPrefixes(array $prefixes): self;
+    public function onlyPrefixes(array $prefixes): static;
 
     /**
      * Exclude a prefix.
      *
      * @param  string  $prefix  The prefix to exclude
      */
-    public function excludePrefix(string $prefix): self;
+    public function excludePrefix(string $prefix): static;
 
     /**
      * Exclude multiple prefixes.
      *
      * @param  array<int, string>  $prefixes  The prefixes to exclude
      */
-    public function excludePrefixes(array $prefixes): self;
+    public function excludePrefixes(array $prefixes): static;
 
     // ==================== AUTO-DISCOVERY ====================
 
     /**
      * Disable auto-discovery.
      */
-    public function disableAutoDiscovery(): self;
+    public function disableAutoDiscovery(): static;
 
     /**
      * Enable auto-discovery.
      */
-    public function enableAutoDiscovery(): self;
+    public function enableAutoDiscovery(): static;
 
     /**
      * Alias for disableAutoDiscovery.
      */
-    public function manualOnly(): self;
+    public function manualOnly(): static;
 
     /**
      * Check if auto-discovery is enabled.
@@ -213,7 +213,7 @@ interface DirectiveDiscoveryInterface
      *
      * @param  int  $depth  The maximum depth
      */
-    public function setMaxDepth(int $depth): self;
+    public function setMaxDepth(int $depth): static;
 
     /**
      * Get the maximum scanning depth.
@@ -225,7 +225,7 @@ interface DirectiveDiscoveryInterface
     /**
      * Reset all filters to default.
      */
-    public function resetConfig(): self;
+    public function resetConfig(): static;
 
     // ==================== CORE DISCOVERY METHODS ====================
 
@@ -234,14 +234,14 @@ interface DirectiveDiscoveryInterface
      *
      * @param  string  $directory  The directory path
      */
-    public function addSource(string $directory): self;
+    public function addSource(string $directory): static;
 
     /**
      * Add multiple custom source directories.
      *
      * @param  array<int, string>  $directories  The directory paths
      */
-    public function addSources(array $directories): self;
+    public function addSources(array $directories): static;
 
     /**
      * Add a directive class name directly to the collection.
@@ -251,7 +251,7 @@ interface DirectiveDiscoveryInterface
      *
      * @throws \InvalidArgumentException If the class does not extend AbstractDirective
      */
-    public function addDirective(string $class, bool $force = false): self;
+    public function addDirective(string $class, bool $force = false): static;
 
     /**
      * Add multiple directive class names directly to the collection.
@@ -259,7 +259,7 @@ interface DirectiveDiscoveryInterface
      * @param  array<class-string<AbstractDirective>>  $classes  Array of directive class names
      * @param  bool  $force  Whether to bypass reserved signature check
      */
-    public function addDirectives(array $classes, bool $force = false): self;
+    public function addDirectives(array $classes, bool $force = false): static;
 
     /**
      * Discovers all available directives from all sources.
@@ -283,14 +283,14 @@ interface DirectiveDiscoveryInterface
      *
      * @param  string  $signature  The signature to reserve
      */
-    public function addReservedSignature(string $signature): self;
+    public function addReservedSignature(string $signature): static;
 
     /**
      * Remove a reserved signature.
      *
      * @param  string  $signature  The signature to un-reserve
      */
-    public function removeReservedSignature(string $signature): self;
+    public function removeReservedSignature(string $signature): static;
 
     /**
      * Get all reserved signatures.

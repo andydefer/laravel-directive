@@ -45,7 +45,7 @@ final class DirectiveKernel extends DirectiveDiscoveryService
     private array $directivesCache = [];
 
     private function __construct(
-        private readonly Container $container,
+        protected Container $container,
     ) {
         parent::__construct($container);
         $this->context = new MapCollection;
