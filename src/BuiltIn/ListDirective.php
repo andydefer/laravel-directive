@@ -30,7 +30,7 @@ final class ListDirective extends AbstractDirective
     /**
      * The indentation level for the key-value output.
      */
-    private const INDENTATION_LEVEL = 2;
+    private const INDENTATION_LEVEL = 5;
 
     /**
      * The signature used to invoke this directive.
@@ -161,7 +161,7 @@ final class ListDirective extends AbstractDirective
         $console->title("📋 Details for: {$commandName}");
         $console->line();
 
-        // ✅ Informations générales
+        // ✅ Informations générales - valeurs en cyan
         $generalInfo = MapCollection::from([
             'Signature' => $directive->signature,
             'Description' => $directive->description,
@@ -175,7 +175,7 @@ final class ListDirective extends AbstractDirective
         $console->raw(KeyValue::renderWithValueColor($generalInfo, 'cyan'));
         $console->line();
 
-        // ✅ Arguments requis
+        // ✅ Arguments requis - valeurs en jaune
         if ($structure->hasRequireds()) {
             $console->info('Required Arguments:');
             $requiredData = MapCollection::from(
@@ -185,15 +185,23 @@ final class ListDirective extends AbstractDirective
             $console->line();
         }
 
-        // ✅ Arguments avec valeurs par défaut
+        // ✅ Arguments avec valeurs par défaut - valeurs en vert
         if ($structure->hasDefaults()) {
             $console->info('Default Arguments:');
-            $defaultData = MapCollection::from($structure->getDefaults());
+            $defaults = $structure->getDefaults();
+
+            // ✅ Remplacer les valeurs null ou vides par 'NULL'
+            $defaultsWithNull = array_map(
+                fn ($value) => ($value === null || $value === '') ? 'NULL' : $value,
+                $defaults
+            );
+
+            $defaultData = MapCollection::from($defaultsWithNull);
             $console->raw(KeyValue::renderWithValueColor($defaultData, 'green'));
             $console->line();
         }
 
-        // ✅ Arguments variadiques
+        // ✅ Arguments variadiques - valeurs en magenta
         if ($structure->hasVariadics()) {
             $console->info('Variadic Arguments:');
             $variadicData = MapCollection::from(
@@ -203,7 +211,7 @@ final class ListDirective extends AbstractDirective
             $console->line();
         }
 
-        // ✅ Flags
+        // ✅ Flags - valeurs en cyan
         if ($structure->hasFlags()) {
             $console->info('Flags:');
             $flagsData = MapCollection::from(
@@ -213,7 +221,7 @@ final class ListDirective extends AbstractDirective
             $console->line();
         }
 
-        // ✅ Exemple d'utilisation
+        // ✅ Exemple d'utilisation - valeurs en blanc (défaut)
         $console->info('Example:');
         $example = $this->buildExample($commandName, $structure);
         $console->raw(KeyValue::render(
