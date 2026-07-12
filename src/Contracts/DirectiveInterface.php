@@ -6,185 +6,339 @@ namespace AndyDefer\Directive\Contracts;
 
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Container\Container;
+use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Records\DirectiveCallRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
 
 /**
- * Contract for all directive implementations.
+ * Interface for all directives.
  *
- * A directive is a self-contained CLI command that can be executed from the
- * command line. It defines a signature, aliases, and execution logic.
+ * A directive is a self-contained CLI command that defines a signature,
+ * aliases, and execution logic.
  */
 interface DirectiveInterface
 {
+    // ==================== BASIC METHODS ====================
+
     /**
-     * Gets the container instance.
+     * Get the directive signature.
+     *
+     * The signature defines the command name and its arguments.
+     * Example: 'backup {source} {destination} {format=zip} {--force}'
+     *
+     * @return string The directive signature
+     */
+    public function getSignature(): string;
+
+    /**
+     * Get the directive description.
+     *
+     * @return string The directive description
+     */
+    public function getDescription(): string;
+
+    /**
+     * Get the directive aliases.
+     *
+     * @return StringTypedCollection List of aliases
+     */
+    public function getAliases(): StringTypedCollection;
+
+    // ==================== ACCESSORS ====================
+
+    /**
+     * Get the container instance.
      *
      * @return Container|null The container instance
      */
     public function getContainer(): ?Container;
 
     /**
-     * Gets the console output handler.
+     * Get the kernel instance.
      *
-     * @return Console The console instance for output operations
+     * @return DirectiveKernel|null The kernel instance
+     */
+    public function getKernel(): ?DirectiveKernel;
+
+    /**
+     * Get the console instance.
+     *
+     * @return Console The console instance
      */
     public function getConsole(): Console;
 
     /**
-     * Gets the parsed signature record.
+     * Get the parsed signature record.
      *
-     * Contains the parsed representation of the directive's signature
-     * after parsing the user's query.
-     *
-     * @return ParsedSignatureRecord The parsed signature data
+     * @return ParsedSignatureRecord The parsed record
      */
     public function getParsed(): ParsedSignatureRecord;
 
     /**
-     * Gets the signature structure value object.
-     *
-     * Provides a structured representation of the directive's signature
-     * definition.
+     * Get the signature structure.
      *
      * @return SignatureStructureVO The signature structure
      */
     public function getStructure(): SignatureStructureVO;
 
-    /**
-     * Gets the value of a required or default argument.
-     *
-     * @param  string  $key  The argument name
-     * @return mixed The argument value, or null if not found
-     */
-    public function argument(string $key): mixed;
+    // ==================== ARGUMENT METHODS ====================
 
     /**
-     * Checks if an argument exists (required or default).
+     * Get an argument value by key, searching in order of priority.
      *
-     * @param  string  $key  The argument name
+     * Search order:
+     * 1. Required arguments
+     * 2. Default arguments
+     * 3. Enum arguments
+     * 4. Variadic arguments (returns array)
+     * 5. Flags (returns bool)
+     *
+     * @param  string  $key  The argument key
+     * @return mixed The argument value, or null if not found
+     */
+    public function getArgument(string $key): mixed;
+
+    /**
+     * Check if an argument exists.
+     *
+     * @param  string  $key  The argument key
      * @return bool True if the argument exists, false otherwise
      */
     public function hasArgument(string $key): bool;
 
     /**
-     * Gets the value of a flag.
+     * Get the value of a required argument.
      *
-     * @param  string  $key  The flag name
-     * @return bool True if the flag is present, false otherwise
+     * @param  string  $key  The argument key
+     * @return string|null The argument value, or null if not found
      */
-    public function flag(string $key): bool;
+    public function getRequired(string $key): ?string;
 
     /**
-     * Checks if a flag exists in the signature.
+     * Get all required arguments.
      *
-     * @param  string  $key  The flag name
-     * @return bool True if the flag exists, false otherwise
+     * @return array<string, string> Associative array of argument names to values
      */
-    public function hasFlag(string $key): bool;
+    public function getRequireds(): array;
 
     /**
-     * Checks if a flag is active in the current query.
+     * Get the value of a default argument.
      *
-     * @param  string  $key  The flag name
-     * @return bool True if the flag is active, false otherwise
+     * @param  string  $key  The argument key
+     * @return string|null The argument value, or null if not found
      */
-    public function isFlagActive(string $key): bool;
+    public function getDefault(string $key): ?string;
 
     /**
-     * Gets all variadic arguments from the query.
+     * Get all default arguments.
      *
-     * @return StringTypedCollection Collection of variadic argument values
+     * @return array<string, string|null> Associative array of argument names to values
      */
-    public function getVariadicArguments(): StringTypedCollection;
+    public function getDefaults(): array;
 
     /**
-     * Checks if variadic arguments are present in the query.
+     * Get the value of an enum argument.
      *
-     * @return bool True if variadic arguments exist, false otherwise
+     * @param  string  $key  The enum key
+     * @return mixed The enum value, or null if not found
      */
-    public function hasVariadicArguments(): bool;
+    public function getEnum(string $key): mixed;
 
     /**
-     * Gets all required arguments with their values.
+     * Get all enum arguments.
      *
-     * @return array<string, mixed> Associative array of argument names to values
+     * @return array<string, mixed> Associative array of enum names to values
      */
-    public function getRequiredArguments(): array;
+    public function getEnums(): array;
 
     /**
-     * Gets all default arguments with their values.
+     * Get the allowed values for an enum argument.
      *
-     * @return array<string, mixed> Associative array of argument names to values
+     * @param  string  $key  The enum key
+     * @return array<string>|null The allowed values, or null if not found
      */
-    public function getDefaultArguments(): array;
+    public function getEnumAllowedValues(string $key): ?array;
 
     /**
-     * Gets all flags with their values.
+     * Check if an enum is required.
      *
-     * @return array<string, bool> Associative array of flag names to values
+     * @param  string  $key  The enum key
+     * @return bool True if required, false otherwise
+     */
+    public function isEnumRequired(string $key): bool;
+
+    /**
+     * Check if an enum is optional.
+     *
+     * @param  string  $key  The enum key
+     * @return bool True if optional, false otherwise
+     */
+    public function isEnumOptional(string $key): bool;
+
+    /**
+     * Check if a value is allowed for an enum.
+     *
+     * @param  string  $key  The enum key
+     * @param  string  $value  The value to check
+     * @return bool True if allowed, false otherwise
+     */
+    public function isEnumValueAllowed(string $key, string $value): bool;
+
+    /**
+     * Get the value of a variadic argument.
+     *
+     * @param  string  $key  The variadic key
+     * @return array<string> The variadic values, or empty array if not found
+     */
+    public function getVariadic(string $key): array;
+
+    /**
+     * Get all variadic arguments.
+     *
+     * @return array<string, array<string>> Associative array of variadic names to values
+     */
+    public function getVariadics(): array;
+
+    /**
+     * Check if a variadic argument exists.
+     *
+     * @param  string  $key  The variadic key
+     * @return bool True if exists, false otherwise
+     */
+    public function hasVariadic(string $key): bool;
+
+    /**
+     * Get the value of a flag.
+     *
+     * @param  string  $key  The flag key (without '--' prefix)
+     * @return bool True if active, false otherwise
+     */
+    public function getFlag(string $key): bool;
+
+    /**
+     * Get all flags.
+     *
+     * @return array<string, bool> Associative array of flag names to boolean values
      */
     public function getFlags(): array;
 
     /**
-     * Gets the names of all active flags.
+     * Check if a flag exists.
      *
-     * @return array<int, string> List of active flag names
+     * @param  string  $key  The flag key (without '--' prefix)
+     * @return bool True if exists, false otherwise
+     */
+    public function hasFlag(string $key): bool;
+
+    /**
+     * Check if a flag is active.
+     *
+     * @param  string  $key  The flag key (without '--' prefix)
+     * @return bool True if active, false otherwise
+     */
+    public function isFlagActive(string $key): bool;
+
+    /**
+     * Get all active flags.
+     *
+     * @return array<string> List of active flag names
      */
     public function getActiveFlags(): array;
 
     /**
-     * Checks if the directive has required arguments.
+     * Get all variadic arguments as a flat collection.
      *
-     * @return bool True if required arguments exist, false otherwise
+     * @return StringTypedCollection All variadic values
+     */
+    public function getVariadicArguments(): StringTypedCollection;
+
+    /**
+     * Check if there are any variadic arguments.
+     *
+     * @return bool True if there are variadic arguments, false otherwise
+     */
+    public function hasVariadicArguments(): bool;
+
+    /**
+     * Get all required arguments.
+     *
+     * @deprecated Use getRequireds() instead
+     *
+     * @return array<string, string> Associative array of argument names to values
+     */
+    public function getRequiredArguments(): array;
+
+    /**
+     * Get all default arguments.
+     *
+     * @deprecated Use getDefaults() instead
+     *
+     * @return array<string, string|null> Associative array of argument names to values
+     */
+    public function getDefaultArguments(): array;
+
+    /**
+     * Check if there are required arguments.
+     *
+     * @return bool True if there are required arguments, false otherwise
      */
     public function hasRequireds(): bool;
 
     /**
-     * Checks if the directive has default arguments.
+     * Check if there are default arguments.
      *
-     * @return bool True if default arguments exist, false otherwise
+     * @return bool True if there are default arguments, false otherwise
      */
     public function hasDefaults(): bool;
 
     /**
-     * Checks if the directive has flags.
+     * Check if there are any enums.
      *
-     * @return bool True if flags exist, false otherwise
+     * @return bool True if there are enums, false otherwise
+     */
+    public function hasEnums(): bool;
+
+    /**
+     * Check if there are any flags.
+     *
+     * @return bool True if there are flags, false otherwise
      */
     public function hasFlags(): bool;
 
+    // ==================== OUTPUT METHODS ====================
+
     /**
-     * Outputs a plain line of text.
+     * Output a line of text.
      *
      * @param  string  $message  The message to output
      */
     public function line(string $message): void;
 
     /**
-     * Outputs an informational message.
+     * Output an informational message.
      *
      * @param  string  $message  The message to output
      */
     public function info(string $message): void;
 
     /**
-     * Outputs an error message.
+     * Output an error message.
      *
      * @param  string  $message  The message to output
      */
     public function error(string $message): void;
 
     /**
-     * Outputs a blank line.
+     * Output a new line.
      */
     public function newLine(): void;
 
     /**
-     * Outputs a separator line.
+     * Output a separator line.
      *
      * @param  string  $character  The character to repeat
      * @param  int  $length  The length of the separator
@@ -192,57 +346,44 @@ interface DirectiveInterface
     public function separator(string $character = '-', int $length = 80): void;
 
     /**
-     * Prompts the user for input.
+     * Ask a question and get user input.
      *
-     * @param  string  $question  The question to display
-     * @return string The user's response
+     * @param  string  $question  The question to ask
+     * @return string The user's answer
      */
     public function ask(string $question): string;
 
     /**
-     * Prompts the user for confirmation.
+     * Ask a yes/no question.
      *
-     * @param  string  $question  The question to display
-     * @return bool True if the user confirms, false otherwise
+     * @param  string  $question  The question to ask
+     * @return bool True if confirmed, false otherwise
      */
     public function confirm(string $question): bool;
 
     /**
-     * Displays a table with headers and rows.
+     * Output a table.
      *
-     * @param  ListCollection|array<int, string>  $headers  The table headers
-     * @param  ListCollection|array<int, array<int, string>>  $rows  The table rows
+     * @param  ListCollection|array  $headers  The table headers
+     * @param  ListCollection|array  $rows  The table rows
      */
     public function table(ListCollection|array $headers, ListCollection|array $rows): void;
 
+    // ==================== CALL METHODS ====================
+
     /**
-     * Gets the list of internal calls made by this directive.
+     * Get all queued internal calls.
      *
-     * @return array<int, object> List of call records
+     * @return array<DirectiveCallRecord> List of queued calls
      */
     public function getCalls(): array;
 
+    // ==================== EXECUTION METHODS ====================
+
     /**
-     * Executes the directive.
+     * Run the directive.
      *
-     * @return ExitCode The exit code indicating success or failure
+     * @return ExitCode The exit code
      */
     public function run(): ExitCode;
-
-    /**
-     * Gets the list of aliases for this directive.
-     *
-     * @return StringTypedCollection Collection of alias names
-     */
-    public function getAliases(): StringTypedCollection;
-
-    /**
-     * Gets the signature of this directive.
-     *
-     * The signature defines the command name, arguments, and flags
-     * in a syntax similar to Laravel's Artisan commands.
-     *
-     * @return string The signature string
-     */
-    public function getSignature(): string;
 }

@@ -55,7 +55,7 @@ final class KernelAuditDirective extends AbstractDirective
     protected function execute(): ExitCode
     {
         $verbose = $this->isFlagActive('verbose');
-        $format = $this->argument('format') ?? 'table';
+        $format = $this->getArgument('format') ?? 'table';
 
         $kernel = $this->getKernel();
         $console = $this->getConsole();

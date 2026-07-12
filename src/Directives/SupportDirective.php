@@ -27,7 +27,7 @@ final class SupportDirective extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        $all = $this->flag('all');
+        $all = $this->getFlag('all');
 
         $this->line('');
         $this->info('🌟 Support Open Source Work');

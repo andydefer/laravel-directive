@@ -111,32 +111,202 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->structure;
     }
 
+    // ==================== ARGUMENT METHODS ====================
+
     /**
-     * {@inheritdoc}
+     * Get an argument value by key, searching in order of priority.
+     *
+     * Search order:
+     * 1. Required arguments
+     * 2. Default arguments
+     * 3. Enum arguments
+     * 4. Variadic arguments (returns array)
+     * 5. Flags (returns bool)
+     *
+     * @param  string  $key  The argument key
+     * @return mixed The argument value, or null if not found
      */
-    final public function argument(string $key): mixed
+    final public function getArgument(string $key): mixed
     {
-        return $this->parsed->requireds->get($key) ?? $this->parsed->defaults->get($key);
+        // 1. Required arguments
+        if ($this->parsed->requireds->has($key)) {
+            return $this->parsed->requireds->get($key);
+        }
+
+        // 2. Default arguments
+        if ($this->parsed->defaults->has($key)) {
+            return $this->parsed->defaults->get($key);
+        }
+
+        // 3. Enum arguments
+        if ($this->parsed->enums->has($key)) {
+            return $this->parsed->enums->get($key);
+        }
+
+        // 4. Variadic arguments (returns array)
+        if ($this->parsed->variadics->has($key)) {
+            return $this->parsed->variadics->get($key);
+        }
+
+        // 5. Flags (returns bool)
+        if ($this->parsed->flags->has($key)) {
+            return $this->parsed->flags->get($key);
+        }
+
+        return null;
     }
 
     /**
-     * {@inheritdoc}
+     * Check if an argument exists.
+     *
+     * @param  string  $key  The argument key
+     * @return bool True if the argument exists, false otherwise
      */
     final public function hasArgument(string $key): bool
     {
-        return $this->parsed->requireds->has($key) || $this->parsed->defaults->has($key);
+        return $this->parsed->requireds->has($key)
+            || $this->parsed->defaults->has($key)
+            || $this->parsed->enums->has($key)
+            || $this->parsed->variadics->has($key)
+            || $this->parsed->flags->has($key);
     }
 
     /**
-     * {@inheritdoc}
+     * Get the value of a required argument.
      */
-    final public function flag(string $key): bool
+    final public function getRequired(string $key): ?string
+    {
+        return $this->parsed->requireds->get($key);
+    }
+
+    /**
+     * Get all required arguments.
+     *
+     * @return array<string, string>
+     */
+    final public function getRequireds(): array
+    {
+        return $this->parsed->requireds->toAssociativeArray();
+    }
+
+    /**
+     * Get the value of a default argument.
+     */
+    final public function getDefault(string $key): ?string
+    {
+        return $this->parsed->defaults->get($key);
+    }
+
+    /**
+     * Get all default arguments.
+     *
+     * @return array<string, string|null>
+     */
+    final public function getDefaults(): array
+    {
+        return $this->parsed->defaults->toAssociativeArray();
+    }
+
+    /**
+     * Get the value of an enum argument.
+     */
+    final public function getEnum(string $key): mixed
+    {
+        return $this->parsed->enums->get($key);
+    }
+
+    /**
+     * Get all enum arguments.
+     *
+     * @return array<string, mixed>
+     */
+    final public function getEnums(): array
+    {
+        return $this->parsed->enums->toAssociativeArray();
+    }
+
+    /**
+     * Get the allowed values for an enum argument.
+     *
+     * @return array<string>|null
+     */
+    final public function getEnumAllowedValues(string $key): ?array
+    {
+        return $this->parsed->enums->getAllowedValues($key);
+    }
+
+    /**
+     * Check if an enum is required.
+     */
+    final public function isEnumRequired(string $key): bool
+    {
+        return $this->parsed->enums->isRequired($key);
+    }
+
+    /**
+     * Check if an enum is optional.
+     */
+    final public function isEnumOptional(string $key): bool
+    {
+        return $this->parsed->enums->isOptional($key);
+    }
+
+    /**
+     * Check if a value is allowed for an enum.
+     */
+    final public function isEnumValueAllowed(string $key, string $value): bool
+    {
+        return $this->parsed->enums->isAllowed($key, $value);
+    }
+
+    /**
+     * Get the value of a variadic argument.
+     *
+     * @return array<string>
+     */
+    final public function getVariadic(string $key): array
+    {
+        return $this->parsed->variadics->get($key);
+    }
+
+    /**
+     * Get all variadic arguments.
+     *
+     * @return array<string, array<string>>
+     */
+    final public function getVariadics(): array
+    {
+        return $this->parsed->variadics->toAssociativeArray();
+    }
+
+    /**
+     * Check if a variadic argument exists.
+     */
+    final public function hasVariadic(string $key): bool
+    {
+        return $this->parsed->variadics->has($key);
+    }
+
+    /**
+     * Get the value of a flag.
+     */
+    final public function getFlag(string $key): bool
     {
         return $this->parsed->flags->get($key);
     }
 
     /**
-     * {@inheritdoc}
+     * Get all flags.
+     *
+     * @return array<string, bool>
+     */
+    final public function getFlags(): array
+    {
+        return $this->parsed->flags->toAssociativeArray();
+    }
+
+    /**
+     * Check if a flag exists.
      */
     final public function hasFlag(string $key): bool
     {
@@ -144,7 +314,7 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Check if a flag is active.
      */
     final public function isFlagActive(string $key): bool
     {
@@ -152,7 +322,17 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Get all active flags.
+     *
+     * @return array<string>
+     */
+    final public function getActiveFlags(): array
+    {
+        return $this->parsed->flags->getActiveNames();
+    }
+
+    /**
+     * Get all variadic arguments as a flat collection.
      */
     final public function getVariadicArguments(): StringTypedCollection
     {
@@ -166,7 +346,7 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Check if there are any variadic arguments.
      */
     final public function hasVariadicArguments(): bool
     {
@@ -174,39 +354,27 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Get all required arguments.
+     *
+     * @deprecated Use getRequireds() instead
      */
     final public function getRequiredArguments(): array
     {
-        return $this->parsed->requireds->toAssociativeArray();
+        return $this->getRequireds();
     }
 
     /**
-     * {@inheritdoc}
+     * Get all default arguments.
+     *
+     * @deprecated Use getDefaults() instead
      */
     final public function getDefaultArguments(): array
     {
-        return $this->parsed->defaults->toAssociativeArray();
+        return $this->getDefaults();
     }
 
     /**
-     * {@inheritdoc}
-     */
-    final public function getFlags(): array
-    {
-        return $this->parsed->flags->toAssociativeArray();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    final public function getActiveFlags(): array
-    {
-        return $this->parsed->flags->getActiveNames();
-    }
-
-    /**
-     * {@inheritdoc}
+     * Check if there are required arguments.
      */
     final public function hasRequireds(): bool
     {
@@ -214,7 +382,7 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Check if there are default arguments.
      */
     final public function hasDefaults(): bool
     {
@@ -222,12 +390,22 @@ abstract class AbstractDirective implements DirectiveInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Check if there are any enums.
+     */
+    final public function hasEnums(): bool
+    {
+        return $this->parsed->enums->isNotEmpty();
+    }
+
+    /**
+     * Check if there are any flags.
      */
     final public function hasFlags(): bool
     {
         return $this->parsed->flags->isNotEmpty();
     }
+
+    // ==================== OUTPUT METHODS ====================
 
     /**
      * {@inheritdoc}
@@ -293,6 +471,8 @@ abstract class AbstractDirective implements DirectiveInterface
         $this->console->table($headers, $rows);
     }
 
+    // ==================== CALL METHODS ====================
+
     /**
      * Queues an internal call to another directive.
      *
@@ -311,6 +491,8 @@ abstract class AbstractDirective implements DirectiveInterface
         return $this->calls;
     }
 
+    // ==================== ALIAS METHODS ====================
+
     /**
      * {@inheritdoc}
      */
@@ -318,6 +500,8 @@ abstract class AbstractDirective implements DirectiveInterface
     {
         return new StringTypedCollection;
     }
+
+    // ==================== ABSTRACT METHODS ====================
 
     /**
      * {@inheritdoc}
@@ -330,6 +514,8 @@ abstract class AbstractDirective implements DirectiveInterface
      * @return ExitCode The exit code
      */
     abstract protected function execute(): ExitCode;
+
+    // ==================== HOOK METHODS ====================
 
     /**
      * Hook called before the main execution.
@@ -445,7 +631,6 @@ abstract class AbstractDirective implements DirectiveInterface
         } catch (Throwable $e) {
             $this->error('Error in before hook: '.$e->getMessage());
 
-            // ✅ Ajouter un problème dans le kernel
             $this->kernel->addProblem(
                 'directive_before_hook',
                 'Failed to execute before hook for directive: '.static::class,
@@ -474,7 +659,6 @@ abstract class AbstractDirective implements DirectiveInterface
             $this->afterExecute(ExitCode::RUNTIME_ERROR);
             $this->error('Error in execute hook: '.$e->getMessage());
 
-            // ✅ Ajouter un problème dans le kernel
             $this->kernel->addProblem(
                 'directive_execute_hook',
                 'Failed to execute directive: '.static::class,
@@ -519,7 +703,6 @@ abstract class AbstractDirective implements DirectiveInterface
         if ($directive === null) {
             $this->console->error("Directive not found: {$commandName}");
 
-            // ✅ Ajouter un problème dans le kernel
             $this->kernel->addProblem(
                 'call_directive_not_found',
                 'Internal call directive not found: '.$commandName,
@@ -533,7 +716,6 @@ abstract class AbstractDirective implements DirectiveInterface
         if ($this->isCircularCall($directive, $query)) {
             $this->console->alertWarning("Circular call detected: {$query}");
 
-            // ✅ Ajouter un problème dans le kernel
             $this->kernel->addProblem(
                 'circular_call_detected',
                 'Circular call detected for directive: '.$directive->class,
@@ -653,7 +835,6 @@ abstract class AbstractDirective implements DirectiveInterface
             array_pop(self::$executionStack);
             $this->console->error('Error executing call: '.$e->getMessage());
 
-            // ✅ Ajouter un problème dans le kernel
             $this->kernel->addProblem(
                 'execute_call_instance',
                 'Failed to execute internal call for directive: '.$directive->class,

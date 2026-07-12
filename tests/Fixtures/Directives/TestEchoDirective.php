@@ -27,12 +27,12 @@ final class TestEchoDirective extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        $message = $this->argument('message') ?? 'Hello World';
+        $message = $this->getArgument('message') ?? 'Hello World';
 
         $this->line($message);
 
-        if ($this->argument('extra')) {
-            $this->line($this->argument('extra'));
+        if ($this->getArgument('extra')) {
+            $this->line($this->getArgument('extra'));
         }
 
         return ExitCode::SUCCESS;

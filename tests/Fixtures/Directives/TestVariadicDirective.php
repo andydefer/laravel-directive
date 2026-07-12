@@ -23,7 +23,7 @@ final class TestVariadicDirective extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        $name = $this->argument('name');
+        $name = $this->getArgument('name');
         $this->line("Name: {$name}");
 
         if ($this->hasVariadicArguments()) {

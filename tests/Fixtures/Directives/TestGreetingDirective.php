@@ -29,7 +29,7 @@ final class TestGreetingDirective extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        $name = $this->argument('name') ?? 'World';
+        $name = $this->getArgument('name') ?? 'World';
         $this->line("Hello, {$name}!");
 
         return ExitCode::SUCCESS;

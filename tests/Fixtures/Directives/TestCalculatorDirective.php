@@ -31,9 +31,9 @@ class TestCalculatorDirective extends AbstractDirective
 
     public function execute(): ExitCode
     {
-        $operation = $this->argument('operation');
-        $a = (float) $this->argument('a');
-        $b = (float) ($this->argument('b') ?? 0);
+        $operation = $this->getArgument('operation');
+        $a = (float) $this->getArgument('a');
+        $b = (float) ($this->getArgument('b') ?? 0);
 
         if ($operation === null) {
             $this->error('Operation is required');

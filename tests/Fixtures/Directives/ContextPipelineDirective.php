@@ -22,7 +22,7 @@ final class ContextPipelineDirective extends AbstractDirective
 
     protected function execute(): ExitCode
     {
-        $name = $this->argument('name');
+        $name = $this->getArgument('name');
 
         // Step 1: Validate
         $this->contextSet('name', $name);

@@ -21,7 +21,7 @@ final class ContextRemoveDirective extends AbstractDirective
 
     protected function execute(): ExitCode
     {
-        $key = $this->argument('key');
+        $key = $this->getArgument('key');
         $this->contextRemove($key);
 
         return ExitCode::SUCCESS;

@@ -21,7 +21,7 @@ final class ContextSetDirective extends AbstractDirective
 
     protected function execute(): ExitCode
     {
-        $name = $this->argument('name');
+        $name = $this->getArgument('name');
 
         $this->contextSet('user_name', $name);
         $this->contextIncrement('counter');

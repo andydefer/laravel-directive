@@ -205,9 +205,9 @@ PHP;
             signature: 'user-create {name} {email} {--admin}',
             description: 'Create a new user',
             executeContent: <<<'PHP'
-$name = $this->argument('name');
-$email = $this->argument('email');
-$isAdmin = $this->flag('admin');
+$name = $this->getArgument('name');
+$email = $this->getArgument('email');
+$isAdmin = $this->getFlag('admin');
 $message = "User {$name} ({$email}) created";
 if ($isAdmin) {
     $message .= " as admin";
@@ -225,7 +225,7 @@ PHP
             signature: 'cache-clear {--force}',
             description: 'Clear application cache',
             executeContent: <<<'PHP'
-$force = $this->flag('force');
+$force = $this->getFlag('force');
 $message = "Cache cleared";
 if ($force) {
     $message .= " (forced)";
@@ -258,8 +258,8 @@ PHP
             description: 'Echo a message',
             aliases: ['echo'],
             executeContent: <<<'PHP'
-$message = $this->argument('message');
-$extra = $this->argument('extra');
+$message = $this->getArgument('message');
+$extra = $this->getArgument('extra');
 $output = $message;
 if ($extra) {
     $output .= " " . $extra;
@@ -277,7 +277,7 @@ PHP
             signature: 'greeting {name=World}',
             description: 'Say hello to someone',
             executeContent: <<<'PHP'
-$name = $this->argument('name');
+$name = $this->getArgument('name');
 $this->info("Hello, {$name}!");
 return ExitCode::SUCCESS;
 PHP
@@ -292,9 +292,9 @@ PHP
             description: 'Test calculator directive for arithmetic operations',
             aliases: ['calc', 'math'],
             executeContent: <<<'PHP'
-$operation = $this->argument('operation');
-$a = (int) $this->argument('a');
-$b = (int) $this->argument('b', 0);
+$operation = $this->getArgument('operation');
+$a = (int) $this->getArgument('a');
+$b = (int) $this->getArgument('b', 0);
 
 switch ($operation) {
     case 'add':
@@ -331,13 +331,13 @@ PHP
             signature: 'variadic {name} {files*} {--verbose}',
             description: 'Test variadic arguments',
             executeContent: <<<'PHP'
-$name = $this->argument('name');
+$name = $this->getArgument('name');
 $this->info("Name: {$name}");
 $files = $this->getVariadicArguments();
 foreach ($files as $file) {
     $this->line("- {$file}");
 }
-if ($this->flag('verbose')) {
+if ($this->getFlag('verbose')) {
     $this->info('Verbose mode enabled');
 }
 return ExitCode::SUCCESS;
@@ -557,8 +557,8 @@ PHP
             signature: 'test:concrete {name} {email} {format=zip} {files*} {--force} {--verbose}',
             description: 'Test concrete directive for AbstractDirective tests',
             executeContent: <<<'PHP'
-$name = $this->argument('name');
-$email = $this->argument('email');
+$name = $this->getArgument('name');
+$email = $this->getArgument('email');
 $this->info("Name: {$name}, Email: {$email}");
 return ExitCode::SUCCESS;
 PHP
@@ -573,10 +573,10 @@ PHP
             description: 'Test echo directive',
             aliases: ['echo'],
             executeContent: <<<'PHP'
-$message = $this->argument('message') ?? 'Hello World';
+$message = $this->getArgument('message') ?? 'Hello World';
 $this->line($message);
-if ($this->argument('extra')) {
-    $this->line($this->argument('extra'));
+if ($this->getArgument('extra')) {
+    $this->line($this->getArgument('extra'));
 }
 return ExitCode::SUCCESS;
 PHP
@@ -590,7 +590,7 @@ PHP
             signature: 'greeting {name=?}',
             description: 'Test greeting directive',
             executeContent: <<<'PHP'
-$name = $this->argument('name') ?? 'World';
+$name = $this->getArgument('name') ?? 'World';
 $this->info("Hello, {$name}!");
 return ExitCode::SUCCESS;
 PHP
@@ -604,8 +604,8 @@ PHP
             signature: 'test:directive {name} {email} {format=zip} {files*} {--force} {--verbose}',
             description: 'Test directive',
             executeContent: <<<'PHP'
-$name = $this->argument('name');
-$email = $this->argument('email');
+$name = $this->getArgument('name');
+$email = $this->getArgument('email');
 $this->info("Name: {$name}, Email: {$email}");
 return ExitCode::SUCCESS;
 PHP

@@ -36,15 +36,15 @@ final class AbstractDirectiveTest extends IntegrationTestCase
     {
         $directive = $this->createDirective('test:concrete John^Doe john@example.com');
 
-        $this->assertSame('John Doe', $directive->argument('name'));
-        $this->assertSame('john@example.com', $directive->argument('email'));
+        $this->assertSame('John Doe', $directive->getArgument('name'));
+        $this->assertSame('john@example.com', $directive->getArgument('email'));
     }
 
     public function test_argument_returns_null_for_unknown_key(): void
     {
         $directive = $this->createDirective('test:concrete John john@example.com');
 
-        $this->assertNull($directive->argument('unknown'));
+        $this->assertNull($directive->getArgument('unknown'));
     }
 
     public function test_has_argument_returns_true_when_exists(): void
@@ -65,14 +65,14 @@ final class AbstractDirectiveTest extends IntegrationTestCase
     {
         $directive = $this->createDirective('test:concrete John john@example.com');
 
-        $this->assertSame('zip', $directive->argument('format'));
+        $this->assertSame('zip', $directive->getArgument('format'));
     }
 
     public function test_argument_overrides_default_value(): void
     {
         $directive = $this->createDirective('test:concrete John john@example.com tar^gz');
 
-        $this->assertSame('tar gz', $directive->argument('format'));
+        $this->assertSame('tar gz', $directive->getArgument('format'));
     }
 
     public function test_option_returns_value(): void

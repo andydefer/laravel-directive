@@ -21,7 +21,7 @@ final class ContextIncrementDirective extends AbstractDirective
 
     protected function execute(): ExitCode
     {
-        $step = (int) ($this->argument('step') ?? 1);
+        $step = (int) ($this->getArgument('step') ?? 1);
         $this->contextIncrement('counter', $step);
 
         return ExitCode::SUCCESS;
