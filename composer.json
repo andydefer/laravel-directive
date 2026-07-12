@@ -15,7 +15,7 @@
         "nikic/php-parser": "^5.8",
         "andydefer/algo-kit": "^0.8.1",
         "andydefer/laravel-jsonl": "^0.8.2",
-        "andydefer/php-signature-parser": "^0.7.1",
+        "andydefer/php-signature-parser": "^0.9.0",
         "andydefer/php-console": "^1.6.1"
     },
     "require-dev": {
