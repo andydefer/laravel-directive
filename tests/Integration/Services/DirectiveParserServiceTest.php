@@ -34,10 +34,10 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         // Assert
         $this->assertInstanceOf(ParsedSignatureRecord::class, $result);
         $this->assertSame('user:create', $result->source);
-        $this->assertSame('John Doe', $result->required->first()->value);
-        $this->assertSame('john@example.com', $result->required->last()->value);
-        $this->assertCount(0, $result->default);
-        $this->assertCount(0, $result->variadic);
+        $this->assertSame('John Doe', $result->requireds->first()->value);
+        $this->assertSame('john@example.com', $result->requireds->last()->value);
+        $this->assertCount(0, $result->defaults);
+        $this->assertCount(0, $result->variadics);
         $this->assertCount(0, $result->flags);
     }
 
@@ -52,7 +52,7 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
 
         // Assert
         $this->assertSame('user:list', $result->source);
-        $this->assertSame('10', $result->default->first()->value);
+        $this->assertSame('10', $result->defaults->first()->value);
     }
 
     public function test_parse_with_argument_default_value_overridden(): void
@@ -65,7 +65,7 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $this->assertSame('5', $result->default->first()->value);
+        $this->assertSame('5', $result->defaults->first()->value);
     }
 
     public function test_parse_with_required_and_default_arguments(): void
@@ -78,8 +78,8 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $this->assertSame('John', $result->required->first()->value);
-        $this->assertSame('user', $result->default->first()->value);
+        $this->assertSame('John', $result->requireds->first()->value);
+        $this->assertSame('user', $result->defaults->first()->value);
     }
 
     public function test_parse_with_flags(): void
@@ -106,7 +106,7 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $this->assertSame('John', $result->required->first()->value);
+        $this->assertSame('John', $result->requireds->first()->value);
         $this->assertTrue($result->flags->first()->value);
         $this->assertTrue($result->flags->last()->value);
     }
@@ -121,8 +121,8 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $this->assertSame('John', $result->required->first()->value);
-        $this->assertSame('john@example.com', $result->required->last()->value);
+        $this->assertSame('John', $result->requireds->first()->value);
+        $this->assertSame('john@example.com', $result->requireds->last()->value);
         $this->assertTrue($result->flags->first()->value);  // active
         $this->assertFalse($result->flags->last()->value);  // verbose
     }
@@ -137,7 +137,7 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $variadic = $result->variadic->first();
+        $variadic = $result->variadics->first();
         $this->assertSame('files', $variadic->name);
         $this->assertCount(3, $variadic->values);
         $this->assertSame(['file1.txt', 'file2.txt', 'file3.txt'], $variadic->values->toArray());
@@ -153,8 +153,8 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $this->assertSame('John Doe', $result->required->first()->value);
-        $variadic = $result->variadic->first();
+        $this->assertSame('John Doe', $result->requireds->first()->value);
+        $variadic = $result->variadics->first();
         $this->assertSame('files', $variadic->name);
         $this->assertCount(2, $variadic->values);
         $this->assertSame(['file1.txt', 'file2.txt'], $variadic->values->toArray());
@@ -170,7 +170,7 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
         $result = $this->service->parse($signature, $query);
 
         // Assert
-        $variadic = $result->variadic->first();
+        $variadic = $result->variadics->first();
         $this->assertCount(2, $variadic->values);
         $this->assertTrue($result->flags->first()->value);
     }
@@ -186,9 +186,9 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
 
         // Assert
         $this->assertSame('test:cmd', $result->source);
-        $this->assertCount(0, $result->required);
-        $this->assertCount(0, $result->default);
-        $this->assertCount(0, $result->variadic);
+        $this->assertCount(0, $result->requireds);
+        $this->assertCount(0, $result->defaults);
+        $this->assertCount(0, $result->variadics);
         $this->assertCount(0, $result->flags);
     }
 
@@ -203,16 +203,16 @@ final class DirectiveParserServiceTest extends IntegrationTestCase
 
         // Assert
         $this->assertSame('backup', $result->source);
-        $this->assertSame('/var/www', $result->required->first()->value);
-        $this->assertSame('/backup', $result->required->last()->value);
-        $this->assertSame('tar.gz', $result->default->first()->value);
-        $this->assertSame('dist', $result->default->last()->value);
+        $this->assertSame('/var/www', $result->requireds->first()->value);
+        $this->assertSame('/backup', $result->requireds->last()->value);
+        $this->assertSame('tar.gz', $result->defaults->first()->value);
+        $this->assertSame('dist', $result->defaults->last()->value);
 
-        $excludes = $result->variadic->first();
+        $excludes = $result->variadics->first();
         $this->assertSame('excludes', $excludes->name);
         $this->assertSame(['cache', 'logs', 'tmp'], $excludes->values->toArray());
 
-        $purpose = $result->variadic->last();
+        $purpose = $result->variadics->last();
         $this->assertSame('purpose', $purpose->name);
         $this->assertSame(['home', 'data', 'models'], $purpose->values->toArray());
 

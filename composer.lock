@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "df7444c85d58940953af5fd989dc5b9f",
+    "content-hash": "b76353f800b3ebd30af7ca6f49a64644",
     "packages": [
         {
             "name": "andydefer/algo-kit",
@@ -309,20 +309,20 @@
         },
         {
             "name": "andydefer/php-signature-parser",
-            "version": "v0.7.1",
+            "version": "v0.9.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/php-signature-parser.git",
-                "reference": "c23355fb7d3dc14f677169ea6c98c4f0efe078f0"
+                "reference": "9319a54adb1bc3619804d0430e4a8bfceebb5e70"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/php-signature-parser/zipball/c23355fb7d3dc14f677169ea6c98c4f0efe078f0",
-                "reference": "c23355fb7d3dc14f677169ea6c98c4f0efe078f0",
+                "url": "https://api.github.com/repos/andydefer/php-signature-parser/zipball/9319a54adb1bc3619804d0430e4a8bfceebb5e70",
+                "reference": "9319a54adb1bc3619804d0430e4a8bfceebb5e70",
                 "shasum": ""
             },
             "require": {
-                "andydefer/domain-structures": "^1.21.1",
+                "andydefer/domain-structures": "^1.21.2",
                 "php": "^8.1"
             },
             "require-dev": {
@@ -350,9 +350,9 @@
             "description": "A flexible signature parser for CLI commands",
             "support": {
                 "issues": "https://github.com/andydefer/php-signature-parser/issues",
-                "source": "https://github.com/andydefer/php-signature-parser/tree/v0.7.1"
+                "source": "https://github.com/andydefer/php-signature-parser/tree/v0.9.0"
             },
-            "time": "2026-07-10T09:21:35+00:00"
+            "time": "2026-07-12T12:03:59+00:00"
         },
         {
             "name": "andydefer/php-vo",

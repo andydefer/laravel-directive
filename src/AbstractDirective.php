@@ -116,7 +116,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     final public function argument(string $key): mixed
     {
-        return $this->parsed->required->get($key) ?? $this->parsed->default->get($key);
+        return $this->parsed->requireds->get($key) ?? $this->parsed->defaults->get($key);
     }
 
     /**
@@ -124,7 +124,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     final public function hasArgument(string $key): bool
     {
-        return $this->parsed->required->has($key) || $this->parsed->default->has($key);
+        return $this->parsed->requireds->has($key) || $this->parsed->defaults->has($key);
     }
 
     /**
@@ -158,7 +158,7 @@ abstract class AbstractDirective implements DirectiveInterface
     {
         $values = new StringTypedCollection;
 
-        foreach ($this->parsed->variadic->getAllValues() as $value) {
+        foreach ($this->parsed->variadics->getAllValues() as $value) {
             $values->add($value);
         }
 
@@ -170,7 +170,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     final public function hasVariadicArguments(): bool
     {
-        return $this->parsed->variadic->countAllValues() > 0;
+        return $this->parsed->variadics->countAllValues() > 0;
     }
 
     /**
@@ -178,7 +178,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     final public function getRequiredArguments(): array
     {
-        return $this->parsed->required->toAssociativeArray();
+        return $this->parsed->requireds->toAssociativeArray();
     }
 
     /**
@@ -186,7 +186,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     final public function getDefaultArguments(): array
     {
-        return $this->parsed->default->toAssociativeArray();
+        return $this->parsed->defaults->toAssociativeArray();
     }
 
     /**
@@ -210,7 +210,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     final public function hasRequireds(): bool
     {
-        return $this->parsed->required->isNotEmpty();
+        return $this->parsed->requireds->isNotEmpty();
     }
 
     /**
@@ -218,7 +218,7 @@ abstract class AbstractDirective implements DirectiveInterface
      */
     final public function hasDefaults(): bool
     {
-        return $this->parsed->default->isNotEmpty();
+        return $this->parsed->defaults->isNotEmpty();
     }
 
     /**
