@@ -48,7 +48,7 @@ class GreetCommand extends Command
     
     public function handle()
     {
-        $name = $this->argument('name');
+        $name = $this->getArgument('name');
         $formal = $this->option('formal');
         $this->info(($formal ? "Good day, $name" : "Hello, $name"));
     }
@@ -254,7 +254,7 @@ class DeployDirective extends AbstractDirective
     
     protected function beforeExecute(): void
     {
-        $this->contextSet('environment', $this->argument('environment'));
+        $this->contextSet('environment', $this->getArgument('environment'));
         $this->contextSet('start_time', microtime(true));
     }
     
@@ -265,13 +265,13 @@ class DeployDirective extends AbstractDirective
         $this->call("deploy:validate $env");
         $this->call("deploy:backup $env");
         
-        if (!$this->flag('skip-tests')) {
+        if (!$this->getFlag('skip-tests')) {
             $this->call('deploy:build --with-tests');
         } else {
             $this->call('deploy:build');
         }
         
-        $this->call("deploy:migrate $env --force=" . ($this->flag('force') ? 'true' : 'false'));
+        $this->call("deploy:migrate $env --force=" . ($this->getFlag('force') ? 'true' : 'false'));
         $this->call("deploy:activate $env");
         $this->call('deploy:post --notify');
         
@@ -298,8 +298,8 @@ class ProcessDataDirective extends AbstractDirective
     
     protected function execute(): ExitCode
     {
-        $file = $this->argument('file');
-        $dryRun = $this->flag('dry-run');
+        $file = $this->getArgument('file');
+        $dryRun = $this->getFlag('dry-run');
         
         // Étape 1 : Chargement
         $this->call("data:load $file");
@@ -315,7 +315,7 @@ class ProcessDataDirective extends AbstractDirective
         
         // Étape 5 : Export
         if (!$dryRun) {
-            $format = $this->argument('format');
+            $format = $this->getArgument('format');
             $this->call("data:export --format=$format");
         }
         
@@ -341,13 +341,13 @@ class AppDirective extends AbstractDirective
     
     protected function execute(): ExitCode
     {
-        $action = $this->argument('action');
+        $action = $this->getArgument('action');
         
         match ($action) {
             'deploy' => $this->call('deploy'),
-            'reports' => $this->call('reports --format=' . $this->argument('format')),
+            'reports' => $this->call('reports --format=' . $this->getArgument('format')),
             'monitor' => $this->call('monitor'),
-            'status' => $this->call('status --id=' . $this->argument('id')),
+            'status' => $this->call('status --id=' . $this->getArgument('id')),
             default => $this->error("Unknown action: $action"),
         };
         
@@ -368,11 +368,11 @@ class PipelineDirective extends AbstractDirective
     
     protected function execute(): ExitCode
     {
-        $branch = $this->argument('branch');
+        $branch = $this->getArgument('branch');
         
         $this->call('ci:lint');
         
-        if ($this->flag('parallel')) {
+        if ($this->getFlag('parallel')) {
             $this->call('ci:test --parallel');
         } else {
             $this->call('ci:test');
@@ -401,8 +401,8 @@ class PipelineDirective extends AbstractDirective
 
 ```php
 // Accès aux arguments et flags
-$name = $this->argument('name');
-$verbose = $this->flag('verbose');
+$name = $this->getArgument('name');
+$verbose = $this->getFlag('verbose');
 
 // Gestion du contexte
 $this->contextSet('user_id', 42);
