@@ -27,6 +27,7 @@ Homestead.json
 /storage/pail
 .env.backup
 .env.production
+/.directive/
 .phpactor.json
 auth.json
 docs/diffs/

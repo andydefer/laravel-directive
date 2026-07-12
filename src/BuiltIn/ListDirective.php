@@ -172,7 +172,7 @@ final class ListDirective extends AbstractDirective
 
         $documentation = SignatureDocumentor::generate($directive->signature, 'array');
 
-        // Nettoyer la signature (enlever les commentaires)
+        // Nettoyer la signature (enlever les commentaires, retours à la ligne)
         $cleanSignature = $this->cleanSignature($directive->signature);
 
         $payload = [
@@ -193,13 +193,21 @@ final class ListDirective extends AbstractDirective
     }
 
     /**
-     * Clean signature by removing comments.
+     * Clean signature by removing comments, newlines and extra spaces.
+     *
+     * @param  string  $signature  The raw signature
+     * @return string The cleaned signature
      */
     private function cleanSignature(string $signature): string
     {
+        // 1. Extraire les commentaires avec CommentManager
         $commentManager = new CommentManager;
+        $cleaned = $commentManager->extractComments($signature);
 
-        return $commentManager->extractComments($signature);
+        // 2. Nettoyer les retours à la ligne et les espaces multiples
+        $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));
+
+        return $cleaned;
     }
 
     /**
@@ -211,7 +219,7 @@ final class ListDirective extends AbstractDirective
 
         $documentation = SignatureDocumentor::generate($directive->signature, 'array');
 
-        // Nettoyer la signature (enlever les commentaires)
+        // Nettoyer la signature (enlever les commentaires, retours à la ligne)
         $cleanSignature = $this->cleanSignature($directive->signature);
 
         $console->title(sprintf('📋 Details for: %s', $documentation['source']));

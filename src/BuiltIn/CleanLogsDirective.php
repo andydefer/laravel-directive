@@ -26,12 +26,16 @@ final class CleanLogsDirective extends AbstractDirective
 
     public function getSignature(): string
     {
-        return 'clean:directive-logs {days=30} {--dry-run} {--verbose}';
+        return 'clean:directive-logs 
+                {days=?}#"Number of days to retain (NULL = delete all with confirmation)" 
+                {--dry-run}#"Preview deletions without actually deleting" 
+                {--verbose}#"Show detailed information about each file" 
+                {--force}#"Skip confirmation when deleting all files"';
     }
 
     public function getDescription(): string
     {
-        return 'Remove old execution log files that exceed the retention period ';
+        return 'Remove old execution log files that exceed the retention period';
     }
 
     public function getAliases(): StringTypedCollection
@@ -46,31 +50,48 @@ final class CleanLogsDirective extends AbstractDirective
         $fileSystem = $container->make(FileSystemInterface::class);
 
         $daysRaw = $this->getArgument('days');
+        $dryRun = $this->getFlag('dry-run');
+        $verbose = $this->getFlag('verbose');
+        $force = $this->getFlag('force');
 
-        if ($daysRaw !== null && ! is_numeric($daysRaw)) {
+        // Si days est null, on supprime TOUT
+        $deleteAll = $daysRaw === null || $daysRaw === '';
+
+        // Si days est fourni mais non numérique
+        if ($daysRaw !== null && $daysRaw !== '' && ! is_numeric($daysRaw)) {
             $this->error('Days must be a valid number');
 
             return ExitCode::INVALID_ARGUMENT;
         }
 
-        $days = (int) ($daysRaw ?? 30);
-        $dryRun = $this->getFlag('dry-run');
-        $verbose = $this->getFlag('verbose');
+        $days = $deleteAll ? 0 : (int) $daysRaw;
 
-        if ($days < 1) {
-            $this->error('Days must be at least 1');
+        if ($days < 0) {
+            $this->error('Days cannot be negative');
 
             return ExitCode::INVALID_ARGUMENT;
         }
 
         $basePath = $logger->getBasePath();
-        $cutoffDateTime = Carbon::now()->subDays($days)->format('Y-m-d');
+
+        // Vérifier si le dossier existe avant d'afficher les stats
+        if (! $fileSystem->isDirectory($basePath)) {
+            $this->info('No log files to delete.');
+
+            return ExitCode::SUCCESS;
+        }
+
+        // ✅ Si days = 0, on supprime TOUT en utilisant une date future
+        $cutoffDateTime = $days === 0
+            ? Carbon::now()->addDay()->format('Y-m-d') // Supprime tout (date future)
+            : Carbon::now()->subDays($days)->format('Y-m-d');
 
         $filesToDelete = $this->getFilesToDelete($fileSystem, $basePath, $cutoffDateTime);
 
         $count = count($filesToDelete);
 
-        if ($verbose) {
+        // Ne pas afficher les stats si aucun fichier à supprimer
+        if ($verbose && $count > 0) {
             $this->displayStatistics($filesToDelete, $count, $days);
         }
 
@@ -78,6 +99,23 @@ final class CleanLogsDirective extends AbstractDirective
             $this->info('No log files to delete.');
 
             return ExitCode::SUCCESS;
+        }
+
+        // Si days = 0 (delete all) et pas force, demander confirmation
+        if ($days === 0 && ! $force && ! $dryRun) {
+            $this->newLine();
+            $this->error('⚠️  WARNING: You are about to delete ALL log files!');
+            $this->newLine();
+
+            $confirmed = $this->confirm('Are you sure you want to delete all log files?');
+
+            if (! $confirmed) {
+                $this->info('Operation cancelled.');
+
+                return ExitCode::SUCCESS;
+            }
+
+            $this->newLine();
         }
 
         if ($dryRun) {
@@ -144,7 +182,7 @@ final class CleanLogsDirective extends AbstractDirective
         $newestDate = ! empty($dates) ? max($dates) : 'N/A';
 
         $data = MapCollection::from([
-            'Retention' => $days.' days',
+            'Retention' => $days === 0 ? 'ALL (delete everything)' : $days.' days',
             'Files to delete' => $count,
             'Total size' => $totalSizeMb.' MB',
             'Date range' => $oldestDate.' to '.$newestDate,

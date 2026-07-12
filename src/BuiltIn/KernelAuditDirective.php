@@ -214,7 +214,6 @@ final class KernelAuditDirective extends AbstractDirective
             'Version' => $container->version() ?? 'N/A',
             'Max depth' => $kernel->getMaxDepth(),
             'Auto-discovery' => $kernel->isAutoDiscoveryEnabled() ? 'Enabled' : 'Disabled',
-            'Silent mode' => $kernel->isVerbose() ? 'Enabled' : 'Disabled',
         ]);
 
         echo KeyValue::renderWithValueColor($data, 'yellow');
