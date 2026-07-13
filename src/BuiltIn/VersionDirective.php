@@ -60,6 +60,16 @@ final class VersionDirective extends AbstractDirective
     private const CACHE_TTL = 3600;
 
     /**
+     * Default fallback data when no cache and no internet.
+     */
+    private const FALLBACK_DATA = [
+        'latest_version' => '3.6.3',
+        'release_date' => '2026-06-03',
+        'downloads' => 'N/A',
+        'description' => 'A flexible CLI command system for Laravel that breaks free from Artisan\'s constraints. Directives introduces a clean separation between what your command does (business logic) and how it\'s presented (output/UI).',
+    ];
+
+    /**
      * The signature used to invoke this directive.
      */
     public function getSignature(): string
@@ -157,29 +167,85 @@ final class VersionDirective extends AbstractDirective
         if (file_exists($cacheFile)) {
             $cached = json_decode(file_get_contents($cacheFile), true);
             if (is_array($cached) && ! empty($cached)) {
-                // ✅ Vérifier si le cache est encore valide
                 $cacheTime = $cached['cached_at'] ?? 0;
                 $cacheAge = time() - $cacheTime;
 
                 if ($cacheAge < self::CACHE_TTL) {
-                    return $cached['data'] ?? [];
+                    return $cached['data'] ?? self::FALLBACK_DATA;
                 }
             }
         }
 
-        // ✅ Appel API si cache invalide ou inexistant
+        // ✅ Vérifier la connectivité internet
+        if (! $this->hasInternetConnection()) {
+            // ✅ Si cache existe mais expiré, on l'utilise quand même
+            if (file_exists($cacheFile)) {
+                $cached = json_decode(file_get_contents($cacheFile), true);
+                if (is_array($cached) && ! empty($cached)) {
+                    return $cached['data'] ?? self::FALLBACK_DATA;
+                }
+            }
+
+            // ✅ Pas de cache et pas d'internet → données par défaut
+            return self::FALLBACK_DATA;
+        }
+
+        // ✅ Appel API si internet est disponible
         $data = $this->fetchFromPackagist();
 
-        // ✅ Stocker en cache avec timestamp
+        // ✅ Stocker en cache si on a des données
         if (! empty($data)) {
             $cacheData = [
                 'cached_at' => time(),
                 'data' => $data,
             ];
             file_put_contents($cacheFile, json_encode($cacheData, JSON_PRETTY_PRINT));
+
+            return $data;
         }
 
-        return $data;
+        // ✅ Si l'API échoue, utiliser le cache existant ou les données par défaut
+        if (file_exists($cacheFile)) {
+            $cached = json_decode(file_get_contents($cacheFile), true);
+            if (is_array($cached) && ! empty($cached)) {
+                return $cached['data'] ?? self::FALLBACK_DATA;
+            }
+        }
+
+        return self::FALLBACK_DATA;
+    }
+
+    /**
+     * Check if the server has internet connectivity.
+     *
+     * Uses DNS resolution as the primary method since it's fast and reliable.
+     * Falls back to a socket connection if DNS fails.
+     *
+     * @return bool True if internet is reachable
+     */
+    private function hasInternetConnection(): bool
+    {
+        // ✅ Try DNS resolution first (fastest)
+        $hosts = ['google.com', 'cloudflare.com', '1.1.1.1'];
+
+        foreach ($hosts as $host) {
+            $ip = gethostbynamel($host);
+            if ($ip !== false && ! empty($ip)) {
+                return true;
+            }
+        }
+
+        // ✅ Fallback to socket connection
+        foreach ($hosts as $host) {
+            $fp = @fsockopen($host, 80, $errno, $errstr, 3);
+            if ($fp) {
+                fclose($fp);
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
