@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Contracts;
 
 use AndyDefer\ConsoleWriter\Console\Console;
-use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveCallRecord;

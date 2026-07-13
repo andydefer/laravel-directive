@@ -5,43 +5,47 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Bootstrap;
 
 use AndyDefer\Directive\Enums\ApplicationType;
+use AndyDefer\Directive\Helpers\Paths;
 
+/**
+ * Detects the execution environment and application type.
+ *
+ * This utility determines whether the code is running inside a Laravel web
+ * application, a standalone package/library, or an unknown context. It uses
+ * multiple detection strategies including file system checks, Composer
+ * configuration analysis, and environment variables.
+ *
+ * The detection results are used by the bootstrap process to select the
+ * appropriate application factory and configuration strategy.
+ */
 final class EnvironmentDetector
 {
     /**
-     * Detect if the current execution is inside a package/library.
+     * Detects if the current execution is inside a package/library context.
+     *
+     * Uses multiple detection strategies:
+     * - Presence of vendor directory at project root
+     * - Composer package type (library or package)
+     * - Composer package name containing a slash
+     * - Current directory being inside vendor
+     *
+     * @return bool True if running in a package/library context
      */
     public static function isPackage(): bool
     {
-        // 1. Vérifier la présence du dossier vendor à la racine
-        $vendorPath = Paths::projectRoot().'/vendor';
-        if (! is_dir($vendorPath)) {
+        $rootPath = Paths::projectRoot();
+
+        // Check for vendor directory at project root
+        if (! is_dir($rootPath.'/vendor')) {
             return false;
         }
 
-        // 2. Vérifier si le fichier composer.json contient "type": "library" ou "project"
-        $composerPath = Paths::projectRoot().'/composer.json';
-        if (file_exists($composerPath)) {
-            $composer = json_decode(file_get_contents($composerPath), true);
-            $type = $composer['type'] ?? null;
-
-            // ✅ Si c'est une library ou un package
-            if ($type === 'library' || $type === 'package') {
-                return true;
-            }
-
-            // ✅ Si le nom correspond à un package (contient /)
-            if (isset($composer['name']) && str_contains($composer['name'], '/')) {
-                return true;
-            }
+        // Check Composer configuration for package indicators
+        if (self::isComposerPackage($rootPath)) {
+            return true;
         }
 
-        // 3. Vérifier la présence d'un fichier de configuration Laravel
-        if (file_exists(Paths::projectRoot().'/config/app.php')) {
-            return false; // C'est une application Laravel complète
-        }
-
-        // 4. Vérifier si on est dans le dossier vendor
+        // Check if we are inside the vendor directory
         if (str_contains(__DIR__, '/vendor/')) {
             return true;
         }
@@ -50,43 +54,32 @@ final class EnvironmentDetector
     }
 
     /**
-     * Detect if the current execution is inside a Laravel web application.
+     * Detects if the current execution is inside a Laravel web application.
+     *
+     * Uses multiple detection strategies:
+     * - Presence of Laravel-specific files (config/app.php, bootstrap/app.php, public/)
+     * - Composer project type
+     * - Laravel framework dependency in Composer
+     * - Presence of .env file
+     *
+     * @return bool True if running in a Laravel web application
      */
     public static function isWebApplication(): bool
     {
-        // 1. Présence des fichiers d'application Laravel
-        $hasConfig = file_exists(Paths::projectRoot().'/config/app.php');
-        $hasBootstrap = file_exists(Paths::projectRoot().'/bootstrap/app.php');
-        $hasPublic = is_dir(Paths::projectRoot().'/public');
+        $rootPath = Paths::projectRoot();
 
-        if ($hasConfig && $hasBootstrap && $hasPublic) {
+        // Check for Laravel application structure
+        if (self::hasLaravelStructure($rootPath)) {
             return true;
         }
 
-        // 2. Vérifier le composer.json
-        $composerPath = Paths::projectRoot().'/composer.json';
-        if (file_exists($composerPath)) {
-            $composer = json_decode(file_get_contents($composerPath), true);
-            $type = $composer['type'] ?? null;
-
-            // ✅ Type "project" = application
-            if ($type === 'project') {
-                return true;
-            }
-
-            // ✅ Présence des dépendances Laravel
-            $requires = array_merge(
-                $composer['require'] ?? [],
-                $composer['require-dev'] ?? []
-            );
-
-            if (isset($requires['laravel/framework'])) {
-                return true;
-            }
+        // Check Composer configuration
+        if (self::isLaravelComposerProject($rootPath)) {
+            return true;
         }
 
-        // 3. Présence du fichier .env
-        if (file_exists(Paths::projectRoot().'/.env')) {
+        // Check for .env file (common in Laravel applications)
+        if (file_exists($rootPath.'/.env')) {
             return true;
         }
 
@@ -94,8 +87,9 @@ final class EnvironmentDetector
     }
 
     /**
-     * Detect if the current execution is inside a package/library.
      * Alias for isPackage().
+     *
+     * @return bool True if running in a library context
      */
     public static function isLibrary(): bool
     {
@@ -103,7 +97,9 @@ final class EnvironmentDetector
     }
 
     /**
-     * Get the application type as a string.
+     * Returns the application type as a string.
+     *
+     * @return string One of: 'web_application', 'package', 'unknown'
      */
     public static function getApplicationType(): string
     {
@@ -119,7 +115,9 @@ final class EnvironmentDetector
     }
 
     /**
-     * Get the application type as an enum.
+     * Returns the application type as an enum.
+     *
+     * @return ApplicationType The detected application type
      */
     public static function getApplicationTypeEnum(): ApplicationType
     {
@@ -135,7 +133,14 @@ final class EnvironmentDetector
     }
 
     /**
-     * Check if we are in a test environment.
+     * Checks if the current execution is in a test environment.
+     *
+     * Detects test environment by:
+     * - PHPUnit being installed
+     * - PHPUNIT_RUNNING environment variable
+     * - APP_ENV environment variable set to 'testing'
+     *
+     * @return bool True if running in a test environment
      */
     public static function isTestEnvironment(): bool
     {
@@ -145,12 +150,103 @@ final class EnvironmentDetector
     }
 
     /**
-     * Check if we are in a development environment.
+     * Checks if the current execution is in a development environment.
+     *
+     * Detects development environment by:
+     * - APP_ENV set to 'local' or 'development'
+     * - APP_DEBUG set to 'true'
+     *
+     * @return bool True if running in a development environment
      */
     public static function isDevelopmentEnvironment(): bool
     {
-        return getenv('APP_ENV') === 'local'
-            || getenv('APP_ENV') === 'development'
+        $env = getenv('APP_ENV');
+
+        return $env === 'local'
+            || $env === 'development'
             || getenv('APP_DEBUG') === 'true';
+    }
+
+    /**
+     * Checks if the Composer configuration indicates a package.
+     *
+     * @param  string  $rootPath  The project root path
+     * @return bool True if Composer indicates a package
+     */
+    private static function isComposerPackage(string $rootPath): bool
+    {
+        $composerPath = $rootPath.'/composer.json';
+
+        if (! file_exists($composerPath)) {
+            return false;
+        }
+
+        $composer = json_decode(file_get_contents($composerPath), true);
+
+        if (! is_array($composer)) {
+            return false;
+        }
+
+        // Check if type is library or package
+        $type = $composer['type'] ?? null;
+        if ($type === 'library' || $type === 'package') {
+            return true;
+        }
+
+        // Check if package name contains a slash (indicates a package)
+        if (isset($composer['name']) && str_contains($composer['name'], '/')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if the directory has Laravel application structure.
+     *
+     * @param  string  $rootPath  The project root path
+     * @return bool True if Laravel structure is present
+     */
+    private static function hasLaravelStructure(string $rootPath): bool
+    {
+        $hasConfig = file_exists($rootPath.'/config/app.php');
+        $hasBootstrap = file_exists($rootPath.'/bootstrap/app.php');
+        $hasPublic = is_dir($rootPath.'/public');
+
+        return $hasConfig && $hasBootstrap && $hasPublic;
+    }
+
+    /**
+     * Checks if the Composer configuration indicates a Laravel project.
+     *
+     * @param  string  $rootPath  The project root path
+     * @return bool True if Composer indicates a Laravel project
+     */
+    private static function isLaravelComposerProject(string $rootPath): bool
+    {
+        $composerPath = $rootPath.'/composer.json';
+
+        if (! file_exists($composerPath)) {
+            return false;
+        }
+
+        $composer = json_decode(file_get_contents($composerPath), true);
+
+        if (! is_array($composer)) {
+            return false;
+        }
+
+        // Check if type is project
+        if (($composer['type'] ?? null) === 'project') {
+            return true;
+        }
+
+        // Check for Laravel framework dependency
+        $requires = array_merge(
+            $composer['require'] ?? [],
+            $composer['require-dev'] ?? []
+        );
+
+        return isset($requires['laravel/framework']);
     }
 }

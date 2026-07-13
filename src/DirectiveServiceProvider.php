@@ -7,9 +7,7 @@ namespace AndyDefer\Directive;
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\ConsoleWriter\Console\Contracts\ConsoleInterface;
 use AndyDefer\Directive\Configs\DirectiveConfig;
-use AndyDefer\Directive\Container\LaravelContainerAdapter;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
-use AndyDefer\Directive\Contracts\ContainerInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\ComposerReaderInterface;
 use AndyDefer\Directive\Contracts\Services\DependencyResolverInterface;
@@ -29,7 +27,6 @@ use AndyDefer\SignatureParser\Contracts\ParserRegistryInterface;
 use AndyDefer\SignatureParser\Contracts\SignatureParserInterface;
 use AndyDefer\SignatureParser\SignatureParser;
 use Illuminate\Config\Repository as ConfigRepository;
-use Illuminate\Contracts\Foundation\Application as LaravelApplication;
 use Illuminate\Support\ServiceProvider;
 use PhpParser\Parser;
 use PhpParser\ParserFactory;
@@ -38,8 +35,6 @@ final class DirectiveServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // ✅ Enregistrer l'adaptateur Laravel
-        $this->registerContainerAdapter();
 
         // ✅ Enregistrer tous les services
         $this->registerConfigs();
@@ -53,25 +48,8 @@ final class DirectiveServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/config/directive.php' => config_path('directive.php'),
+            __DIR__.'/../config/directive.php' => config_path('directive.php'),
         ], 'directive-config');
-    }
-
-    /**
-     * Register the Laravel container adapter.
-     */
-    private function registerContainerAdapter(): void
-    {
-        $this->app->singleton(ContainerInterface::class, function ($app) {
-            /** @var LaravelApplication $laravel */
-            $laravel = $app;
-
-            return new LaravelContainerAdapter($laravel);
-        });
-
-        $this->app->singleton(ConsoleInterface::class, function () {
-            return new Console;
-        });
     }
 
     /**
@@ -122,9 +100,13 @@ final class DirectiveServiceProvider extends ServiceProvider
             return new FileSystemService;
         });
 
+        // Console service with both concrete and interface bindings
         $this->app->singleton(Console::class, function () {
             return new Console;
         });
+
+        // Alias the interface to the concrete implementation
+        $this->app->alias(Console::class, ConsoleInterface::class);
 
         $this->app->singleton(Parser::class, function () {
             return (new ParserFactory)->createForNewestSupportedVersion();

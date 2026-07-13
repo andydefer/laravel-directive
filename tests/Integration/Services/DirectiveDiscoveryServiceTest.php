@@ -6,11 +6,7 @@ namespace AndyDefer\Directive\Tests\Integration\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
-use AndyDefer\Directive\Container\Container;
-use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
-use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
-use AndyDefer\Directive\Contracts\Services\DirectiveParserInterface;
 use AndyDefer\Directive\Enums\DiscoverySource;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
@@ -20,7 +16,6 @@ use AndyDefer\Directive\Tests\IntegrationTestCase;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\DomainStructures\Utils\StrictAssociative;
-use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -63,29 +58,6 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
                 "php": "^8.1"
             }
         }');
-
-        $appMock = $this->createMock(Container::class);
-
-        $parserMock = $this->createMock(DirectiveParserInterface::class);
-        $scannerMock = $this->createMock(DirectiveScannerInterface::class);
-        $fileSystemMock = $this->createMock(FileSystemInterface::class);
-
-        $configMock = $this->createMock(DirectiveConfigInterface::class);
-        $configMock->method('getCustomSources')->willReturn([]);
-        $configMock->method('getReservedSignatures')->willReturn([]);
-        $configMock->method('getVendorDir')->willReturn($tempDir.'/vendor');
-        $configMock->method('getComposerPath')->willReturn($tempDir.'/composer.json');
-        $configMock->method('basePath')->willReturn($tempDir);
-
-        $appMock->method('make')->willReturnCallback(function ($class) use ($parserMock, $scannerMock, $fileSystemMock, $configMock) {
-            return match ($class) {
-                DirectiveParserInterface::class => $parserMock,
-                DirectiveScannerInterface::class => $scannerMock,
-                FileSystemInterface::class => $fileSystemMock,
-                DirectiveConfigInterface::class => $configMock,
-                default => throw new \RuntimeException("Unexpected make call: {$class}"),
-            };
-        });
 
         return DirectiveDiscoveryService::init($this->app);
     }

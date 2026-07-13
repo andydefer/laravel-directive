@@ -1,8 +1,9 @@
 <?php
 
-namespace AndyDefer\Directive\Bootstrap;
+namespace AndyDefer\Directive\Factories;
 
 use AndyDefer\Directive\DirectiveServiceProvider;
+use AndyDefer\Directive\Helpers\Paths;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Support\Facades\Facade;

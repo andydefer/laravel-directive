@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Configs;
 
-use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
+use AndyDefer\Directive\Helpers\Paths as HelpersPaths;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 
 /**
@@ -70,7 +70,7 @@ final class DirectiveConfig implements DirectiveConfigInterface
             return $path;
         }
 
-        $cwd = Paths::projectRoot();
+        $cwd = HelpersPaths::projectRoot();
 
         if ($cwd === false) {
             throw new \RuntimeException('Unable to determine current working directory');

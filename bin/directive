@@ -6,17 +6,18 @@ declare(strict_types=1);
 require './vendor/autoload.php';
 
 use AndyDefer\ConsoleWriter\Console\Contracts\ConsoleInterface;
-use AndyDefer\Directive\Bootstrap\ApplicationFactory;
+use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
 use AndyDefer\Directive\DirectiveKernel;
+use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Exceptions\BootstrapException;
 
-$bootstrap = ApplicationFactory::create();
+$bootstrap = ApplicationBuilder::init()->withProvider(DirectiveServiceProvider::class)->build();
 $console =$bootstrap->make(ConsoleInterface::class);
 
 try {
     $kernel = $bootstrap->make(DirectiveKernel::class);
     $exitCode = $kernel->run($argv);
-    
+
     exit($exitCode->value);
 } catch (BootstrapException $e) {
     $console->error('Bootstrap Error: ' . $e->getMessage());

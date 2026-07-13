@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Integration;
 
 use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Helpers\Paths;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestEchoDirective;
 use AndyDefer\Directive\Tests\IntegrationTestCase;

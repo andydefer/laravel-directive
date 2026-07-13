@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Bootstrap;
+namespace AndyDefer\Directive\Factories;
 
 use AndyDefer\Directive\Exceptions\BootstrapException;
+use AndyDefer\Directive\Helpers\Paths;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Foundation\Application;
 

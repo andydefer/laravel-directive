@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Discovers;
 
-use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
+use AndyDefer\Directive\Helpers\Paths;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use Throwable;
 

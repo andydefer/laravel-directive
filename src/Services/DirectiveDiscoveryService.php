@@ -6,7 +6,6 @@ namespace AndyDefer\Directive\Services;
 
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
-use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Contracts\Configs\DirectiveConfigInterface;
 use AndyDefer\Directive\Contracts\Scanners\DirectiveScannerInterface;
 use AndyDefer\Directive\Contracts\Services\DirectiveDiscoveryInterface;

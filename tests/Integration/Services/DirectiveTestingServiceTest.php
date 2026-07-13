@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests\Integration\Services;
 
-use AndyDefer\Directive\Bootstrap\Paths;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Helpers\Paths;
 use AndyDefer\Directive\Services\DirectiveTestingService;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestCalculatorDirective;
 use AndyDefer\Directive\Tests\Fixtures\Directives\TestConcreteDirective;

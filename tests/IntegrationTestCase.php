@@ -4,22 +4,17 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Tests;
 
-use AndyDefer\Directive\Container\LaravelContainerAdapter;
 use AndyDefer\Directive\DirectiveServiceProvider;
 use Carbon\Carbon;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class IntegrationTestCase extends Orchestra
 {
-    protected LaravelContainerAdapter $laravelContainer;
-
     protected function setUp(): void
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::create(2024, 1, 1, 12, 0, 0));
 
-        $this->laravelContainer = new LaravelContainerAdapter($this->app);
-        $this->laravelContainer->version();
         $this->runDatabaseMigrations();
 
     }
