@@ -2,7 +2,15 @@
 
 ## Description
 
-`ApplicationBuilder` est un builder fluent pour créer et configurer des applications Laravel dans le contexte du package Directive. Il offre une interface fluide pour enregistrer des providers, définir des configurations et forcer le type d'application à utiliser.
+`ApplicationBuilder` est un builder fluent pour créer et configurer des applications Laravel dans le contexte du package Directive. Il offre une interface fluide pour enregistrer des providers, définir des configurations, forcer le type d'application et configurer la base de données.
+
+## Hiérarchie / Implémentations
+
+```
+ApplicationBuilder
+```
+
+**Aucune interface implémentée** - Classe finale autonome.
 
 ## Rôle principal
 
@@ -10,7 +18,24 @@
 - Enregistrer des **Service Providers** de manière fluide
 - Charger des **fichiers de configuration** personnalisés
 - Forcer le **type d'application** indépendamment de la détection automatique
+- Configurer la **base de données** (SQLite, MySQL, PostgreSQL)
 - Fournir des **méthodes statiques** pour les cas d'usage courants
+
+---
+
+## Installation
+
+```bash
+composer require andydefer/laravel-directive
+```
+
+### Dépendances
+
+- PHP 8.1+
+- `Illuminate\Contracts\Foundation\Application` - Conteneur Laravel
+- `Illuminate\Support\ServiceProvider` - Providers
+- `Illuminate\Database\DatabaseServiceProvider` - Base de données
+- `Illuminate\Events\EventServiceProvider` - Événements
 
 ---
 
@@ -261,6 +286,8 @@ Ajoute un fichier de configuration.
 
 **Retourne :** `self` - Instance du builder (fluent)
 
+**Exceptions :** `InvalidArgumentException` - Si le fichier n'existe pas ou ne retourne pas un tableau
+
 **Exemple :**
 ```php
 $builder->withConfigPath('/config/directive.php');
@@ -289,13 +316,84 @@ $builder->withConfigPaths([
 
 ---
 
+### `withDatabase(array $config, string $connection = 'sqlite'): self`
+
+Configure la base de données.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$config` | `array<string, mixed>` | Configuration de la base de données |
+| `$connection` | `string` | Nom de la connexion (par défaut: 'sqlite') |
+
+**Retourne :** `self` - Instance du builder (fluent)
+
+**Effets secondaires :** Ajoute automatiquement `EventServiceProvider` et `DatabaseServiceProvider`
+
+**Exemple :**
+```php
+$builder->withDatabase([
+    'default' => 'sqlite',
+    'connections' => [
+        'sqlite' => [
+            'driver' => 'sqlite',
+            'database' => '/path/to/database.sqlite',
+        ],
+    ],
+]);
+```
+
+---
+
+### `withSqlite(string $databaseFile, bool $foreignKeyConstraints = true): self`
+
+Configure SQLite avec création automatique du dossier et du fichier.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$databaseFile` | `string` | Chemin du fichier SQLite |
+| `$foreignKeyConstraints` | `bool` | Activer les contraintes de clé étrangère |
+
+**Retourne :** `self` - Instance du builder (fluent)
+
+**Effets secondaires :** Crée le dossier et le fichier s'ils n'existent pas
+
+**Exemple :**
+```php
+$builder->withSqlite('/path/to/database.sqlite');
+```
+
+---
+
+### `withMySql(string $host, string $database, string $username, string $password, int $port = 3306): self`
+
+Configure MySQL.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$host` | `string` | Hôte de la base de données |
+| `$database` | `string` | Nom de la base de données |
+| `$username` | `string` | Nom d'utilisateur |
+| `$password` | `string` | Mot de passe |
+| `$port` | `int` | Port (par défaut: 3306) |
+
+**Retourne :** `self` - Instance du builder (fluent)
+
+**Exemple :**
+```php
+$builder->withMySql('localhost', 'my_database', 'root', 'secret');
+```
+
+---
+
 ### `build(): Application`
 
 Construit et retourne l'application configurée.
 
 **Retourne :** `Application` - Instance de l'application
 
-**Exceptions :** `InvalidArgumentException` - Si un fichier de config est introuvable ou invalide
+**Exceptions :** 
+- `InvalidArgumentException` - Si un fichier de config est introuvable ou invalide
+- `InvalidArgumentException` - Si un provider n'étend pas `ServiceProvider`
 
 **Exemple :**
 ```php
@@ -316,6 +414,7 @@ $app = ApplicationBuilder::internal()
 
 use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
 use AndyDefer\Directive\DirectiveServiceProvider;
+use AndyDefer\Nemesis\NemesisServiceProvider;
 
 $app = ApplicationBuilder::internal([
     DirectiveServiceProvider::class,
@@ -343,7 +442,43 @@ $app = ApplicationBuilder::external([
 
 ---
 
-### Cas 3 : Chargement de fichiers de configuration
+### Cas 3 : Application avec base de données SQLite
+
+```php
+<?php
+
+use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
+use AndyDefer\Directive\DirectiveServiceProvider;
+use AndyDefer\Nemesis\NemesisServiceProvider;
+
+$app = ApplicationBuilder::internal([
+    DirectiveServiceProvider::class,
+    NemesisServiceProvider::class,
+])
+    ->withSqlite(__DIR__ . '/database/database.sqlite')
+    ->build();
+```
+
+---
+
+### Cas 4 : Application avec base de données MySQL
+
+```php
+<?php
+
+use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
+use AndyDefer\Directive\DirectiveServiceProvider;
+
+$app = ApplicationBuilder::internal([
+    DirectiveServiceProvider::class,
+])
+    ->withMySql('localhost', 'my_database', 'root', 'secret')
+    ->build();
+```
+
+---
+
+### Cas 5 : Chargement de fichiers de configuration
 
 ```php
 <?php
@@ -365,45 +500,7 @@ $app = ApplicationBuilder::internal([
 
 ---
 
-### Cas 4 : Détection automatique
-
-```php
-<?php
-
-use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
-use AndyDefer\Directive\DirectiveServiceProvider;
-
-// La détection est automatique
-$app = ApplicationBuilder::create([
-    DirectiveServiceProvider::class
-]);
-```
-
----
-
-### Cas 5 : Forcer un type spécifique
-
-```php
-<?php
-
-use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
-use AndyDefer\Directive\DirectiveServiceProvider;
-use AndyDefer\Directive\Enums\ApplicationType;
-
-// Forcer le type INTERNAL
-$app = ApplicationBuilder::init(ApplicationType::INTERNAL)
-    ->withProvider(DirectiveServiceProvider::class)
-    ->build();
-
-// Forcer le type EXTERNAL
-$app = ApplicationBuilder::init(ApplicationType::EXTERNAL)
-    ->withProvider(DirectiveServiceProvider::class)
-    ->build();
-```
-
----
-
-### Cas 6 : Dans le fichier `bin/directive`
+### Cas 6 : Point d'entrée CLI complet
 
 ```php
 #!/usr/bin/env php
@@ -411,20 +508,29 @@ $app = ApplicationBuilder::init(ApplicationType::EXTERNAL)
 
 declare(strict_types=1);
 
-require './vendor/autoload.php';
-
 use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\DirectiveServiceProvider;
+use AndyDefer\Directive\Enums\ApplicationType;
+use AndyDefer\Nemesis\NemesisServiceProvider;
 
-// Création simple avec détection automatique
-$app = ApplicationBuilder::internal([
-    DirectiveServiceProvider::class
-])->build();
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$app = ApplicationBuilder::init(ApplicationType::INTERNAL)
+    ->withProviders([
+        DirectiveServiceProvider::class,
+        NemesisServiceProvider::class,
+    ])
+    ->withConfig([
+        'app.name' => 'My CLI',
+        'app.debug' => true,
+    ])
+    ->withSqlite(__DIR__ . '/database/database.sqlite')
+    ->build();
 
 $kernel = $app->make(DirectiveKernel::class);
-$exitCode = $kernel->run($argv);
-exit($exitCode->value);
+$exitCode = $kernel->verbose(true)->run($argv)->value;
+exit($exitCode);
 ```
 
 ---
@@ -487,6 +593,7 @@ Retourne Application
 - **Création** : Minimal, dépend des factories sous-jacentes
 - **Configuration** : O(n) où n est le nombre de providers et configurations
 - **Mémoire** : Stocke les providers et configs en mémoire jusqu'au build
+- **Cache** : `ConfigServiceProvider` est chargé automatiquement par défaut
 
 ---
 
@@ -498,45 +605,6 @@ Retourne Application
 | PHP 8.3 | ✅ Complet |
 | PHP 8.2 | ✅ Complet |
 | PHP 8.1 | ✅ Complet |
-
----
-
-## Exemple complet
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
-use AndyDefer\Directive\DirectiveServiceProvider;
-use AndyDefer\Directive\Enums\ApplicationType;
-use AndyDefer\Directive\DirectiveKernel;
-
-// 1. Création avec tous les paramètres
-$app = ApplicationBuilder::init(ApplicationType::INTERNAL)
-    ->withProvider(DirectiveServiceProvider::class)
-    ->withProvider(NemesisServiceProvider::class)
-    ->withConfig([
-        'app.debug' => true,
-        'app.env' => 'development',
-        'database.default' => 'sqlite',
-    ])
-    ->withConfigValue('app.timezone', 'Europe/Paris')
-    ->withConfigPath('/project/config/custom.php')
-    ->withConfigPaths([
-        '/project/config/directive.php' => 'directive',
-        '/project/config/nemesis.php' => 'nemesis',
-    ])
-    ->build();
-
-// 2. Utilisation
-$kernel = $app->make(DirectiveKernel::class);
-$kernel->addSource('/project/directives');
-
-$exitCode = $kernel->run(['directive', 'help']);
-exit($exitCode->value);
-```
 
 ---
 
@@ -554,10 +622,49 @@ exit($exitCode->value);
 
 ---
 
+## Configuration de base de données
+
+### SQLite
+
+```php
+$builder->withSqlite('/path/to/database.sqlite');
+```
+
+Crée automatiquement :
+- Le dossier parent si inexistant
+- Le fichier SQLite s'il n'existe pas
+
+### MySQL
+
+```php
+$builder->withMySql('localhost', 'my_database', 'root', 'secret', 3306);
+```
+
+### Personnalisée
+
+```php
+$builder->withDatabase([
+    'default' => 'pgsql',
+    'connections' => [
+        'pgsql' => [
+            'driver' => 'pgsql',
+            'host' => 'localhost',
+            'database' => 'my_database',
+            'username' => 'root',
+            'password' => 'secret',
+            'port' => 5432,
+        ],
+    ],
+], 'pgsql');
+```
+
+---
+
 ## Voir aussi
 
 - `InternalApplicationFactory` - Factory pour applications internes
 - `ExternalApplicationFactory` - Factory pour applications externes
 - `ApplicationType` - Énumération des types d'application
 - `EnvironmentDetector` - Détection de l'environnement
+- `ConfigServiceProvider` - Chargement automatique des configurations
 - `DirectiveServiceProvider` - Provider principal du package

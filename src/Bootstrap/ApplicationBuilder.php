@@ -10,6 +10,8 @@ use AndyDefer\Directive\Factories\InternalApplicationFactory;
 use AndyDefer\Directive\Helpers\EnvironmentDetector;
 use AndyDefer\Directive\Providers\ConfigServiceProvider;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\DatabaseServiceProvider;
+use Illuminate\Events\EventServiceProvider;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -263,6 +265,133 @@ final class ApplicationBuilder
         }
 
         return $this;
+    }
+
+    /**
+     * Configure the database connection.
+     *
+     * @param  array<string, mixed>  $config  Database configuration
+     * @param  string  $connection  The connection name (default: 'sqlite')
+     *
+     * @example
+     * // SQLite
+     * $builder->withDatabase([
+     *     'default' => 'sqlite',
+     *     'connections' => [
+     *         'sqlite' => [
+     *             'driver' => 'sqlite',
+     *             'database' => '/path/to/database.sqlite',
+     *         ],
+     *     ],
+     * ]);
+     *
+     * // MySQL
+     * $builder->withDatabase([
+     *     'default' => 'mysql',
+     *     'connections' => [
+     *         'mysql' => [
+     *             'driver' => 'mysql',
+     *             'host' => 'localhost',
+     *             'database' => 'my_database',
+     *             'username' => 'root',
+     *             'password' => 'secret',
+     *         ],
+     *     ],
+     * ]);
+     */
+    public function withDatabase(array $config, string $connection = 'sqlite'): self
+    {
+        // ✅ Ajouter les providers de base de données
+        $this->withProviders([
+            EventServiceProvider::class,
+            DatabaseServiceProvider::class,
+        ]);
+
+        // ✅ Ajouter la configuration de la base de données
+        $this->config['database'] = array_merge(
+            [
+                'default' => $connection,
+                'connections' => [],
+                'migrations' => 'migrations',
+            ],
+            $config
+        );
+
+        return $this;
+    }
+
+    /**
+     * Configure SQLite database.
+     *
+     * @param  string  $databaseFile  Path to the SQLite database file
+     * @param  bool  $foreignKeyConstraints  Enable foreign key constraints
+     *
+     * @example
+     * $builder->withSqlite('/path/to/database.sqlite');
+     */
+    public function withSqlite(string $databaseFile, bool $foreignKeyConstraints = true): self
+    {
+        // ✅ Créer le dossier si nécessaire
+        $dir = dirname($databaseFile);
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        // ✅ Créer le fichier s'il n'existe pas
+        if (! file_exists($databaseFile)) {
+            touch($databaseFile);
+        }
+
+        return $this->withDatabase([
+            'default' => 'sqlite',
+            'connections' => [
+                'sqlite' => [
+                    'driver' => 'sqlite',
+                    'database' => $databaseFile,
+                    'prefix' => '',
+                    'foreign_key_constraints' => $foreignKeyConstraints,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Configure MySQL database.
+     *
+     * @param  string  $host  Database host
+     * @param  string  $database  Database name
+     * @param  string  $username  Database username
+     * @param  string  $password  Database password
+     * @param  int  $port  Database port
+     *
+     * @example
+     * $builder->withMySql('localhost', 'my_database', 'root', 'secret');
+     */
+    public function withMySql(
+        string $host,
+        string $database,
+        string $username,
+        string $password,
+        int $port = 3306
+    ): self {
+        return $this->withDatabase([
+            'default' => 'mysql',
+            'connections' => [
+                'mysql' => [
+                    'driver' => 'mysql',
+                    'host' => $host,
+                    'port' => $port,
+                    'database' => $database,
+                    'username' => $username,
+                    'password' => $password,
+                    'charset' => 'utf8mb4',
+                    'collation' => 'utf8mb4_unicode_ci',
+                    'prefix' => '',
+                    'strict' => true,
+                    'engine' => null,
+                ],
+            ],
+        ]);
     }
 
     /**
