@@ -64,7 +64,7 @@ $directive = new MyDirective($kernel, 'John --force');
 
 ---
 
-### `getContainer(): ?Container`
+### `getApplication(): ?Container`
 
 Retourne le conteneur de dépendances.
 
@@ -72,7 +72,7 @@ Retourne le conteneur de dépendances.
 
 **Exemple :**
 ```php
-$container = $directive->getContainer();
+$container = $directive->getApplication();
 $logger = $container->make(Logger::class);
 ```
 

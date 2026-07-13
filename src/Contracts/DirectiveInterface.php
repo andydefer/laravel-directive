@@ -13,6 +13,7 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
+use Illuminate\Foundation\Application;
 
 /**
  * Interface for all directives.
@@ -53,9 +54,9 @@ interface DirectiveInterface
     /**
      * Get the container instance.
      *
-     * @return Container|null The container instance
+     * @return Application|null The container instance
      */
-    public function getContainer(): ?Container;
+    public function getApplication(): ?Application;
 
     /**
      * Get the kernel instance.

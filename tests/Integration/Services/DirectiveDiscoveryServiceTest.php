@@ -87,7 +87,7 @@ final class DirectiveDiscoveryServiceTest extends IntegrationTestCase
             };
         });
 
-        return DirectiveDiscoveryService::init($appMock);
+        return DirectiveDiscoveryService::init($this->app);
     }
 
     // ==================== EXISTING TESTS ====================

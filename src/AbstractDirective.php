@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AndyDefer\Directive;
 
 use AndyDefer\ConsoleWriter\Console\Console;
-use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveCallRecord;
@@ -16,6 +15,7 @@ use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\DomainStructures\Utils\MapCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
+use Illuminate\Foundation\Application;
 use Throwable;
 
 /**
@@ -65,8 +65,8 @@ abstract class AbstractDirective implements DirectiveInterface
     ) {
         $this->kernel = $kernel;
         $this->context = $kernel->getContext();
-        $this->console = $this->kernel->getContainer()->make(Console::class);
-        $this->parser = $this->kernel->getContainer()->make(DirectiveParserService::class);
+        $this->console = $this->kernel->getApplication()->make(Console::class);
+        $this->parser = $this->kernel->getApplication()->make(DirectiveParserService::class);
         $this->parsed = $this->parser->parse($this->getSignature(), $query);
         $this->structure = new SignatureStructureVO($this->getSignature());
     }
@@ -74,9 +74,9 @@ abstract class AbstractDirective implements DirectiveInterface
     /**
      * {@inheritdoc}
      */
-    final public function getContainer(): ?Container
+    final public function getApplication(): ?Application
     {
-        return $this->kernel->getContainer();
+        return $this->kernel->getApplication();
     }
 
     /**

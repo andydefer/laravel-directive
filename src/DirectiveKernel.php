@@ -7,7 +7,6 @@ namespace AndyDefer\Directive;
 use AndyDefer\AlgoKIT\Algorithms\BKTree;
 use AndyDefer\ConsoleWriter\Console\Console;
 use AndyDefer\Directive\Collections\DirectiveMetadataCollection;
-use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveMetadataRecord;
 use AndyDefer\Directive\Records\ExecutionStatsRecord;
@@ -15,6 +14,7 @@ use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 use AndyDefer\Directive\Services\ExecutionStatsLogger;
 use AndyDefer\DomainStructures\Utils\MapCollection;
 use AndyDefer\StorageKit\Storage\MemoryStorage;
+use Illuminate\Foundation\Application;
 use ReflectionClass;
 use Throwable;
 
@@ -45,7 +45,7 @@ final class DirectiveKernel extends DirectiveDiscoveryService
     private array $directivesCache = [];
 
     private function __construct(
-        protected Container $container,
+        protected Application $container,
     ) {
         parent::__construct($container);
         $this->context = new MapCollection;
@@ -75,12 +75,12 @@ final class DirectiveKernel extends DirectiveDiscoveryService
         }
     }
 
-    public static function init(Container $container): self
+    public static function init(Application $container): self
     {
         return new self($container);
     }
 
-    public function getContainer(): Container
+    public function getApplication(): Application
     {
         return $this->container;
     }

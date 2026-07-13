@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Bootstrap;
 
-use AndyDefer\Directive\Container\LaravelContainerAdapter;
-use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Exceptions\BootstrapException;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Foundation\Application;
 
 /**
- * Bootstraps the Laravel application for the Directive CLI runner.
+ * Factory for bootstrapping the Laravel application.
  *
  * This class handles environment loading, autoloader registration, application
  * creation, service provider registration, and application bootstrapping.
  */
-final readonly class CliBootstrap
+final readonly class ExternalApplicationFactory
 {
     /**
      * The package name used in compiled providers storage.
@@ -24,36 +22,13 @@ final readonly class CliBootstrap
     private const PACKAGE_KEY = 'andydefer/laravel-directive';
 
     /**
-     * @param  Application  $app  The Laravel application instance
-     */
-    public function __construct(
-        private Application $app,
-    ) {}
-
-    /**
-     * Executes the CLI runner with the given arguments.
+     * Creates a fully bootstrapped application instance.
      *
-     * @param  array<int, string>  $arguments  The CLI arguments
-     * @return int The exit code
-     */
-    public function run(array $arguments): int
-    {
-        $adapter = new LaravelContainerAdapter($this->app);
-        $kernel = DirectiveKernel::init($adapter);
-
-        $code = $kernel->run($arguments)->value;
-
-        return $code;
-    }
-
-    /**
-     * Creates a fully bootstrapped CLI bootstrap instance.
-     *
-     * @return self A new instance with a bootstrapped application
+     * @return Application The bootstrapped Laravel application
      *
      * @throws BootstrapException If bootstrapping fails
      */
-    public static function create(): self
+    public static function create(): Application
     {
         self::loadEnvironment();
         self::loadAutoloader();
@@ -62,7 +37,7 @@ final readonly class CliBootstrap
         self::registerProviders($app);
         self::bootApplication($app);
 
-        return new self($app);
+        return $app;
     }
 
     /**

@@ -122,7 +122,7 @@ $exitCode = $kernel->runSignature('test-directive John john@example.com');
 
 ---
 
-### `getContainer(): Container`
+### `getApplication(): Container`
 
 Retourne le conteneur de dépendances.
 

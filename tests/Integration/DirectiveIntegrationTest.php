@@ -29,7 +29,7 @@ final class DirectiveIntegrationTest extends IntegrationTestCase
         TestAfterFailingDirective::resetLog();
         TestNestedBeforeAfterDirective::resetLog();
 
-        $this->kernel = DirectiveKernel::init($this->laravelContainer);
+        $this->kernel = DirectiveKernel::init($this->app);
 
         $this->kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
 

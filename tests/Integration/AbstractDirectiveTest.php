@@ -21,7 +21,7 @@ final class AbstractDirectiveTest extends IntegrationTestCase
     {
         parent::setUp();
 
-        $this->kernel = DirectiveKernel::init($this->laravelContainer);
+        $this->kernel = DirectiveKernel::init($this->app);
         $this->kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
         $this->kernel->resetContext();
     }
@@ -477,7 +477,7 @@ final class AbstractDirectiveTest extends IntegrationTestCase
     {
         $directive = $this->createDirective('test:concrete John john@example.com');
 
-        $this->assertSame($this->laravelContainer, $directive->getContainer());
+        $this->assertSame($this->app, $directive->getApplication());
     }
 
     public function test_get_kernel_returns_kernel(): void

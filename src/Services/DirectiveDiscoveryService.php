@@ -25,6 +25,7 @@ use AndyDefer\PhpServices\Contracts\FileSystemInterface;
 use AndyDefer\PhpServices\Services\FileSystemService;
 use AndyDefer\SignatureParser\SignatureParser;
 use Carbon\Carbon;
+use Illuminate\Foundation\Application;
 use PhpParser\ParserFactory;
 use ReflectionClass;
 use ReflectionException;
@@ -105,10 +106,10 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     protected ListCollection $problems;
 
     /**
-     * @param  Container  $container  The container instance
+     * @param  Application  $container  The container instance
      */
     protected function __construct(
-        protected Container $container,
+        protected Application $container,
     ) {
         $this->collection = new DirectiveMetadataCollection;
         $this->customSources = new StringTypedCollection;
@@ -142,7 +143,7 @@ class DirectiveDiscoveryService implements DirectiveDiscoveryInterface
     /**
      * Initialize the discovery service with a container.
      */
-    public static function init(Container $container): static
+    public static function init(Application $container): static
     {
         return new static($container);
     }

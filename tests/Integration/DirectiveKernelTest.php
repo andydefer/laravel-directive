@@ -25,7 +25,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
         ob_start();
 
-        $this->kernel = DirectiveKernel::init($this->laravelContainer);
+        $this->kernel = DirectiveKernel::init($this->app);
 
         $this->kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
 
@@ -703,14 +703,14 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_disabled_by_default(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
 
         $this->assertFalse($kernel->isVerbose());
     }
 
     public function test_verbose_mode_can_be_enabled(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         $this->assertTrue($kernel->isVerbose());
@@ -718,7 +718,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_can_be_disabled(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
         $kernel->verbose(false);
 
@@ -727,7 +727,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_with_output_disables_verbose(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
         $kernel->withOutput();
 
@@ -736,7 +736,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_without_output_enables_verbose(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(false);
         $kernel->withoutOutput();
 
@@ -745,7 +745,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_does_not_display_problems_when_none_exist(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->addSource(Paths::projectRoot().'/tests/Fixtures/Directives');
         $kernel->verbose(true);
 
@@ -758,7 +758,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_displays_problems_when_they_exist(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();
@@ -770,7 +770,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_displays_problems_in_log_format(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();
@@ -793,7 +793,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_displays_problem_key_context_message_and_timestamp(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();
@@ -810,7 +810,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_displays_problems_with_context_data(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();
@@ -825,7 +825,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_displays_end_of_problems_marker(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();
@@ -837,7 +837,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_problems_count_is_displayed(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();
@@ -849,7 +849,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_works_with_run_directive(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();
@@ -862,7 +862,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_preserves_problems_in_response_record(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         $kernel->run(['directive', 'non-existent-command']);
@@ -873,7 +873,7 @@ final class DirectiveKernelTest extends IntegrationTestCase
 
     public function test_verbose_mode_logs_use_error_level(): void
     {
-        $kernel = DirectiveKernel::init($this->laravelContainer);
+        $kernel = DirectiveKernel::init($this->app);
         $kernel->verbose(true);
 
         ob_start();

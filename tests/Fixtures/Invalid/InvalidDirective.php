@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AndyDefer\Directive\Tests\Fixtures\Invalid;
 
 use AndyDefer\ConsoleWriter\Console\Console;
-use AndyDefer\Directive\Container\Container;
 use AndyDefer\Directive\Contracts\DirectiveInterface;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
@@ -13,6 +12,7 @@ use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
+use Illuminate\Foundation\Application;
 
 final class InvalidDirective implements DirectiveInterface
 {
@@ -21,7 +21,7 @@ final class InvalidDirective implements DirectiveInterface
         return 'Invalid directive';
     }
 
-    public function getContainer(): Container
+    public function getApplication(): Application
     {
         throw new \RuntimeException('Invalid directive should not have Laravel');
     }

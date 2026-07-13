@@ -5,16 +5,19 @@ declare(strict_types=1);
 
 require './vendor/autoload.php';
 
-use AndyDefer\ConsoleWriter\Console\Console;
-use AndyDefer\Directive\Bootstrap\CliBootstrap;
+use AndyDefer\ConsoleWriter\Console\Contracts\ConsoleInterface;
+use AndyDefer\Directive\Bootstrap\ApplicationFactory;
+use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Exceptions\BootstrapException;
 
-$console = new Console();
+$bootstrap = ApplicationFactory::create();
+$console =$bootstrap->make(ConsoleInterface::class);
 
 try {
-    $bootstrap = CliBootstrap::create();
-    $exitCode = $bootstrap->run($argv);
-    exit($exitCode);
+    $kernel = $bootstrap->make(DirectiveKernel::class);
+    $exitCode = $kernel->run($argv);
+    
+    exit($exitCode->value);
 } catch (BootstrapException $e) {
     $console->error('Bootstrap Error: ' . $e->getMessage());
     exit(2);

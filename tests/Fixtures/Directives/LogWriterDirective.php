@@ -35,9 +35,9 @@ final class LogWriterDirective extends AbstractDirective
 
     protected function execute(): ExitCode
     {
-        $container = $this->getContainer();
+        $application = $this->getApplication();
         /** @var ExecutionStatsLogger $logger */
-        $logger = $container->make(ExecutionStatsLogger::class);
+        $logger = $application->make(ExecutionStatsLogger::class);
 
         $message = $this->getArgument('message') ?? 'Test log message';
         $count = (int) ($this->getArgument('count') ?? 1);

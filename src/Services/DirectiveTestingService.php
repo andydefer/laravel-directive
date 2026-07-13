@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Services;
 
-use AndyDefer\Directive\Container\Container;
-use AndyDefer\Directive\Container\LaravelContainerAdapter;
 use AndyDefer\Directive\DirectiveKernel;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Helpers\TestHelper;
 use AndyDefer\Directive\Records\DirectiveResponseRecord;
 use AndyDefer\DomainStructures\Utils\Sequential;
-use Illuminate\Contracts\Foundation\Application as LaravelApplication;
+use Illuminate\Foundation\Application;
 use Throwable;
 
 /**
@@ -26,21 +24,17 @@ final class DirectiveTestingService
     private DirectiveKernel $kernel;
 
     /**
-     * @param  Container|LaravelApplication  $container  The container instance
+     * @param  Application  $application  The application instance
      * @param  array<int, string>  $sourcePaths  Additional source paths to scan
      */
     public function __construct(
-        private readonly Container|LaravelApplication $container,
+        private readonly Application $application,
         private readonly array $sourcePaths = [],
     ) {
         $this->originalCwd = getcwd();
         $this->setupTempDirectory();
 
-        $adapter = $this->container instanceof LaravelApplication
-                ? new LaravelContainerAdapter($this->container)
-                : $this->container;
-
-        $this->kernel = DirectiveKernel::init($adapter);
+        $this->kernel = DirectiveKernel::init($application);
 
         foreach ($this->sourcePaths as $path) {
             $this->kernel->addSource($path);

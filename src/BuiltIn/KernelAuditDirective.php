@@ -203,7 +203,7 @@ final class KernelAuditDirective extends AbstractDirective
 
     private function displayConfiguration(Console $console, DirectiveKernel $kernel): void
     {
-        $container = $kernel->getContainer();
+        $container = $kernel->getApplication();
 
         $console->info('⚙️ Configuration');
         $console->separator('-', 40);

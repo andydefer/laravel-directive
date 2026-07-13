@@ -45,7 +45,7 @@ final class CleanLogsDirective extends AbstractDirective
 
     protected function execute(): ExitCode
     {
-        $container = $this->getContainer();
+        $container = $this->getApplication();
         $logger = $container->make(ExecutionStatsLogger::class);
         $fileSystem = $container->make(FileSystemInterface::class);
 
