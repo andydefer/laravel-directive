@@ -7,6 +7,7 @@ namespace AndyDefer\Directive\Bootstrap;
 use AndyDefer\Directive\Enums\ApplicationType;
 use AndyDefer\Directive\Factories\ExternalApplicationFactory;
 use AndyDefer\Directive\Factories\InternalApplicationFactory;
+use AndyDefer\Directive\Helpers\EnvironmentDetector;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 

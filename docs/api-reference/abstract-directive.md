@@ -2,7 +2,7 @@
 
 ## Description
 
-`AbstractDirective` est la classe de base abstraite pour toutes les directives du système. Elle fournit les fonctionnalités communes nécessaires au parsing des arguments, à la gestion des flags, à l'exécution des appels internes et à l'interaction avec la console.
+`AbstractDirective` est la classe de base abstraite pour toutes les directives du système. Elle fournit les fonctionnalités communes nécessaires au parsing des arguments, à la gestion des flags, à l'exécution des appels internes, à la manipulation du contexte partagé et à l'interaction avec la console.
 
 ## Hiérarchie / Implémentations
 
@@ -14,8 +14,10 @@ DirectiveInterface
             ├── BuiltIn\VersionDirective
             ├── BuiltIn\CleanLogsDirective
             ├── BuiltIn\KernelAuditDirective
-            └── ... (autres directives)
+            └── ... (autres directives personnalisées)
 ```
+
+**Interfaces implémentées :** `DirectiveInterface`
 
 ## Rôle principal
 
@@ -25,10 +27,9 @@ DirectiveInterface
 - L'accès aux valeurs typées via des méthodes dédiées (`getArgument()`, `getFlag()`, etc.)
 - La gestion du contexte partagé entre directives
 - L'exécution d'appels internes avec détection de circularité
-- Les méthodes de sortie console (héritées de `Console`)
+- Les méthodes de sortie console (héritées du composant `Console`)
 - La journalisation des problèmes via le noyau
-
----
+- Les hooks d'exécution (`beforeExecute()`, `afterExecute()`)
 
 ## Installation
 
@@ -42,7 +43,7 @@ composer require andydefer/laravel-directive
 - `DirectiveKernel` - Noyau d'exécution
 - `Console` - Composant de sortie console
 - `SignatureParser` - Parser de signatures
-- `Container` - Conteneur de dépendances
+- `Application` - Conteneur Laravel
 
 ---
 
@@ -64,16 +65,16 @@ $directive = new MyDirective($kernel, 'John --force');
 
 ---
 
-### `getApplication(): ?Container`
+### `getApplication(): ?Application`
 
-Retourne le conteneur de dépendances.
+Retourne l'application Laravel.
 
-**Retourne :** `?Container` - Instance du conteneur ou `null`
+**Retourne :** `?Application` - Instance de l'application ou `null`
 
 **Exemple :**
 ```php
-$container = $directive->getApplication();
-$logger = $container->make(Logger::class);
+$app = $directive->getApplication();
+$logger = $app->make(Logger::class);
 ```
 
 ---
@@ -346,6 +347,30 @@ Vérifie si un argument variadique existe.
 
 ---
 
+### `getVariadicArguments(): StringTypedCollection`
+
+Récupère tous les arguments variadiques sous forme de collection plate.
+
+**Retourne :** `StringTypedCollection` - Collection de toutes les valeurs variadiques
+
+**Exemple :**
+```php
+$allValues = $directive->getVariadicArguments();
+foreach ($allValues as $value) {
+    echo $value . "\n";
+}
+```
+
+---
+
+### `hasVariadicArguments(): bool`
+
+Vérifie s'il y a des arguments variadiques.
+
+**Retourne :** `bool` - `true` s'il y en a, `false` sinon
+
+---
+
 ### `getFlag(string $key): bool`
 
 Récupère la valeur d'un flag.
@@ -408,30 +433,6 @@ $active = $directive->getActiveFlags(); // ['force', 'verbose']
 
 ---
 
-### `getVariadicArguments(): StringTypedCollection`
-
-Récupère tous les arguments variadiques sous forme de collection plate.
-
-**Retourne :** `StringTypedCollection` - Collection de toutes les valeurs variadiques
-
-**Exemple :**
-```php
-$allValues = $directive->getVariadicArguments();
-foreach ($allValues as $value) {
-    echo $value . "\n";
-}
-```
-
----
-
-### `hasVariadicArguments(): bool`
-
-Vérifie s'il y a des arguments variadiques.
-
-**Retourne :** `bool` - `true` s'il y en a, `false` sinon
-
----
-
 ### `hasRequireds(): bool`
 
 Vérifie s'il y a des arguments requis.
@@ -464,88 +465,6 @@ Vérifie s'il y a des flags.
 
 ---
 
-### `line(string $message): void`
-
-Affiche une ligne de texte.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$message` | `string` | Message à afficher |
-
----
-
-### `info(string $message): void`
-
-Affiche un message d'information (couleur bleue).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$message` | `string` | Message à afficher |
-
----
-
-### `error(string $message): void`
-
-Affiche un message d'erreur (couleur rouge).
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$message` | `string` | Message à afficher |
-
----
-
-### `newLine(): void`
-
-Affiche une nouvelle ligne.
-
----
-
-### `separator(string $character = '-', int $length = 80): void`
-
-Affiche une ligne de séparation.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$character` | `string` | Caractère à répéter |
-| `$length` | `int` | Longueur de la ligne |
-
----
-
-### `ask(string $question): string`
-
-Pose une question à l'utilisateur.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$question` | `string` | Question à poser |
-
-**Retourne :** `string` - Réponse de l'utilisateur
-
----
-
-### `confirm(string $question): bool`
-
-Demande une confirmation à l'utilisateur.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$question` | `string` | Question à poser |
-
-**Retourne :** `bool` - `true` si confirmé, `false` sinon
-
----
-
-### `table(ListCollection|array $headers, ListCollection|array $rows): void`
-
-Affiche un tableau.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$headers` | `ListCollection|array` | En-têtes du tableau |
-| `$rows` | `ListCollection|array` | Lignes du tableau |
-
----
-
 ### `call(string $query): void`
 
 Queue un appel interne vers une autre directive.
@@ -572,14 +491,6 @@ protected function execute(): ExitCode
 Récupère tous les appels internes queués.
 
 **Retourne :** `array<DirectiveCallRecord>` - Liste des appels
-
----
-
-### `getAliases(): StringTypedCollection`
-
-Récupère les alias de la directive.
-
-**Retourne :** `StringTypedCollection` - Collection des alias
 
 ---
 
@@ -655,6 +566,14 @@ final class GreetDirective extends AbstractDirective
 }
 ```
 
+**Utilisation :**
+```bash
+./directive greet John --formal
+# Output: Good day, John!
+```
+
+---
+
 ### Cas 2 : Directive avec énumérations
 
 ```php
@@ -686,12 +605,80 @@ final class SetLevelDirective extends AbstractDirective
             $this->info("Level set to: {$level}");
         }
 
+        // Utiliser la valeur autorisée
+        if ($this->isEnumValueAllowed('level', 'high')) {
+            $this->info('High level is valid');
+        }
+
         return ExitCode::SUCCESS;
     }
 }
 ```
 
-### Cas 3 : Directive avec appel interne
+**Utilisation :**
+```bash
+./directive set-level high --verbose
+# Output: Level set to: high
+```
+
+---
+
+### Cas 3 : Directive avec arguments variadiques
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use AndyDefer\Directive\AbstractDirective;
+use AndyDefer\Directive\Enums\ExitCode;
+
+final class DeleteDirective extends AbstractDirective
+{
+    public function getSignature(): string
+    {
+        return 'delete {files*} {--force}';
+    }
+
+    public function getDescription(): string
+    {
+        return 'Delete multiple files';
+    }
+
+    protected function execute(): ExitCode
+    {
+        $files = $this->getVariadic('files');
+        $force = $this->getFlag('force');
+
+        if (empty($files)) {
+            $this->error('No files specified');
+            return ExitCode::INVALID_ARGUMENT;
+        }
+
+        $this->info(sprintf('Deleting %d file(s)...', count($files)));
+
+        foreach ($files as $file) {
+            if ($force) {
+                $this->info("Force deleting: {$file}");
+            } else {
+                $this->info("Deleting: {$file}");
+            }
+        }
+
+        return ExitCode::SUCCESS;
+    }
+}
+```
+
+**Utilisation :**
+```bash
+./directive delete [file1.txt, file2.txt, file3.txt] --force
+# Output: Deleting 3 file(s)...
+```
+
+---
+
+### Cas 4 : Directive avec appels internes
 
 ```php
 <?php
@@ -713,6 +700,11 @@ final class DeployDirective extends AbstractDirective
         return 'Deploy the application';
     }
 
+    protected function beforeExecute(): void
+    {
+        $this->info('Starting deployment...');
+    }
+
     protected function execute(): ExitCode
     {
         $env = $this->getRequired('environment');
@@ -720,6 +712,7 @@ final class DeployDirective extends AbstractDirective
 
         $this->info("Deploying to {$env}...");
 
+        // Appels internes
         if ($force) {
             $this->call('backup database');
             $this->call('clear cache');
@@ -727,14 +720,27 @@ final class DeployDirective extends AbstractDirective
             $this->call('validate --strict');
         }
 
-        $this->call('run migrations');
+        $this->call('migrate --force');
 
         return ExitCode::SUCCESS;
+    }
+
+    protected function afterExecute(ExitCode $exitCode): void
+    {
+        $this->info('Deployment completed with code: ' . $exitCode->value);
     }
 }
 ```
 
-### Cas 4 : Directive avec contexte partagé
+**Utilisation :**
+```bash
+./directive deploy production --force
+# Output: Starting deployment... Deploying to production...
+```
+
+---
+
+### Cas 5 : Directive avec manipulation du contexte partagé
 
 ```php
 <?php
@@ -744,44 +750,77 @@ declare(strict_types=1);
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 
-final class ContextDirective extends AbstractDirective
+final class CounterDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'context {action} {key} {value?}';
+        return 'counter {action} {name} {value?}';
     }
 
     public function getDescription(): string
     {
-        return 'Manipulate shared context';
+        return 'Manipulate shared counters';
     }
 
     protected function execute(): ExitCode
     {
         $action = $this->getRequired('action');
-        $key = $this->getRequired('key');
+        $name = $this->getRequired('name');
         $value = $this->getArgument('value');
 
         switch ($action) {
             case 'set':
-                $this->contextSet($key, $value);
-                $this->info("Set {$key} = {$value}");
+                $this->contextSet($name, (int) $value);
+                $this->info("Set {$name} = {$value}");
                 break;
 
             case 'get':
-                $value = $this->contextGet($key);
-                $this->info("{$key} = " . ($value ?? 'null'));
+                $value = $this->contextGet($name);
+                $this->info("{$name} = " . ($value ?? 'null'));
                 break;
 
             case 'increment':
-                $new = $this->contextIncrement($key);
-                $this->info("{$key} = {$new}");
+                $new = $this->contextIncrement($name, (int) $value);
+                $this->info("{$name} = {$new}");
+                break;
+
+            case 'decrement':
+                $new = $this->contextDecrement($name, (int) $value);
+                $this->info("{$name} = {$new}");
+                break;
+
+            case 'has':
+                $exists = $this->contextHas($name);
+                $this->info("{$name} exists: " . ($exists ? 'true' : 'false'));
+                break;
+
+            case 'remove':
+                $this->contextRemove($name);
+                $this->info("Removed {$name}");
+                break;
+
+            case 'clear':
+                $this->contextClear();
+                $this->info('Context cleared');
+                break;
+
+            case 'all':
+                $all = $this->contextAll();
+                $this->info('Context: ' . json_encode($all->toArray()));
                 break;
         }
 
         return ExitCode::SUCCESS;
     }
 }
+```
+
+**Utilisation :**
+```bash
+./directive counter set visits 10
+./directive counter increment visits 5
+./directive counter get visits
+# Output: visits = 15
 ```
 
 ---
@@ -793,15 +832,15 @@ new Directive($kernel, $query)
     ↓
 __construct()
     ├── kernel → $this->kernel
-    ├── context → $this->context
-    ├── console → $this->console
-    ├── parser → $this->parser
+    ├── context → $this->kernel->getContext()
+    ├── console → $this->kernel->getApplication()->make(Console::class)
+    ├── parser → $this->kernel->getApplication()->make(DirectiveParserService::class)
     ├── parsed → parser->parse(signature, query)
     └── structure → new SignatureStructureVO(signature)
     ↓
 run()
     ├── beforeExecute() (hook)
-    │   └── Si exception → RUNTIME_ERROR
+    │   └── Si exception → RUNTIME_ERROR + problème enregistré
     ├── execute() (logique métier)
     │   ├── Appels à getArgument(), getFlag(), etc.
     │   ├── Appels à call() pour les appels internes
@@ -814,6 +853,7 @@ run()
     │   │   └── executeDirectiveInstance()
     │   └── Retourne ExitCode
     ├── afterExecute(exitCode) (hook)
+    │   └── Si exception → RUNTIME_ERROR + problème enregistré
     └── Retourne ExitCode
 ```
 
@@ -821,13 +861,21 @@ run()
 
 ## Gestion des erreurs
 
-| Situation | Erreur | Message |
-|-----------|--------|---------|
+| Situation | Exception/Problème | Message/Contexte |
+|-----------|-------------------|------------------|
 | Erreur dans `beforeExecute()` | Problème kernel | `directive_before_hook` |
 | Erreur dans `execute()` | Problème kernel | `directive_execute_hook` |
+| Erreur dans `afterExecute()` | Problème kernel | `directive_after_hook` |
 | Appel interne vers directive inexistante | Problème kernel | `call_directive_not_found` |
-| Appel interne circulaire | Problème kernel | `circular_call_detected` |
+| Appel interne circulaire détecté | Problème kernel | `circular_call_detected: {command}` |
 | Erreur dans l'exécution d'un appel interne | Problème kernel | `execute_call_instance` |
+
+**Messages d'erreur exacts :**
+```
+call_directive_not_found: "Directive not found for command '{command}'"
+circular_call_detected: "Circular call detected: {command}"
+execute_call_instance: "Error executing call: {command}"
+```
 
 ---
 
@@ -837,6 +885,7 @@ run()
 - **Recherche d'arguments** : O(1) via les collections typées
 - **Appels internes** : O(m) où m est le nombre d'appels queués
 - **Détection de circularité** : O(1) via la pile d'exécution
+- **Mémoire** : Minimal, les collections sont immuables
 
 ---
 
@@ -896,6 +945,12 @@ final class BackupDirective extends AbstractDirective
         $force = $this->getFlag('force');
         $verbose = $this->getFlag('verbose');
 
+        // Vérifications
+        if (!is_dir($source)) {
+            $this->error("Source directory not found: {$source}");
+            return ExitCode::INVALID_ARGUMENT;
+        }
+
         if ($verbose) {
             $this->info('Source: ' . $source);
             $this->info('Destination: ' . $destination);
@@ -905,7 +960,7 @@ final class BackupDirective extends AbstractDirective
             $this->info('Force: ' . ($force ? 'Yes' : 'No'));
         }
 
-        // Simulation de la logique de backup
+        // Logique métier avec appels internes
         $this->call('validate --strict');
         $this->call('compress --level=' . $level);
 
@@ -913,7 +968,9 @@ final class BackupDirective extends AbstractDirective
             $this->call('clean --all');
         }
 
-        $this->info('✅ Backup completed successfully!');
+        // Utilisation du contexte partagé
+        $backupCount = $this->contextIncrement('backup_count');
+        $this->info("✅ Backup #{$backupCount} completed successfully!");
 
         return ExitCode::SUCCESS;
     }
@@ -927,6 +984,11 @@ final class BackupDirective extends AbstractDirective
 }
 ```
 
+**Utilisation complète :**
+```bash
+./directive backup /home/user/documents /backup/dest zip high [*.tmp, *.log] --force --verbose
+```
+
 ---
 
 ## Voir aussi
@@ -937,3 +999,4 @@ final class BackupDirective extends AbstractDirective
 - `ExitCode` - Énumération des codes de sortie
 - `SignatureParser` - Parser de signatures
 - `SignatureStructureVO` - Structure de signature
+- `ParsedSignatureRecord` - Données parsées

@@ -2,156 +2,63 @@
 
 ## Description
 
-Service de découverte et de gestion des classes de directives à partir de multiples sources. Analyse les répertoires, les packages vendors et les sources personnalisées pour trouver les classes étendant `AbstractDirective`.
+`DirectiveDiscoveryService` est le service central de découverte des directives. Il scrute différentes sources (intégrées, espace de travail, vendors, sources personnalisées) pour trouver et enregistrer toutes les directives disponibles, tout en appliquant des filtres de namespace, de préfixe et d'ignorance.
 
 ## Hiérarchie / Implémentations
 
 ```
 DirectiveDiscoveryInterface
     └── DirectiveDiscoveryService
-        └── DirectiveKernel (hérite de cette classe)
+            └── DirectiveKernel (étend cette classe)
 ```
+
+**Interfaces implémentées :** `DirectiveDiscoveryInterface`
 
 ## Rôle principal
 
-`DirectiveDiscoveryService` est le moteur de découverte du système de directives. Il permet de :
+`DirectiveDiscoveryService` agit comme le moteur de découverte des directives. Il assure :
 
-- Découvrir automatiquement les directives depuis 4 sources différentes (built-in, workspace, vendor, custom)
-- Filtrer les directives par namespace, préfixe, source ou signature
-- Gérer les signatures réservées (empêcher l'écrasement des commandes système)
-- Ajouter manuellement des directives via leur FQCN
-- Configurer la profondeur de scan des répertoires
-- Suivre les problèmes rencontrés lors de la découverte
+- La **découverte** des directives depuis 5 sources différentes
+- Le **filtrage** par namespace, préfixe, chemin et signature
+- La **gestion des problèmes** rencontrés lors de la découverte
+- L'**ajout manuel** de directives via FQCN
+- La **configuration** de la profondeur de scan et des sources ignorées
+- La **collecte des métadonnées** des directives (signature, description, alias)
 
-## Installation
-
-```bash
-composer require andydefer/laravel-directive
-```
-
-### Dépendances
-
-- `Container` - Conteneur de dépendances
-- `DirectiveConfigInterface` - Configuration du package
-- `DirectiveScannerInterface` - Scan des classes PHP
-- `DirectiveParserInterface` - Parsing des signatures
-- `FileSystemInterface` - Opérations sur le système de fichiers
-- PHP 8.1+
+---
 
 ## API / Méthodes publiques
 
-### `static init(Container $container): self`
+### `init(Application $container): static`
 
 Initialise le service de découverte avec un conteneur.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$container` | `Container` | Conteneur de dépendances |
+| `$container` | `Application` | Instance de l'application Laravel |
 
-**Retourne :** `self` - Instance du service
+**Retourne :** `static` - Instance du service
 
 **Exemple :**
 ```php
-$container = DirectiveContainer::create();
-$discovery = DirectiveDiscoveryService::init($container);
+$discovery = DirectiveDiscoveryService::init($app);
 ```
 
 ---
 
-### `discover(): DirectiveMetadataCollection`
-
-Découvre toutes les directives disponibles depuis toutes les sources.
-
-**Retourne :** `DirectiveMetadataCollection` - Collection des métadonnées découvertes
-
-**Exceptions :** Aucune (les erreurs sont capturées et ajoutées comme problèmes)
-
-**Exemple :**
-```php
-$directives = $discovery->discover();
-
-foreach ($directives as $directive) {
-    echo $directive->class . ' - ' . $directive->signature . "\n";
-}
-```
-
----
-
-### `addSource(string $directory): self`
-
-Ajoute un répertoire source personnalisé à scanner.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$directory` | `string` | Chemin absolu du répertoire |
-
-**Retourne :** `self` - Instance fluide
-
-**Exemple :**
-```php
-$discovery->addSource(__DIR__ . '/src/Commands');
-```
-
----
-
-### `addSources(array $directories): self`
-
-Ajoute plusieurs répertoires sources personnalisés.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$directories` | `array<int, string>` | Liste des chemins |
-
-**Retourne :** `self` - Instance fluide
-
----
-
-### `addDirective(string $class, bool $force = false): self`
-
-Ajoute une directive manuellement par son nom de classe complet.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$class` | `class-string<AbstractDirective>` | Nom de classe complet |
-| `$force` | `bool` | Ignorer les signatures réservées |
-
-**Retourne :** `self` - Instance fluide
-
-**Exceptions :** `InvalidArgumentException` - Si la classe n'étend pas `AbstractDirective`
-
-**Exemple :**
-```php
-$discovery->addDirective(MyCustomDirective::class);
-```
-
----
-
-### `addDirectives(array $classes, bool $force = false): self`
-
-Ajoute plusieurs directives manuellement.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$classes` | `array<class-string<AbstractDirective>>` | Liste des classes |
-| `$force` | `bool` | Ignorer les signatures réservées |
-
-**Retourne :** `self` - Instance fluide
-
----
-
-### `setMaxDepth(int $depth): self`
+### `setMaxDepth(int $depth): static`
 
 Définit la profondeur maximale de scan des répertoires.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
-| `$depth` | `int` | Profondeur (entre 2 et 7) |
+| `$depth` | `int` | Profondeur (clampée entre 2 et 7) |
 
-**Retourne :** `self` - Instance fluide
+**Retourne :** `static` - Instance du service (fluent)
 
 **Exemple :**
 ```php
-$discovery->setMaxDepth(5); // Scan jusqu'à 5 niveaux
+$discovery->setMaxDepth(5);
 ```
 
 ---
@@ -164,339 +71,654 @@ Retourne la profondeur maximale de scan.
 
 ---
 
-### `ignoreSource(DiscoverySource|string $source): self`
-
-Ignore une source spécifique.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$source` | `DiscoverySource\|string` | Source à ignorer |
-
-**Retourne :** `self` - Instance fluide
-
-**Exemple :**
-```php
-use AndyDefer\Directive\Enums\DiscoverySource;
-
-$discovery->ignoreSource(DiscoverySource::VENDOR);
-// Désactive la découverte des vendors
-```
-
----
-
-### `ignoreSources(array $sources): self`
-
-Ignore plusieurs sources.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$sources` | `array<DiscoverySource\|string>` | Sources à ignorer |
-
-**Retourne :** `self` - Instance fluide
-
----
-
-### `ignorePath(string $path): self`
-
-Ignore un chemin spécifique lors du scan.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$path` | `string` | Chemin à ignorer |
-
-**Retourne :** `self` - Instance fluide
-
-**Exemple :**
-```php
-$discovery->ignorePath(__DIR__ . '/src/Deprecated');
-```
-
----
-
-### `ignoreDirective(string $signature): self`
-
-Ignore une directive par sa signature.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$signature` | `string` | Signature complète ou partielle |
-
-**Retourne :** `self` - Instance fluide
-
-**Exemple :**
-```php
-$discovery->ignoreDirective('test-directive');
-// Ignore toutes les directives commençant par "test-directive"
-```
-
----
-
-### `onlyNamespace(string $namespace): self`
-
-Restreint la découverte à un namespace spécifique.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$namespace` | `string` | Namespace à inclure |
-
-**Retourne :** `self` - Instance fluide
-
-**Exemple :**
-```php
-$discovery->onlyNamespace('App\\Commands\\');
-// Seulement les directives dans App\Commands
-```
-
----
-
-### `excludeNamespace(string $namespace): self`
-
-Exclut un namespace de la découverte.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$namespace` | `string` | Namespace à exclure |
-
-**Retourne :** `self` - Instance fluide
-
----
-
-### `onlyPrefix(string $prefix): self`
-
-Restreint la découverte aux signatures commençant par un préfixe.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$prefix` | `string` | Préfixe à inclure |
-
-**Retourne :** `self` - Instance fluide
-
-**Exemple :**
-```php
-$discovery->onlyPrefix('app:');
-// Seulement les directives commençant par "app:"
-```
-
----
-
-### `excludePrefix(string $prefix): self`
-
-Exclut les signatures commençant par un préfixe.
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `$prefix` | `string` | Préfixe à exclure |
-
-**Retourne :** `self` - Instance fluide
-
----
-
-### `disableAutoDiscovery(): self`
-
-Désactive la découverte automatique (seules les directives enregistrées manuellement sont utilisées).
-
-**Retourne :** `self` - Instance fluide
-
-**Exemple :**
-```php
-$discovery->disableAutoDiscovery();
-// Seules les directives ajoutées via addDirective() seront disponibles
-```
-
----
-
-### `manualOnly(): self`
-
-Alias de `disableAutoDiscovery()`.
-
----
-
-### `resetConfig(): self`
-
-Réinitialise tous les filtres à leurs valeurs par défaut.
-
-**Retourne :** `self` - Instance fluide
-
----
-
-### `addProblem(string $key, string $context, string $message, array $contextData = []): void`
+### `addProblem(string $key, string $context, string $message, mixed $contextData = [], int $backtraceOffset = 1): void`
 
 Ajoute un problème à la collection.
 
 | Paramètre | Type | Description |
 |-----------|------|-------------|
 | `$key` | `string` | Identifiant unique du problème |
-| `$context` | `string` | Description du contexte |
+| `$context` | `string` | Description lisible du contexte |
 | `$message` | `string` | Message d'erreur |
-| `$contextData` | `array<string, mixed>` | Données contextuelles additionnelles |
+| `$contextData` | `mixed` | Données contextuelles supplémentaires |
+| `$backtraceOffset` | `int` | Décalage dans la stack trace |
 
-**Retourne :** `void`
+**Exemple :**
+```php
+$discovery->addProblem(
+    'config_loading',
+    'Failed to load custom sources',
+    'Configuration file not found',
+    ['config_file' => '/path/to/config.php']
+);
+```
 
 ---
 
 ### `getProblems(): ListCollection`
 
-Retourne la collection des problèmes rencontrés.
+Retourne tous les problèmes rencontrés.
 
-**Retourne :** `ListCollection` - Collection des problèmes
+**Retourne :** `ListCollection<MapCollection>` - Collection des problèmes
+
+---
+
+### `clearProblems(): static`
+
+Efface tous les problèmes.
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `ignoreSource(DiscoverySource|string $source): static`
+
+Ignore une source de découverte.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$source` | `DiscoverySource|string` | Source à ignorer |
+
+**Retourne :** `static` - Instance du service (fluent)
 
 **Exemple :**
 ```php
-$problems = $discovery->getProblems();
-foreach ($problems as $problem) {
-    echo $problem->get('message') . "\n";
+$discovery->ignoreSource(DiscoverySource::VENDOR);
+// ou
+$discovery->ignoreSource('vendor');
+```
+
+---
+
+### `ignoreSources(array $sources): static`
+
+Ignore plusieurs sources.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$sources` | `array<DiscoverySource|string>` | Sources à ignorer |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `enableSource(DiscoverySource|string $source): static`
+
+Réactive une source précédemment ignorée.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$source` | `DiscoverySource|string` | Source à réactiver |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `enableSources(array $sources): static`
+
+Réactive plusieurs sources.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$sources` | `array<DiscoverySource|string>` | Sources à réactiver |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `isSourceIgnored(DiscoverySource|string $source): bool`
+
+Vérifie si une source est ignorée.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$source` | `DiscoverySource|string` | Source à vérifier |
+
+**Retourne :** `bool` - `true` si ignorée, `false` sinon
+
+---
+
+### `ignorePath(string $path): static`
+
+Ignore un chemin de scan.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$path` | `string` | Chemin à ignorer |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `ignorePaths(array $paths): static`
+
+Ignore plusieurs chemins.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$paths` | `array<string>` | Chemins à ignorer |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `enablePath(string $path): static`
+
+Réactive un chemin précédemment ignoré.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$path` | `string` | Chemin à réactiver |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `enablePaths(array $paths): static`
+
+Réactive plusieurs chemins.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$paths` | `array<string>` | Chemins à réactiver |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `ignoreDirective(string $signature): static`
+
+Ignore une directive par sa signature.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature de la directive |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+**Exemple :**
+```php
+$discovery->ignoreDirective('greet');
+```
+
+---
+
+### `ignoreDirectives(array $signatures): static`
+
+Ignore plusieurs directives.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signatures` | `array<string>` | Signatures à ignorer |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `enableDirective(string $signature): static`
+
+Réactive une directive précédemment ignorée.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature à réactiver |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `enableDirectives(array $signatures): static`
+
+Réactive plusieurs directives.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signatures` | `array<string>` | Signatures à réactiver |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `isDirectiveIgnored(string $signature): bool`
+
+Vérifie si une directive est ignorée.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature à vérifier |
+
+**Retourne :** `bool` - `true` si ignorée, `false` sinon
+
+---
+
+### `onlyNamespace(string $namespace): static`
+
+Ajoute un namespace à la liste des namespaces autorisés.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$namespace` | `string` | Namespace à autoriser |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+**Exemple :**
+```php
+$discovery->onlyNamespace('App\\Directives\\');
+```
+
+---
+
+### `onlyNamespaces(array $namespaces): static`
+
+Ajoute plusieurs namespaces à la liste des namespaces autorisés.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$namespaces` | `array<string>` | Namespaces à autoriser |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `excludeNamespace(string $namespace): static`
+
+Exclut un namespace.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$namespace` | `string` | Namespace à exclure |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `excludeNamespaces(array $namespaces): static`
+
+Exclut plusieurs namespaces.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$namespaces` | `array<string>` | Namespaces à exclure |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `onlyPrefix(string $prefix): static`
+
+Ajoute un préfixe à la liste des préfixes autorisés.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$prefix` | `string` | Préfixe à autoriser |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+**Exemple :**
+```php
+$discovery->onlyPrefix('test:');
+// Seules les directives commençant par 'test:' seront découvertes
+```
+
+---
+
+### `onlyPrefixes(array $prefixes): static`
+
+Ajoute plusieurs préfixes à la liste des préfixes autorisés.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$prefixes` | `array<string>` | Préfixes à autoriser |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `excludePrefix(string $prefix): static`
+
+Exclut un préfixe.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$prefix` | `string` | Préfixe à exclure |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `excludePrefixes(array $prefixes): static`
+
+Exclut plusieurs préfixes.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$prefixes` | `array<string>` | Préfixes à exclure |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `disableAutoDiscovery(): static`
+
+Désactive la découverte automatique.
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `enableAutoDiscovery(): static`
+
+Active la découverte automatique.
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `manualOnly(): static`
+
+Alias pour `disableAutoDiscovery()`.
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `isAutoDiscoveryEnabled(): bool`
+
+Vérifie si la découverte automatique est activée.
+
+**Retourne :** `bool` - `true` si activée, `false` sinon
+
+---
+
+### `resetConfig(): static`
+
+Réinitialise tous les filtres à leurs valeurs par défaut.
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `addSource(string $directory): static`
+
+Ajoute un répertoire source personnalisé.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$directory` | `string` | Chemin du répertoire à scanner |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+**Exemple :**
+```php
+$discovery->addSource('/path/to/custom/directives');
+```
+
+---
+
+### `addSources(array $directories): static`
+
+Ajoute plusieurs répertoires sources personnalisés.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$directories` | `array<string>` | Chemins des répertoires à scanner |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `addDirective(string $class, bool $force = false): static`
+
+Ajoute une directive directement par sa classe.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$class` | `class-string<AbstractDirective>` | Classe de la directive |
+| `$force` | `bool` | Forcer même si la signature est réservée |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+**Exceptions :** `InvalidArgumentException` si la classe n'étend pas `AbstractDirective`
+
+**Exemple :**
+```php
+$discovery->addDirective(GreetDirective::class);
+```
+
+---
+
+### `addDirectives(array $classes, bool $force = false): static`
+
+Ajoute plusieurs directives directement par leurs classes.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$classes` | `array<class-string<AbstractDirective>>` | Classes des directives |
+| `$force` | `bool` | Forcer même si les signatures sont réservées |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `discover(): DirectiveMetadataCollection`
+
+Découvre toutes les directives disponibles depuis toutes les sources.
+
+**Retourne :** `DirectiveMetadataCollection` - Collection des métadonnées des directives
+
+**Sources découvertes dans l'ordre :**
+1. Directives enregistrées manuellement
+2. Directives intégrées (Built-in)
+3. Directives de l'espace de travail (Workspace)
+4. Directives des vendors
+5. Sources personnalisées
+
+**Exemple :**
+```php
+$directives = $discovery->discover();
+foreach ($directives as $directive) {
+    echo $directive->signature . "\n";
 }
 ```
 
 ---
 
-### `clearProblems(): self`
+### `getCollection(): DirectiveMetadataCollection`
 
-Efface tous les problèmes.
+Retourne la collection actuelle sans relancer la découverte.
 
-**Retourne :** `self` - Instance fluide
+**Retourne :** `DirectiveMetadataCollection` - Collection actuelle
+
+---
+
+### `clear(): void`
+
+Efface la collection.
+
+**Exemple :**
+```php
+$discovery->clear();
+// La collection est maintenant vide
+```
+
+---
+
+### `addReservedSignature(string $signature): static`
+
+Ajoute une signature réservée.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature à réserver |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `removeReservedSignature(string $signature): static`
+
+Supprime une signature réservée.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$signature` | `string` | Signature à libérer |
+
+**Retourne :** `static` - Instance du service (fluent)
+
+---
+
+### `getReservedSignatures(): array`
+
+Retourne toutes les signatures réservées.
+
+**Retourne :** `array<string>` - Liste des signatures réservées
 
 ---
 
 ## Cas d'utilisation
 
-### Cas 1 : Découverte complète avec tous les filtres
+### Cas 1 : Découverte de base
 
 ```php
 <?php
 
-use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
-use AndyDefer\Directive\Enums\DiscoverySource;
 
-$container = DirectiveContainer::create();
-$discovery = DirectiveDiscoveryService::init($container);
+$discovery = DirectiveDiscoveryService::init($app);
 
-// Configuration de la découverte
-$discovery
-    ->setMaxDepth(4)
-    ->addSource(__DIR__ . '/src/Commands')
-    ->ignoreSource(DiscoverySource::VENDOR) // Ignore les vendors
-    ->ignorePath(__DIR__ . '/src/Deprecated')
-    ->onlyNamespace('App\\Commands\\')
-    ->excludePrefix('test:');
+// Ajouter une source personnalisée
+$discovery->addSource('/path/to/custom/directives');
 
-// Découverte
+// Découvrir toutes les directives
 $directives = $discovery->discover();
 
 echo "Found " . $directives->count() . " directives\n";
 foreach ($directives as $directive) {
-    echo "- {$directive->signature} ({$directive->class})\n";
+    echo "  - {$directive->signature}\n";
 }
 ```
 
-### Cas 2 : Ajout manuel de directives
+---
+
+### Cas 2 : Filtrage par namespace
 
 ```php
 <?php
 
-$discovery = DirectiveDiscoveryService::init($container);
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 
-// Ajout manuel
-$discovery->addDirective(CustomDirective::class);
-$discovery->addDirectives([
-    AdminDirective::class,
-    UserDirective::class,
-    ReportDirective::class,
+$discovery = DirectiveDiscoveryService::init($app);
+
+// Uniquement les directives du namespace App\Directives\
+$discovery->onlyNamespace('App\\Directives\\');
+
+// Exclure le namespace App\Directives\Tests\
+$discovery->excludeNamespace('App\\Directives\\Tests\\');
+
+$directives = $discovery->discover();
+// Seules les directives de App\Directives\ (hors Tests\) sont incluses
+```
+
+---
+
+### Cas 3 : Filtrage par préfixe
+
+```php
+<?php
+
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+
+$discovery = DirectiveDiscoveryService::init($app);
+
+// Uniquement les directives commençant par 'test:'
+$discovery->onlyPrefix('test:');
+
+// Exclure les directives commençant par 'test:internal'
+$discovery->excludePrefix('test:internal');
+
+$directives = $discovery->discover();
+// Seules les directives test: (hors test:internal) sont incluses
+```
+
+---
+
+### Cas 4 : Ignorer des sources
+
+```php
+<?php
+
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Enums\DiscoverySource;
+
+$discovery = DirectiveDiscoveryService::init($app);
+
+// Ignorer les directives des vendors
+$discovery->ignoreSource(DiscoverySource::VENDOR);
+
+// Ignorer plusieurs sources
+$discovery->ignoreSources([
+    DiscoverySource::VENDOR,
+    DiscoverySource::CUSTOM,
 ]);
 
-// Découverte manuelle uniquement
-$discovery->disableAutoDiscovery();
 $directives = $discovery->discover();
-
-echo "Only manual directives: " . $directives->count() . "\n";
+// Seules les sources non ignorées sont scannées
 ```
 
-### Cas 3 : Filtrage avancé par namespace et préfixe
+---
+
+### Cas 5 : Ajout manuel de directives
 
 ```php
 <?php
 
-$discovery = DirectiveDiscoveryService::init($container);
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use App\Directives\GreetDirective;
+use App\Directives\DeployDirective;
 
-// Inclure seulement les directives de l'API
-$discovery
-    ->onlyNamespace('App\\Api\\')
-    ->onlyPrefix('api:');
+$discovery = DirectiveDiscoveryService::init($app);
 
+// Ajout manuel avec force (ignore les signatures réservées)
+$discovery->addDirective(GreetDirective::class, true);
+
+// Ajout de plusieurs directives
+$discovery->addDirectives([
+    DeployDirective::class,
+    BackupDirective::class,
+]);
+
+// La découverte inclut ces directives
 $directives = $discovery->discover();
-// Ne retourne que les directives dans App\Api commençant par "api:"
-
-// Exclure certaines catégories
-$discovery
-    ->excludeNamespace('App\\Deprecated\\')
-    ->excludePrefix('legacy:');
-
-$directives = $discovery->discover();
-// Exclut les directives dépréciées
 ```
 
-### Cas 4 : Gestion des signatures réservées
+---
+
+### Cas 6 : Gestion des problèmes
 
 ```php
 <?php
 
-// Ajouter une signature réservée
-$discovery->addReservedSignature('help');
+use AndyDefer\Directive\Services\DirectiveDiscoveryService;
 
-// Une directive avec la signature 'help' sera ignorée (sauf si force=true)
-$discovery->addDirective(CustomHelpDirective::class); // Ignoré
+$discovery = DirectiveDiscoveryService::init($app);
 
-// Forcer l'ajout
-$discovery->addDirective(CustomHelpDirective::class, true); // Ajouté
-
-// Supprimer une signature réservée
-$discovery->removeReservedSignature('help');
-$discovery->addDirective(CustomHelpDirective::class); // Maintenant accepté
-```
-
-### Cas 5 : Suivi des problèmes de découverte
-
-```php
-<?php
-
-$discovery = DirectiveDiscoveryService::init($container);
-
-// Tenter de découvrir avec des sources invalides
+// Ajout d'un chemin inexistant
 $discovery->addSource('/invalid/path');
-$discovery->addSource('/another/invalid/path');
 
+// La découverte va générer des problèmes
 $directives = $discovery->discover();
 
-// Récupérer les problèmes
+// Récupérer et afficher les problèmes
 $problems = $discovery->getProblems();
-
-if ($problems->isNotEmpty()) {
-    foreach ($problems as $problem) {
-        echo "❌ " . $problem->get('key') . "\n";
-        echo "   Context: " . $problem->get('context') . "\n";
-        echo "   Message: " . $problem->get('message') . "\n";
-    }
+foreach ($problems as $problem) {
+    echo "Key: " . $problem->get('key') . "\n";
+    echo "Context: " . $problem->get('context') . "\n";
+    echo "Message: " . $problem->get('message') . "\n";
+    echo "---\n";
 }
-```
 
-### Cas 6 : Utilisation dans un Kernel
-
-```php
-<?php
-
-use AndyDefer\Directive\DirectiveKernel;
-
-$kernel = DirectiveKernel::init($container);
-
-// Le kernel hérite de DirectiveDiscoveryService
-$kernel
-    ->addSource(__DIR__ . '/src/Commands')
-    ->ignoreSource(DiscoverySource::VENDOR)
-    ->onlyNamespace('App\\Commands\\');
-
-// La découverte est déclenchée lors de l'exécution
-$kernel->run($argv);
+// Nettoyer les problèmes
+$discovery->clearProblems();
 ```
 
 ---
@@ -506,159 +728,86 @@ $kernel->run($argv);
 ```
 discover()
     ↓
-Réinitialiser la collection
+collection = new DirectiveMetadataCollection
     ↓
-discoverRegisteredDirectives()
-    ├── Pour chaque directive enregistrée
-    │   ├── valider la classe
-    │   ├── vérifier les filtres
-    │   └── ajouter à la collection
+1. discoverRegisteredDirectives()
+    └── addDirectiveFromFqcn() pour chaque classe enregistrée
     ↓
-Si auto-discovery enabled:
-    ├── discoverBuiltInDirectives()
-    │   └── BuiltInDirectiveDiscovery → FQCNs
-    ├── discoverWorkspaceDirectives()
-    │   └── WorkspaceDirectiveDiscovery → FQCNs
-    ├── discoverVendorDirectives()
-    │   └── VendorDirectiveDiscovery → FQCNs
-    └── discoverCustomDirectives()
-        └── Scanner → FQCNs par source
+2. discoverBuiltInDirectives()
+    ├── BuiltInDirectiveDiscovery->discover()
+    └── addDirectiveFromFqcn() pour chaque FQCN trouvé
     ↓
-Pour chaque FQCN:
-    ├── isValidDirectiveClass()
-    ├── vérifier ignoredDirectives
-    ├── vérifier reservedSignatures
-    ├── vérifier namespace filters
-    ├── vérifier prefix filters
-    └── ajouter à la collection
+3. discoverWorkspaceDirectives()
+    ├── WorkspaceDirectiveDiscovery->discover()
+    └── addDirectiveFromFqcn() pour chaque FQCN trouvé
     ↓
-Retourner DirectiveMetadataCollection (unique by class)
-```
-
-### Filtrage des FQCNs
-
-```
-addDirectiveFromFqcn($fqcn, $force)
+4. discoverVendorDirectives()
+    ├── VendorDirectiveDiscovery->discover()
+    └── addDirectiveFromFqcn() pour chaque FQCN trouvé
     ↓
-isValidDirectiveClass()
-    ├── Non abstraite
-    └── Étend AbstractDirective
+5. discoverCustomDirectives()
+    ├── Pour chaque source personnalisée
+    │   ├── Scanner->scan($directory, $maxDepth)
+    │   └── addDirectiveFromFqcn() pour chaque FQCN trouvé
+    └──
     ↓
-ignoredDirectives contient signature? → ignorer
+addDirectiveFromFqcn($fqcn)
+    ├── ReflectionClass($fqcn)
+    ├── isValidDirectiveClass() (vérifie que c'est un AbstractDirective)
+    ├── Vérifie si la signature est ignorée
+    ├── Vérifie si la signature est réservée (sauf force=true)
+    ├── passesNamespaceFilters()
+    ├── passesPrefixFilters()
+    └── Ajoute à la collection
     ↓
-force=false ET isReservedSignature()? → ignorer
-    ↓
-passesNamespaceFilters()
-    ├── Si onlyNamespaces → doit correspondre
-    └── Si excludedNamespaces → ne doit pas correspondre
-    ↓
-passesPrefixFilters()
-    ├── Si onlyPrefixes → signature doit correspondre
-    └── Si excludedPrefixes → signature ne doit pas correspondre
-    ↓
-Ajouter à la collection
+Retourne DirectiveMetadataCollection (uniqueByClass)
 ```
 
 ---
 
 ## Gestion des erreurs
 
-### Système de problèmes
-
-| Type de problème | Clé | Contexte | Données |
-|------------------|-----|----------|---------|
-| Échec de configuration | `config_loading` | `Failed to load custom sources from configuration` | `config_key` |
-| Résolution de parser | `parser_resolution` | `Failed to resolve DirectiveParserInterface` | `fallback` |
-| Résolution de scanner | `scanner_resolution` | `Failed to resolve DirectiveScannerInterface` | `fallback` |
-| Résolution de filesystem | `filesystem_resolution` | `Failed to resolve FileSystemInterface` | `fallback` |
-| Source personnalisée non valide | `custom_source_not_directory` | `Custom source path is not a directory` | `path` |
-| Réflexion échouée | `reflection_error` | `Failed to reflect class` | `class` |
-| Ajout de directive | `add_directive` | `Failed to add directive class` | `class`, `force` |
-| Vérification de signature | `reserved_signature_check` | `Failed to check reserved signature` | `signature` |
-| Découverte de source | `discover_{source}_source` | `Failed to discover {source} directives` | `source` |
-
-### Aucune exception n'est levée lors de la découverte. Les erreurs sont capturées et ajoutées comme problèmes.
-
----
-
-## Intégration
-
-### Avec DirectiveContainer
-
-```php
-$container = DirectiveContainer::create('/path/to/project');
-$discovery = DirectiveDiscoveryService::init($container);
-```
-
-### Avec Laravel (Service Provider)
-
-```php
-// Dans un ServiceProvider
-$this->app->singleton(DirectiveDiscoveryService::class, function ($app) {
-    $discovery = DirectiveDiscoveryService::init($app->make(Container::class));
-    
-    // Configuration depuis config/directive.php
-    $config = config('directive');
-    if (!empty($config['custom_sources'])) {
-        $discovery->addSources($config['custom_sources']);
-    }
-    if (!empty($config['ignored_sources'])) {
-        $discovery->ignoreSources($config['ignored_sources']);
-    }
-    if (!empty($config['max_depth'])) {
-        $discovery->setMaxDepth($config['max_depth']);
-    }
-    
-    return $discovery;
-});
-```
-
-### Avec DirectiveKernel
-
-```php
-// Le kernel hérite de DirectiveDiscoveryService
-$kernel = DirectiveKernel::init($container);
-$kernel
-    ->addSource(__DIR__ . '/src/Directives')
-    ->onlyNamespace('App\\Directives\\')
-    ->ignoreSource(DiscoverySource::VENDOR);
-
-// La configuration est utilisée lors de l'exécution
-$kernel->run($argv);
-```
+| Situation | Problème | Contexte | Message |
+|-----------|----------|----------|---------|
+| Échec de chargement des sources config | `config_loading` | `Failed to load custom sources from configuration` | Message de l'exception |
+| Résolution du parser échouée | `parser_resolution` | `Failed to resolve DirectiveParserInterface from container, using fallback` | Message de l'exception |
+| Résolution du scanner échouée | `scanner_resolution` | `Failed to resolve DirectiveScannerInterface from container, using fallback` | Message de l'exception |
+| Résolution du filesystem échouée | `filesystem_resolution` | `Failed to resolve FileSystemInterface from container, using fallback` | Message de l'exception |
+| Résolution de la config échouée | `config_resolution` | `Failed to resolve DirectiveConfigInterface from container` | Message de l'exception |
+| Échec découverte built-in | `discover_builtin` | `Failed to discover built-in directives` | Message de l'exception |
+| Échec découverte workspace | `discover_workspace` | `Failed to discover workspace directives` | Message de l'exception |
+| Échec découverte vendor | `discover_vendor` | `Failed to discover vendor directives` | Message de l'exception |
+| Échec découverte custom | `discover_custom` | `Failed to discover custom directives` | Message de l'exception |
+| Classe invalide pour addDirective | `add_directive` | `Failed to add directive class: {class}` | `Class "{class}" must extend AbstractDirective` |
+| Erreur de réflexion | `reflection_error` | `Failed to reflect class: {class}` | Message de l'exception |
 
 ---
 
 ## Performance
 
-| Opération | Complexité | Détails |
-|-----------|------------|---------|
-| `discover()` | O(n × d) | n = classes PHP, d = profondeur de scan |
-| `addDirective()` | O(1) | Ajout dans une collection |
-| `ignoreSource()` | O(1) | Ajout dans une collection |
-| `onlyNamespace()` | O(1) | Ajout dans une collection |
+- **Découverte** : O(n) où n est le nombre de fichiers scannés
+- **Scan des répertoires** : Profondeur configurable (default 3, max 7)
+- **Filtrage** : O(1) par vérification (collections typées)
+- **Mémoire** : Stocke les métadonnées des directives en mémoire
+- **Problèmes** : Collection mutable, peut être nettoyée
 
-**Optimisations :**
-- Les directives enregistrées ont priorité
-- Les résultats sont dédoublonnés par classe
-- Les filtres sont évalués avant l'instanciation des classes
-- Cache des directives dans le kernel
+### Optimisations
 
-**Mémoire :**
-- Toutes les métadonnées sont stockées dans une collection
-- Les classes sont instanciées sans constructeur (si possible)
-- Les FQCNs sont conservés en mémoire
+- Cache des directives découvertes
+- Scan limité par profondeur max
+- Filtrage avant instanciation complète
+- Collections typées pour les performances
 
 ---
 
 ## Compatibilité
 
-| Version PHP | Support | Notes |
-|-------------|---------|-------|
-| PHP 8.4 | ✅ Complet | Support total |
-| PHP 8.3 | ✅ Complet | Support total |
-| PHP 8.2 | ✅ Complet | Support total |
-| PHP 8.1 | ✅ Complet | Support total |
+| Version PHP | Support |
+|-------------|---------|
+| PHP 8.4 | ✅ Complet |
+| PHP 8.3 | ✅ Complet |
+| PHP 8.2 | ✅ Complet |
+| PHP 8.1 | ✅ Complet |
 
 ---
 
@@ -669,113 +818,74 @@ $kernel->run($argv);
 
 declare(strict_types=1);
 
-use AndyDefer\Directive\Container\DirectiveContainer;
 use AndyDefer\Directive\Services\DirectiveDiscoveryService;
+use AndyDefer\Directive\Bootstrap\ApplicationBuilder;
+use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Enums\DiscoverySource;
+use App\Directives\GreetDirective;
+use App\Directives\DeployDirective;
 
-// 1. Création du conteneur
-$container = DirectiveContainer::create(__DIR__);
+// 1. Création de l'application
+$app = ApplicationBuilder::internal([
+    DirectiveServiceProvider::class
+])->build();
 
-// 2. Initialisation du service
-$discovery = DirectiveDiscoveryService::init($container);
+// 2. Initialisation du service de découverte
+$discovery = DirectiveDiscoveryService::init($app);
 
 // 3. Configuration
-$discovery
-    // Profondeur de scan
-    ->setMaxDepth(4)
-    
-    // Sources personnalisées
-    ->addSource(__DIR__ . '/src/Directives')
-    ->addSource(__DIR__ . '/app/Commands')
-    
-    // Ignorer certaines sources
-    ->ignoreSource(DiscoverySource::VENDOR)
-    ->ignoreSource(DiscoverySource::BUILTIN)
-    
-    // Ignorer des chemins spécifiques
-    ->ignorePath(__DIR__ . '/src/Deprecated')
-    ->ignorePath(__DIR__ . '/tests')
-    
-    // Ignorer certaines directives
-    ->ignoreDirective('test:legacy')
-    ->ignoreDirective('deprecated:')
-    
-    // Filtrage par namespace
+$discovery->setMaxDepth(4)
+    ->addSource('/custom/directives')
+    ->addSource('/project/directives')
     ->onlyNamespace('App\\Directives\\')
-    ->excludeNamespace('App\\Directives\\Internal\\')
-    
-    // Filtrage par préfixe
-    ->onlyPrefix('app:')
-    ->excludePrefix('admin:');
+    ->excludePrefix('test:')
+    ->ignoreSource(DiscoverySource::VENDOR);
 
-// 4. Découverte
+// 4. Ajout manuel de directives
+$discovery->addDirectives([
+    GreetDirective::class,
+    DeployDirective::class,
+], true); // force = true pour ignorer les signatures réservées
+
+// 5. Découverte
 $directives = $discovery->discover();
 
-echo "=== Discovery Report ===\n";
-echo "Total directives found: " . $directives->count() . "\n\n";
+// 6. Affichage des résultats
+echo "Discovered " . $directives->count() . " directives\n\n";
 
-// 5. Analyse des résultats
-$classes = [];
 foreach ($directives as $directive) {
-    $classes[] = $directive->class;
-    echo "- {$directive->signature}\n";
-    echo "  Class: {$directive->class}\n";
-    echo "  Description: {$directive->description}\n";
+    echo "📦 " . $directive->signature . "\n";
+    echo "   Class: " . $directive->class . "\n";
+    echo "   Description: " . $directive->description . "\n";
+    
     if ($directive->aliases->isNotEmpty()) {
-        echo "  Aliases: " . implode(', ', $directive->aliases->toArray()) . "\n";
+        echo "   Aliases: " . implode(', ', $directive->aliases->toArray()) . "\n";
     }
     echo "\n";
 }
 
-// 6. Dédoublonnage
-$unique = $directives->uniqueByClass();
-echo "Unique classes: " . $unique->count() . "\n\n";
-
-// 7. Récupération des problèmes
+// 7. Vérification des problèmes
 $problems = $discovery->getProblems();
-if ($problems->isNotEmpty()) {
-    echo "=== Problems Encountered ===\n";
+if (!$problems->isEmpty()) {
+    echo "⚠️ Problems encountered:\n";
     foreach ($problems as $problem) {
-        echo "  ❌ " . $problem->get('key') . "\n";
-        echo "     Context: " . $problem->get('context') . "\n";
-        echo "     Message: " . $problem->get('message') . "\n";
+        echo "  - [{$problem->get('key')}] " . $problem->get('context') . "\n";
+        echo "    " . $problem->get('message') . "\n";
     }
-    echo "\n";
 }
 
-// 8. Ajout manuel d'une directive
-try {
-    $discovery->addDirective(MyCustomDirective::class);
-    echo "✅ Manual directive added\n";
-} catch (InvalidArgumentException $e) {
-    echo "❌ Error: " . $e->getMessage() . "\n";
-}
-
-// 9. Forcer l'ajout (ignore réservé)
-$discovery->addDirective(MyHelpDirective::class, true);
-echo "✅ Forced directive added\n";
-
-// 10. Réinitialisation pour un nouveau scan
-$discovery->resetConfig()->manualOnly();
-echo "\nConfig reset, manual only\n";
-
-$manualDirectives = $discovery->discover();
-echo "Manual directives: " . $manualDirectives->count() . "\n";
-
-// 11. Vérification des signatures réservées
-$reserved = $discovery->getReservedSignatures();
-echo "\nReserved signatures:\n";
-foreach ($reserved as $signature) {
-    echo "  - $signature\n";
-}
+// 8. Réinitialisation
+$discovery->resetConfig()->clearProblems();
 ```
+
+---
 
 ## Voir aussi
 
-- `DirectiveKernel` - Noyau d'exécution (hérite de cette classe)
+- `DirectiveDiscoveryInterface` - Interface du service
+- `DirectiveMetadataRecord` - Enregistrement des métadonnées
 - `DirectiveMetadataCollection` - Collection des métadonnées
 - `DiscoverySource` - Énumération des sources
-- `BuiltInDirectiveDiscovery` - Découverte des directives intégrées
-- `WorkspaceDirectiveDiscovery` - Découverte dans l'espace de travail
-- `VendorDirectiveDiscovery` - Découverte dans les vendors
-- `AbstractDiscovery` - Classe de base pour les sources de découverte
+- `WorkspaceDirectiveDiscovery` - Découverte workspace
+- `VendorDirectiveDiscovery` - Découverte vendor
+- `BuiltInDirectiveDiscovery` - Découverte built-in

@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AndyDefer\Directive\Bootstrap;
+namespace AndyDefer\Directive\Helpers;
 
 use AndyDefer\Directive\Enums\ApplicationType;
-use AndyDefer\Directive\Helpers\Paths;
 
 /**
  * Detects the execution environment and application type.
