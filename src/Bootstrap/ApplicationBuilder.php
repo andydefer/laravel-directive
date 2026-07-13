@@ -8,6 +8,7 @@ use AndyDefer\Directive\Enums\ApplicationType;
 use AndyDefer\Directive\Factories\ExternalApplicationFactory;
 use AndyDefer\Directive\Factories\InternalApplicationFactory;
 use AndyDefer\Directive\Helpers\EnvironmentDetector;
+use AndyDefer\Directive\Providers\ConfigServiceProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
@@ -56,7 +57,8 @@ final class ApplicationBuilder
      */
     private function __construct()
     {
-        // Empty constructor
+        // ✅ ConfigServiceProvider chargé automatiquement par défaut
+        $this->providers[] = ConfigServiceProvider::class;
     }
 
     /**
