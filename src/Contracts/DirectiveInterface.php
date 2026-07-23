@@ -10,6 +10,7 @@ use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\Directive\Records\DirectiveCallRecord;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
+use AndyDefer\DomainStructures\Utils\StrictDataObject;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
 use Illuminate\Foundation\Application;
@@ -84,6 +85,26 @@ interface DirectiveInterface
      * @return SignatureStructureVO The signature structure
      */
     public function getStructure(): SignatureStructureVO;
+
+    // ==================== CUSTOM DATA METHODS ====================
+
+    /**
+     * Get all custom data from the parsed signature.
+     *
+     * Custom data is extracted from custom tags in the signature like <key="value">.
+     *
+     * @return StrictDataObject The custom data object
+     */
+    public function getCustomData(): StrictDataObject;
+
+    /**
+     * Get a specific custom data item by key.
+     *
+     * @param  string  $key  The custom data key
+     * @param  mixed  $default  Default value if key not found
+     * @return mixed The custom data value, or default if not found
+     */
+    public function getCustomDataItem(string $key, mixed $default = null): mixed;
 
     // ==================== ARGUMENT METHODS ====================
 

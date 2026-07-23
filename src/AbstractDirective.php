@@ -13,6 +13,7 @@ use AndyDefer\Directive\Services\DirectiveParserService;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\ListCollection;
 use AndyDefer\DomainStructures\Utils\MapCollection;
+use AndyDefer\DomainStructures\Utils\StrictDataObject;
 use AndyDefer\SignatureParser\Records\ParsedSignatureRecord;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
 use Illuminate\Foundation\Application;
@@ -109,6 +110,32 @@ abstract class AbstractDirective implements DirectiveInterface
     final public function getStructure(): SignatureStructureVO
     {
         return $this->structure;
+    }
+
+    // ==================== CUSTOM DATA METHODS ====================
+
+    /**
+     * Get all custom data from the parsed signature.
+     *
+     * Custom data is extracted from custom tags in the signature like <key="value">.
+     *
+     * @return StrictDataObject The custom data object
+     */
+    final public function getCustomData(): StrictDataObject
+    {
+        return $this->parsed->custom_data;
+    }
+
+    /**
+     * Get a specific custom data item by key.
+     *
+     * @param  string  $key  The custom data key
+     * @param  mixed  $default  Default value if key not found
+     * @return mixed The custom data value, or default if not found
+     */
+    final public function getCustomDataItem(string $key, mixed $default = null): mixed
+    {
+        return $this->parsed->custom_data[$key] ?? $default;
     }
 
     // ==================== ARGUMENT METHODS ====================

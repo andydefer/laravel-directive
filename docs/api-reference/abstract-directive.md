@@ -1,8 +1,8 @@
-# AbstractDirective - Référence Technique
+## AbstractDirective - Référence Technique (Mise à jour)
 
 ## Description
 
-`AbstractDirective` est la classe de base abstraite pour toutes les directives du système. Elle fournit les fonctionnalités communes nécessaires au parsing des arguments, à la gestion des flags, à l'exécution des appels internes, à la manipulation du contexte partagé et à l'interaction avec la console.
+`AbstractDirective` est la classe de base abstraite pour toutes les directives du système. Elle fournit les fonctionnalités communes nécessaires au parsing des arguments, à la gestion des flags, à l'exécution des appels internes, à la manipulation du contexte partagé, à l'interaction avec la console et à la gestion des données personnalisées via des tags.
 
 ## Hiérarchie / Implémentations
 
@@ -25,6 +25,7 @@ DirectiveInterface
 
 - Le parsing des arguments et flags via `DirectiveParserService`
 - L'accès aux valeurs typées via des méthodes dédiées (`getArgument()`, `getFlag()`, etc.)
+- La gestion des données personnalisées via des tags (`<key="value">`)
 - La gestion du contexte partagé entre directives
 - L'exécution d'appels internes avec détection de circularité
 - Les méthodes de sortie console (héritées du composant `Console`)
@@ -44,6 +45,7 @@ composer require andydefer/laravel-directive
 - `Console` - Composant de sortie console
 - `SignatureParser` - Parser de signatures
 - `Application` - Conteneur Laravel
+- `StrictDataObject` - Objet de données typé
 
 ---
 
@@ -131,6 +133,39 @@ Retourne la structure de la signature.
 ```php
 $structure = $directive->getStructure();
 $requireds = $structure->getRequireds(); // ['name', 'email']
+```
+
+---
+
+### `getCustomData(): StrictDataObject`
+
+Retourne toutes les données personnalisées extraites des tags personnalisés.
+
+**Retourne :** `StrictDataObject` - Objet contenant toutes les données personnalisées
+
+**Exemple :**
+```php
+$customData = $directive->getCustomData();
+// StrictDataObject ['description' => 'User profile data', 'version' => '1.0']
+```
+
+---
+
+### `getCustomDataItem(string $key, mixed $default = null): mixed`
+
+Récupère une valeur spécifique des données personnalisées.
+
+| Paramètre | Type | Description |
+|-----------|------|-------------|
+| `$key` | `string` | Clé de la donnée personnalisée |
+| `$default` | `mixed` | Valeur par défaut si la clé n'existe pas |
+
+**Retourne :** `mixed` - La valeur ou `$default` si non trouvée
+
+**Exemple :**
+```php
+$description = $directive->getCustomDataItem('description', 'Default description');
+echo $description; // 'User profile data'
 ```
 
 ---
@@ -522,7 +557,7 @@ Hook appelé après l'exécution principale. À surcharger dans les directives c
 
 ## Cas d'utilisation
 
-### Cas 1 : Création d'une directive simple
+### Cas 1 : Création d'une directive avec tags personnalisés
 
 ```php
 <?php
@@ -533,33 +568,32 @@ use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 
-final class GreetDirective extends AbstractDirective
+final class ForgeDataDirective extends AbstractDirective
 {
     public function getSignature(): string
     {
-        return 'greet {name} {--formal}';
+        return 'forge:data {name} <description="">';
     }
 
     public function getDescription(): string
     {
-        return 'Say hello to someone';
+        return 'Create a new data DTO class';
     }
 
     public function getAliases(): StringTypedCollection
     {
-        return StringTypedCollection::from(['hello']);
+        return StringTypedCollection::from(['create-data']);
     }
 
     protected function execute(): ExitCode
     {
         $name = $this->getRequired('name');
-        $formal = $this->getFlag('formal');
+        
+        // Récupération de la description via tag personnalisé
+        $description = $this->getCustomDataItem('description', 'Data DTO for ' . $name);
 
-        if ($formal) {
-            $this->info("Good day, {$name}!");
-        } else {
-            $this->info("Hello, {$name}!");
-        }
+        $this->info("Creating data: {$name}");
+        $this->info("Description: {$description}");
 
         return ExitCode::SUCCESS;
     }
@@ -568,8 +602,9 @@ final class GreetDirective extends AbstractDirective
 
 **Utilisation :**
 ```bash
-./directive greet John --formal
-# Output: Good day, John!
+./directive forge:data user <description="User profile data transfer object">
+# Output: Creating data: user
+#         Description: User profile data transfer object
 ```
 
 ---
@@ -605,20 +640,9 @@ final class SetLevelDirective extends AbstractDirective
             $this->info("Level set to: {$level}");
         }
 
-        // Utiliser la valeur autorisée
-        if ($this->isEnumValueAllowed('level', 'high')) {
-            $this->info('High level is valid');
-        }
-
         return ExitCode::SUCCESS;
     }
 }
-```
-
-**Utilisation :**
-```bash
-./directive set-level high --verbose
-# Output: Level set to: high
 ```
 
 ---
@@ -670,12 +694,6 @@ final class DeleteDirective extends AbstractDirective
 }
 ```
 
-**Utilisation :**
-```bash
-./directive delete [file1.txt, file2.txt, file3.txt] --force
-# Output: Deleting 3 file(s)...
-```
-
 ---
 
 ### Cas 4 : Directive avec appels internes
@@ -712,7 +730,6 @@ final class DeployDirective extends AbstractDirective
 
         $this->info("Deploying to {$env}...");
 
-        // Appels internes
         if ($force) {
             $this->call('backup database');
             $this->call('clear cache');
@@ -732,97 +749,6 @@ final class DeployDirective extends AbstractDirective
 }
 ```
 
-**Utilisation :**
-```bash
-./directive deploy production --force
-# Output: Starting deployment... Deploying to production...
-```
-
----
-
-### Cas 5 : Directive avec manipulation du contexte partagé
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-
-final class CounterDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'counter {action} {name} {value?}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Manipulate shared counters';
-    }
-
-    protected function execute(): ExitCode
-    {
-        $action = $this->getRequired('action');
-        $name = $this->getRequired('name');
-        $value = $this->getArgument('value');
-
-        switch ($action) {
-            case 'set':
-                $this->contextSet($name, (int) $value);
-                $this->info("Set {$name} = {$value}");
-                break;
-
-            case 'get':
-                $value = $this->contextGet($name);
-                $this->info("{$name} = " . ($value ?? 'null'));
-                break;
-
-            case 'increment':
-                $new = $this->contextIncrement($name, (int) $value);
-                $this->info("{$name} = {$new}");
-                break;
-
-            case 'decrement':
-                $new = $this->contextDecrement($name, (int) $value);
-                $this->info("{$name} = {$new}");
-                break;
-
-            case 'has':
-                $exists = $this->contextHas($name);
-                $this->info("{$name} exists: " . ($exists ? 'true' : 'false'));
-                break;
-
-            case 'remove':
-                $this->contextRemove($name);
-                $this->info("Removed {$name}");
-                break;
-
-            case 'clear':
-                $this->contextClear();
-                $this->info('Context cleared');
-                break;
-
-            case 'all':
-                $all = $this->contextAll();
-                $this->info('Context: ' . json_encode($all->toArray()));
-                break;
-        }
-
-        return ExitCode::SUCCESS;
-    }
-}
-```
-
-**Utilisation :**
-```bash
-./directive counter set visits 10
-./directive counter increment visits 5
-./directive counter get visits
-# Output: visits = 15
-```
-
 ---
 
 ## Flux d'exécution
@@ -836,6 +762,13 @@ __construct()
     ├── console → $this->kernel->getApplication()->make(Console::class)
     ├── parser → $this->kernel->getApplication()->make(DirectiveParserService::class)
     ├── parsed → parser->parse(signature, query)
+    │   ├── source
+    │   ├── requireds
+    │   ├── defaults
+    │   ├── variadics
+    │   ├── flags
+    │   ├── enums
+    │   └── custom_data (tags personnalisés)
     └── structure → new SignatureStructureVO(signature)
     ↓
 run()
@@ -843,6 +776,7 @@ run()
     │   └── Si exception → RUNTIME_ERROR + problème enregistré
     ├── execute() (logique métier)
     │   ├── Appels à getArgument(), getFlag(), etc.
+    │   ├── Appels à getCustomData(), getCustomDataItem()
     │   ├── Appels à call() pour les appels internes
     │   └── Retourne ExitCode
     ├── executeCalls()
@@ -859,138 +793,6 @@ run()
 
 ---
 
-## Gestion des erreurs
-
-| Situation | Exception/Problème | Message/Contexte |
-|-----------|-------------------|------------------|
-| Erreur dans `beforeExecute()` | Problème kernel | `directive_before_hook` |
-| Erreur dans `execute()` | Problème kernel | `directive_execute_hook` |
-| Erreur dans `afterExecute()` | Problème kernel | `directive_after_hook` |
-| Appel interne vers directive inexistante | Problème kernel | `call_directive_not_found` |
-| Appel interne circulaire détecté | Problème kernel | `circular_call_detected: {command}` |
-| Erreur dans l'exécution d'un appel interne | Problème kernel | `execute_call_instance` |
-
-**Messages d'erreur exacts :**
-```
-call_directive_not_found: "Directive not found for command '{command}'"
-circular_call_detected: "Circular call detected: {command}"
-execute_call_instance: "Error executing call: {command}"
-```
-
----
-
-## Performance
-
-- **Parsing** : O(n) où n est le nombre de tokens dans la signature
-- **Recherche d'arguments** : O(1) via les collections typées
-- **Appels internes** : O(m) où m est le nombre d'appels queués
-- **Détection de circularité** : O(1) via la pile d'exécution
-- **Mémoire** : Minimal, les collections sont immuables
-
----
-
-## Compatibilité
-
-| Version PHP | Support |
-|-------------|---------|
-| PHP 8.4 | ✅ Complet |
-| PHP 8.3 | ✅ Complet |
-| PHP 8.2 | ✅ Complet |
-| PHP 8.1 | ✅ Complet |
-
----
-
-## Exemple complet
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use AndyDefer\Directive\AbstractDirective;
-use AndyDefer\Directive\Enums\ExitCode;
-use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
-
-final class BackupDirective extends AbstractDirective
-{
-    public function getSignature(): string
-    {
-        return 'backup {source}#"Source directory" {destination} {format=zip} ::level->[low,medium,high]=medium {excludes*} {--force} {--verbose}';
-    }
-
-    public function getDescription(): string
-    {
-        return 'Create a backup of files and directories';
-    }
-
-    public function getAliases(): StringTypedCollection
-    {
-        return StringTypedCollection::from(['bk', 'save']);
-    }
-
-    protected function beforeExecute(): void
-    {
-        if ($this->getFlag('verbose')) {
-            $this->info('Starting backup process...');
-        }
-    }
-
-    protected function execute(): ExitCode
-    {
-        $source = $this->getRequired('source');
-        $destination = $this->getRequired('destination');
-        $format = $this->getDefault('format');
-        $level = $this->getEnum('level');
-        $excludes = $this->getVariadic('excludes');
-        $force = $this->getFlag('force');
-        $verbose = $this->getFlag('verbose');
-
-        // Vérifications
-        if (!is_dir($source)) {
-            $this->error("Source directory not found: {$source}");
-            return ExitCode::INVALID_ARGUMENT;
-        }
-
-        if ($verbose) {
-            $this->info('Source: ' . $source);
-            $this->info('Destination: ' . $destination);
-            $this->info('Format: ' . $format);
-            $this->info('Level: ' . $level);
-            $this->info('Excludes: ' . implode(', ', $excludes));
-            $this->info('Force: ' . ($force ? 'Yes' : 'No'));
-        }
-
-        // Logique métier avec appels internes
-        $this->call('validate --strict');
-        $this->call('compress --level=' . $level);
-
-        if ($force) {
-            $this->call('clean --all');
-        }
-
-        // Utilisation du contexte partagé
-        $backupCount = $this->contextIncrement('backup_count');
-        $this->info("✅ Backup #{$backupCount} completed successfully!");
-
-        return ExitCode::SUCCESS;
-    }
-
-    protected function afterExecute(ExitCode $exitCode): void
-    {
-        if ($this->getFlag('verbose')) {
-            $this->info('Backup process finished with code: ' . $exitCode->value);
-        }
-    }
-}
-```
-
-**Utilisation complète :**
-```bash
-./directive backup /home/user/documents /backup/dest zip high [*.tmp, *.log] --force --verbose
-```
-
----
-
 ## Voir aussi
 
 - `DirectiveInterface` - Interface des directives
@@ -1000,3 +802,4 @@ final class BackupDirective extends AbstractDirective
 - `SignatureParser` - Parser de signatures
 - `SignatureStructureVO` - Structure de signature
 - `ParsedSignatureRecord` - Données parsées
+- `StrictDataObject` - Objet de données typé pour les tags personnalisés
