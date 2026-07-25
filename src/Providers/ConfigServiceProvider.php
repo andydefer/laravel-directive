@@ -10,13 +10,28 @@ use Illuminate\Support\ServiceProvider;
 
 final class ConfigServiceProvider extends ServiceProvider
 {
+    /**
+     * @var int Profondeur de récursion maximale pour éviter les boucles infinies
+     */
+    private const MAX_RECURSION_DEPTH = 20;
+
+    /**
+     * @var int Profondeur de récursion actuelle
+     */
+    private static int $recursionDepth = 0;
+
+    /**
+     * @var array<string, bool> Liste des chemins déjà visités (pour détection de cycles)
+     */
+    private static array $visitedPaths = [];
+
     public function register(): void
     {
         $this->app->singleton(ConfigRepository::class, function ($app) {
             $config = [];
             $basePath = $app->basePath();
 
-            // ✅ Liste des dossiers de configuration à scanner
+            // Liste des dossiers de configuration à scanner
             $configDirs = [
                 $basePath.'/config',
                 $basePath.'/configs',
@@ -33,13 +48,13 @@ final class ConfigServiceProvider extends ServiceProvider
 
             $repository = new Repository($config);
 
-            // ✅ Enregistrer le service 'config'
+            // Enregistrer le service 'config'
             $this->app->instance('config', $repository);
 
             return $repository;
         });
 
-        // ✅ Alias 'config' vers ConfigRepository
+        // Alias 'config' vers ConfigRepository
         $this->app->alias(ConfigRepository::class, 'config');
     }
 
@@ -51,8 +66,35 @@ final class ConfigServiceProvider extends ServiceProvider
      */
     private function loadConfigFiles(string $dir, array &$config): void
     {
+        // ✅ Vérifier la profondeur de récursion
+        self::$recursionDepth++;
+        if (self::$recursionDepth > self::MAX_RECURSION_DEPTH) {
+            self::$recursionDepth--;
+
+            return;
+        }
+
+        // ✅ Résoudre le chemin réel pour détecter les liens symboliques
+        $realPath = realpath($dir);
+        if ($realPath === false) {
+            self::$recursionDepth--;
+
+            return;
+        }
+
+        // ✅ Détection des cycles (dossier déjà visité)
+        if (isset(self::$visitedPaths[$realPath])) {
+            self::$recursionDepth--;
+
+            return;
+        }
+
+        self::$visitedPaths[$realPath] = true;
+
         $files = scandir($dir);
         if ($files === false) {
+            self::$recursionDepth--;
+
             return;
         }
 
@@ -63,8 +105,8 @@ final class ConfigServiceProvider extends ServiceProvider
 
             $path = $dir.'/'.$file;
 
+            // ✅ Récursion pour les sous-dossiers
             if (is_dir($path)) {
-                // ✅ Récursion pour les sous-dossiers
                 $this->loadConfigFiles($path, $config);
 
                 continue;
@@ -78,9 +120,14 @@ final class ConfigServiceProvider extends ServiceProvider
             // ✅ Extraire le nom de la clé de configuration
             $key = pathinfo($file, PATHINFO_FILENAME);
 
-            // ✅ Charger le fichier de configuration
-            $content = require $path;
-            if (! is_array($content)) {
+            // ✅ Charger le fichier de configuration avec gestion d'erreur
+            try {
+                $content = require $path;
+                if (! is_array($content)) {
+                    continue;
+                }
+            } catch (\Throwable $e) {
+                // Ignorer silencieusement les erreurs de chargement
                 continue;
             }
 
@@ -91,5 +138,7 @@ final class ConfigServiceProvider extends ServiceProvider
                 $config[$key] = $content;
             }
         }
+
+        self::$recursionDepth--;
     }
 }
