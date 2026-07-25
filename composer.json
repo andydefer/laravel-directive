@@ -13,8 +13,8 @@
         "php": ">=8.1",
         "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
         "nikic/php-parser": "^5.8",
-        "andydefer/algo-kit": "^0.8.8",
-        "andydefer/laravel-jsonl": "^0.8.11",
+        "andydefer/algo-kit": "^0.8.9",
+        "andydefer/laravel-jsonl": "^0.8.12",
         "andydefer/php-signature-parser": "^0.10.3",
         "andydefer/php-console": "^1.6.11"
     },
