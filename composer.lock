@@ -4,24 +4,24 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "01c9ee2ae7b44b713662c0cd94ed0ba7",
+    "content-hash": "c286ea49eca461b6cf672602a206b88a",
     "packages": [
         {
             "name": "andydefer/algo-kit",
-            "version": "v0.8.9",
+            "version": "v0.8.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/algo-kit.git",
-                "reference": "85f29b16336b61d8fbac4a26a3f5d08bb7f0549f"
+                "reference": "ca0c4e792d70a5dced0a8863e28e4cf629227c46"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/algo-kit/zipball/85f29b16336b61d8fbac4a26a3f5d08bb7f0549f",
-                "reference": "85f29b16336b61d8fbac4a26a3f5d08bb7f0549f",
+                "url": "https://api.github.com/repos/andydefer/algo-kit/zipball/ca0c4e792d70a5dced0a8863e28e4cf629227c46",
+                "reference": "ca0c4e792d70a5dced0a8863e28e4cf629227c46",
                 "shasum": ""
             },
             "require": {
-                "andydefer/storage-kit": "^0.7.10",
+                "andydefer/storage-kit": "^0.7.11",
                 "php": ">=8.1"
             },
             "require-dev": {
@@ -49,9 +49,9 @@
             "description": "Algo KIT - Probabilistic data structures and algorithms for large-scale data processing in PHP",
             "support": {
                 "issues": "https://github.com/andydefer/algo-kit/issues",
-                "source": "https://github.com/andydefer/algo-kit/tree/v0.8.9"
+                "source": "https://github.com/andydefer/algo-kit/tree/v0.8.10"
             },
-            "time": "2026-07-25T18:49:57+00:00"
+            "time": "2026-07-25T19:16:11+00:00"
         },
         {
             "name": "andydefer/domain-structures",
@@ -406,20 +406,20 @@
         },
         {
             "name": "andydefer/storage-kit",
-            "version": "v0.7.10",
+            "version": "v0.7.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andydefer/storage-kit.git",
-                "reference": "3168a721c778aa292c5bd52e8a1eaf3db00ab691"
+                "reference": "29ea3ca9d3283f3e245e2ba119db9e8fdbb47a42"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andydefer/storage-kit/zipball/3168a721c778aa292c5bd52e8a1eaf3db00ab691",
-                "reference": "3168a721c778aa292c5bd52e8a1eaf3db00ab691",
+                "url": "https://api.github.com/repos/andydefer/storage-kit/zipball/29ea3ca9d3283f3e245e2ba119db9e8fdbb47a42",
+                "reference": "29ea3ca9d3283f3e245e2ba119db9e8fdbb47a42",
                 "shasum": ""
             },
             "require": {
-                "andydefer/php-jsonl": "^0.10.10",
+                "andydefer/php-jsonl": "^0.10.11",
                 "php": ">=8.1",
                 "phpfastcache/phpfastcache": "^9.2"
             },
@@ -449,9 +449,9 @@
             "description": "Storage adapters : Memory, JSONL, and Cache",
             "support": {
                 "issues": "https://github.com/andydefer/storage-kit/issues",
-                "source": "https://github.com/andydefer/storage-kit/tree/v0.7.10"
+                "source": "https://github.com/andydefer/storage-kit/tree/v0.7.11"
             },
-            "time": "2026-07-25T18:30:39+00:00"
+            "time": "2026-07-25T18:56:15+00:00"
         },
         {
             "name": "brick/math",

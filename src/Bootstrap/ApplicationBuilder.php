@@ -13,6 +13,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Events\EventServiceProvider;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\ViewServiceProvider;
 
 /**
  * Factory for creating and configuring the Directive application.
@@ -52,7 +53,14 @@ final class ApplicationBuilder
      */
     private array $configPaths = [];
 
+    /**
+     * @var array<string, string> View paths
+     */
+    private array $viewPaths = [];
+
     private ?ApplicationType $forcedType = null;
+
+    private bool $viewsLoaded = false;
 
     /**
      * Private constructor to enforce factory pattern.
@@ -395,6 +403,72 @@ final class ApplicationBuilder
     }
 
     /**
+     * Configure view paths for CLI context.
+     *
+     * This is useful when using MailChannel or other view-dependent
+     * services in CLI directives.
+     *
+     * @param  array<string>  $paths  Array of view paths
+     * @param  string  $namespace  The namespace for the views (default: 'app')
+     *
+     * @example
+     * $builder->withViews([resource_path('views')]);
+     * $builder->withViews([resource_path('views'), resource_path('emails')]);
+     */
+    public function withViews(array $paths, string $namespace = 'app'): self
+    {
+        $this->viewPaths = $paths;
+
+        // ✅ Ajouter le ViewServiceProvider
+        $this->withProvider(ViewServiceProvider::class);
+
+        // ✅ Configurer les chemins de vues
+        $this->config['view'] = array_merge(
+            $this->config['view'] ?? [],
+            [
+                'paths' => $paths,
+                'namespaces' => [
+                    $namespace => $paths,
+                ],
+            ]
+        );
+
+        $this->viewsLoaded = true;
+
+        return $this;
+    }
+
+    /**
+     * Add a single view path.
+     *
+     * @param  string  $path  View path
+     * @param  string  $namespace  The namespace for the views (default: 'app')
+     */
+    public function withViewPath(string $path, string $namespace = 'app'): self
+    {
+        $this->viewPaths[] = $path;
+
+        // ✅ Ajouter le ViewServiceProvider si pas encore ajouté
+        if (! $this->viewsLoaded) {
+            $this->withProvider(ViewServiceProvider::class);
+            $this->viewsLoaded = true;
+        }
+
+        // ✅ Configurer les chemins de vues
+        $this->config['view'] = array_merge(
+            $this->config['view'] ?? [],
+            [
+                'paths' => $this->viewPaths,
+                'namespaces' => [
+                    $namespace => $this->viewPaths,
+                ],
+            ]
+        );
+
+        return $this;
+    }
+
+    /**
      * Build the application.
      */
     public function build(): Application
@@ -406,7 +480,30 @@ final class ApplicationBuilder
         $this->registerProviders($app);
         $this->bootProviders($app);
 
+        // ✅ Forcer le chargement des vues après le boot
+        if ($this->viewsLoaded) {
+            $this->ensureViewsLoaded($app);
+        }
+
         return $app;
+    }
+
+    /**
+     * Ensure views are loaded correctly.
+     */
+    private function ensureViewsLoaded(Application $app): void
+    {
+        try {
+            // ✅ Forcer la configuration des chemins de vues
+            if (! empty($this->viewPaths)) {
+                $app->make('config')->set('view.paths', $this->viewPaths);
+            }
+
+            // ✅ Forcer l'initialisation du view finder
+            $app->make('view.finder');
+        } catch (\Exception $e) {
+            // Ignorer les erreurs de vue en CLI
+        }
     }
 
     /**
