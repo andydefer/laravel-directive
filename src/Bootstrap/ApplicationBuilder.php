@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Bootstrap;
 
+use AndyDefer\Directive\DirectiveServiceProvider;
 use AndyDefer\Directive\Enums\ApplicationType;
 use AndyDefer\Directive\Factories\ExternalApplicationFactory;
 use AndyDefer\Directive\Factories\InternalApplicationFactory;
 use AndyDefer\Directive\Helpers\EnvironmentDetector;
 use AndyDefer\Directive\Providers\ConfigServiceProvider;
+use AndyDefer\Directive\Providers\ViewServiceProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Events\EventServiceProvider;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\View\ViewServiceProvider;
 
 /**
  * Factory for creating and configuring the Directive application.
@@ -54,7 +55,7 @@ final class ApplicationBuilder
     private array $configPaths = [];
 
     /**
-     * @var array<string, string> View paths
+     * @var array<string> View paths
      */
     private array $viewPaths = [];
 
@@ -69,6 +70,9 @@ final class ApplicationBuilder
     {
         // ✅ ConfigServiceProvider chargé automatiquement par défaut
         $this->providers[] = ConfigServiceProvider::class;
+
+        // ✅ DirectiveServiceProvider chargé automatiquement par défaut
+        $this->providers[] = DirectiveServiceProvider::class;
     }
 
     /**
@@ -419,19 +423,25 @@ final class ApplicationBuilder
     {
         $this->viewPaths = $paths;
 
-        // ✅ Ajouter le ViewServiceProvider
-        $this->withProvider(ViewServiceProvider::class);
+        // ✅ Utiliser NOTRE ViewServiceProvider au lieu de celui de Laravel
+        if (! in_array(ViewServiceProvider::class, $this->providers, true)) {
+            $this->withProvider(ViewServiceProvider::class);
+        }
 
-        // ✅ Configurer les chemins de vues
-        $this->config['view'] = array_merge(
-            $this->config['view'] ?? [],
-            [
-                'paths' => $paths,
-                'namespaces' => [
-                    $namespace => $paths,
-                ],
-            ]
-        );
+        // ✅ Définir le cache des vues
+        $cachePath = sys_get_temp_dir().'/directive-views-cache';
+        if (! is_dir($cachePath)) {
+            mkdir($cachePath, 0755, true);
+        }
+
+        $this->config['view'] = [
+            'paths' => $paths,
+            'compiled' => $cachePath,
+            'cache' => true,
+            'namespaces' => [
+                $namespace => $paths,
+            ],
+        ];
 
         $this->viewsLoaded = true;
 
@@ -448,22 +458,25 @@ final class ApplicationBuilder
     {
         $this->viewPaths[] = $path;
 
-        // ✅ Ajouter le ViewServiceProvider si pas encore ajouté
+        // ✅ Utiliser NOTRE ViewServiceProvider si pas encore ajouté
         if (! $this->viewsLoaded) {
             $this->withProvider(ViewServiceProvider::class);
             $this->viewsLoaded = true;
-        }
 
-        // ✅ Configurer les chemins de vues
-        $this->config['view'] = array_merge(
-            $this->config['view'] ?? [],
-            [
+            $cachePath = sys_get_temp_dir().'/directive-views-cache';
+            if (! is_dir($cachePath)) {
+                mkdir($cachePath, 0755, true);
+            }
+
+            $this->config['view'] = [
                 'paths' => $this->viewPaths,
+                'compiled' => $cachePath,
+                'cache' => true,
                 'namespaces' => [
                     $namespace => $this->viewPaths,
                 ],
-            ]
-        );
+            ];
+        }
 
         return $this;
     }
@@ -475,34 +488,32 @@ final class ApplicationBuilder
     {
         $app = $this->createBaseApplication();
 
+        // ✅ Charger la configuration AVANT les providers
+        $this->loadViewConfig($app);
         $this->loadConfigFiles($app);
         $this->applyConfig($app);
+
+        // ✅ Puis les providers
         $this->registerProviders($app);
         $this->bootProviders($app);
-
-        // ✅ Forcer le chargement des vues après le boot
-        if ($this->viewsLoaded) {
-            $this->ensureViewsLoaded($app);
-        }
 
         return $app;
     }
 
     /**
-     * Ensure views are loaded correctly.
+     * Load view configuration before anything else.
      */
-    private function ensureViewsLoaded(Application $app): void
+    private function loadViewConfig(Application $app): void
     {
-        try {
-            // ✅ Forcer la configuration des chemins de vues
-            if (! empty($this->viewPaths)) {
-                $app->make('config')->set('view.paths', $this->viewPaths);
+        if (! empty($this->viewPaths)) {
+            $cachePath = sys_get_temp_dir().'/directive-views-cache';
+            if (! is_dir($cachePath)) {
+                mkdir($cachePath, 0755, true);
             }
 
-            // ✅ Forcer l'initialisation du view finder
-            $app->make('view.finder');
-        } catch (\Exception $e) {
-            // Ignorer les erreurs de vue en CLI
+            $app->config->set('view.paths', $this->viewPaths);
+            $app->config->set('view.compiled', $cachePath);
+            $app->config->set('view.cache', true);
         }
     }
 
@@ -577,12 +588,17 @@ final class ApplicationBuilder
     {
         foreach ($this->config as $key => $value) {
             if (method_exists($app, 'config')) {
-                $current = $app->config->get($key, []);
-
-                if (is_array($current) && is_array($value)) {
-                    $app->config->set($key, array_merge($current, $value));
-                } else {
+                // ✅ Pour la configuration des vues, remplacer complètement
+                if (str_starts_with($key, 'view.') || $key === 'view') {
                     $app->config->set($key, $value);
+                } else {
+                    $current = $app->config->get($key, []);
+
+                    if (is_array($current) && is_array($value)) {
+                        $app->config->set($key, array_merge($current, $value));
+                    } else {
+                        $app->config->set($key, $value);
+                    }
                 }
             }
         }
