@@ -14,7 +14,7 @@
         "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
         "nikic/php-parser": "^5.8",
         "andydefer/algo-kit": "^0.8.11",
-        "andydefer/laravel-jsonl": "^0.8.13",
+        "andydefer/laravel-jsonl": "^0.8.14",
         "andydefer/php-signature-parser": "^0.10.4",
         "andydefer/php-console": "^1.6.12"
     },
