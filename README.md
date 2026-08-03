@@ -49,6 +49,12 @@
 composer require andydefer/laravel-directive
 ```
 
+## Publier la config
+
+```bash
+php artisan vendor:publish --tag=directive-config
+```
+
 **Prérequis :** PHP 8.1+ | Laravel 12.x, 13.x, 14.x ou 15.x
 
 ---
