@@ -75,7 +75,7 @@ final class DirectiveKernel extends DirectiveDiscoveryService
         }
     }
 
-    public static function init(Application $container): self
+    public static function init(Application $container): static
     {
         return new self($container);
     }
