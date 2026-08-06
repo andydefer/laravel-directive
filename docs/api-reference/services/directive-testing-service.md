@@ -98,7 +98,7 @@ $response = $service->runDirective(
 );
 ```
 
----
+---a
 
 ### `runSignature(string $query): DirectiveResponseRecord`
 

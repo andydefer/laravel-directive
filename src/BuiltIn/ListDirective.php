@@ -16,13 +16,6 @@ use AndyDefer\SignatureParser\CommentManager;
 use AndyDefer\SignatureParser\SignatureDocumentor;
 use AndyDefer\SignatureParser\ValueObjects\SignatureStructureVO;
 
-/**
- * Built-in directive that lists all available directives.
- *
- * Discovers and displays all registered directives grouped by category.
- * Supports aliases for quick access (ls, -l, --list).
- * Supports search by source (e.g., list test:call).
- */
 final class ListDirective extends AbstractDirective
 {
     private const DEFAULT_CATEGORY = 'General';
@@ -63,9 +56,6 @@ final class ListDirective extends AbstractDirective
         return $this->listAllDirectives($directives);
     }
 
-    /**
-     * Lists all directives grouped by category.
-     */
     private function listAllDirectives(DirectiveMetadataCollection $directives): ExitCode
     {
         $console = $this->getConsole();
@@ -93,9 +83,6 @@ final class ListDirective extends AbstractDirective
         return ExitCode::SUCCESS;
     }
 
-    /**
-     * Shows detailed information about a specific directive.
-     */
     private function showDirectiveDetails(
         DirectiveMetadataCollection $directives,
         string $source,
@@ -112,9 +99,6 @@ final class ListDirective extends AbstractDirective
             : $this->renderDirectiveAsDefault($directive);
     }
 
-    /**
-     * Finds a directive by source or alias.
-     */
     private function findDirective(DirectiveMetadataCollection $directives, string $source): ?DirectiveMetadataRecord
     {
         foreach ($directives as $directive) {
@@ -134,17 +118,11 @@ final class ListDirective extends AbstractDirective
         return null;
     }
 
-    /**
-     * Extracts the command name from a signature.
-     */
     private function extractCommandName(string $signature): string
     {
         return (new SignatureStructureVO($signature))->getSource();
     }
 
-    /**
-     * Handles the case where a directive is not found.
-     */
     private function handleDirectiveNotFound(DirectiveMetadataCollection $directives, string $source): ExitCode
     {
         $console = $this->getConsole();
@@ -163,16 +141,11 @@ final class ListDirective extends AbstractDirective
         return ExitCode::NOT_FOUND;
     }
 
-    /**
-     * Renders directive details in JSON format.
-     */
     private function renderDirectiveAsJson(DirectiveMetadataRecord $directive): ExitCode
     {
         $console = $this->getConsole();
 
         $documentation = SignatureDocumentor::generate($directive->signature, 'array');
-
-        // Nettoyer la signature (enlever les commentaires, retours à la ligne)
         $cleanSignature = $this->cleanSignature($directive->signature);
 
         $payload = [
@@ -192,34 +165,20 @@ final class ListDirective extends AbstractDirective
         return ExitCode::SUCCESS;
     }
 
-    /**
-     * Clean signature by removing comments, newlines and extra spaces.
-     *
-     * @param  string  $signature  The raw signature
-     * @return string The cleaned signature
-     */
     private function cleanSignature(string $signature): string
     {
-        // 1. Extraire les commentaires avec CommentManager
         $commentManager = new CommentManager;
         $cleaned = $commentManager->extractComments($signature);
-
-        // 2. Nettoyer les retours à la ligne et les espaces multiples
         $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));
 
         return $cleaned;
     }
 
-    /**
-     * Renders directive details in the default format.
-     */
     private function renderDirectiveAsDefault(DirectiveMetadataRecord $directive): ExitCode
     {
         $console = $this->getConsole();
 
         $documentation = SignatureDocumentor::generate($directive->signature, 'array');
-
-        // Nettoyer la signature (enlever les commentaires, retours à la ligne)
         $cleanSignature = $this->cleanSignature($directive->signature);
 
         $console->title(sprintf('📋 Details for: %s', $documentation['source']));
@@ -236,9 +195,6 @@ final class ListDirective extends AbstractDirective
         return ExitCode::SUCCESS;
     }
 
-    /**
-     * Renders general information about a directive.
-     */
     private function renderGeneralInfo(DirectiveMetadataRecord $directive, string $cleanSignature): void
     {
         $console = $this->getConsole();
@@ -257,9 +213,6 @@ final class ListDirective extends AbstractDirective
         $console->line();
     }
 
-    /**
-     * Renders arguments (required, default, variadic) with their comments.
-     */
     private function renderArguments(array $documentation, string $key, string $title, string $color): void
     {
         $console = $this->getConsole();
@@ -278,9 +231,15 @@ final class ListDirective extends AbstractDirective
                 $label .= " -> [{$item['comment']}]";
             }
 
-            $value = $key === 'defaults'
-                ? $this->normalizeDefaultValue($item['default'])
-                : ($key === 'requireds' ? 'Required' : 'Multiple values allowed');
+            if ($key === 'variadics' && isset($item['restrictions']) && ! empty($item['restrictions'])) {
+                $value = 'Allowed values: '.implode(', ', $item['restrictions']);
+            } elseif ($key === 'defaults') {
+                $value = $this->normalizeDefaultValue($item['default']);
+            } elseif ($key === 'requireds') {
+                $value = 'Required';
+            } else {
+                $value = 'Multiple values allowed';
+            }
 
             $data = $data->put($label, $value);
         }
@@ -289,9 +248,6 @@ final class ListDirective extends AbstractDirective
         $console->line();
     }
 
-    /**
-     * Renders enum arguments.
-     */
     private function renderEnums(array $documentation): void
     {
         $console = $this->getConsole();
@@ -319,9 +275,6 @@ final class ListDirective extends AbstractDirective
         $console->line();
     }
 
-    /**
-     * Renders flags.
-     */
     private function renderFlags(array $documentation): void
     {
         $console = $this->getConsole();
@@ -347,9 +300,6 @@ final class ListDirective extends AbstractDirective
         $console->line();
     }
 
-    /**
-     * Renders the example usage.
-     */
     private function renderExample(array $documentation): void
     {
         $console = $this->getConsole();
@@ -363,9 +313,6 @@ final class ListDirective extends AbstractDirective
         $console->line();
     }
 
-    /**
-     * Normalizes a default value.
-     */
     private function normalizeDefaultValue(mixed $value): string
     {
         if ($value === null || $value === '?' || $value === '~' || $value === '') {
@@ -375,9 +322,6 @@ final class ListDirective extends AbstractDirective
         return (string) $value;
     }
 
-    /**
-     * Gets the state string for an enum.
-     */
     private function getEnumState(array $enum): string
     {
         if ($enum['is_required']) {
@@ -391,17 +335,12 @@ final class ListDirective extends AbstractDirective
         return sprintf('default: %s', $enum['default_value'] ?? 'NULL');
     }
 
-    /**
-     * Groups directives by category.
-     */
     private function groupDirectivesByCategory(DirectiveMetadataCollection $directives): array
     {
         $categories = [];
 
         foreach ($directives as $directive) {
             $category = $this->extractCategory($directive->signature);
-
-            // Nettoyer le nom de la catégorie
             $cleanCategory = $this->cleanCategoryName($category);
 
             if (! isset($categories[$cleanCategory])) {
@@ -416,22 +355,16 @@ final class ListDirective extends AbstractDirective
         return $categories;
     }
 
-    /**
-     * Extracts the category from a directive signature.
-     */
     private function extractCategory(string $signature): string
     {
-        // Nettoyer la signature en premier
         $commentManager = new CommentManager;
         $cleanSignature = $commentManager->extractComments($signature);
 
         $parts = explode(':', $cleanSignature);
 
-        // Si la signature contient ':' et que la première partie n'est pas la source
         if (count($parts) > 1) {
             $category = trim($parts[0]);
 
-            // Vérifier si c'est une catégorie valide (pas un nom de commande)
             if (! empty($category) && ! str_contains($category, '{') && ! str_contains($category, '}')) {
                 return ucfirst($category);
             }
@@ -440,22 +373,16 @@ final class ListDirective extends AbstractDirective
         return self::DEFAULT_CATEGORY;
     }
 
-    /**
-     * Clean category name for display.
-     */
     private function cleanCategoryName(string $category): string
     {
-        // Utiliser CommentManager pour nettoyer
         $commentManager = new CommentManager;
         $cleaned = $commentManager->extractComments($category);
 
-        // Si le résultat est vide, prendre la première partie avant '{'
         if (empty(trim($cleaned))) {
             $cleaned = explode('{', $category)[0];
             $cleaned = trim($cleaned);
         }
 
-        // Si encore vide, retourner la catégorie par défaut
         if (empty($cleaned)) {
             return self::DEFAULT_CATEGORY;
         }
@@ -463,9 +390,6 @@ final class ListDirective extends AbstractDirective
         return $cleaned;
     }
 
-    /**
-     * Renders items within a category.
-     */
     private function renderCategoryItems(DirectiveMetadataCollection $items): void
     {
         $console = $this->getConsole();
@@ -473,9 +397,6 @@ final class ListDirective extends AbstractDirective
         $console->raw(KeyValue::render(MapCollection::from($data), self::INDENTATION_LEVEL));
     }
 
-    /**
-     * Builds category data for display.
-     */
     private function buildCategoryData(DirectiveMetadataCollection $items): array
     {
         $data = [];
@@ -496,9 +417,6 @@ final class ListDirective extends AbstractDirective
         return $data;
     }
 
-    /**
-     * Clean command name for display.
-     */
     private function cleanCommandName(string $name): string
     {
         $commentManager = new CommentManager;
@@ -512,9 +430,6 @@ final class ListDirective extends AbstractDirective
         return empty($cleaned) ? $name : $cleaned;
     }
 
-    /**
-     * Finds suggestions for a not-found directive.
-     */
     private function findSuggestions(DirectiveMetadataCollection $directives, string $source): array
     {
         $suggestions = [];
@@ -538,17 +453,11 @@ final class ListDirective extends AbstractDirective
         return array_slice($suggestions, 0, self::SUGGESTION_LIMIT);
     }
 
-    /**
-     * Checks if two strings are similar.
-     */
     private function isSimilar(string $needle, string $haystack): bool
     {
         return levenshtein($needle, $haystack) <= self::LEVENSHTEIN_THRESHOLD;
     }
 
-    /**
-     * Builds an example usage string.
-     */
     private function buildExampleFromDocumentation(array $documentation): string
     {
         $parts = [$documentation['source']];
@@ -579,9 +488,6 @@ final class ListDirective extends AbstractDirective
         return implode(' ', $parts);
     }
 
-    /**
-     * Discovers all available directives.
-     */
     private function discoverDirectives(): DirectiveMetadataCollection
     {
         return $this->getKernel()->discover()->unique();
