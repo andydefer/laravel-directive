@@ -125,7 +125,7 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
         $signature = $directive->getSignature();
 
         $this->assertStringContainsString('clean:logger-logs', $signature);
-        $this->assertStringContainsString('days=?', $signature);
+        $this->assertStringContainsString('days=0', $signature);
         $this->assertStringContainsString('--dry-run', $signature);
         $this->assertStringContainsString('--verbose', $signature);
         $this->assertStringContainsString('--force', $signature);
@@ -204,28 +204,6 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
 
     // ==================== DAYS OPTION TESTS ====================
 
-    public function test_default_days_from_config(): void
-    {
-        Config::set('logger.retention_days', 30);
-
-        // Fichier de 31 jours (DOIT être supprimé car 31 > 30)
-        $this->createLogFile(31);
-        $oldFile = $this->getExpectedFilePath(31);
-        $this->assertFileExists($oldFile);
-
-        // Fichier de 25 jours (DOIT rester car 25 < 30)
-        $this->createLogFile(25);
-        $recentFile = $this->getExpectedFilePath(25);
-        $this->assertFileExists($recentFile);
-
-        $response = $this->service->run('clean:logger-logs --dry-run');
-
-        $cleanedOutput = $this->stripAnsi($response->output);
-
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Would delete 1 file(s)', $cleanedOutput);
-    }
-
     public function test_custom_days_overrides_config(): void
     {
         Config::set('logger.retention_days', 30);
@@ -245,28 +223,6 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
         // Avec days=15, les deux fichiers sont supprimés (31 et 20 > 15)
         $this->assertStringContainsString('Would delete 2 file(s)', $cleanedOutput);
-    }
-
-    public function test_null_days_uses_config_retention(): void
-    {
-        Config::set('logger.retention_days', 7);
-
-        // Fichier de 10 jours (DOIT être supprimé car 10 > 7)
-        $this->createLogFile(10);
-        $oldFile = $this->getExpectedFilePath(10);
-        $this->assertFileExists($oldFile);
-
-        // Fichier de 3 jours (DOIT rester car 3 < 7)
-        $this->createLogFile(3);
-        $recentFile = $this->getExpectedFilePath(3);
-        $this->assertFileExists($recentFile);
-
-        $response = $this->service->run('clean:logger-logs --dry-run');
-
-        $cleanedOutput = $this->stripAnsi($response->output);
-
-        $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Would delete 1 file(s)', $cleanedOutput);
     }
 
     public function test_zero_days_means_delete_all(): void

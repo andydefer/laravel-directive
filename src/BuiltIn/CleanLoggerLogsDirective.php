@@ -28,7 +28,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
     public function getSignature(): string
     {
         return 'clean:logger-logs 
-                {days=?}#"Number of days to retain (NULL = delete all with confirmation)" 
+                {days=0}#"Number of days to retain (NULL = delete all with confirmation)" 
                 {--dry-run}#"Preview deletions without actually deleting" 
                 {--verbose}#"Show detailed information about each file" 
                 {--force}#"Skip confirmation when deleting all files"';

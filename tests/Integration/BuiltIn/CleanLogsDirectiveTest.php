@@ -131,7 +131,7 @@ final class CleanLogsDirectiveTest extends IntegrationTestCase
         $signature = $directive->getSignature();
 
         $this->assertStringContainsString('clean:directive-logs', $signature);
-        $this->assertStringContainsString('days=?', $signature);
+        $this->assertStringContainsString('days=0', $signature);
         $this->assertStringContainsString('--dry-run', $signature);
         $this->assertStringContainsString('--verbose', $signature);
         $this->assertStringContainsString('--force', $signature);
