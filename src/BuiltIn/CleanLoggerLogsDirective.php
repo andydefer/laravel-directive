@@ -7,6 +7,7 @@ namespace AndyDefer\Directive\BuiltIn;
 use AndyDefer\ConsoleWriter\Console\Components\KeyValue;
 use AndyDefer\Directive\AbstractDirective;
 use AndyDefer\Directive\Enums\ExitCode;
+use AndyDefer\Directive\Services\ExecutionStatsLogger;
 use AndyDefer\DomainStructures\Collections\Utility\StringTypedCollection;
 use AndyDefer\DomainStructures\Utils\MapCollection;
 use AndyDefer\PhpServices\Contracts\FileSystemInterface;
@@ -46,9 +47,10 @@ final class CleanLoggerLogsDirective extends AbstractDirective
     protected function execute(): ExitCode
     {
         $container = $this->getApplication();
+        $logger = $container->make(ExecutionStatsLogger::class);
         $fileSystem = $container->make(FileSystemInterface::class);
 
-        $daysRaw = ($this->getArgument('days')) ?? Config::get('logger.retention_days', 30);
+        $daysRaw = $this->getArgument('days') ?? Config::get('logger.retention_days', 30);
         $dryRun = $this->getFlag('dry-run');
         $verbose = $this->getFlag('verbose');
         $force = $this->getFlag('force');
@@ -92,7 +94,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
 
         // Ne pas afficher les stats si aucun fichier à supprimer
         if ($verbose && $count > 0) {
-            $this->displayStatistics($filesToDelete, $count, $days, $basePath);
+            $this->displayStatistics($filesToDelete, $count, $days);
         }
 
         if ($count === 0) {
@@ -164,7 +166,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
      *
      * @param  array<int, string>  $filesToDelete
      */
-    private function displayStatistics(array $filesToDelete, int $count, int $days, string $basePath): void
+    private function displayStatistics(array $filesToDelete, int $count, int $days): void
     {
         $totalSize = 0;
         $dates = [];
@@ -186,7 +188,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
             'Files to delete' => $count,
             'Total size' => $totalSizeMb.' MB',
             'Date range' => $oldestDate.' to '.$newestDate,
-            'Base path' => $basePath,
+            'Base path' => dirname($filesToDelete[0] ?? ''),
         ]);
 
         $this->newLine();
