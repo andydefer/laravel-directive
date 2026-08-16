@@ -27,7 +27,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
     public function getSignature(): string
     {
         return 'clean:logger-logs 
-                {days=?}#"Number of days to retain (NULL = use config retention_days)" 
+                {days=?}#"Number of days to retain (NULL = delete all with confirmation)" 
                 {--dry-run}#"Preview deletions without actually deleting" 
                 {--verbose}#"Show detailed information about each file" 
                 {--force}#"Skip confirmation when deleting all files"';
@@ -48,28 +48,25 @@ final class CleanLoggerLogsDirective extends AbstractDirective
         $container = $this->getApplication();
         $fileSystem = $container->make(FileSystemInterface::class);
 
-        $daysRaw = $this->getArgument('days');
+        $daysRaw = ($this->getArgument('days')) ?? Config::get('logger.retention_days', 30);
         $dryRun = $this->getFlag('dry-run');
         $verbose = $this->getFlag('verbose');
         $force = $this->getFlag('force');
 
-        // Récupérer le path depuis la config du package logger
+        // ✅ La SEULE différence : le path vient de la config du package logger
         $basePath = Config::get('logger.path', storage_path('logs/structured'));
 
-        // Si days est null, utiliser retention_days de la config
-        if ($daysRaw === null || $daysRaw === '') {
-            $days = Config::get('logger.retention_days', 30);
-            $daysRaw = (string) $days;
-        } else {
-            // Si days est fourni mais non numérique
-            if (! is_numeric($daysRaw)) {
-                $this->error('Days must be a valid number');
+        // Si days est null, on supprime TOUT
+        $deleteAll = $daysRaw === null || $daysRaw === '';
 
-                return ExitCode::INVALID_ARGUMENT;
-            }
+        // Si days est fourni mais non numérique
+        if ($daysRaw !== null && $daysRaw !== '' && ! is_numeric($daysRaw)) {
+            $this->error('Days must be a valid number');
 
-            $days = (int) $daysRaw;
+            return ExitCode::INVALID_ARGUMENT;
         }
+
+        $days = $deleteAll ? 0 : (int) $daysRaw;
 
         if ($days < 0) {
             $this->error('Days cannot be negative');
@@ -77,24 +74,23 @@ final class CleanLoggerLogsDirective extends AbstractDirective
             return ExitCode::INVALID_ARGUMENT;
         }
 
-        // Vérifier si le dossier existe
+        // Vérifier si le dossier existe avant d'afficher les stats
         if (! $fileSystem->isDirectory($basePath)) {
             $this->info('No log files to delete.');
 
             return ExitCode::SUCCESS;
         }
 
-        // ✅ Si days = 0, on supprime TOUT
-        $deleteAll = $days === 0;
-        $cutoffDateTime = $deleteAll
-            ? Carbon::now()->addDays(2)->format('Y-m-d') // Supprime tout avec marge
+        // ✅ Si days = 0, on supprime TOUT en utilisant une date future
+        $cutoffDateTime = $days === 0
+            ? Carbon::now()->addDay()->format('Y-m-d') // Supprime tout (date future)
             : Carbon::now()->subDays($days)->format('Y-m-d');
 
         $filesToDelete = $this->getFilesToDelete($fileSystem, $basePath, $cutoffDateTime);
 
         $count = count($filesToDelete);
 
-        // Afficher les statistiques si verbose et des fichiers à supprimer
+        // Ne pas afficher les stats si aucun fichier à supprimer
         if ($verbose && $count > 0) {
             $this->displayStatistics($filesToDelete, $count, $days, $basePath);
         }
@@ -105,8 +101,8 @@ final class CleanLoggerLogsDirective extends AbstractDirective
             return ExitCode::SUCCESS;
         }
 
-        // Si delete all et pas force, demander confirmation
-        if ($deleteAll && ! $force && ! $dryRun) {
+        // Si days = 0 (delete all) et pas force, demander confirmation
+        if ($days === 0 && ! $force && ! $dryRun) {
             $this->newLine();
             $this->error('⚠️  WARNING: You are about to delete ALL log files!');
             $this->newLine();
@@ -123,10 +119,10 @@ final class CleanLoggerLogsDirective extends AbstractDirective
         }
 
         if ($dryRun) {
-            return $this->handleDryRun($filesToDelete, $count, $verbose);
+            return $this->handleDryRun($filesToDelete, $count);
         }
 
-        return $this->handleDeletion($fileSystem, $filesToDelete, $count, $verbose);
+        return $this->handleDeletion($fileSystem, $filesToDelete, $count);
     }
 
     /**
@@ -155,8 +151,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
 
             $fileModifiedTime = Carbon::createFromTimestamp($file->getMTime())->format('Y-m-d');
 
-            // ✅ Utiliser <= pour inclure la date du cutoff
-            if ($fileModifiedTime <= $cutoffDateTime) {
+            if ($fileModifiedTime < $cutoffDateTime) {
                 $filesToDelete[] = $file->getPathname();
             }
         }
@@ -205,12 +200,12 @@ final class CleanLoggerLogsDirective extends AbstractDirective
      *
      * @param  array<int, string>  $filesToDelete
      */
-    private function handleDryRun(array $filesToDelete, int $count, bool $verbose): ExitCode
+    private function handleDryRun(array $filesToDelete, int $count): ExitCode
     {
         $this->getConsole()->alertWarning('🔍 DRY RUN MODE - No files will be deleted');
         $this->newLine();
 
-        if ($verbose) {
+        if ($this->getFlag('verbose')) {
             $this->line('Files that would be deleted:');
             foreach ($filesToDelete as $file) {
                 $sizeKb = round(filesize($file) / 1024, 2);
@@ -231,7 +226,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
      *
      * @param  array<int, string>  $filesToDelete
      */
-    private function handleDeletion(FileSystemInterface $fileSystem, array $filesToDelete, int $count, bool $verbose): ExitCode
+    private function handleDeletion(FileSystemInterface $fileSystem, array $filesToDelete, int $count): ExitCode
     {
         $deleted = 0;
         $errors = 0;
@@ -242,7 +237,7 @@ final class CleanLoggerLogsDirective extends AbstractDirective
             try {
                 if ($fileSystem->delete($file)) {
                     $deleted++;
-                    if ($verbose) {
+                    if ($this->getFlag('verbose')) {
                         $this->line('  ✓ Deleted: '.basename($file));
                     }
                 } else {
@@ -250,14 +245,23 @@ final class CleanLoggerLogsDirective extends AbstractDirective
                 }
             } catch (\Throwable $e) {
                 $errors++;
-                if ($verbose) {
+                if ($this->getFlag('verbose')) {
                     $this->error('  ✗ Failed to delete: '.basename($file).' - '.$e->getMessage());
                 }
             }
         }
 
-        // Nettoyer les dossiers vides
-        $this->cleanEmptyDirectories($fileSystem, dirname($filesToDelete[0] ?? ''));
+        // Clean empty directories
+        $basePath = dirname($filesToDelete[0] ?? '');
+
+        while ($basePath && $basePath !== dirname($basePath)) {
+            if ($fileSystem->isDirectory($basePath) && count(scandir($basePath)) === 2) {
+                $fileSystem->delete($basePath);
+            } else {
+                break;
+            }
+            $basePath = dirname($basePath);
+        }
 
         $this->newLine();
         if ($errors === 0) {
@@ -267,20 +271,5 @@ final class CleanLoggerLogsDirective extends AbstractDirective
         }
 
         return $errors === 0 ? ExitCode::SUCCESS : ExitCode::FAILURE;
-    }
-
-    /**
-     * Clean empty directories recursively.
-     */
-    private function cleanEmptyDirectories(FileSystemInterface $fileSystem, string $basePath): void
-    {
-        while ($basePath && $basePath !== dirname($basePath)) {
-            if ($fileSystem->isDirectory($basePath) && count(scandir($basePath)) === 2) {
-                $fileSystem->delete($basePath);
-            } else {
-                break;
-            }
-            $basePath = dirname($basePath);
-        }
     }
 }

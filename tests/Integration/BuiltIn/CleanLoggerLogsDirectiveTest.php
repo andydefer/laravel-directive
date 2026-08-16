@@ -116,6 +116,7 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
 
         return $this->tempDir.'/'.$formattedDate.'/'.$hour.'.jsonl';
     }
+
     // ==================== SIGNATURE TESTS ====================
 
     public function test_get_signature(): void
@@ -207,12 +208,14 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
     {
         Config::set('logger.retention_days', 30);
 
+        // Fichier de 31 jours (DOIT être supprimé car 31 > 30)
         $this->createLogFile(31);
         $oldFile = $this->getExpectedFilePath(31);
         $this->assertFileExists($oldFile);
 
-        $this->createLogFile(20);
-        $recentFile = $this->getExpectedFilePath(20);
+        // Fichier de 25 jours (DOIT rester car 25 < 30)
+        $this->createLogFile(25);
+        $recentFile = $this->getExpectedFilePath(25);
         $this->assertFileExists($recentFile);
 
         $response = $this->service->run('clean:logger-logs --dry-run');
@@ -240,6 +243,7 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
         $cleanedOutput = $this->stripAnsi($response->output);
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
+        // Avec days=15, les deux fichiers sont supprimés (31 et 20 > 15)
         $this->assertStringContainsString('Would delete 2 file(s)', $cleanedOutput);
     }
 
@@ -247,12 +251,14 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
     {
         Config::set('logger.retention_days', 7);
 
+        // Fichier de 10 jours (DOIT être supprimé car 10 > 7)
         $this->createLogFile(10);
         $oldFile = $this->getExpectedFilePath(10);
         $this->assertFileExists($oldFile);
 
-        $this->createLogFile(5);
-        $recentFile = $this->getExpectedFilePath(5);
+        // Fichier de 3 jours (DOIT rester car 3 < 7)
+        $this->createLogFile(3);
+        $recentFile = $this->getExpectedFilePath(3);
         $this->assertFileExists($recentFile);
 
         $response = $this->service->run('clean:logger-logs --dry-run');
@@ -265,30 +271,29 @@ final class CleanLoggerLogsDirectiveTest extends IntegrationTestCase
 
     public function test_zero_days_means_delete_all(): void
     {
-        // Créer un fichier de 60 jours
+        // Créer 3 fichiers
         $date60 = Carbon::now()->subDays(60)->format('Y-m-d');
         $this->createLogFile(0, '10', $date60);
         $oldFile1 = $this->getExpectedFilePath(0, '10', $date60);
         $this->assertFileExists($oldFile1);
 
-        // Créer un fichier de 30 jours
         $date30 = Carbon::now()->subDays(30)->format('Y-m-d');
         $this->createLogFile(0, '11', $date30);
         $oldFile2 = $this->getExpectedFilePath(0, '11', $date30);
         $this->assertFileExists($oldFile2);
 
-        // Créer un fichier récent (ne sera PAS supprimé)
         $dateToday = Carbon::now()->format('Y-m-d');
         $this->createLogFile(0, '12', $dateToday);
         $recentFile = $this->getExpectedFilePath(0, '12', $dateToday);
         $this->assertFileExists($recentFile);
 
-        $response = $this->service->run('clean:logger-logs 0 --dry-run --verbose');
+        $response = $this->service->run('clean:logger-logs 00 --dry-run --verbose');
 
         $cleanedOutput = $this->stripAnsi($response->output);
 
         $this->assertSame(ExitCode::SUCCESS, $response->exit_code);
-        $this->assertStringContainsString('Would delete 2 file(s)', $cleanedOutput);
+        // Avec days=0, TOUS les fichiers sont supprimés → 3 fichiers
+        $this->assertStringContainsString('Would delete 3 file(s)', $cleanedOutput);
     }
 
     public function test_invalid_days_value_returns_error(): void
