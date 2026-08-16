@@ -1,9 +1,9 @@
 {
-    "cached_at": 1786037891,
+    "cached_at": 1786868221,
     "data": {
         "latest_version": "3.6.3",
         "release_date": "2026-06-03",
-        "downloads": "1.4K",
+        "downloads": "1.7K",
         "description": "A flexible CLI command system for Laravel that breaks free from Artisan's constraints. Directives introduces a clean separation between what your command does (business logic) and how it's presented (output\/UI)."
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AndyDefer\Directive\Discovers;
 
+use AndyDefer\Directive\BuiltIn\CleanLoggerLogsDirective;
 use AndyDefer\Directive\BuiltIn\CleanLogsDirective;
 use AndyDefer\Directive\BuiltIn\HelpDirective;
 use AndyDefer\Directive\BuiltIn\KernelAuditDirective;
@@ -30,6 +31,7 @@ final class BuiltInDirectiveDiscovery extends AbstractDiscovery
         HelpDirective::class,
         VersionDirective::class,
         CleanLogsDirective::class,
+        CleanLoggerLogsDirective::class,
         KernelAuditDirective::class,
     ];
 
