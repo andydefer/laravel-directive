@@ -16,7 +16,7 @@
         "andydefer/algo-kit": "^0.8.17",
         "andydefer/laravel-jsonl": "^0.8.18",
         "andydefer/php-signature-parser": "^0.12.3",
-        "andydefer/php-console": "^1.7.1"
+        "andydefer/php-console": "^1.7.2"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
