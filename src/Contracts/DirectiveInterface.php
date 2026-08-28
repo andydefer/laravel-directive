@@ -354,6 +354,13 @@ interface DirectiveInterface
     public function error(string $message): void;
 
     /**
+     * Output an warning message.
+     *
+     * @param  string  $message  The message to output
+     */
+    public function warn(string $message): void;
+
+    /**
      * Output a new line.
      */
     public function newLine(): void;

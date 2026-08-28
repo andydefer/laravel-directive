@@ -461,6 +461,14 @@ abstract class AbstractDirective implements DirectiveInterface
     /**
      * {@inheritdoc}
      */
+    final public function warn(string $message): void
+    {
+        $this->console->alertWarning($message);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     final public function newLine(): void
     {
         $this->console->newLine();
