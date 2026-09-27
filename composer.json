@@ -13,10 +13,10 @@
         "php": ">=8.1",
         "laravel/framework": "^12.0|^13.0|^14.0|^15.0",
         "nikic/php-parser": "^5.8",
-        "andydefer/algo-kit": "^0.9.16",
-        "andydefer/laravel-jsonl": "^0.8.37",
-        "andydefer/php-signature-parser": "^0.12.8",
-        "andydefer/php-console": "^1.7.15"
+        "andydefer/algo-kit": "^0.9.17",
+        "andydefer/laravel-jsonl": "^0.8.38",
+        "andydefer/php-signature-parser": "^0.12.9",
+        "andydefer/php-console": "^1.7.16"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
