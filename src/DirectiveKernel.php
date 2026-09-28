@@ -459,7 +459,8 @@ final class DirectiveKernel extends DirectiveDiscoveryService
             $signatureParts = explode(' ', $directive->signature);
             $directiveName = $signatureParts[0];
 
-            return $directiveName === $commandName;
+            return $this->normalizeCommandName($directiveName) === $this->normalizeCommandName($commandName);
+
         } catch (Throwable $e) {
             $this->addProblem(
                 'matches_command_name',
@@ -472,11 +473,28 @@ final class DirectiveKernel extends DirectiveDiscoveryService
         }
     }
 
+    /**
+     * Normalizes a string by removing all whitespace characters and
+     * lowercasing the result.
+     *
+     * Collapses spaces, tabs, newlines and any other whitespace to an
+     * empty string, then lowercases the string. Useful for comparing
+     * command names that may contain arbitrary formatting or casing on
+     * either side.
+     *
+     * @param  string  $value  The raw string to normalize
+     * @return string The normalized string (whitespace removed, lowercase)
+     */
+    private function normalizeCommandName(string $value): string
+    {
+        return strtolower((string) preg_replace('/\s+/', '', $value));
+    }
+
     private function matchesAlias(DirectiveMetadataRecord $directive, string $commandName): bool
     {
         try {
             foreach ($directive->aliases as $alias) {
-                if ($alias === $commandName) {
+                if ($this->normalizeCommandName($alias) === $this->normalizeCommandName($commandName)) {
                     return true;
                 }
             }
