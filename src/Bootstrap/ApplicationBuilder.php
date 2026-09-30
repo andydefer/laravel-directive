@@ -14,28 +14,14 @@ use AndyDefer\Directive\Providers\ViewServiceProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Events\EventServiceProvider;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Foundation\Bootstrap\LoadConfiguration;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * Factory for creating and configuring the Directive application.
- *
- * This class provides both a fluent builder interface and a simple
- * factory method for creating Laravel applications with custom
- * service providers and configuration.
- *
- * @example
- * // Internal Laravel application
- * $app = ApplicationBuilder::internal([
- *     DirectiveServiceProvider::class
- * ])->build();
- *
- * // External standalone application with config
- * $app = ApplicationBuilder::external([
- *     DirectiveServiceProvider::class
- * ])->withConfig(['debug' => true])->build();
- *
- * // With automatic detection
- * $app = ApplicationBuilder::create([DirectiveServiceProvider::class]);
  */
 final class ApplicationBuilder
 {
@@ -55,31 +41,30 @@ final class ApplicationBuilder
     private array $configPaths = [];
 
     /**
-     * @var array<string> View paths
+     * @var array<string, list<string>>
      */
-    private array $viewPaths = [];
+    private array $viewNamespaces = [];
+
+    /**
+     * @var array<string, mixed>|null
+     */
+    private ?array $databaseConfig = null;
+
+    /**
+     * @var list<string>
+     */
+    private array $sqliteFiles = [];
 
     private ?ApplicationType $forcedType = null;
 
-    private bool $viewsLoaded = false;
-
-    /**
-     * Private constructor to enforce factory pattern.
-     */
     private function __construct()
     {
-        // ✅ ConfigServiceProvider chargé automatiquement par défaut
-        $this->providers[] = ConfigServiceProvider::class;
-
-        // ✅ DirectiveServiceProvider chargé automatiquement par défaut
-        $this->providers[] = DirectiveServiceProvider::class;
+        $this->addProvider(ConfigServiceProvider::class);
+        $this->addProvider(DirectiveServiceProvider::class);
     }
 
     /**
-     * Create a new application builder instance.
-     *
-     * @param  ApplicationType|null  $type  Force a specific application type
-     * @param  array<class-string<ServiceProvider>>  $providers  Service providers to register
+     * @param  array<class-string<ServiceProvider>>  $providers
      */
     public static function init(?ApplicationType $type = null, array $providers = []): self
     {
@@ -89,7 +74,7 @@ final class ApplicationBuilder
             $builder->forceType($type);
         }
 
-        if (! empty($providers)) {
+        if ($providers !== []) {
             $builder->withProviders($providers);
         }
 
@@ -97,12 +82,7 @@ final class ApplicationBuilder
     }
 
     /**
-     * Create a builder for an internal (Laravel) application.
-     *
-     * This forces the builder to use the InternalApplicationFactory
-     * regardless of environment detection.
-     *
-     * @param  array<class-string<ServiceProvider>>  $providers  Service providers to register
+     * @param  array<class-string<ServiceProvider>>  $providers
      */
     public static function internal(array $providers = []): self
     {
@@ -110,12 +90,7 @@ final class ApplicationBuilder
     }
 
     /**
-     * Create a builder for an external (standalone) application.
-     *
-     * This forces the builder to use the ExternalApplicationFactory
-     * regardless of environment detection.
-     *
-     * @param  array<class-string<ServiceProvider>>  $providers  Service providers to register
+     * @param  array<class-string<ServiceProvider>>  $providers
      */
     public static function external(array $providers = []): self
     {
@@ -123,12 +98,7 @@ final class ApplicationBuilder
     }
 
     /**
-     * Create a builder for a web application context.
-     *
-     * Forces the builder to use the InternalApplicationFactory
-     * with web application detection.
-     *
-     * @param  array<class-string<ServiceProvider>>  $providers  Service providers to register
+     * @param  array<class-string<ServiceProvider>>  $providers
      */
     public static function web(array $providers = []): self
     {
@@ -136,12 +106,7 @@ final class ApplicationBuilder
     }
 
     /**
-     * Create a builder for a package/library context.
-     *
-     * Forces the builder to use the ExternalApplicationFactory
-     * with package detection.
-     *
-     * @param  array<class-string<ServiceProvider>>  $providers  Service providers to register
+     * @param  array<class-string<ServiceProvider>>  $providers
      */
     public static function package(array $providers = []): self
     {
@@ -149,44 +114,29 @@ final class ApplicationBuilder
     }
 
     /**
-     * Create application with providers (simple approach).
-     *
      * @param  array<class-string<ServiceProvider>>  $providers
-     * @param  ApplicationType|null  $type  Force a specific application type
      */
     public static function create(array $providers = [], ?ApplicationType $type = null): Application
     {
-        return self::init($type, $providers)
-            ->build();
+        return self::init($type, $providers)->build();
     }
 
     /**
-     * Create an internal (Laravel) application with providers.
-     *
      * @param  array<class-string<ServiceProvider>>  $providers
      */
     public static function createInternal(array $providers = []): Application
     {
-        return self::internal($providers)
-            ->build();
+        return self::internal($providers)->build();
     }
 
     /**
-     * Create an external (standalone) application with providers.
-     *
      * @param  array<class-string<ServiceProvider>>  $providers
      */
     public static function createExternal(array $providers = []): Application
     {
-        return self::external($providers)
-            ->build();
+        return self::external($providers)->build();
     }
 
-    /**
-     * Force the application to be built with a specific type.
-     *
-     * @param  ApplicationType  $type  The application type to force
-     */
     public function forceType(ApplicationType $type): self
     {
         $this->forcedType = $type;
@@ -195,42 +145,38 @@ final class ApplicationBuilder
     }
 
     /**
-     * Add a service provider.
-     *
      * @param  class-string<ServiceProvider>  $provider
+     *
+     * @throws InvalidArgumentException
      */
     public function withProvider(string $provider): self
     {
-        $this->providers[] = $provider;
+        $this->addProvider($provider);
 
         return $this;
     }
 
     /**
-     * Add multiple service providers.
-     *
      * @param  array<class-string<ServiceProvider>>  $providers
+     *
+     * @throws InvalidArgumentException
      */
     public function withProviders(array $providers): self
     {
-        $this->providers = array_merge($this->providers, $providers);
+        foreach ($providers as $provider) {
+            $this->addProvider($provider);
+        }
 
         return $this;
     }
 
-    /**
-     * Set configuration.
-     */
     public function withConfig(array $config): self
     {
-        $this->config = array_merge($this->config, $config);
+        $this->config = $this->mergeConfigRecursive($this->config, $config);
 
         return $this;
     }
 
-    /**
-     * Set a single configuration value.
-     */
     public function withConfigValue(string $key, mixed $value): self
     {
         $this->config[$key] = $value;
@@ -239,39 +185,34 @@ final class ApplicationBuilder
     }
 
     /**
-     * Add a configuration file path.
-     *
-     * The configuration file should return an array of configuration values.
-     *
-     * @param  string  $path  Absolute path to the configuration file
-     * @param  string|null  $key  Optional key to nest the config under
+     * @throws InvalidArgumentException
      */
     public function withConfigPath(string $path, ?string $key = null): self
     {
-        $this->configPaths[$path] = $key ?? pathinfo($path, PATHINFO_FILENAME);
+        $realPath = $path === '' ? false : realpath($path);
+
+        if ($realPath === false || ! is_file($realPath)) {
+            throw new InvalidArgumentException(
+                sprintf('Configuration file not found: %s', $path)
+            );
+        }
+
+        $this->configPaths[$realPath] = $key ?? pathinfo($realPath, PATHINFO_FILENAME);
 
         return $this;
     }
 
     /**
-     * Add multiple configuration file paths.
+     * @param  array<int|string, string|null>  $paths
      *
-     * @param  array<string, string|null>  $paths  Array of paths with optional keys
-     *
-     * @example
-     *   withConfigPaths([
-     *       '/path/to/directive.php',              // key = 'directive'
-     *       '/path/to/nemesis.php' => 'nemesis',   // explicit key
-     *   ])
+     * @throws InvalidArgumentException
      */
     public function withConfigPaths(array $paths): self
     {
         foreach ($paths as $path => $key) {
             if (is_int($path)) {
-                // No key provided, use filename
-                $this->withConfigPath($key);
+                $this->withConfigPath((string) $key);
             } else {
-                // Key provided
                 $this->withConfigPath($path, $key);
             }
         }
@@ -280,48 +221,15 @@ final class ApplicationBuilder
     }
 
     /**
-     * Configure the database connection.
-     *
-     * @param  array<string, mixed>  $config  Database configuration
-     * @param  string  $connection  The connection name (default: 'sqlite')
-     *
-     * @example
-     * // SQLite
-     * $builder->withDatabase([
-     *     'default' => 'sqlite',
-     *     'connections' => [
-     *         'sqlite' => [
-     *             'driver' => 'sqlite',
-     *             'database' => '/path/to/database.sqlite',
-     *         ],
-     *     ],
-     * ]);
-     *
-     * // MySQL
-     * $builder->withDatabase([
-     *     'default' => 'mysql',
-     *     'connections' => [
-     *         'mysql' => [
-     *             'driver' => 'mysql',
-     *             'host' => 'localhost',
-     *             'database' => 'my_database',
-     *             'username' => 'root',
-     *             'password' => 'secret',
-     *         ],
-     *     ],
-     * ]);
+     * @param  array<string, mixed>  $config
      */
     public function withDatabase(array $config, string $connection = 'sqlite'): self
     {
-        // ✅ Ajouter les providers de base de données
-        $this->withProviders([
-            EventServiceProvider::class,
-            DatabaseServiceProvider::class,
-        ]);
+        $this->addProvider(EventServiceProvider::class);
+        $this->addProvider(DatabaseServiceProvider::class);
 
-        // ✅ Ajouter la configuration de la base de données
-        $this->config['database'] = array_merge(
-            [
+        $this->databaseConfig = $this->mergeConfigRecursive(
+            $this->databaseConfig ?? [
                 'default' => $connection,
                 'connections' => [],
                 'migrations' => 'migrations',
@@ -332,26 +240,10 @@ final class ApplicationBuilder
         return $this;
     }
 
-    /**
-     * Configure SQLite database.
-     *
-     * @param  string  $databaseFile  Path to the SQLite database file
-     * @param  bool  $foreignKeyConstraints  Enable foreign key constraints
-     *
-     * @example
-     * $builder->withSqlite('/path/to/database.sqlite');
-     */
     public function withSqlite(string $databaseFile, bool $foreignKeyConstraints = true): self
     {
-        // ✅ Créer le dossier si nécessaire
-        $dir = dirname($databaseFile);
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        // ✅ Créer le fichier s'il n'existe pas
-        if (! file_exists($databaseFile)) {
-            touch($databaseFile);
+        if ($databaseFile !== '' && $databaseFile !== ':memory:') {
+            $this->sqliteFiles[] = $databaseFile;
         }
 
         return $this->withDatabase([
@@ -367,24 +259,12 @@ final class ApplicationBuilder
         ]);
     }
 
-    /**
-     * Configure MySQL database.
-     *
-     * @param  string  $host  Database host
-     * @param  string  $database  Database name
-     * @param  string  $username  Database username
-     * @param  string  $password  Database password
-     * @param  int  $port  Database port
-     *
-     * @example
-     * $builder->withMySql('localhost', 'my_database', 'root', 'secret');
-     */
     public function withMySql(
         string $host,
         string $database,
         string $username,
         string $password,
-        int $port = 3306
+        int $port = 3306,
     ): self {
         return $this->withDatabase([
             'default' => 'mysql',
@@ -407,233 +287,298 @@ final class ApplicationBuilder
     }
 
     /**
-     * Configure view paths for CLI context.
-     *
-     * This is useful when using MailChannel or other view-dependent
-     * services in CLI directives.
-     *
-     * @param  array<string>  $paths  Array of view paths
-     * @param  string  $namespace  The namespace for the views (default: 'app')
-     *
-     * @example
-     * $builder->withViews([resource_path('views')]);
-     * $builder->withViews([resource_path('views'), resource_path('emails')]);
+     * @param  list<string>  $paths
      */
     public function withViews(array $paths, string $namespace = 'app'): self
     {
-        $this->viewPaths = $paths;
+        $this->addProvider(ViewServiceProvider::class);
 
-        // ✅ Utiliser NOTRE ViewServiceProvider au lieu de celui de Laravel
-        if (! in_array(ViewServiceProvider::class, $this->providers, true)) {
-            $this->withProvider(ViewServiceProvider::class);
+        foreach ($paths as $path) {
+            $this->addViewPath($path, $namespace);
         }
-
-        // ✅ Définir le cache des vues
-        $cachePath = sys_get_temp_dir().'/directive-views-cache';
-        if (! is_dir($cachePath)) {
-            mkdir($cachePath, 0755, true);
-        }
-
-        $this->config['view'] = [
-            'paths' => $paths,
-            'compiled' => $cachePath,
-            'cache' => true,
-            'namespaces' => [
-                $namespace => $paths,
-            ],
-        ];
-
-        $this->viewsLoaded = true;
 
         return $this;
     }
 
-    /**
-     * Add a single view path.
-     *
-     * @param  string  $path  View path
-     * @param  string  $namespace  The namespace for the views (default: 'app')
-     */
     public function withViewPath(string $path, string $namespace = 'app'): self
     {
-        $this->viewPaths[] = $path;
-
-        // ✅ Utiliser NOTRE ViewServiceProvider si pas encore ajouté
-        if (! $this->viewsLoaded) {
-            $this->withProvider(ViewServiceProvider::class);
-            $this->viewsLoaded = true;
-
-            $cachePath = sys_get_temp_dir().'/directive-views-cache';
-            if (! is_dir($cachePath)) {
-                mkdir($cachePath, 0755, true);
-            }
-
-            $this->config['view'] = [
-                'paths' => $this->viewPaths,
-                'compiled' => $cachePath,
-                'cache' => true,
-                'namespaces' => [
-                    $namespace => $this->viewPaths,
-                ],
-            ];
-        }
+        $this->addProvider(ViewServiceProvider::class);
+        $this->addViewPath($path, $namespace);
 
         return $this;
     }
 
     /**
-     * Build the application.
+     * @throws InvalidArgumentException
+     * @throws RuntimeException
      */
     public function build(): Application
     {
         $app = $this->createBaseApplication();
 
-        // ✅ Charger la configuration AVANT les providers
-        $this->loadViewConfig($app);
+        // LoadConfiguration déclenche EventServiceProvider, qui résout
+        // le binding 'files' (Filesystem). On le lie avant le bootstrap
+        // pour éviter BindingResolutionException.
+        if (! $app->bound('files')) {
+            $app->singleton('files', static fn (): Filesystem => new Filesystem);
+        }
+
+        // Charge la configuration Laravel (fichiers config/) et crée
+        // le repository 'config' avant toute autre étape.
+        $app->bootstrapWith([
+            LoadConfiguration::class,
+        ]);
+
+        $viewsCachePath = $this->prepareViewsCache();
+        $this->prepareSqliteFiles();
+        $this->applyViewConfig($app, $viewsCachePath);
         $this->loadConfigFiles($app);
         $this->applyConfig($app);
+        $this->applyDatabaseConfig($app);
 
-        // ✅ Puis les providers
-        $this->registerProviders($app);
-        $this->bootProviders($app);
+        foreach ($this->providers as $providerClass) {
+            $app->register($providerClass);
+        }
+
+        // boot() est idempotent : il ne boote que les providers non encore bootés.
+        $app->boot();
 
         return $app;
     }
 
     /**
-     * Load view configuration before anything else.
+     * @param  class-string<ServiceProvider>  $provider
+     *
+     * @throws InvalidArgumentException
      */
-    private function loadViewConfig(Application $app): void
+    private function addProvider(string $provider): void
     {
-        if (! empty($this->viewPaths)) {
-            $cachePath = sys_get_temp_dir().'/directive-views-cache';
-            if (! is_dir($cachePath)) {
-                mkdir($cachePath, 0755, true);
+        if (! is_subclass_of($provider, ServiceProvider::class)) {
+            throw new InvalidArgumentException(
+                sprintf('Class "%s" must extend %s', $provider, ServiceProvider::class)
+            );
+        }
+
+        if (! in_array($provider, $this->providers, true)) {
+            $this->providers[] = $provider;
+        }
+    }
+
+    private function addViewPath(string $path, string $namespace): void
+    {
+        if (! isset($this->viewNamespaces[$namespace])) {
+            $this->viewNamespaces[$namespace] = [];
+        }
+
+        if (! in_array($path, $this->viewNamespaces[$namespace], true)) {
+            $this->viewNamespaces[$namespace][] = $path;
+        }
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    private function prepareViewsCache(): ?string
+    {
+        if ($this->viewNamespaces === []) {
+            return null;
+        }
+
+        $allPaths = array_merge(...array_values($this->viewNamespaces));
+
+        $hasPosix = function_exists('posix_geteuid');
+        $uid = $hasPosix ? posix_geteuid() : (getmyuid() ?: 0);
+
+        $cachePath = sys_get_temp_dir()
+            .DIRECTORY_SEPARATOR
+            .'directive-views-cache-'
+            .$uid
+            .'-'
+            .substr(hash('sha256', implode('|', $allPaths)), 0, 16);
+
+        // Un lien symbolique posé à l'avance pourrait rediriger le cache ailleurs.
+        if (is_link($cachePath)) {
+            throw new RuntimeException(sprintf('Unsafe view cache directory: %s', $cachePath));
+        }
+
+        if (! is_dir($cachePath) && ! @mkdir($cachePath, 0700, true) && ! is_dir($cachePath)) {
+            throw new RuntimeException(
+                sprintf('Unable to create view cache directory: %s', $cachePath)
+            );
+        }
+
+        // Le dossier existait peut-être déjà, créé par quelqu'un d'autre.
+        if ($hasPosix && fileowner($cachePath) !== $uid) {
+            throw new RuntimeException(sprintf('Unsafe view cache directory: %s', $cachePath));
+        }
+
+        @chmod($cachePath, 0700);
+
+        return $cachePath;
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    private function prepareSqliteFiles(): void
+    {
+        foreach ($this->sqliteFiles as $databaseFile) {
+            $directory = dirname($databaseFile);
+
+            if (! is_dir($directory) && ! @mkdir($directory, 0755, true) && ! is_dir($directory)) {
+                throw new RuntimeException(
+                    sprintf('Unable to create SQLite directory: %s', $directory)
+                );
             }
 
-            $app->config->set('view.paths', $this->viewPaths);
-            $app->config->set('view.compiled', $cachePath);
-            $app->config->set('view.cache', true);
+            if (! file_exists($databaseFile) && @touch($databaseFile) === false) {
+                throw new RuntimeException(
+                    sprintf('Unable to create SQLite database file: %s', $databaseFile)
+                );
+            }
         }
     }
 
-    /**
-     * Create base application.
-     */
+    private function applyViewConfig(Application $app, ?string $viewsCachePath): void
+    {
+        if ($this->viewNamespaces === [] || $viewsCachePath === null) {
+            return;
+        }
+
+        $config = $app->make('config');
+
+        $paths = $config->get('view.paths', []);
+
+        foreach ($this->viewNamespaces as $namespacePaths) {
+            foreach ($namespacePaths as $path) {
+                if (! in_array($path, $paths, true)) {
+                    $paths[] = $path;
+                }
+            }
+        }
+
+        $config->set('view.paths', $paths);
+        $config->set('view.compiled', $viewsCachePath);
+        $config->set('view.cache', true);
+
+        $namespaces = $config->get('view.namespaces', []);
+
+        foreach ($this->viewNamespaces as $namespace => $namespacePaths) {
+            if (! isset($namespaces[$namespace])) {
+                $namespaces[$namespace] = [];
+            }
+
+            foreach ($namespacePaths as $path) {
+                if (! in_array($path, $namespaces[$namespace], true)) {
+                    $namespaces[$namespace][] = $path;
+                }
+            }
+        }
+
+        $config->set('view.namespaces', $namespaces);
+    }
+
     private function createBaseApplication(): Application
     {
-        // ✅ Use forced type if specified
-        if ($this->forcedType !== null) {
-            return match ($this->forcedType) {
-                ApplicationType::INTERNAL => InternalApplicationFactory::create(),
-                ApplicationType::EXTERNAL => ExternalApplicationFactory::create(),
-                ApplicationType::WEB_APPLICATION => InternalApplicationFactory::create(),
-                ApplicationType::PACKAGE => ExternalApplicationFactory::create(),
-                default => $this->detectApplication(),
-            };
-        }
-
-        return $this->detectApplication();
+        return match ($this->forcedType) {
+            ApplicationType::INTERNAL, ApplicationType::WEB_APPLICATION, ApplicationType::PACKAGE => InternalApplicationFactory::create(),
+            ApplicationType::EXTERNAL => ExternalApplicationFactory::create(),
+            null => $this->detectApplication(),
+        };
     }
 
-    /**
-     * Detect the application type from the environment.
-     */
     private function detectApplication(): Application
     {
         if (EnvironmentDetector::isWebApplication()) {
             return InternalApplicationFactory::create();
         }
 
-        if (EnvironmentDetector::isPackage()) {
-            return ExternalApplicationFactory::create();
-        }
-
-        // Default to External (standalone)
-        return ExternalApplicationFactory::create();
+        return InternalApplicationFactory::create();
     }
 
-    /**
-     * Load configuration from files.
-     */
     private function loadConfigFiles(Application $app): void
     {
+        if ($this->configPaths === []) {
+            return;
+        }
+
+        $config = $app->make('config');
+
         foreach ($this->configPaths as $path => $key) {
-            if (! file_exists($path)) {
-                throw new \InvalidArgumentException(
-                    sprintf('Configuration file not found: %s', $path)
-                );
-            }
+            $loaded = (static fn () => require $path)();
 
-            $config = require $path;
-
-            if (! is_array($config)) {
-                throw new \InvalidArgumentException(
+            if (! is_array($loaded)) {
+                throw new InvalidArgumentException(
                     sprintf('Configuration file must return an array: %s', $path)
                 );
             }
 
-            // Merge with existing config
-            if (method_exists($app, 'config')) {
-                $current = $app->config->get($key, []);
-                $app->config->set($key, array_merge($current, $config));
-            }
+            $current = $config->get($key, []);
+
+            $config->set($key, $this->mergeConfigRecursive(
+                is_array($current) ? $current : [],
+                $loaded
+            ));
         }
     }
 
-    /**
-     * Apply configuration to application.
-     */
     private function applyConfig(Application $app): void
     {
+        if ($this->config === []) {
+            return;
+        }
+
+        $config = $app->make('config');
+
         foreach ($this->config as $key => $value) {
-            if (method_exists($app, 'config')) {
-                // ✅ Pour la configuration des vues, remplacer complètement
-                if (str_starts_with($key, 'view.') || $key === 'view') {
-                    $app->config->set($key, $value);
-                } else {
-                    $current = $app->config->get($key, []);
+            $current = $config->get($key);
 
-                    if (is_array($current) && is_array($value)) {
-                        $app->config->set($key, array_merge($current, $value));
-                    } else {
-                        $app->config->set($key, $value);
-                    }
-                }
+            if (is_array($current) && is_array($value)) {
+                $config->set($key, $this->mergeConfigRecursive($current, $value));
+            } else {
+                $config->set($key, $value);
             }
         }
     }
 
-    /**
-     * Register all providers.
-     */
-    private function registerProviders(Application $app): void
+    private function applyDatabaseConfig(Application $app): void
     {
-        foreach ($this->providers as $providerClass) {
-            if (! is_subclass_of($providerClass, ServiceProvider::class)) {
-                throw new \InvalidArgumentException(
-                    sprintf('Class "%s" must extend %s', $providerClass, ServiceProvider::class)
-                );
-            }
-
-            /** @var ServiceProvider $provider */
-            $provider = new $providerClass($app);
-            $provider->register();
+        if ($this->databaseConfig === null) {
+            return;
         }
+
+        $config = $app->make('config');
+        $current = $config->get('database', []);
+
+        $config->set('database', $this->mergeConfigRecursive(
+            is_array($current) ? $current : [],
+            $this->databaseConfig
+        ));
     }
 
     /**
-     * Boot all providers.
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $override
+     * @return array<string, mixed>
      */
-    private function bootProviders(Application $app): void
+    private function mergeConfigRecursive(array $base, array $override): array
     {
-        foreach ($this->providers as $providerClass) {
-            /** @var ServiceProvider $provider */
-            $provider = new $providerClass($app);
+        foreach ($override as $key => $value) {
+            if (
+                isset($base[$key])
+                && is_array($base[$key])
+                && is_array($value)
+                && ! array_is_list($base[$key])
+                && ! array_is_list($value)
+            ) {
+                $base[$key] = $this->mergeConfigRecursive($base[$key], $value);
 
-            if (method_exists($provider, 'boot')) {
-                $provider->boot();
+                continue;
             }
+
+            $base[$key] = $value;
         }
+
+        return $base;
     }
 }
