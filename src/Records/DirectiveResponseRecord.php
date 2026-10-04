@@ -15,4 +15,12 @@ final class DirectiveResponseRecord extends AbstractRecord
         public readonly string $output,
         public readonly Sequential $problems = new Sequential,
     ) {}
+
+    /**
+     * Get the directive output without ANSI escape sequences.
+     */
+    public function strippedOutput(): string
+    {
+        return strip_ansi($this->output);
+    }
 }
